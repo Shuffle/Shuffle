@@ -51,11 +51,13 @@ import BillingStats from "./BillingStats.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Context } from "../context/ContextApi.jsx";
+import LicencePopup from "./LicencePopup.jsx";
 
 const Billing = memo((props) => {
-	const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, clickedFromOrgTab } = props;
+	const { globalUrl, userdata, serverside, billingInfo, stripeKey,isLoaded, selectedOrganization, handleGetOrg, clickedFromOrgTab, removeCookie} = props;
 	//const alert = useAlert();
 	let navigate = useNavigate();
+	const [isLoggedIn, setIsLoggedIn] = useState(false)
 	const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
 	const [dealList, setDealList] = React.useState([]);
 	const [dealName, setDealName] = React.useState("");
@@ -73,13 +75,16 @@ const Billing = memo((props) => {
 	const [currentAppRunsInNumber, setCurrentAppRunsInNumber] = useState(0);
 	const [alertThresholds, setAlertThresholds] = useState(selectedOrganization.Billing !== undefined && selectedOrganization.Billing.AlertThreshold !== undefined && selectedOrganization.Billing.AlertThreshold !== null ? selectedOrganization.Billing.AlertThreshold : [{ percentage: '', count: '', Email_send: false }]);
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [deleteAlertIndex, setDeleteAlertIndex] = useState(-1);
 	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
-	
 	useEffect(() => {
 		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
 			const percentage = (userdata.app_execution_usage / userdata.app_execution_limit) * 100;
 			setCurrentAppRunsInPercentage(Math.round(percentage));
 			setCurrentAppRunsInNumber(userdata.app_execution_limit - userdata.app_execution_usage);
+		}
+		if (userdata?.id?.length > 0 && isLoggedIn === false){
+			setIsLoggedIn(true)
 		}
 	}, [userdata]);
 
@@ -182,7 +187,8 @@ const Billing = memo((props) => {
 
 	const isCloud =
 		window.location.host === "localhost:3002" ||
-		window.location.host === "shuffler.io";
+		window.location.host === "shuffler.io" || 
+		window.location.host === "sandbox.shuffler.io";
 
 	billingInfo.subscription = {
 		"active": true,
@@ -419,8 +425,16 @@ const Billing = memo((props) => {
 			const data = {
 				org_id: orgId,
 				email: newBillingEmail,
+				name: selectedOrganization.name,
+				description: selectedOrganization.description,
+				image: selectedOrganization.image,
+				defaults: selectedOrganization.defaults,
+				sso_config: selectedOrganization.sso_config,
+				mfa_required: selectedOrganization.mfa_required,
 				billing: {
 					email: newBillingEmail,
+					AlertThreshold: selectedOrganization?.Billing?.AlertThreshold,
+					Consultation: selectedOrganization?.Billing?.Consultation,
 				},
 			};
 
@@ -747,13 +761,21 @@ const Billing = memo((props) => {
 								open={openChangeEmailBox}
 								onClose={handleCloseChangeEmailBox}
 								PaperProps={{
-									style: {
-										padding: '20px',
-										borderRadius: '8px',
-										maxWidth: '500px',
-										width: '100%'
+									sx: {
+									  borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+									  border: theme?.palette?.DialogStyle?.border,
+									  minWidth: '440px',
+									  fontFamily: theme?.typography?.fontFamily,
+									  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									  zIndex: 1000,
+									  '& .MuiDialogContent-root': {
+										backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									  },
+									  '& .MuiDialogTitle-root': {
+										backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									  },
 									}
-								}}
+								  }}
 							>
 								<DialogTitle style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Change Billing Email</DialogTitle>
 								<DialogContent>
@@ -810,7 +832,7 @@ const Billing = memo((props) => {
 							color="primary"
 							style={{
 								marginTop: !userdata.has_card_available ? 20 : 10,
-								borderRadius: 8,
+								borderRadius: 4,
 								height: 40,
 								fontSize: 16,
 								color: userdata.has_card_available ? "#ff8544" : "#1a1a1a",
@@ -843,7 +865,7 @@ const Billing = memo((props) => {
 								color="primary"
 								style={{
 									marginTop: 10,
-									borderRadius: 8,
+									borderRadius: 4,
 									height: 40,
 									fontSize: 16,
 									color: "#1a1a1a",
@@ -933,11 +955,19 @@ const Billing = memo((props) => {
 			const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`;
 			const data = {
 				org_id: selectedOrganization.id,
+				name: selectedOrganization.name,
+				description: selectedOrganization.description,
+				image: selectedOrganization.image,
+				defaults: selectedOrganization.defaults,
+				sso_config: selectedOrganization.sso_config,
+				mfa_required: selectedOrganization.mfa_required,
 				Billing: {
 					Consultation: {
 						hours: String(inputHour),
 						minutes: String(inputMinutes),
 					},
+					AlertThreshold: selectedOrganization.Billing.AlertThreshold,
+					email: selectedOrganization.Billing.email,
 				}
 			};
 
@@ -1030,9 +1060,9 @@ const Billing = memo((props) => {
 			<div style={{
 				padding: 20,
 				// maxWidth: 400,
-				width: 340,
+				width: "100%",
 				height: 480,
-				backgroundColor: hovered ? "#2b2b2b" : theme.palette.backgroundColor,
+				backgroundColor: hovered ? "#2b2b2b" : "#1e1e1e",
 				borderRadius: theme.palette?.borderRadius * 2,
 				border: "1px solid rgba(255,255,255,0.3)",
 				marginRight: 10,
@@ -1123,7 +1153,7 @@ const Billing = memo((props) => {
 						color="primary"
 						style={{
 							marginTop: userdata.support ? 0 : 10,
-							borderRadius: 8,
+							borderRadius: 4,
 							height: 40,
 							fontSize: 16,
 							color: "#1A1A1A",
@@ -1142,8 +1172,23 @@ const Billing = memo((props) => {
 					>
 						Buy
 					</Button>
-					<Dialog open={clickOnBuy} onClose={() => { setClickOnBuy(false) }} PaperProps={{style: {backgroundColor: "rgb(26, 26, 26)"}}}>
-						<Typography variant="body1" style={{ marginTop: 10, textAlign: 'center', padding: 20, fontSize: 18 }}>
+					<Dialog open={clickOnBuy} onClose={() => { setClickOnBuy(false) }} PaperProps={{
+                    sx: {
+                      borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                      border: theme?.palette?.DialogStyle?.border,
+                      minWidth: '440px',
+                      fontFamily: theme?.typography?.fontFamily,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      zIndex: 1000,
+                      '& .MuiDialogContent-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      },
+                      '& .MuiDialogTitle-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      },
+                    }
+                  }}>
+						<Typography variant="body1" style={{ paddingTop: 10, textAlign: 'center', padding: 20, fontSize: 18, backgroundColor: theme?.palette?.DialogStyle?.backgroundColor }}>
 							You will be taken to Stripe to book professional service hours. You can adjust the number of hours on the left side of the Stripe page.
 						</Typography>
 						<DialogContent>
@@ -1178,10 +1223,9 @@ const Billing = memo((props) => {
 								color="primary"
 								style={{
 									marginTop: userdata.support ? 5 : 10,
-									borderRadius: 8,
+									borderRadius: 4,
 									height: 40,
 									fontSize: 16,
-									color: "#ff8544",
 									textTransform: 'none',
 									cursor: getProfessionalServices ? 'pointer' : 'not-allowed',
 									opacity: getProfessionalServices ? 1 : 0.6,
@@ -1202,13 +1246,23 @@ const Billing = memo((props) => {
 					fullWidth
 					style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
 					PaperProps={{
-						style: {
-							width: 500,
-							margin: 0,
+						sx: {
+						  borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+						  border: theme?.palette?.DialogStyle?.border,
+						  minWidth: '440px',
+						  fontFamily: theme?.typography?.fontFamily,
+						  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						  zIndex: 1000,
+						  '& .MuiDialogContent-root': {
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						  },
+						  '& .MuiDialogTitle-root': {
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						  },
 						}
-					}}
+					  }}
 				>
-					<DialogTitle style={{ marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
+					<DialogTitle style={{ paddingTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
 						Upgrade Consultation Plan
 					</DialogTitle>
 					<DialogContent style={{ padding: '24px', }}>
@@ -1244,7 +1298,7 @@ const Billing = memo((props) => {
 						<Button
 							variant="contained"
 							color="primary"
-							style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none' }}
+							style={{ marginTop: '24px', borderRadius: 4, color: "#1a1a1a", backgroundColor: "#ff8544",fontSize: 16, display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none' }}
 							onClick={handleUpgradeConsultation}
 						>
 							Submit Request for {consultationHours} hours
@@ -1305,8 +1359,8 @@ const Billing = memo((props) => {
 					padding: 20,
 					height: 480,
 					// maxWidth: 400,
-					width: 340,
-					backgroundColor: hovered ? "#2b2b2b" : theme.palette.backgroundColor,
+					width: "100%",
+					backgroundColor: hovered ? "#2b2b2b" : "#1e1e1e",
 					borderRadius: theme.palette?.borderRadius * 2,
 					border: "1px solid rgba(255,255,255,0.3)",
 					marginRight: 10,
@@ -1354,7 +1408,7 @@ const Billing = memo((props) => {
 						</li>
 					</ul>
 				</div>
-				<div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', marginTop: 30, width: 340 }}>
+				<div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', marginTop: 30, }}>
 					<Button
 						fullWidth
 						disabled={false}
@@ -1362,12 +1416,13 @@ const Billing = memo((props) => {
 						color="primary"
 						style={{
 							marginTop: 10,
-							borderRadius: 8,
+							borderRadius: 4,
 							height: 40,
 							fontSize: 16,
 							color: "#1A1A1A",
 							textTransform: 'none',
-							backgroundColor: "#FF8544"
+							backgroundColor: "#FF8544",
+							width: "100%",
 						}}
 						onClick={() => {
 							if (Cloud) {
@@ -1390,12 +1445,11 @@ const Billing = memo((props) => {
 						color="primary"
 						style={{
 							marginTop: 10,
-							borderRadius: 8,
+							borderRadius: 4,
 							height: 40,
 							fontSize: 16,
 							textTransform: 'none',
-							color: "#FF8544",
-							backgroundColor: "#1a1a1a",
+							width: "100%",
 						}}
 						onClick={() => {
 							if (Cloud) {
@@ -1417,14 +1471,23 @@ const Billing = memo((props) => {
 						fullWidth
 						style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
 						PaperProps={{
-							style: {
-								width: 500,
-								margin: 0,
-								backgroundColor: "rgb(26, 26, 26)",
+							sx: {
+							  borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+							  border: theme?.palette?.DialogStyle?.border,
+							  minWidth: '440px',
+							  fontFamily: theme?.typography?.fontFamily,
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							  zIndex: 1000,
+							  '& .MuiDialogContent-root': {
+								backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							  },
+							  '& .MuiDialogTitle-root': {
+								backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							  },
 							}
-						}}
+						  }}
 					>
-						<DialogTitle style={{ marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
+						<DialogTitle style={{ paddingTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
 							Private Training
 						</DialogTitle>
 						<DialogContent style={{ padding: '24px', }}>
@@ -1460,7 +1523,7 @@ const Billing = memo((props) => {
 							<Button
 								variant="contained"
 								color="primary"
-								style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544" }}
+								style={{ marginTop: '24px', fontSize: 16, display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544" }}
 								onClick={handlePrivateTraining}
 							>
 								Submit Request
@@ -1819,7 +1882,6 @@ const Billing = memo((props) => {
 		setCurrentIndex(findCurrentIndex ? newAlertThresholds.findIndex(threshold => threshold.Email_send === false) : - 1);
 		toast.info("Alert Threshold deleted successfully. Don't forget to save your changes.");
 	};
-
 	const HandleEditOrgForAlertThreshold = (orgId) => {
 
 		// Use the `some` method to check for invalid counts
@@ -1840,6 +1902,12 @@ const Billing = memo((props) => {
 
 		const data = {
 			org_id: orgId,
+			name: selectedOrganization?.name,
+			description: selectedOrganization?.description,
+			image: selectedOrganization?.image,
+			defaults: selectedOrganization?.defaults,
+			sso_config: selectedOrganization?.sso_config,
+			mfa_required: selectedOrganization?.mfa_required,
 			billing: {
 				email: BillingEmail,
 				AlertThreshold: alertThresholds.map(threshold => ({
@@ -1847,6 +1915,7 @@ const Billing = memo((props) => {
 					percentage: parseInt(threshold.percentage, 10),
 					count: parseInt(threshold.count, 10),
 				})),
+				Consultation: selectedOrganization?.billing?.Consultation,
 			},
 		};
 
@@ -1901,12 +1970,12 @@ const Billing = memo((props) => {
 					Billing	& Licensing
 				</Typography>}
 			{clickedFromOrgTab ?
-				<span style={{ color: "#9E9E9E" }}>{isCloud ?
+				<span style={{ color: "#9E9E9E", fontSize: 16 }}>{isCloud ?
 					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
 					"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
 				}</span> :
-				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10 }}>
+				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10, fontSize: 16 }}>
 					{isCloud ?
 						"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 						:
@@ -1917,19 +1986,19 @@ const Billing = memo((props) => {
 			{userdata.support === true ?
 				<div style={{ marginBottom: 10, marginTop: clickedFromOrgTab ? 16 : null, color: clickedFromOrgTab ? "#F1F1F1" : null }}>
 					For sales: Create&nbsp;
-					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
 						EU contract
 					</a>
 					&nbsp;or&nbsp;
-					<a href={"https://docs.google.com/document/d/1cF-Cwxt1TcahlLrpl1GH2hFZO4gxppLeYjHW6QB0EzQ/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+					<a href={"https://docs.google.com/document/d/1cF-Cwxt1TcahlLrpl1GH2hFZO4gxppLeYjHW6QB0EzQ/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
 						NOT EU contract
 					</a>
 					&nbsp; - &nbsp;
-					<a href={"https://drive.google.com/drive/folders/1zVvwwkbQXW3p-DJYa0GBDzFo_ZnV_I_5"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+					<a href={"https://drive.google.com/drive/folders/1zVvwwkbQXW3p-DJYa0GBDzFo_ZnV_I_5"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
 						Google Drive Link
 					</a>
 					&nbsp; - &nbsp;
-					<a href={"https://github.com/Shuffle/Shuffle-docs/tree/master/handbook/Sales"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+					<a href={"https://github.com/Shuffle/Shuffle-docs/tree/master/handbook/Sales"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
 						Sales Process (old)
 					</a>
 				</div>
@@ -1944,22 +2013,24 @@ const Billing = memo((props) => {
 				</Typography>
 				: null}
 
-			<div style={{ display: "flex", width: clickedFromOrgTab ? 1030 : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : 580 }} >
+			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : "100%", maxWidth: 860, marginTop: 20}} >
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
-					<SubscriptionObject
-						index={0}
-						globalUrl={globalUrl}
-						userdata={userdata}
-						serverside={serverside}
-						billingInfo={billingInfo}
-						stripeKey={stripeKey}
-						selectedOrganization={selectedOrganization}
-						subscription={billingInfo.subscription}
-						highlight={selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0}
+					<LicencePopup
+					serverside={serverside}
+					removeCookie={removeCookie}
+					isLoaded={isLoaded}
+					isLoggedIn={isLoggedIn}
+					globalUrl={globalUrl}
+					selectedOrganization={selectedOrganization}
+					billingInfo={billingInfo}
+					isCloud={isCloud}
+					userdata={userdata}
+					stripeKey={stripeKey}
+					{...props}
 					/>
 					: !isCloud ?
 						<span style={{ display: "flex", }}>
-							<SubscriptionObject
+							{/* <SubscriptionObject
 								index={0}
 								globalUrl={globalUrl}
 								userdata={userdata}
@@ -1977,8 +2048,22 @@ const Billing = memo((props) => {
 									],
 								}}
 								highlight={true}
-							/>
-							<SubscriptionObject
+							/> */}
+							<LicencePopup
+								{...props}
+							  	serverside={serverside}
+								removeCookie={removeCookie}
+								isLoaded={isLoaded}
+								isLoggedIn={isLoggedIn}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								billingInfo={billingInfo}
+								isCloud={isCloud}
+								userdata={userdata}
+								stripeKey={stripeKey}
+							/>	
+
+							{/* <SubscriptionObject
 								index={1}
 								globalUrl={globalUrl}
 								userdata={userdata}
@@ -1996,7 +2081,7 @@ const Billing = memo((props) => {
 									],
 								}}
 								highlight={false}
-							/>
+							/> */}
 						</span>
 						: null}
 
@@ -2255,14 +2340,14 @@ const Billing = memo((props) => {
 			  </div>
             ) : null*/}
 			{!isChildOrg && isCloud && (
-				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 10 }}>
+				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }}>
 					<Typography style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}>
 						Professional Services
 					</Typography>
 					<Typography color="textSecondary" style={{fontSize: 16,}}>
 						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at support@shuffler.io.
 					</Typography>
-					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5 }}>
+					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5, }}>
 						{billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
 							isChildOrg ? null : (
 								<ConsultationManagement
@@ -2276,7 +2361,7 @@ const Billing = memo((props) => {
 					</div>
 				</div>
 			)}
-			<div style={{ marginTop: isCloud && 40, marginLeft: 10 }}>
+			<div style={{ marginTop: 40, marginLeft: 10 }}>
 				<Typography
 					style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
 				>
@@ -2323,43 +2408,51 @@ const Billing = memo((props) => {
 					<div style={{ marginTop: 15 }}>
 						{alertThresholds.map((threshold, index) => (
 							<div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+							 <TextField
+								style={{
+								marginTop: 10,
+								backgroundColor: "#212121",
+								width: 250,
+								height: 50,
+								}}
+								InputProps={{
+								style: {
+									height: 50,
+									color: 'white',
+								},
+								endAdornment: '%',
+								}}
+								InputLabelProps={{
+								shrink: undefined,
+								}}
+								color="primary"
+								fullWidth
+								label="Alert threshold (%)"
+								type="number"
+								value={threshold.percentage}
+								onChange={(e) => updateAlertThreshold(index, 'percentage', e.target.value)}
+								margin="normal"
+								variant="outlined"
+								inputProps={{
+								max: 100,
+								}}
+							/>
 								<TextField
 									style={{
-										marginTop: 10,
-										backgroundColor: "#212121",
-										width: 250,
+									marginTop: 10,
+									height: 50,
+									backgroundColor: "#212121",
+									width: 250,
+									marginLeft: 15,
 									}}
 									InputProps={{
-										style: {
-											height: 50,
-											color: 'white',
-										},
-										endAdornment: '%',
+									style: {
+										height: 50,
+										color: 'white',
+									},
 									}}
-									color="primary"
-									fullWidth
-									label="Alert threshold (%)"
-									type="number"
-									value={threshold.percentage}
-									onChange={(e) => updateAlertThreshold(index, 'percentage', e.target.value)}
-									margin="normal"
-									variant="outlined"
-									inputProps={{
-										max: 100,
-									}}
-								/>
-								<TextField
-									style={{
-										marginTop: 10,
-										backgroundColor: "#212121",
-										width: 250,
-										marginLeft: 15,
-									}}
-									InputProps={{
-										style: {
-											height: 50,
-											color: 'white',
-										},
+									InputLabelProps={{
+									shrink: undefined,
 									}}
 									color="primary"
 									fullWidth
@@ -2370,34 +2463,67 @@ const Billing = memo((props) => {
 									margin="normal"
 									variant="outlined"
 								/>
-								<span style={{ marginLeft: alertThresholds[index].Email_send === true ? 10 : 35, color: 'green' }}>{alertThresholds[index].Email_send === true && <Tooltip title="We have already sent alert for this threshold."><CheckCircle /></Tooltip>}</span>
-								{
-									alertThresholds.length > 1 &&
-									(
-										<Button
-											disableRipple
-											disableElevation
-											sx={{
-												padding: 0,
-												'&:hover': {
-													backgroundColor: 'transparent',
-												},
-											}}
-
-											onClick={() => { setDeleteAlertVerification(true) }}
-										>
-											<DeleteIcon sx={{ color: theme.palette.secondary.main }} />
-										</Button>
-									)
-								}
-								<Dialog open={deleteAlertVerification} onClose={() => setDeleteAlertVerification(false)} sx={{ '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)', }, }}>
-									<DialogTitle>Are you sure you want to delete this threshold?</DialogTitle>
-									<DialogActions>
-										<Button style={{ textTransform: 'none', fontSize: 16 }} color="primary" onClick={() => setDeleteAlertVerification(false)}>Cancel</Button>
-										<Button style={{ textTransform: 'none', fontSize: 16 }} color="secondary" onClick={() => { handleDeleteAlertThreshold(index); setDeleteAlertVerification(false) }} >Delete</Button>
-									</DialogActions>
-								</Dialog>
-							</div>
+							<span
+							  style={{
+								marginLeft: alertThresholds[index].Email_send === true ? 10 : 35,
+								color: 'green',
+							  }}
+							>
+							  {alertThresholds[index].Email_send === true && (
+								<Tooltip title="We have already sent alert for this threshold.">
+								  <CheckCircle />
+								</Tooltip>
+							  )}
+							</span>
+							{alertThresholds.length > 1 && (
+							  <Button
+								disableRipple
+								disableElevation
+								sx={{
+								  padding: 0,
+								  '&:hover': {
+									backgroundColor: 'transparent',
+								  },
+								}}
+								onClick={() => {
+								  setDeleteAlertVerification(true);
+								  setDeleteAlertIndex(index);
+								}}
+							  >
+								<DeleteIcon sx={{ color: theme.palette.secondary.main }} />
+							  </Button>
+							)}
+							<Dialog
+							  open={deleteAlertVerification}
+							  onClose={() => setDeleteAlertVerification(false)}
+							  sx={{
+								'& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
+							  }}
+							>
+							  <DialogTitle>Are you sure you want to delete this threshold?</DialogTitle>
+							  <DialogActions>
+								<Button
+								  style={{ textTransform: 'none', fontSize: 16 }}
+								  color="primary"
+								  onClick={() => setDeleteAlertVerification(false)}
+								>
+								  Cancel
+								</Button>
+								<Button
+								  style={{ textTransform: 'none', fontSize: 16 }}
+								  color="secondary"
+								  onClick={() => {
+									handleDeleteAlertThreshold(deleteAlertIndex);
+									setDeleteAlertVerification(false);
+								  }}
+								>
+								  Delete
+								</Button>
+							  </DialogActions>
+							</Dialog>
+						  </div>
+						  
+						  
 						))}
 					</div>
 				</div>
@@ -2449,10 +2575,8 @@ const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
 		: "auto",
 	  padding: "27px 10px 19px 27px", 
 	  backgroundColor: '#212121', 
-	  borderRadius: '16px',
 	  height: '100%',
 	  boxSizing: 'border-box',
-	  borderLeft: '1px solid #494949',
 	  overflow: 'hidden',
 	  maxHeight: "1700px", overflowY: "auto",scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'
 	}), [clickedFromOrgTab]);

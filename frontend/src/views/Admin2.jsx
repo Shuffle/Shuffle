@@ -238,7 +238,7 @@ const Admin2 = (props) => {
         const data = {
             name: name,
             description: description,
-            org_id: orgId,
+            org_id: orgId?.length > 0 ? orgId : selectedOrganization?.id,
             image: image,
             defaults: defaults,
             sso_config: sso_config,
@@ -263,6 +263,7 @@ const Admin2 = (props) => {
                     if (responseJson["success"] === false) {
                         toast("Failed updating org: ", responseJson.reason);
                     } else {
+                        handleGetOrg(selectedOrganization?.id);
                         if (
                             lead_info === undefined ||
                             lead_info === null ||
@@ -329,7 +330,7 @@ const Admin2 = (props) => {
     }
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 0.8, }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 0.9}}>
             <AdminNavBar userdata={userdata} isLoaded={isLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud} serverside={serverside} />
         </div>
     );

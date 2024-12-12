@@ -255,7 +255,7 @@ const Priorities = memo((props) => {
 					  onClick={() => {
 						clearNotifications()
 					  }}
-					  style={{marginLeft: 50, }}
+					  style={{marginLeft: 50, textTransform: "none", fontSize: 16}}
 					>
 					  Mark all as read 
 					</Button>
@@ -265,7 +265,7 @@ const Priorities = memo((props) => {
 
 			{clickedFromOrgTab? null : <Divider style={{marginTop: 50, marginBottom: 50, }} />}
 			<h2 style={{ display: clickedFromOrgTab ? null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ? 30 :null, color: clickedFromOrgTab ? "#ffffff" : null }}>Suggestions</h2>
-			<span style={{ fontSize: 16, color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25 }}>
+			<span style={{ fontSize: 16, color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25,  }}>
 				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. <br/>These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;
 				<a
 					target="_blank"
@@ -431,64 +431,132 @@ const NotificationItem = memo((props) => {
 			: 
 			null
 		}
-		<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", wordWrap: "break-word" }}>
+		<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", wordWrap: "break-word", fontSize: 16 }}>
 			{data.description}
 		</Typography >
 		<div style={{ display: "flex" }}>
-		  <ButtonGroup>
-			  <Button
-				color="secondary"
-				variant="outlined"
-				style={{ marginTop: 15 }}
-				disabled={data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0}
-				onClick={() => {
-				window.open(data.reference_url, "_blank")
-				}}
-			  >
-				   Explore 
-			  </Button>
-			  {data.read === false ? (
-				<Button
-				  color="secondary"
-				  variant="outlined"
-				  style={{ marginTop: 15 }}
-				  onClick={() => {
-					dismissNotification(data.id);
-				  }}
-				>
-				  Dismiss 
-				</Button>
-			  ) : null}
-			<Tooltip title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting." placement="top">
-				<Button
-				  color="secondary"
-				  variant={data.ignored === true ? "contained" : "outlined"}
-				  style={{ marginTop: 15, }}
-				  onClick={() => {
-					if (data.ignored === true) {
-						dismissNotification(data.id, false)
-					} else {
-						dismissNotification(data.id, true)
-					}
-				  }}
-				>
-					{data.ignored === true ? "Re-enable" : "Disable"}
-				</Button>
-			</Tooltip>
-		  </ButtonGroup>
+  <Button
+    style={{
+      marginTop: 15,
+      textTransform: "none",
+      fontSize: 16,
+      marginRight: 5,
+      border: "1px solid #ff8544",
+      color: "#ff8544",
+      width: 130,
+      opacity: data.reference_url ? 1 : 0.5,
+      cursor: data.reference_url ? "pointer" : "not-allowed",
+    }}
+    disabled={
+      !data.reference_url || data.reference_url.length === 0
+    }
+    onClick={() => {
+      window.open(data.reference_url, "_blank");
+    }}
+  >
+    Explore
+  </Button>
 
-		  <Typography variant="body2" color="textSecondary" style={{ marginLeft: 20, marginTop: 20, wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
-			<b>First seen</b>: {new Date(data.created_at * 1000).toISOString().slice(0, 19)}
-			</Typography >
+  {data.read === false ? (
+    <Button
+      sx={{
+        marginTop: "15px",
+        border: "none",
+        textTransform: "none",
+        fontSize: 16,
+        color: "#ffffff",
+        marginRight: "5px",
+        backgroundColor: "transparent",
+        "&:hover": { backgroundColor: "transparent" },
+      }}
+      onClick={() => {
+        dismissNotification(data.id);
+      }}
+    >
+      Dismiss
+    </Button>
+  ) : null}
 
-			<Typography variant="body2" color="textSecondary" style={{ marginLeft: 20, marginTop: 20, wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
-			<b>Last seen</b>: {new Date(data.updated_at * 1000).toISOString().slice(0, 19)}
-			</Typography >
+  <Tooltip
+    title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting."
+    placement="top"
+  >
+    <Button
+      style={{
+        marginTop: 15,
+        textTransform: "none",
+        fontSize: 16,
+        width: 130,
+        border: data.ignored
+          ? "1px solid #2bc07e"
+          : "1px solid #ff8544",
+        color: data.ignored ? "#ffffff" : "#ff8544",
+        backgroundColor: data.ignored ? "#2bc07e" : "transparent",
+        opacity: data.ignored || data.dismissable ? 1 : 0.5,
+        cursor: data.dismissable ? "pointer" : "not-allowed",
+      }}
+      disabled={!data.dismissable}
+      onClick={() => {
+        if (data.ignored) {
+          dismissNotification(data.id, false);
+        } else {
+          dismissNotification(data.id, true);
+        }
+      }}
+    >
+      {data.ignored ? "Re-enable" : "Disable"}
+    </Button>
+  </Tooltip>
 
-			<Typography variant="body2" color="textSecondary" style={{ marginLeft: 20, marginTop: 20, wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
-			<b>Times seen</b>: {data.amount}
-			</Typography >
-		</div>
+  <Typography
+    variant="body2"
+    color="textSecondary"
+    style={{
+      marginLeft: 20,
+      marginTop: 20,
+      wordWrap: "break-word",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+	  fontSize: 16,
+
+    }}
+  >
+    <b>First seen</b>:{" "}
+    {new Date(data.created_at * 1000).toISOString().slice(0, 19)}
+  </Typography>
+
+  <Typography
+    variant="body2"
+    color="textSecondary"
+    style={{
+      marginLeft: 20,
+      marginTop: 20,
+      wordWrap: "break-word",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+	  fontSize: 16,
+    }}
+  >
+    <b>Last seen</b>:{" "}
+    {new Date(data.updated_at * 1000).toISOString().slice(0, 19)}
+  </Typography>
+
+  <Typography
+    variant="body2"
+    color="textSecondary"
+    style={{
+      marginLeft: 20,
+      marginTop: 20,
+      wordWrap: "break-word",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+	  fontSize: 16,
+    }}
+  >
+    <b>Times seen</b>: {data.amount}
+  </Typography>
+</div>
+
 	  </Paper>
 	);
 })
