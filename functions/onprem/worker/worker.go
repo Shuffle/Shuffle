@@ -4102,8 +4102,8 @@ func runWebserver(listener net.Listener) {
 		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
 	}
 	/*** ENDREMOVE ***/
-	var dockercli *dockerclient.Client
-	ctx := context.Background()
+	// var dockercli *dockerclient.Client
+	// ctx := context.Background()
 	scaleReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
 	if len(scaleReplicas) > 0 {
 		tmpInt, err := strconv.Atoi(scaleReplicas)
@@ -4130,7 +4130,7 @@ func runWebserver(listener net.Listener) {
 	}
 
 	if strings.ToLower(os.Getenv("SHUFFLE_SWARM_CONFIG")) == "run" || strings.ToLower(os.Getenv("SHUFFLE_APP_REPLICAS")) == "" {
-		go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
+		// go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
 	}
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
