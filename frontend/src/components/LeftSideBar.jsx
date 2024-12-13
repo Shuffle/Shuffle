@@ -229,7 +229,7 @@ useEffect(() => {
       setOpenautomateTab(false);
       setOpenSecurityTab(true);
       setCurrentOpenTab("security");
-        } else if ((lastTabOpenByUser === "usecases" && currentPath.includes("/usecases")) || currentPath.includes("/usecases")) {
+        } else if ((lastTabOpenByUser === "usecases" && currentPath.includes("/usecases2")) || currentPath.includes("/usecases2")) {
       setOpenautomateTab(true);
       setOpenSecurityTab(false);
       setCurrentOpenTab("usecases");
@@ -466,7 +466,6 @@ useEffect(() => {
             onClick={(event) => {
               handleClose();
             }}
-            style={{fontSize: 18}}
           >
             <BusinessIcon style={{ marginRight: 5 }} /> Organization
           </MenuItem>
@@ -476,7 +475,6 @@ useEffect(() => {
             onClick={(event) => {
               handleClose();
             }}
-            style={{fontSize: 18}}
           >
             <SettingsIcon style={{ marginRight: 5 }} /> Account
           </MenuItem>
@@ -488,7 +486,6 @@ useEffect(() => {
 			onClick={(event) => {
 			  handleClose();
 			}}
-      style={{fontSize: 18}}
 		  >
 			<NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
 				notifications === undefined || notifications === null ? 0 : 
@@ -501,7 +498,6 @@ useEffect(() => {
             onClick={(event) => {
               handleClose();
             }}
-            style={{fontSize: 18}}
           >
             <LightbulbIcon style={{ marginRight: 5 }} /> Use Cases
           </MenuItem>
@@ -514,25 +510,23 @@ useEffect(() => {
             onClick={(event) => {
               handleClose();
             }}
-            style={{fontSize: 18}}
           >
             <HelpOutlineIcon style={{ marginRight: 5 }} /> About
           </MenuItem>
         </Link>
         <MenuItem
-          style={{ color: "white", fontSize: 18 }}
+          style={{ color: "white" }}
           onClick={(event) => {
             handleClickLogout();
             event.preventDefault();
             handleClose();
           }}
-          
         >
           <MeetingRoomIcon style={{ marginRight: 5 }} /> &nbsp;Logout
         </MenuItem>
         <Divider style={{ marginBottom: 10, }} />
 
-        <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
+        <Typography variant="body2" color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, }}>
           Version: 2.0.0-beta
         </Typography>
       </Menu>
@@ -723,7 +717,6 @@ useEffect(() => {
       width: expandLeftNav ? "100%" : 30,
       padding: 0,
     },
-    fontSize: 18
   };
 
   const modalView = (
@@ -943,7 +936,6 @@ useEffect(() => {
             display: "flex",
             flexDirection: "column",
             padding: expandLeftNav ? "0 16px" : "0px 8px",
-            gap: 1.2,
           }}
         >
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
@@ -958,18 +950,18 @@ useEffect(() => {
               variant="text"
               style={{
                 ...ButtonStyle,
-                backgroundColor: ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? "#2f2f2f": "transparent",
+                backgroundColor: ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases2" || currentPath.includes("/search"))))? "#2f2f2f": "transparent",
               }}
               onMouseOver={(event)=>{
                 event.currentTarget.style.backgroundColor = "#2f2f2f";
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? "#2f2f2f": "transparent";
+                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases2" || currentPath.includes("/search"))))? "#2f2f2f": "transparent";
               }}
             >
               <img
                 src={detectionIcon}
-                style={{ width: 18, height: 18, marginRight: expandLeftNav ? 10 : 0 }}
+                style={{ width: 16, height: 16, marginRight: expandLeftNav ? 10 : 0 }}
                 alt="Automate Icon"
               />
               <span
@@ -1028,7 +1020,7 @@ useEffect(() => {
               display:  "flex",
               flexDirection: "column",
               paddingLeft: 16,
-              gap: 10,
+              gap: 4,
             }}
           >
 	  		<Link to="/usecases" style={hrefStyle}>
@@ -1040,9 +1032,8 @@ useEffect(() => {
               style={{
                 width: "100%",
                 height: 35,
-                color: currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases") ? "#FFFFFF" : "#C8C8C8",
+                color: "#C8C8C8",
                 justifyContent: "flex-start",
-                fontSize: 18,
                 textTransform: "none",
                 backgroundColor: currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases")? "#2f2f2f": "transparent",
                 marginLeft: 16
@@ -1055,13 +1046,13 @@ useEffect(() => {
               }}
               disableRipple={expandLeftNav ? false : true}
             >
-              <span style={{display: expandLeftNav ? "inline" : "none",opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 18 }}>•</span>{" "}
+              <span style={{display: expandLeftNav ? "inline" : "none",opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 16 }}>•</span>{" "}
               <span
                 style={{
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "usecases" && currentPath.includes("/usecases") ? "#FFFFFF" : "#C8C8C8",
+                  color: currentOpenTab === "usecases" && currentPath.includes("/usecases3") ? "#F1F1F1" : "#C8C8C8",
                 }}
               >
                 Usecases
@@ -1077,12 +1068,11 @@ useEffect(() => {
               style={{
                 width: "100%",
                 height: 35,
-                color: currentOpenTab === "workflows" && currentPath === "/workflows"  ? "#FFFFFF" : "#C8C8C8",
+                color: "#C8C8C8",
                 justifyContent: "flex-start",
                 textTransform: "none",
                 backgroundColor: currentOpenTab === "workflows" && currentPath === "/workflows" && expandLeftNav? "#2f2f2f": "transparent",
-                marginLeft: 16,
-                fontSize: 18
+                marginLeft: 16
               }}
               disableRipple={expandLeftNav ? false : true}
               onMouseOver={(event)=>{
@@ -1092,13 +1082,13 @@ useEffect(() => {
                 event.currentTarget.style.backgroundColor = currentOpenTab === "workflows" && currentPath === "/workflows" && expandLeftNav? "#2f2f2f": "transparent";
               }}
             >
-              <span style={{display: expandLeftNav ? "inline" : "none", opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 18 }}>•</span>{" "}
+              <span style={{display: expandLeftNav ? "inline" : "none", opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 16 }}>•</span>{" "}
               <span
                 style={{
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "workflows" && currentPath === "/workflows"  ? "#FFFFFF" : "#C8C8C8",
+                  color: currentOpenTab === "workflows" && currentPath === "/workflows"  ? "#F1F1F1" : "#C8C8C8",
                 }}
               >
                 Workflows
@@ -1114,12 +1104,11 @@ useEffect(() => {
               style={{
                 width: "100%",
                 height: 35,
-                color: currentOpenTab === "apps" && currentPath.includes("/apps") ? "#FFFFFF" : "#C8C8C8",
+                color: "#C8C8C8",
                 justifyContent: "flex-start",
                 textTransform: "none",
                 backgroundColor: currentOpenTab === "apps" && expandLeftNav && currentPath.includes("/apps2") ? "#2f2f2f": "transparent",
-                marginLeft: 16,
-                fontSize: 18
+                marginLeft: 16
               }}
               onMouseOver={(event)=>{
                 event.currentTarget.style.backgroundColor = "#2f2f2f";
@@ -1129,13 +1118,13 @@ useEffect(() => {
               }}
               disableRipple={expandLeftNav ? false : true}
             >
-              <span style={{display: expandLeftNav ? "inline" : "none",opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 18 }}>•</span>{" "}
+              <span style={{display: expandLeftNav ? "inline" : "none",opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 16 }}>•</span>{" "}
               <span
                 style={{
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "apps" && currentPath.includes("/apps") ? "#FFFFFF" : "#C8C8C8",
+                  color: currentOpenTab === "apps" && currentPath.includes("/apps2") ? "#F1F1F1" : "#C8C8C8",
                 }}
               >
                 Apps
@@ -1189,11 +1178,12 @@ useEffect(() => {
                   ? "#2f2f2f"
                   : "transparent";
               }}
+              disabled={!userdata?.support}
             >
               <ShieldOutlinedIcon
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   marginRight: expandLeftNav ? 10 : 0,
                   color: userdata?.support ? "inherit" : "#6F6F6F",
                 }}
@@ -1202,7 +1192,6 @@ useEffect(() => {
                 style={{
                   display: expandLeftNav ? "inline" : "none",
                   marginRight: "auto",
-                  fontSize: 18,
                   color: userdata?.support
                     ? currentOpenTab === "security" && currentPath.includes("/security")
                       ? "#F1F1F1"
@@ -1289,7 +1278,7 @@ useEffect(() => {
                       }}
                       disabled={userdata?.support === false}
                     >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
                         •
                       </span>
                       <span
@@ -1297,7 +1286,6 @@ useEffect(() => {
                           display: expandLeftNav ? "inline" : "none",
                           opacity: expandLeftNav ? 1 : 0,
                           transition: "opacity 0.3s ease",
-                          fontSize: 18,
                           color:
                             userdata?.support && currentOpenTab === "detection" && currentPath.includes("/detection")
                               ? "#F1F1F1"
@@ -1341,7 +1329,7 @@ useEffect(() => {
                         cursor: userdata?.support ? "pointer" : "not-allowed",
                       }}
                     >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
                         •
                       </span>
                       <span
@@ -1349,7 +1337,6 @@ useEffect(() => {
                           display: expandLeftNav ? "inline" : "none",
                           opacity: expandLeftNav ? 1 : 0,
                           transition: "opacity 0.3s ease",
-                          fontSize: 18,
                           color:
                             userdata?.support && currentOpenTab === "response" && currentPath.includes("/response")
                               ? "#F1F1F1"
@@ -1393,7 +1380,7 @@ useEffect(() => {
                         cursor: userdata?.support ? "pointer" : "not-allowed",
                       }}
                     >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
                         •
                       </span>
                       <span
@@ -1401,7 +1388,6 @@ useEffect(() => {
                           display: expandLeftNav ? "inline" : "none",
                           opacity: expandLeftNav ? 1 : 0,
                           transition: "opacity 0.3s ease",
-                          fontSize: 18,
                           color:
                             userdata?.support && currentOpenTab === "response" && currentPath.includes("/response")
                               ? "#F1F1F1"
@@ -1472,7 +1458,7 @@ useEffect(() => {
           <Typography
             style={{
               color: "#CDCDCD",
-              fontSize: 18,
+              fontSize: 14,
               padding: "8px 8px",
               marginBottom: 10,
             }}
@@ -1702,7 +1688,7 @@ useEffect(() => {
                   },
                   transition: "opacity 0.3s ease",
                   textTransform: "none",
-                  fontSize: 18,
+                  fontSize: 16,
                 }}
                 disableElevation
                 disableRipple
@@ -1732,14 +1718,13 @@ useEffect(() => {
                   style={{
                     color: "#CDCDCD",
                     margin: "0 5px",
-                    fontSize: 18,
+                    fontSize: 16,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     maxWidth: 150,
                     textAlign: "center",
                     marginLeft: 10,
-
                   }}
                 >
                   {userdata?.username}

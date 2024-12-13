@@ -57,7 +57,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                 : hover
                     ? ""
                     : "1px solid rgba(255,255,255,0.3)",
-            borderImage: makeFancy ? "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1" : "none",
+            borderImage: makeFancy ? "linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1" : "none",
             transition: 'all 0.2s ease-in-out',
         }
 
@@ -340,7 +340,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
 
 
     const circularLoader = validation ? <CircularProgress color="primary" /> : null
-    const errorText = openApiError?.length > 0 ? <div style={{ marginTop: 15, color: '#fd4c62' }}>Error: {openApiError}</div> : null
+    const errorText = openApiError?.length > 0 ? <div style={{ marginTop: 10 }}>Error: {openApiError}</div> : null
 
     // Common dialog styles
     const dialogStyle = {
@@ -400,13 +400,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         Create New App
                     </Typography>
                     <IconButton
-                        onClick={() => {
-                            setOpenApi("")
-                            setOpenApiError("")
-                            setAppValidation("")
-                            setValidation(false)
-                            onClose()
-                        }}
+                        onClick={onClose}
                         sx={{
                             color: 'rgba(255, 255, 255, 0.7)',
                             '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
@@ -483,14 +477,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         Create New App from Open API or Swagger
                     </Typography>
                     <IconButton
-                        onClick={() => {
-                            setOpenApiModal(false)
-                            setGenerateAppModal(false)
-                            setOpenApi("")
-                            setOpenApiError("")
-                            setAppValidation("")
-                            setValidation(false)
-                        }}
+                        onClick={() => setOpenApiModal(false)}
                         sx={{
                             color: 'rgba(255,255,255,0.7)',
                             '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
@@ -500,16 +487,14 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ px: 4, py: 3 }}>
-                    <div style={{ display: "flex", fontSize: '14px', gap: '5px', alignItems: 'center', marginBottom: '10px', fontFamily: theme?.typography?.fontFamily, marginTop: '15px' }}>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '16px' }}>
+                    <div style={{ display: "flex", fontSize: '14px', gap: '5px', alignItems: 'center', marginBottom: '10px', fontFamily: theme?.typography?.fontFamily }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
                             Paste in the URI for the OpenAPI or find out
                         </Typography>
                         <Link style={{
                             color: '#ff8544',
                             textDecoration: 'none',
                             textDecoration: 'underline',
-                            fontSize: '16px',
-                            fontFamily: theme?.typography?.fontFamily
                         }}>
                             How to find URI for openAPI?
                         </Link>
@@ -521,13 +506,12 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             fullWidth
                             variant="outlined"
                             placeholder="Open API URI"
-                            style={{ fontFamily: theme?.typography?.fontFamily, fontSize: '16px' }}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
-                                    height: '40px',
+                                    height: '40px'
                                 },
                                 '& .MuiOutlinedInput-input::placeholder': {
-                                    fontSize: '16px'
+                                    fontSize: '14px'
                                 }
                             }}
                             onChange={(e) => setOpenApi(e.target.value)}
@@ -542,7 +526,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                                 px: 3,
                                 textTransform: 'none',
                                 height: '40px',
-                                fontSize: '16px',
+                                fontSize: '14px',
                                 fontFamily: theme?.typography?.fontFamily,
                                 cursor: 'pointer'
                             }}
@@ -578,7 +562,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         sx={{
                             color: '#FF8544',
                             borderColor: '#FF8544',
-                            px: 5,
+                            px: 3,
                             py: 1,
                             '&:hover': {
                                 borderColor: '#FF8544',
@@ -586,8 +570,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             },
                             textTransform: 'none',
                             fontSize: '14px',
-                            fontFamily: theme?.typography?.fontFamily,
-                            height: '40px'
+                            fontFamily: theme?.typography?.fontFamily
                         }}
                     >
                         Upload
@@ -622,8 +605,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             },
                             textTransform: 'none',
                             py: 1.5,
-                            mb: 1.5,
-                            fontSize: '16px',
+                            fontSize: '14px',
                             fontWeight: 500,
                             width: '100%',
                             maxWidth: '300px',
@@ -666,7 +648,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     <Typography variant="h6" sx={{
                         color: '#F1F1F1',
                         fontWeight: 500,
-                        fontFamily: theme?.typography?.fontFamily,
+                        fontFamily: theme?.typography?.fontFamily
                     }}>
                         Generate an app based on documentation (beta)
                     </Typography>
@@ -674,10 +656,6 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         onClick={() => {
                             setGenerateAppModal(false)
                             setOpenApiModal(false)
-                            setOpenApi("")
-                            setOpenApiError("")
-                            setAppValidation("")
-                            setValidation(false)
                         }}
                         sx={{
                             color: 'rgba(255,255,255,0.7)',
@@ -690,9 +668,9 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                 <DialogContent sx={{ px: 4, py: 3, pt: 0 }}>
                     <Typography sx={{
                         color: 'rgba(255,255,255,0.85)',
-                        mb: 2,
+                        mb: 3,
                         fontSize: '14px',
-                        mt: 2,
+                        mt:4,
                         fontFamily: theme?.typography?.fontFamily
                     }}>
                         Paste in a URL, and we will make it into an app for you.
@@ -711,15 +689,18 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                                     color: 'white',
                                     '& fieldset': {
                                         borderWidth: '1px',
-                                        borderImage: "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1",
+                                        borderImage: 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1',
+                                        borderImageSlice: 1,
                                     },
                                     '&:hover fieldset': {
                                         borderWidth: '1px',
-                                        borderImage: "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1",
+                                        borderImage: 'linear-gradient(45deg, red, orange, yellow,   green, blue, indigo, violet) 1',
+                                        borderImageSlice: 1,
                                     },
                                     '&.Mui-focused fieldset': {
                                         borderWidth: '2px',
-                                        borderImage: "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1",
+                                        borderImage: 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1',
+                                        borderImageSlice: 1,
                                     }
                                 },
                                 '& .MuiOutlinedInput-input::placeholder': {
@@ -746,7 +727,6 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                 </DialogContent>
                 <DialogActions sx={{
                     py: 2,
-                    pt: 1,
                     px: 3,
                     gap: 2,
                     display: 'flex',
@@ -756,7 +736,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     {circularLoader}
                     {
                         !validation &&
-                        <Typography sx={{ color: '#c5c5c5', fontSize: '14px', fontFamily: theme?.typography?.fontFamily, }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px', fontFamily: theme?.typography?.fontFamily, pt: 2 }}>
                             This may take multiple minutes based on the size of the documentation.
                         </Typography>
                     }

@@ -648,13 +648,12 @@ const AppStats = (defaultprops) => {
 			All shown statistics are gathered from <a 
 				href={`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`} 
 				target="_blank"
-				style={{ textDecoration: "none", color: "#FF8444",}}
+				style={{ textDecoration: "none", color: "#f85a3e",}}
 			>Your Organisation Statistics. </a>
 			It exists to give you more insight into your workflows, and to understand your utilization of the Shuffle platform. <b>The billing tracker is in Beta, and is always calculated manually before being invoiced.</b>
 		</Typography>
 
-		<div style={{display: "flex", flexDirection: "column", textAlign: "center",}}>
-			<div style={{flexDirection: "row", }}>
+		<div style={{display: "flex", textAlign: "center",}}>
 			{filteredStatistics !== undefined ?
 				<div style={{flex: 1, display: "flex", textAlign: "center",}}>
 					<Tooltip title={
@@ -727,135 +726,40 @@ const AppStats = (defaultprops) => {
 					</Tooltip>
 				</div>
 			: null}
-			</div>
-			
 
 			{clickedFromOrgTab? (
 				<LocalizationProvider dateAdapter={AdapterDayjs} style={{ flex: 1 }}>
-				<div style={{ display: "flex", flexDirection: "row", width: "100%", gap: "10px", justifyContent: 'center', alignItems: 'center', paddingTop: 10 }}>
-				  <div
-					style={{
-					  display: "flex",
-					  flexDirection: "row",
-					  flex: 1,
-					  alignItems: "center",
-					}}
-				  >
-					<Typography
-					  style={{
-						marginLeft: 10,
-						marginRight: 10,
-						fontSize: 16,
-						whiteSpace: "nowrap",
-					  }}
-					  color="textSecondary"
-					>
-					  Search from
-					</Typography>
+				<div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+					<div style={{ flex: 1, maxWidth: "200px", }}>
 					<DateTimePicker
-					  slotProps={{
-						textField: {
-						  sx: {
-							"& .MuiOutlinedInput-root": {
-							  "& fieldset": {
-								borderColor: "#494949 !important",
-								borderWidth: "1px !important",
-							  },
-							  "&:hover fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  "&.Mui-focused fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  height: "35px",
-							  fontSize: 16,
-							  color: "#c8c8c8",
-							},
-						  },
-						},
-					  }}
-					  sx={{
-						"& .MuiInputBase-root": { 
-						  height: "35px",
-						  minHeight: "35px",
-						},
-						"& .MuiInputBase-input": {
-						  height: "35px",
-						  padding: "0 14px",
-						  boxSizing: "border-box",
-						  color: "#c8c8c8",
-						  fontSize: 16,
-						}
-					  }}
-					  ampm={false}
-					  format="YYYY-MM-DD HH:mm:ss"
-					  value={startTime}
-					  onChange={handleStartTimeChange}
-					/>
-				  </div>
-				  <div
-					style={{
-					  display: "flex",
-					  flexDirection: "row",
-					  flex: 1,
-					  alignItems: "center",
-					}}
-				  >
-					<Typography
-					  style={{
-						marginLeft: 10,
-						marginRight: 10,
-						fontSize: 16,
-						whiteSpace: "nowrap",
-					  }}
-					  color="textSecondary"
-					>
-					  Search until
-					</Typography>
-					<DateTimePicker
-					  slotProps={{
-						textField: {
-						  sx: {
-							"& .MuiOutlinedInput-root": {
-							  "& fieldset": {
-								borderColor: "#494949 !important",
-								borderWidth: "1px !important",
-							  },
-							  "&:hover fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  "&.Mui-focused fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  height: "35px",
-							  fontSize: 16,
-							  color: "#c8c8c8",
-							},
-						  },
-						},
-					  }}
-					  sx={{
+						sx={{
 						marginTop: 1,
-						"& .MuiInputBase-root": { 
-						  height: "35px",
-						  minHeight: "35px",
-						},
-						"& .MuiInputBase-input": {
-						  height: "35px",
-						  padding: "0 14px",
-						  boxSizing: "border-box",
-						  color: "#c8c8c8",
-						  fontSize: 16,
-						}
-					  }}
-					  ampm={false}
-					  format="YYYY-MM-DD HH:mm:ss"
-					  value={endTime}
-					  onChange={handleEndTimeChange}
+						marginLeft: 1,
+						}}
+						ampm={false}
+						label="Search from"
+						format="YYYY-MM-DD HH:mm:ss"
+						value={startTime}
+						onChange={handleStartTimeChange}
+						renderInput={(params) => <TextField {...params} />}
 					/>
-				  </div>
+					</div>
+					<div style={{ flex: 1, maxWidth: "200px",}}>
+					<DateTimePicker
+						sx={{
+						marginTop: 1,
+						marginLeft: 1,
+						}}
+						ampm={false}
+						label="Search until"
+						format="YYYY-MM-DD HH:mm:ss"
+						value={endTime}
+						onChange={handleEndTimeChange}
+						renderInput={(params) => <TextField {...params} />}
+					/>
+					</div>
 				</div>
-			  </LocalizationProvider>
+				</LocalizationProvider>
 			):(
 			<LocalizationProvider dateAdapter={AdapterDayjs} style={{flex: 1, }}>
 				<div style={{display: "flex", flexDirection: "column", }}>
@@ -890,6 +794,8 @@ const AppStats = (defaultprops) => {
 				</div>
 			</LocalizationProvider>
 			)}
+
+
 		</div>
 
 		{appRuns === undefined ? 

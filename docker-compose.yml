@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/shuffle/shuffle-frontend:1.4.0
+    image: ghcr.io/shuffle/shuffle-frontend:1.4.2
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -14,7 +14,7 @@ services:
     depends_on:
       - backend
   backend:
-    image: ghcr.io/shuffle/shuffle-backend:1.4.0
+    image: ghcr.io/shuffle/shuffle-backend:1.4.2
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -53,9 +53,9 @@ services:
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_STATS_DISABLED=true
-      # - SHUFFLE_SWARM_CONFIG=run
+      - SHUFFLE_SWARM_CONFIG=run
       - SHUFFLE_LOGS_DISABLED=true
-      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:1.4.0
+      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:1.4.2
     env_file: .env
     restart: unless-stopped
     security_opt:

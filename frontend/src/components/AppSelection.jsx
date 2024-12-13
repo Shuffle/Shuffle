@@ -466,16 +466,14 @@ const AppSelection = props => {
 									fontSize: 16,
 									color: "rgba(158, 158, 158, 1)",
 									fontFamily: theme?.typography?.fontFamily,
-									lineHeight: "24px"
 								}}
 							>
-								{`${window.location.pathname.includes("my_apps") || window.location.search.includes("my_apps") ?  "You have no apps yet, select your starting apps here" : "Your organization has no apps yet, select your starting apps here"} 
-								or discover more apps using the`}
-								 <span 
+								Your organization has no apps yet, select your starting apps here 
+								or discover more apps using the <span 
 								onClick={() => {
-									navigate("/apps?tab=all_apps")
+									navigate("/apps2?tab=all_apps")
 								}}
-								style={{ color: "#FF8444", fontWeight: "medium", fontSize: 16, cursor:"pointer", marginLeft: 6 }}>App Library</span>
+								style={{ color: "#FF8444", fontWeight: "medium", fontSize: 16, cursor:"pointer" }}>App Library</span>
 							</span>
 							</div>
 						)

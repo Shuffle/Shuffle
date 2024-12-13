@@ -690,7 +690,7 @@ const Files = memo((props) => {
 					onClick={() => {
 						upload.click();
 					}}
-					style={{backgroundColor: isSelectedFiles?'#ff8544':null, color:isSelectedFiles?"#212121":null, textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
+					style={{backgroundColor: isSelectedFiles?'#ff8544':null, color:isSelectedFiles?"#212121":null, textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?8:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
 				>
 			     Upload files
 				</Button>
@@ -711,7 +711,7 @@ const Files = memo((props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 16, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
+					style={{ marginLeft: 16, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?8:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
 					onClick={() => getFiles(selectedCategory)}
@@ -788,7 +788,7 @@ const Files = memo((props) => {
 					:
 					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
+							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
 							color="primary"
 							onClick={() => {
 								setRenderTextBox(true);
@@ -838,7 +838,7 @@ const Files = memo((props) => {
 				/>}
 				<div
 					style={{
-					borderRadius: 4,
+					borderRadius: 8,
 					marginTop: 24,
 					border: "1px solid #494949",
 					width: "100%",
@@ -862,7 +862,7 @@ const Files = memo((props) => {
                             primary={header}
                             style={{
                                 display: "table-cell",
-                                padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
+                                padding: "0px 8px 8px 8px",
                                 whiteSpace: "nowrap",
                                 textOverflow: "ellipsis",
                                 borderBottom: "1px solid #494949",
@@ -870,7 +870,7 @@ const Files = memo((props) => {
                             }}
 							primaryTypographyProps={{
 								style: {
-									paddingLeft: 10,
+									paddingLeft: index === 3 ? 80 : 10,
 								}
 							}}
                         />
@@ -956,13 +956,15 @@ const Files = memo((props) => {
 										<ListItemText
 											primaryTypographyProps={{
 												style: {
+												  display: 'table-cell',
 												  maxWidth: "170px",
 												  whiteSpace: 'nowrap',
 												  textOverflow: 'ellipsis',
 												  overflow: 'hidden',
-												  padding: "8px 8px 8px 20px"
-												}
+												  padding: 8
+												},
 											}}
+											
 											primary={file.filename}
 										/>
 										<ListItemText
@@ -1003,7 +1005,6 @@ const Files = memo((props) => {
 																>
 																	<OpenInNewIcon
 																		style={{
-																			width: 24, height: 24,
 																			color:
 																				file.workflow_id !== "global"
 																					? "#FF8444"
@@ -1043,7 +1044,7 @@ const Files = memo((props) => {
 											style={{
 												display: 'table-cell',
 												overflow: "hidden",
-												textAlign:isSelectedFiles?"center":null,
+												textAlign:isSelectedFiles?"left":null,
 												color: file.status === "active" ? "#2BC07E" : "#FD4C62"
 											}}
 										/>
@@ -1073,7 +1074,7 @@ const Files = memo((props) => {
 															}}
 														>
 															<img src="/icons/editIcon.svg" alt="edit icon"
-																style={{color: iseditable ? "white" : "grey", width: 24, height: 24}}
+																style={{color: iseditable ? "white" : "grey",}}
 															/>
 														</IconButton>
 													</span>
@@ -1119,7 +1120,6 @@ const Files = memo((props) => {
 														>
 															<img src="/icons/downloadIcon.svg" alt="download icon"
 																style={{
-																	width: 24, height: 24,
 																	color:
 																		file.status === "active"
 																			? "white"
@@ -1144,7 +1144,7 @@ const Files = memo((props) => {
 																toast(file.id + " copied to clipboard");
 														}}
 													>
-														<img src="/icons/copyIcon.svg" alt="copy icon" style={{ color: "white", width: 24, height: 24 }} />
+														<img src="/icons/copyIcon.svg" alt="copy icon" style={{ color: "white" }} />
 													</IconButton>
 												</Tooltip>
 												<Tooltip
@@ -1155,35 +1155,21 @@ const Files = memo((props) => {
 													<span>
 														<IconButton
 															disabled={file.status !== "active"}
-															style={{ padding: "6px" }}
+															style = {{padding: "6px"}}
 															onClick={() => {
-															deleteFile(file);
+																deleteFile(file)
 															}}
 														>
-															<svg
-															width="24"
-															height="24"
-															viewBox="0 0 24 24"
-															xmlns="http://www.w3.org/2000/svg"
-															style={{
-																stroke: file.status === "active" ? "#fd4c62" : "#c8c8c8",
-															}}
-															>
-															<path
-																d="M5 7.20001H6.6H19.4"
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																fill="none"
+															<img src="/icons/deleteIcon.svg" alt="delete icon"
+																style={{
+																	color:
+																		file.status === "active"
+																			? "white"
+																			: "grey",
+																}}
 															/>
-															<path
-																d="M17.7996 7.2V18.4C17.7996 18.8243 17.631 19.2313 17.331 19.5314C17.0309 19.8314 16.624 20 16.1996 20H8.19961C7.77526 20 7.3683 19.8314 7.06824 19.5314C6.76818 19.2313 6.59961 18.8243 6.59961 18.4V7.2M8.99961 7.2V5.6C8.99961 5.17565 9.16818 4.76869 9.46824 4.46863C9.7683 4.16857 10.1753 4 10.5996 4H13.7996C14.224 4 14.6309 4.16857 14.931 4.46863C15.231 4.76869 15.3996 5.17565 15.3996 5.6V7.2"
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																fill="none"
-															/>
-															</svg>
 														</IconButton>
-														</span>
+													</span>
 												</Tooltip>
 											</span>
 											style={{

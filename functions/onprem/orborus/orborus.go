@@ -608,8 +608,7 @@ func deployServiceWorkers(image string) {
 				Condition: swarm.RestartPolicyConditionOnFailure,
 			},
 			Placement: &swarm.Placement{
-				Constraints: []string{
-				},
+				Constraints: []string{},
 			},
 		},
 	}

@@ -433,7 +433,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
           fontFamily: theme?.typography?.fontFamily
         }}
       >
-        <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "20px" }}>
+        <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "22px" }}>
           About {app?.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </Typography>
         <IconButton
@@ -464,28 +464,31 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                 boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.2)"
               }}
             />
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 8, }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 8 }}>
               <div style={{
                 display: "flex",
                 flexDirection: "row",
-                alignItems: "center",
               }}>
                 <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
                   {newAppname}
                 </Typography>
-                <Link
-                  to={"/apps/" + (app?.id || app?.objectID)}
-                  style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
-                >
-                  <IconButton
-                    style={{
-                      color: "#f85a3e",
-                      fontSize: 16,
-                    }}
-                  >
-                    <OpenInNewIcon />
-                  </IconButton>
-                </Link>
+                {
+                  isCloud && (
+                    <Link
+                      to={"/apps/" + (app?.id || app?.objectID)}
+                      style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
+                    >
+                      <IconButton
+                        style={{
+                          color: "#f85a3e",
+                          fontSize: 20,
+                        }}
+                      >
+                        <OpenInNewIcon />
+                      </IconButton>
+                    </Link>
+                  )
+                }
               </div>
               <Typography
                 variant="body2"
@@ -544,7 +547,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                 if (canEditApp) {
                   const editUrl = "/apps/edit/" + (app?.id || app?.objectID);
                   navigate(editUrl)
-                } else {
+                }else{
                   const forkUrl = "/apps/new?id=" + (app?.id || app?.objectID);
                   navigate(forkUrl)
                 }
@@ -732,7 +735,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
               bgcolor: '#FF8544',
               '&:hover': { bgcolor: '#FF8544' },
               textTransform: 'none',
-              borderRadius: "4px",
+              borderRadius: 1,
               py: 1,
               px: 7,
               fontSize: "14px",

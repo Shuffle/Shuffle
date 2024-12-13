@@ -27,13 +27,13 @@ import (
 	dockerclient "github.com/docker/docker/client"
 
 	// This is for automatic removal of certain code :)
-	/***  ***/
+	/*** STARTREMOVE ***/
 	"math/rand"
 
 	"github.com/docker/docker/api/types/swarm"
 	uuid "github.com/satori/go.uuid"
 
-	/***  ***/
+	/*** ENDREMOVE ***/
 
 	"github.com/gorilla/mux"
 
@@ -321,11 +321,11 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		*/
 	} else {
 
-		/***  ***/
+		/*** STARTREMOVE ***/
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 			log.Printf("[DEBUG][%s] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", workflowExecution.ExecutionId, 0, cleanupEnv)
 		}
-		/***  ***/
+		/*** ENDREMOVE ***/
 	}
 
 	if len(reason) > 0 && len(nodeId) > 0 {
@@ -393,7 +393,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 
 func int32Ptr(i int32) *int32 { return &i }
 
-// **  ***/
+// ** STARTREMOVE ***/
 func deployk8sApp(image string, identifier string, env []string) error {
 	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 {
 		kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
@@ -631,7 +631,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	return nil
 }
 
-//**  ***/
+//** ENDREMOVE ***/
 
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
@@ -772,7 +772,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		}
 	}
 
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 
 		appName := strings.Replace(identifier, fmt.Sprintf("_%s", action.ID), "", -1)
@@ -802,14 +802,14 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				return err
 			}
 		} else {
-			// **  ***/
+			// ** STARTREMOVE ***/
 			exposedPort = 80
 			err = findAppInfoKubernetes(image, appName, env)
 			if err != nil {
 				log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
 				return err
 			}
-			// **  ***/
+			// ** ENDREMOVE ***/
 		}
 
 		/*
@@ -852,7 +852,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 		return nil
 	}
-	/***  ***/
+	/*** ENDREMOVE ***/
 
 	// Max 10% CPU every second
 	//CPUShares: 128,
@@ -2404,7 +2404,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
-		/***  ***/
+		/*** STARTREMOVE ***/
 		if workflowExecution.Status == "WAITING" && (os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm") {
 			log.Printf("[INFO][%s] Workflow execution is waiting while in swarm. Sending info to backend to ensure execution stops.", workflowExecution.ExecutionId)
 
@@ -2416,7 +2416,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				shutdown(*workflowExecution, "", "", false)
 			}
 		}
-		/***  ***/
+		/*** ENDREMOVE ***/
 	} else {
 		if strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already been ran") || strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already finished") {
 			log.Printf("[ERROR][%s] Skipping rerun of action result as it's already been ran: %s", workflowExecution.ExecutionId)
@@ -2501,7 +2501,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
-		/***  ***/
+		/*** STARTREMOVE ***/
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
@@ -2516,7 +2516,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				sendResult(*workflowExecution, shutdownData)
 			}
 		}
-		/***  ***/
+		/*** ENDREMOVE ***/
 	} else {
 		log.Printf("[INFO][%s] Skipping setexec with status %s", workflowExecution.ExecutionId, workflowExecution.Status)
 
@@ -2536,12 +2536,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 func sendSelfRequest(actionResult shuffle.ActionResult) {
 
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 		log.Printf("[INFO][%s] Not sending self request info since source is default (not swarm)", actionResult.ExecutionId)
 		return
 	}
-	/***  ***/
+	/*** ENDREMOVE ***/
 
 	data, err := json.Marshal(actionResult)
 	if err != nil {
@@ -2680,11 +2680,11 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 			}
 		}
 
-		/***  ***/
+		/*** STARTREMOVE ***/
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 			requestsSent += 1
 		}
-		/***  ***/
+		/*** ENDREMOVE ***/
 
 		log.Printf("[DEBUG][%s] Should send full result to %s", workflowExecution.ExecutionId, baseUrl)
 
@@ -2769,7 +2769,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 // GetLocalIP returns the non loopback local IP of the host
 func getLocalIP() string {
 
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if os.Getenv("IS_KUBERNETES") == "true" {
 		return "shuffle-workers"
 	}
@@ -2836,7 +2836,7 @@ func getLocalIP() string {
 			return foundIP
 		}
 	}
-	/***  ***/
+	/*** ENDREMOVE ***/
 
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -2887,7 +2887,7 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 
 	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
 
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		log.Printf("[DEBUG] Starting webserver (1) on port %d with hostname: %s", baseport, hostname)
 
@@ -2907,7 +2907,7 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 
 		return listener
 	}
-	/***  ***/
+	/*** ENDREMOVE ***/
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	// Set the port environment variable
@@ -2958,7 +2958,7 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 	*/
 }
 
-/***  ***/
+/*** STARTREMOVE ***/
 func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int) error {
 	log.Printf("[DEBUG] Deploying service for %s to swarm on port %d", name, deployport)
 	//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
@@ -3128,10 +3128,10 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	return nil
 }
 
-/***  ***/
+/*** ENDREMOVE ***/
 
 // Runs data discovery
-/***  ***/
+/*** STARTREMOVE ***/
 
 func findAppInfoKubernetes(image, name string, env []string) error {
 	clientset, _, err := shuffle.GetKubernetesClient()
@@ -3291,7 +3291,7 @@ func findAppInfo(image, name string) (int, error) {
 	return exposedPort, nil
 }
 
-/***  ***/
+/*** ENDREMOVE ***/
 
 func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) error {
 	parsedRequest := shuffle.OrborusExecutionRequest{
@@ -3691,11 +3691,11 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 
 // Initial loop etc
 func main() {
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		logsDisabled = "true"
 	}
-	/***  ***/
+	/*** ENDREMOVE ***/
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
 	// Recursive import kind of :)
 	_, err := shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch", false, 0)
@@ -3729,7 +3729,7 @@ func main() {
 	swarmConfig := os.Getenv("SHUFFLE_SWARM_CONFIG")
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, swarmConfig)
 
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		// Forcing download just in case on the first iteration.
 		log.Printf("[INFO] Running in swarm mode - forcing download of apps")
@@ -3744,7 +3744,7 @@ func main() {
 		log.Printf("[ERROR] Stopped listener %#v - exiting.", listener)
 		os.Exit(3)
 	}
-	/***  ***/
+	/*** ENDREMOVE ***/
 
 	authorization := ""
 	executionId := ""
@@ -4097,15 +4097,13 @@ func runWebserver(listener net.Listener) {
 	// What would be require to run a workflow otherwise?
 	// Maybe directly /workflow/run
 
-	/***  ***/
+	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
 	}
 	/*** ENDREMOVE ***/
 	// var dockercli *dockerclient.Client
 	// ctx := context.Background()
-	/***  ***/
-
 	scaleReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
 	if len(scaleReplicas) > 0 {
 		tmpInt, err := strconv.Atoi(scaleReplicas)
@@ -4131,13 +4129,9 @@ func runWebserver(listener net.Listener) {
 		log.Printf("[DEBUG] SHUFFLE_APP_EXECUTIONS_PER_MINUTE set to value %s. Trying to overwrite default (%d)", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"), maxExecutionsPerMinute)
 	}
 
-	/*
-	ctx := context.Background()
 	if strings.ToLower(os.Getenv("SHUFFLE_SWARM_CONFIG")) == "run" || strings.ToLower(os.Getenv("SHUFFLE_APP_REPLICAS")) == "" {
 		// go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
 	}
-	*/
-
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
@@ -4183,14 +4177,12 @@ func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutio
 
 		case <-ticker.C:
 			count := window.CountEvents(time.Now())
-
-			appNumber := numberOfApps(ctx, client)
+			j := numberOfApps(ctx, client)
 			workers := numberOfWorkers(ctx, client)
-
 			execPerMin := maxExecutionsPerMinute / workers
 			if count >= execPerMin {
 				log.Printf("[DEBUG] Too many executions per minute (%d). Scaling down to %d", count, execPerMin)
-				scaleApps(ctx, client, uint64(appNumber+1))
+				scaleApps(ctx, client, uint64(j+1))
 			}
 		}
 	}
