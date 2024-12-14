@@ -16,7 +16,7 @@ RUN go get github.com/mackerelio/go-osstat/memory
 RUN go get github.com/satori/go.uuid 
 RUN go get github.com/shuffle/shuffle-shared 
 RUN	go get github.com/shirou/gopsutil 
-RUN go get k8s.io/client-go
+# RUN go get k8s.io/client-go
 RUN go get k8s.io/apimachinery
 
 RUN go get
