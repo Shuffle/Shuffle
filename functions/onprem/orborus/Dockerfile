@@ -2,12 +2,9 @@ FROM golang:1.22 as builder
 
 WORKDIR /app
 
-# Copy go.mod and go.sum first (if you have them)
-# This allows better caching of dependencies
 # COPY go.* ./
 RUN go mod init orborus
 
-# Combine all go get commands into a single layer
 RUN go get \
     github.com/docker/docker/api/types \
     github.com/docker/docker/api/types/container \
@@ -17,7 +14,6 @@ RUN go get \
     github.com/shuffle/shuffle-shared \
     github.com/shirou/gopsutil
 
-# Copy the rest of the code
 COPY orborus.go .
 
 RUN go mod tidy && \
