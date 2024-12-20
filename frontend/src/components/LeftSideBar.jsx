@@ -662,7 +662,8 @@ useEffect(() => {
 };
 
   const getRegionTag = (region_url) => {
-    let regiontag = "UK";
+    //let regiontag = "UK";
+    let regiontag = "EU";
     if (
       region_url !== undefined &&
       region_url !== null &&
@@ -676,7 +677,7 @@ useEffect(() => {
         if (regiontag === "california") {
           regiontag = "US";
         } else if (regiontag === "frankfurt") {
-          regiontag = "EU";
+          regiontag = "EU-2";
         } else if (regiontag === "ca"){
           regiontag = "CA";
         }
