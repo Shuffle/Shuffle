@@ -4859,7 +4859,7 @@ const releaseToConnectLabel = "Release to Connect"
 	// This causes memory referencing to become a nightmare
 	const data = event.target.data()
     if (data.app_name === "Shuffle Workflow") {
-      if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
+      if ((data?.parameters !== undefined) && (data?.parameters?.length > 0)) {
         getWorkflowApps(data.parameters[0].value)
       }
     }
@@ -10657,7 +10657,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 
 						return(
-							<div style={{marginLeft: index !== 0 ? 5 : 0, }}>
+							<div key={index} style={{marginLeft: index !== 0 ? 5 : 0, }}>
 								<ParsedAppPaper small={true} action={trigger.name} app={JSON.parse(JSON.stringify(trigger))} />
 							</div>
 						)
@@ -11200,7 +11200,7 @@ const releaseToConnectLabel = "Release to Connect"
   const minSize = 370 
   var rightsidebarStyle = {
     position: "fixed",
-    top: appBarSize - 35,
+    top: workflow?.public && !isLoggedIn ? 100 : showWorkflowRevisions ? 100 : appBarSize - 35,
     right: 25,
     height:  "90vh",
     maxWidth: 600,
@@ -13218,7 +13218,7 @@ const releaseToConnectLabel = "Release to Connect"
       };
 
   
-    if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
+    if (Object.getOwnPropertyNames(selectedTrigger)?.length > 0) {
       if (workflow.triggers[selectedTriggerIndex] === undefined) {
         return null;
       }
@@ -14378,7 +14378,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   // Special SCHEDULE handler
   var trigger_header_auth = ""
-  if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers !== null && workflow.triggers !== undefined && workflow.triggers.length >= selectedTriggerIndex && workflow.triggers[selectedTriggerIndex] !== undefined ) {
+  if (Object.getOwnPropertyNames(selectedTrigger)?.length > 0 && workflow?.triggers !== null && workflow?.triggers !== undefined && workflow?.triggers?.length >= selectedTriggerIndex && workflow?.triggers[selectedTriggerIndex] !== undefined ) {
       if (selectedTrigger.trigger_type === "SCHEDULE" && workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null) {
 	    console.log("Autofixing schedule")
 
@@ -14447,7 +14447,7 @@ const releaseToConnectLabel = "Release to Connect"
         if (
           workflow.triggers[selectedTriggerIndex].parameters === undefined ||
           workflow.triggers[selectedTriggerIndex].parameters === null ||
-          workflow.triggers[selectedTriggerIndex].parameters.length === 0
+          workflow?.triggers[selectedTriggerIndex]?.parameters?.length === 0
         ) {
           workflow.triggers[selectedTriggerIndex].parameters = [];
           workflow.triggers[selectedTriggerIndex].parameters[0] = {
@@ -14485,7 +14485,7 @@ const releaseToConnectLabel = "Release to Connect"
       }
   }
 
-  const WebhookSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "WEBHOOK" ? null :
+  const WebhookSidebar =!selectedTrigger || Object.getOwnPropertyNames(selectedTrigger)?.length === 0 || !workflow?.triggers || workflow?.triggers[selectedTriggerIndex] === undefined || selectedTrigger?.trigger_type !== "WEBHOOK" ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
 			{selectedTrigger.app_name}: {selectedTrigger.status}
@@ -14752,8 +14752,8 @@ const releaseToConnectLabel = "Release to Connect"
               </div>
               <TextField
                 style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette?.borderRadius,
+                  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                  borderRadius: theme.palette.textFieldStyle.borderRadius,
                 }}
                 id="webhook_uri_field"
                 onClick={() => {
@@ -15217,7 +15217,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  })
   }
 
-  const UserinputSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "USERINPUT" ? null :
+  const UserinputSidebar = !selectedTrigger || Object.getOwnPropertyNames(selectedTrigger)?.length === 0 || !workflow?.triggers || !workflow?.triggers[selectedTriggerIndex] || !selectedTrigger.trigger_type || selectedTrigger.trigger_type !== "USERINPUT"   ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
 			{selectedTrigger.app_name}
@@ -15378,7 +15378,13 @@ const releaseToConnectLabel = "Release to Connect"
                 label={<div style={{ color: "white" }}>SMS</div>}
               />
             </FormGroup>
-			{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow") ? (
+			{workflow?.triggers &&
+        workflow?.triggers[selectedTriggerIndex] &&
+        workflow?.triggers[selectedTriggerIndex].parameters &&
+        workflow?.triggers[selectedTriggerIndex].parameters[2] &&
+        workflow?.triggers[selectedTriggerIndex].parameters[2].value &&
+        workflow?.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow")
+      ? (
 			<div style={{  }}>
               	{workflows === undefined ||
               	  workflows === null ||
@@ -15506,9 +15512,13 @@ const releaseToConnectLabel = "Release to Connect"
 				</div>
             ) : null}
 
-            {workflow.triggers[selectedTriggerIndex].parameters[2] !==
-              undefined &&
-              workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ? (
+            {workflow?.triggers &&
+              workflow?.triggers[selectedTriggerIndex] &&
+              workflow?.triggers[selectedTriggerIndex].parameters &&
+              workflow?.triggers[selectedTriggerIndex].parameters[2] &&
+              workflow?.triggers[selectedTriggerIndex].parameters[2].value &&
+              workflow?.triggers[selectedTriggerIndex].parameters[2].value.includes("email")
+               ? (
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
@@ -15538,11 +15548,15 @@ const releaseToConnectLabel = "Release to Connect"
               />
             ) : null}
 
-            {workflow.triggers[selectedTriggerIndex].parameters[2] !==
-              undefined &&
-              workflow.triggers[
-                selectedTriggerIndex
-              ].parameters[2].value.includes("sms") ? (
+            {workflow?.triggers &&
+              workflow?.triggers[selectedTriggerIndex] &&
+              workflow?.triggers[selectedTriggerIndex].parameters &&
+              workflow?.triggers[selectedTriggerIndex].parameters[2] &&
+              workflow?.triggers[selectedTriggerIndex].parameters[2].value &&
+              (
+                workflow?.triggers[selectedTriggerIndex].parameters[2].value.includes("email") || 
+                workflow?.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")
+              ) ? (
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
@@ -15639,7 +15653,7 @@ const releaseToConnectLabel = "Release to Connect"
      selectedTrigger.environment = defaultEnvironment.Name
      setSelectedTrigger(selectedTrigger)  }
 
-  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
+  const PipelineSidebar = !selectedTrigger || Object.getOwnPropertyNames(selectedTrigger)?.length === 0 || !workflow?.triggers || !workflow?.triggers[selectedTriggerIndex] || !selectedTrigger.trigger_type || selectedTrigger.trigger_type !== "SCHEDULE"    ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
@@ -15901,7 +15915,7 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
           </div>
 
-  const ScheduleSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
+  const ScheduleSidebar = !selectedTrigger || Object.getOwnPropertyNames(selectedTrigger)?.length === 0 || !workflow?.triggers || !workflow?.triggers[selectedTriggerIndex] && (!selectedTrigger.trigger_type || selectedTrigger.trigger_type !== "SCHEDULE")   ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
 			{selectedTrigger.app_name}: {selectedTrigger.status}
@@ -16158,9 +16172,8 @@ const releaseToConnectLabel = "Release to Connect"
     position: "absolute",
 
     top: isMobile ? 30 : 25,
-	left: isMobile ? 20 : leftSideBarOpenByClick ? leftBarSize + 275 : leftBarSize+135,
-
-    transition: "left 0.3s ease",
+  transform: isMobile ? "translateX(20px)" : `translateX(${leftBarSize}px)`,
+    transition: "all 0.3s ease",
 	zoom: 0.9, 
   }
 
@@ -16922,7 +16935,7 @@ const releaseToConnectLabel = "Release to Connect"
 			border: "1px solid rgba(255,255,255,0.1)",
   			position: "absolute",
   			bottom: 100,
-  			left: leftSideBarOpenByClick ? leftBarSize+300 : leftBarSize+115,
+  			left: leftSideBarOpenByClick ? leftBarSize+270 : leftBarSize+115,
 
 			color: "white",
 			padding: 10, 
@@ -17374,8 +17387,8 @@ const releaseToConnectLabel = "Release to Connect"
                 color="secondary"
 				variant="text"
                 style={{
-                  height: workflow.public ? 100 : buttonHeights,
-                  width: workflow.public ? 100 : 64,
+                  height: buttonHeights,
+                  width:  64,
                 }}
                 variant={
                   lastSaved && !workflow.public ? "text" : "contained"
@@ -17619,7 +17632,7 @@ const releaseToConnectLabel = "Release to Connect"
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
       if (selectedTrigger.trigger_type === undefined) {
-        //defaultReturn = <UserinputSidebar />
+        // defaultReturn = <UserinputSidebar />
         return null;
       } else {
 		/*
@@ -17776,7 +17789,7 @@ const releaseToConnectLabel = "Release to Connect"
           <Typography variant="body1" style={{ marginRight: 10, }}>
             Tags
           </Typography>
-          <div style={{ display: "flex" }}>
+          <div style={{ display: "flex", flexWrap: 'wrap', gap: 5, }}>
             {workflow.tags.map((tag, index) => {
               if (index >= 3) {
                 return null;
@@ -17958,9 +17971,8 @@ const releaseToConnectLabel = "Release to Connect"
           </Typography>
           <Button
             color="primary"
-            variant="contained"
             fullWidth
-            style={{ marginTop: 15, }}
+            style={{ marginTop: 15, backgroundColor: "#ff8544", color: "#1a1a1a", fontSize: 16, textTransform: "none" }}
             onClick={() => {
               // Further checks are being done on the backend
               // Even if the user can "edit" a workflow on the frontend,
@@ -17990,7 +18002,7 @@ const releaseToConnectLabel = "Release to Connect"
             variant="outlined"
 		    disabled={workflow.public !== true}
             fullWidth
-            style={{ marginTop: 15, }}
+            style={{ marginTop: 15, textTransform: "none", fontSize: 16}}
             onClick={() => {
               // setEditWorkflowDetails(true)
               // workflow.public = false
@@ -20554,7 +20566,7 @@ const releaseToConnectLabel = "Release to Connect"
   );
 
   const newView = (
-    <div style={{ color: "white", marginLeft:   leftSideBarOpenByClick ? 280 : 100, transition: "margin-left 0.3s ease", }}>
+    <div style={{ color: "white", marginLeft:   leftSideBarOpenByClick ? workflow?.public ? 210 : 250 : workflow?.public ? isLoggedIn ? 60 : 0 : isLoggedIn ? 100 : 0, transition: "margin-left 0.3s ease", overflow: 'hidden' }}>
       <div
         style={{ display: "flex", borderTop: "0px solid rgba(91, 96, 100, 1)" }}
       >
@@ -20590,8 +20602,8 @@ const releaseToConnectLabel = "Release to Connect"
               maxZoom={2.0}
               wheelSensitivity={0.25}
               style={{
-                width: cytoscapeWidth,
-                height: bodyHeight - 5,
+                width: workflow?.public && !isLoggedIn ? cytoscapeWidth + 50 : cytoscapeWidth ,
+                height: workflow?.public && !isLoggedIn ? (bodyHeight - 50) : bodyHeight - 2,
                 backgroundColor: theme.palette.surfaceColor,
               }}
               stylesheet={cystyle}
@@ -20678,7 +20690,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  {/* Most important: Actions. But these are a lot more complex */}
 	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
-			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
+			  {Object.getOwnPropertyNames(selectedTrigger)?.length > 0 ? 
 				selectedTrigger.trigger_type === "SCHEDULE" ? 
 					ScheduleSidebar 
 				: selectedTrigger.trigger_type === "PIPELINE" ? 
@@ -20693,7 +20705,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  : null}
 
     {
-      rightSideBarOpen && selectedTrigger.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger).length > 0   ? 
+      rightSideBarOpen && selectedTrigger?.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger)?.length > 0   ? 
       <div id="rightside_actions" style={rightsidebarStyle}>
         <SubflowSidebar/>
         </div> : null
@@ -22033,6 +22045,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  	<Paper 
 				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: newrevision.edited === selectedVersion.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: showBorder === true ? `1px solid ${green}` : "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
 				}} onClick={(e) => {
+          setRightSideBarOpen(false)
 					if (newrevision.edited === selectedVersion.edited) {
 						console.log("Same revision! No setting.")
 						return

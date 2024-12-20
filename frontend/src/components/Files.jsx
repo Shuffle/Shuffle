@@ -280,7 +280,7 @@ const Files = memo((props) => {
       <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
         Repository URL (supported: github, gitlab, bitbucket)
         <TextField
-          style={{ backgroundColor: theme.palette.inputColor }}
+          style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
           variant="outlined"
           margin="normal"
           defaultValue={downloadUrl}
@@ -301,7 +301,7 @@ const Files = memo((props) => {
 			  Branch (default value is "main"):
 			</span>
             <TextField
-              style={{ backgroundColor: theme.palette.inputColor }}
+              style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
               variant="outlined"
               margin="normal"
               defaultValue={downloadBranch}
@@ -322,7 +322,7 @@ const Files = memo((props) => {
 			  Folder (can use / for subfolders):
 			</span>
 		    <TextField
-                style={{ backgroundColor: theme.palette.inputColor }}
+                style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
                 variant="outlined"
                 margin="normal"
                 defaultValue={downloadFolder}
@@ -344,7 +344,7 @@ const Files = memo((props) => {
         </span>
         <div style={{ display: "flex" }}>
           <TextField
-            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColork }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -360,7 +360,7 @@ const Files = memo((props) => {
             fullWidth
           />
           <TextField
-            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -668,7 +668,7 @@ const Files = memo((props) => {
 				{fileDownloadModal} 
 
 				<div style={{ marginTop: isSelectedFiles ? 2: 20, marginBottom:20 }}>
-					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null }}>Files</h2>
+					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null, color: "#FFFFFF"}}>Files</h2>
 					<span style={{ marginLeft: isSelectedFiles ? null : 25, color:isSelectedFiles?"#9E9E9E":null}}>
 						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
@@ -690,7 +690,7 @@ const Files = memo((props) => {
 					onClick={() => {
 						upload.click();
 					}}
-					style={{backgroundColor: isSelectedFiles?'#ff8544':null, color:isSelectedFiles?"#212121":null, textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?8:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
+					style={{backgroundColor: isSelectedFiles?'#ff8544':null, color:isSelectedFiles?"#212121":null, textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
 				>
 			     Upload files
 				</Button>
@@ -711,7 +711,7 @@ const Files = memo((props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 16, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?8:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
+					style={{ marginLeft: 16, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
 					onClick={() => getFiles(selectedCategory)}
@@ -788,7 +788,7 @@ const Files = memo((props) => {
 					:
 					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
+							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
 							color="primary"
 							onClick={() => {
 								setRenderTextBox(true);
@@ -833,12 +833,12 @@ const Files = memo((props) => {
 					style={{
 						marginTop: 20,
 						marginBottom: 20,
-						backgroundColor: theme.palette.inputColor,
+						backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 					}}
 				/>}
 				<div
 					style={{
-					borderRadius: 8,
+					borderRadius: 4,
 					marginTop: 24,
 					border: "1px solid #494949",
 					width: "100%",
@@ -862,7 +862,7 @@ const Files = memo((props) => {
                             primary={header}
                             style={{
                                 display: "table-cell",
-                                padding: "0px 8px 8px 8px",
+                                padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                                 whiteSpace: "nowrap",
                                 textOverflow: "ellipsis",
                                 borderBottom: "1px solid #494949",
@@ -870,7 +870,7 @@ const Files = memo((props) => {
                             }}
 							primaryTypographyProps={{
 								style: {
-									paddingLeft: index === 3 ? 80 : 10,
+									paddingLeft: 10,
 								}
 							}}
                         />
@@ -956,15 +956,13 @@ const Files = memo((props) => {
 										<ListItemText
 											primaryTypographyProps={{
 												style: {
-												  display: 'table-cell',
 												  maxWidth: "170px",
 												  whiteSpace: 'nowrap',
 												  textOverflow: 'ellipsis',
 												  overflow: 'hidden',
-												  padding: 8
-												},
+												  padding: "8px 8px 8px 20px"
+												}
 											}}
-											
 											primary={file.filename}
 										/>
 										<ListItemText
@@ -1005,6 +1003,7 @@ const Files = memo((props) => {
 																>
 																	<OpenInNewIcon
 																		style={{
+																			width: 24, height: 24,
 																			color:
 																				file.workflow_id !== "global"
 																					? "#FF8444"
@@ -1044,7 +1043,7 @@ const Files = memo((props) => {
 											style={{
 												display: 'table-cell',
 												overflow: "hidden",
-												textAlign:isSelectedFiles?"left":null,
+												textAlign:isSelectedFiles?"center":null,
 												color: file.status === "active" ? "#2BC07E" : "#FD4C62"
 											}}
 										/>
@@ -1074,7 +1073,7 @@ const Files = memo((props) => {
 															}}
 														>
 															<img src="/icons/editIcon.svg" alt="edit icon"
-																style={{color: iseditable ? "white" : "grey",}}
+																style={{color: iseditable ? "white" : "grey", width: 24, height: 24}}
 															/>
 														</IconButton>
 													</span>
@@ -1120,6 +1119,7 @@ const Files = memo((props) => {
 														>
 															<img src="/icons/downloadIcon.svg" alt="download icon"
 																style={{
+																	width: 24, height: 24,
 																	color:
 																		file.status === "active"
 																			? "white"
@@ -1144,7 +1144,7 @@ const Files = memo((props) => {
 																toast(file.id + " copied to clipboard");
 														}}
 													>
-														<img src="/icons/copyIcon.svg" alt="copy icon" style={{ color: "white" }} />
+														<img src="/icons/copyIcon.svg" alt="copy icon" style={{ color: "white", width: 24, height: 24 }} />
 													</IconButton>
 												</Tooltip>
 												<Tooltip
@@ -1155,21 +1155,35 @@ const Files = memo((props) => {
 													<span>
 														<IconButton
 															disabled={file.status !== "active"}
-															style = {{padding: "6px"}}
+															style={{ padding: "6px" }}
 															onClick={() => {
-																deleteFile(file)
+															deleteFile(file);
 															}}
 														>
-															<img src="/icons/deleteIcon.svg" alt="delete icon"
-																style={{
-																	color:
-																		file.status === "active"
-																			? "white"
-																			: "grey",
-																}}
+															<svg
+															width="24"
+															height="24"
+															viewBox="0 0 24 24"
+															xmlns="http://www.w3.org/2000/svg"
+															style={{
+																stroke: file.status === "active" ? "#fd4c62" : "#c8c8c8",
+															}}
+															>
+															<path
+																d="M5 7.20001H6.6H19.4"
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																fill="none"
 															/>
+															<path
+																d="M17.7996 7.2V18.4C17.7996 18.8243 17.631 19.2313 17.331 19.5314C17.0309 19.8314 16.624 20 16.1996 20H8.19961C7.77526 20 7.3683 19.8314 7.06824 19.5314C6.76818 19.2313 6.59961 18.8243 6.59961 18.4V7.2M8.99961 7.2V5.6C8.99961 5.17565 9.16818 4.76869 9.46824 4.46863C9.7683 4.16857 10.1753 4 10.5996 4H13.7996C14.224 4 14.6309 4.16857 14.931 4.46863C15.231 4.76869 15.3996 5.17565 15.3996 5.6V7.2"
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																fill="none"
+															/>
+															</svg>
 														</IconButton>
-													</span>
+														</span>
 												</Tooltip>
 											</span>
 											style={{
@@ -1195,20 +1209,28 @@ const Files = memo((props) => {
 export default memo(Files);
 
 
-const DownloadFileIcon = memo(({ setLoadFileModalOpen, isSelectedFiles, }) => {
-
-	const { leftSideBarOpenByClick } = useContext(Context)
-
-	return(
-		<Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
-			<IconButton
-				color="secondary"
-				style={{position: "absolute", right: 0, top: isSelectedFiles?null:0, left: isSelectedFiles? leftSideBarOpenByClick ? "90%": "85%":null, transition: "left 0.3s ease" }}
-				variant="text"
-				onClick={() => setLoadFileModalOpen(true)}
-			>
-				<CloudDownloadIcon />
-			</IconButton>
+const DownloadFileIcon = memo(({ setLoadFileModalOpen, isSelectedFiles }) => {
+	
+    return (
+        <Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
+            <IconButton
+                color="secondary"
+                onClick={() => setLoadFileModalOpen(true)}
+                sx={{
+                    position: "absolute",
+                    right: 0,
+                    top: isSelectedFiles ? null : 0,
+                    left: isSelectedFiles
+                        ? "93%"
+                        : null,
+                    transition: "left 0.3s ease",
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                }}
+            >
+                <CloudDownloadIcon />
+            </IconButton>
         </Tooltip>
-	)
-})
+    );
+});

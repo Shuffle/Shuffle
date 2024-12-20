@@ -303,7 +303,7 @@ const CacheView = memo((props) => {
                 Key
                 <TextField
                     color="primary"
-                    style={{ backgroundColor: theme.palette.inputColor }}
+                    style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
                     autoFocus
                     InputProps={{
                         style: {
@@ -341,7 +341,7 @@ const CacheView = memo((props) => {
 				</div>
                 <TextField
                     color="primary"
-                    style={{ backgroundColor: theme.palette.inputColor, marginTop: 0, }}
+                    style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, marginTop: 0, }}
                     InputProps={{
                         style: {
                             color: "white",
@@ -412,7 +412,7 @@ const CacheView = memo((props) => {
                 </span>
             </div>
             <Button
-                style={{backgroundColor: isSelectedDataStore? "#ff8544":null, fontSize: 16, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#1a1a1a":null, borderRadius:isSelectedDataStore?8:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
+                style={{backgroundColor: isSelectedDataStore? "#ff8544":null, fontSize: 16, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#1a1a1a":null, borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
                 variant="contained"
                 color="primary"
                 onClick={() =>{ 
@@ -425,7 +425,7 @@ const CacheView = memo((props) => {
                 Add Cache
             </Button>
             <Button
-                style={{ marginLeft: 5, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?8:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
+                style={{ marginLeft: 16, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
                 color="primary"
                 onClick={() => listOrgCache(orgId)}
@@ -440,7 +440,7 @@ const CacheView = memo((props) => {
             />}
             <div
                 style={{
-                borderRadius: 8,
+                borderRadius: 4,
                 marginTop: 24,
                 border: "1px solid #494949",
                 width: "100%",
@@ -450,7 +450,7 @@ const CacheView = memo((props) => {
             >
             <List 
              style={{
-                borderRadius: 8,
+                borderRadius: 4,
                 paddingBottom: 0,
                 tableLayout: "auto", 
                 display: "table", 
@@ -465,7 +465,7 @@ const CacheView = memo((props) => {
                             primary={header}
                             style={{
                                 display: "table-cell",
-                                padding: "0px 8px 8px 8px",
+                                padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
@@ -518,13 +518,13 @@ const CacheView = memo((props) => {
 
               			const validate = validateJson(data.value);
                         return (
-                            <ListItem key={index} style={{display:'table-row', backgroundColor: bgColor, maxHeight: 300, overflow: "auto", borderBottomLeftRadius: listCache?.length - 1 === index ? 8 : 0, borderBottomRightRadius: listCache?.length - 1 === index ? 8 : 0}}>
+                            <ListItem key={index} style={{display:'table-row', backgroundColor: bgColor, maxHeight: 300, overflow: "auto", borderBottomLeftRadius: listCache?.length - 1 === index ? 8 : 0, borderBottomRightRadius: listCache?.length - 1 === index ? 8 : 0,}}>
                                 <ListItemText
                                     style={{
                                         display: "table-cell",
                                         overflow: "hidden",
-                                        padding: 8,
                                         verticalAlign: "middle",
+                                        padding: "8px 8px 8px 15px"
                                     }}
                                     primary={data.key}
                                 />
@@ -533,9 +533,8 @@ const CacheView = memo((props) => {
 										display: "table-cell",
                                         overflowY: "auto",
                                         overflowX: "auto",
-                                        border: "1px solid rgba(255,255,255,0.7)",
-                                        borderRadius: 6,
-                                        backgroundColor: "#151515",
+                                        borderRadius: 4,
+                                        padding: "15px 5px",
                                         maxHeight: 300,
                                         verticalAlign: "middle",
 									}}
@@ -547,6 +546,8 @@ const CacheView = memo((props) => {
                                                     padding: 5,
                                                     maxHeight: 300,
                                                     overflowY: "auto",
+                                                    backgroundColor: "#151515",
+                                                    border: "1px solid rgba(255,255,255,0.7)",
                                                 }}
                                                 collapsed={true}
                                                 enableClipboard={(copy) => {
