@@ -93,7 +93,7 @@ const LicencePopup = (props) => {
     const paperStyle = {
         padding: 20,
         borderRadius: theme.palette?.borderRadius,
-        height: "100%",
+        height: "100%"
     }
 
     billingInfo.subscription = {
@@ -596,7 +596,8 @@ const LicencePopup = (props) => {
                                 </div>
 							: null}
                         </div>
-                        <Button
+                        {isCloud ? (
+                            <Button
 							fullWidth
 							disabled={false}
 							color="primary"
@@ -626,11 +627,11 @@ const LicencePopup = (props) => {
 								:
 								"Add Card Details"
 							}
-						</Button> 
+						</Button> ) : null}
                             <Button
                             variant="outlined"
                             style={{
-                                marginTop: 10,
+                                marginTop: isCloud? 10 : 30,
                                 borderRadius: 4,
                                 width: "100%",
                                 cursor: "pointer",
@@ -725,14 +726,13 @@ const LicencePopup = (props) => {
     }
 
     const handleChange = (event, newValue) => {
-        console.log("Event, value: ", event.target, newValue)
 
         if (shuffleVariant === 1) {
             setSelectedValue(newValue)
             if (newValue === 32) {
                 setCalculatedCost(`Get A Quote`)
             } else {
-                setCalculatedCost(`$${newValue * 75}`)
+                setCalculatedCost(`$${newValue * 120}`)
             }
         } else {
             setSelectedValue(newValue)
@@ -1112,7 +1112,6 @@ const LicencePopup = (props) => {
 								navigate(`/register?view=pricing&message=You need to create a user to continue`)
 							}
 						} else {
-                            console.log("window.drift: ", window.drift)
 							if (window.drift !== undefined) {
 								window.drift.api.startInteraction({ 
 									interactionId: 386403, 

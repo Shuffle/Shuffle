@@ -3980,6 +3980,12 @@ const Workflows2 = (props) => {
         justifyContent: 'center',
 
     }
+    
+    const iconButtonDisabledStyle = {
+        ...iconButtonStyle,
+        cursor: 'not-allowed',
+        opacity: 0.9, // Reduce opacity
+    }
 
     const Hits = ({ hits, isSearchStalled, searchQuery }) => {
 
@@ -4110,7 +4116,7 @@ const Workflows2 = (props) => {
                 variant="outlined"
                 displayEmpty
                 multiple
-                value={currentRefinement || []} // Ensure currentRefinement is always an array
+                value={currentRefinement || []} 
                 onChange={handleChange}
                 style={{
                     width: "25%",
@@ -4120,7 +4126,24 @@ const Workflows2 = (props) => {
                     borderRadius: 4,
                     backgroundColor: "#212121",
                     fontFamily: theme?.typography?.fontFamily,
-                    color: "#FFFFFF", // White text for better readability
+                    color: "#FFFFFF", 
+                }}
+                MenuProps={{
+                    anchorOrigin: {
+                        vertical: 'bottom',
+                        horizontal: 'left',
+                    },
+                    transformOrigin: {
+                        vertical: 'top',
+                        horizontal: 'left',
+                    },
+                    PaperProps: {
+                        style: {
+                            backgroundColor: '#212121',
+                            color: '#FFFFFF',
+                            fontFamily: theme?.typography?.fontFamily,
+                        }
+                    }
                 }}
                 sx={{
                     '& .MuiOutlinedInput-root': {
@@ -4154,7 +4177,7 @@ const Workflows2 = (props) => {
                     )
                 }
             >
-                <MenuItem disabled value="">
+                <MenuItem disabled value="" style={{ fontFamily: theme?.typography?.fontFamily, fontSize: 16 }}>
                     All Usecases
                 </MenuItem>
                 {items.map((usecase, index) => (
@@ -4168,12 +4191,12 @@ const Workflows2 = (props) => {
                                 backgroundColor: '#3A3A3A', // Darker background on hover
                             },
                             fontFamily: theme?.typography?.fontFamily,
-                            fontSize: "16px"
+                            fontSize: 16
                         }}
                     >
                         <Checkbox
                             checked={currentRefinement.includes(usecase.label)}
-                            style={{ marginRight: 8, color: '#FFFFFF' }}
+                            style={{ marginRight: 8, color: '#FFFFFF', fontSize: 16 }}
                         />
                         {usecase.label} ({usecase.count})
                     </MenuItem>
@@ -4183,6 +4206,21 @@ const Workflows2 = (props) => {
     };
     const CustomCategoryDropdown = connectRefinementList(CategoryDropdown)
 
+    const tabStyle = {
+        textTransform: 'none',
+        marginRight: 20,
+        fontFamily: theme?.typography?.fontFamily,
+        fontSize: 16,
+        borderBottom: "5px solid transparent",
+        minHeight: "48px",
+        padding: "12px 16px",
+    }
+
+    const tabActive = {
+        borderBottom: "5px solid #FF8544",
+        borderRadius: "2px",
+        color: "#FF8544"
+    }
 
 
     const WorkflowView = memo(() => {
@@ -4211,13 +4249,36 @@ const Workflows2 = (props) => {
                         <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
                             <Tabs
                                 value={currTab}
-                                onChange={handleTabChange}
-                                TabIndicatorProps={{ style: { height: '3px', borderRadius: 10, backgroundColor: "#FF8544" } }}
-                                style={{ fontFamily: theme?.typography?.fontFamily }}
+                                onChange={(event, newTab) => handleTabChange(event, newTab)}
+                                style={{
+                                    fontFamily: theme?.typography?.fontFamily,
+                                    fontSize: 16,
+                                    marginBottom: "-2px"
+                                }}
+                                TabIndicatorProps={{ style: { display: 'none' } }}
                             >
-                                <Tab label="Organization Workflows" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily }} />
-                                <Tab label="My Workflows" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily }} />
-                                <Tab label="Discover Workflows" style={{ textTransform: 'none', fontFamily: theme?.typography?.fontFamily }} />
+                                <Tab
+                                    label="Organization Apps"
+                                    style={{
+                                        ...tabStyle,
+                                        ...(currTab === 0 ? tabActive : {})
+                                    }}
+                                />
+                                <Tab
+                                    label="My Apps"
+                                    style={{
+                                        ...tabStyle,
+                                        ...(currTab === 1 ? tabActive : {})
+                                    }}
+                                />
+                                <Tab
+                                    label="Discover Apps"
+                                    style={{
+                                        ...tabStyle,
+                                        marginRight: 0,
+                                        ...(currTab === 2 ? tabActive : {})
+                                    }}
+                                />
                             </Tabs>
                         </div>
 
@@ -4305,7 +4366,7 @@ const Workflows2 = (props) => {
 
                                         setSelectedCategory(remainingCategories);
                                         findWorkflow(chips);
-                                    
+
                                     }}
                                 //onAdd={(chip) => {
                                 //	console.log("ADd: ", chip);
@@ -4435,7 +4496,8 @@ const Workflows2 = (props) => {
 
                             <div style={{ width: "50%", minWidth: "50%", maxWidth: "50%", height: 47, display: "flex", gap: 5 }}>
                                 <div style={{
-                                    display: "flex", height: "100%",
+                                    display: "flex",
+                                    height: "100%",
                                     justifyContent: "space-around",
                                     flex: 0.7,
                                     paddingLeft: 1,
@@ -4444,17 +4506,17 @@ const Workflows2 = (props) => {
                                 }}>
                                     <Tooltip title="Explore Workflow Runs" placement="top">
                                         <IconButton
-                                            style={iconButtonStyle}
+                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => navigate("/workflows/debug")}
                                             disabled={currTab === 2}
                                         >
-                                            <QueryStatsIcon style={{ color: "#F1F1F1" }} />
+                                            <QueryStatsIcon style={{ color: currTab === 2 ? "rgba(241, 241, 241, 0.5)" : "#F1F1F1" }} />
                                         </IconButton>
                                     </Tooltip>
 
                                     <Tooltip title={view === "grid" ? "List view" : "Grid view"} placement="top">
                                         <IconButton
-                                            style={iconButtonStyle}
+                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => {
                                                 const newView = view === "grid" ? "list" : "grid";
                                                 localStorage.setItem("workflowView", newView);
@@ -4462,17 +4524,23 @@ const Workflows2 = (props) => {
                                             }}
                                             disabled={currTab === 2}
                                         >
-                                            {view === "grid" ? <ListIcon /> : <GridOnIcon />}
+                                            {view === "grid" ?
+                                                <ListIcon style={{ color: currTab === 2 ? "rgba(255, 255, 255, 0.5)" : "white" }} /> :
+                                                <GridOnIcon style={{ color: currTab === 2 ? "rgba(255, 255, 255, 0.5)" : "white" }} />
+                                            }
                                         </IconButton>
                                     </Tooltip>
 
                                     <Tooltip title="Import workflows" placement="top">
                                         <IconButton
-                                            style={iconButtonStyle}
+                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => upload.click()}
                                             disabled={currTab === 2}
                                         >
-                                            {submitLoading ? <CircularProgress color="secondary" /> : <PublishIcon />}
+                                            {submitLoading ?
+                                                <CircularProgress color="secondary" /> :
+                                                <PublishIcon style={{ color: currTab === 2 ? "rgba(255, 255, 255, 0.5)" : "white" }} />
+                                            }
                                         </IconButton>
                                     </Tooltip>
 
@@ -4486,11 +4554,11 @@ const Workflows2 = (props) => {
 
                                     <Tooltip title={`Download ALL workflows (${workflows.length})`} placement="top">
                                         <IconButton
-                                            style={{ ...iconButtonStyle, cursor: "pointer" }}
+                                            style={(isCloud || currTab === 2) ? iconButtonDisabledStyle : { ...iconButtonStyle, cursor: "pointer" }}
                                             disabled={isCloud || currTab === 2}
                                             onClick={() => exportAllWorkflows(workflows)}
                                         >
-                                            <GetAppIcon />
+                                            <GetAppIcon style={{ color: (isCloud || currTab === 2) ? "rgba(255, 255, 255, 0.5)" : "white" }} />
                                         </IconButton>
                                     </Tooltip>
                                 </div>

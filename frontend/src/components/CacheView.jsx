@@ -303,7 +303,7 @@ const CacheView = memo((props) => {
                 Key
                 <TextField
                     color="primary"
-                    style={{ backgroundColor: theme.palette.inputColor }}
+                    style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
                     autoFocus
                     InputProps={{
                         style: {
@@ -341,7 +341,7 @@ const CacheView = memo((props) => {
 				</div>
                 <TextField
                     color="primary"
-                    style={{ backgroundColor: theme.palette.inputColor, marginTop: 0, }}
+                    style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, marginTop: 0, }}
                     InputProps={{
                         style: {
                             color: "white",

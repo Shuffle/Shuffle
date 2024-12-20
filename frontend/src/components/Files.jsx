@@ -280,7 +280,7 @@ const Files = memo((props) => {
       <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
         Repository URL (supported: github, gitlab, bitbucket)
         <TextField
-          style={{ backgroundColor: theme.palette.inputColor }}
+          style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
           variant="outlined"
           margin="normal"
           defaultValue={downloadUrl}
@@ -301,7 +301,7 @@ const Files = memo((props) => {
 			  Branch (default value is "main"):
 			</span>
             <TextField
-              style={{ backgroundColor: theme.palette.inputColor }}
+              style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
               variant="outlined"
               margin="normal"
               defaultValue={downloadBranch}
@@ -322,7 +322,7 @@ const Files = memo((props) => {
 			  Folder (can use / for subfolders):
 			</span>
 		    <TextField
-                style={{ backgroundColor: theme.palette.inputColor }}
+                style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
                 variant="outlined"
                 margin="normal"
                 defaultValue={downloadFolder}
@@ -344,7 +344,7 @@ const Files = memo((props) => {
         </span>
         <div style={{ display: "flex" }}>
           <TextField
-            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColork }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -360,7 +360,7 @@ const Files = memo((props) => {
             fullWidth
           />
           <TextField
-            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -668,7 +668,7 @@ const Files = memo((props) => {
 				{fileDownloadModal} 
 
 				<div style={{ marginTop: isSelectedFiles ? 2: 20, marginBottom:20 }}>
-					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null }}>Files</h2>
+					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null, color: "#FFFFFF"}}>Files</h2>
 					<span style={{ marginLeft: isSelectedFiles ? null : 25, color:isSelectedFiles?"#9E9E9E":null}}>
 						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
@@ -833,7 +833,7 @@ const Files = memo((props) => {
 					style={{
 						marginTop: 20,
 						marginBottom: 20,
-						backgroundColor: theme.palette.inputColor,
+						backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 					}}
 				/>}
 				<div
@@ -1209,20 +1209,28 @@ const Files = memo((props) => {
 export default memo(Files);
 
 
-const DownloadFileIcon = memo(({ setLoadFileModalOpen, isSelectedFiles, }) => {
-
-	const { leftSideBarOpenByClick } = useContext(Context)
-
-	return(
-		<Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
-			<IconButton
-				color="secondary"
-				style={{position: "absolute", right: 0, top: isSelectedFiles?null:0, left: isSelectedFiles? leftSideBarOpenByClick ? "90%": "85%":null, transition: "left 0.3s ease" }}
-				variant="text"
-				onClick={() => setLoadFileModalOpen(true)}
-			>
-				<CloudDownloadIcon />
-			</IconButton>
+const DownloadFileIcon = memo(({ setLoadFileModalOpen, isSelectedFiles }) => {
+	
+    return (
+        <Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
+            <IconButton
+                color="secondary"
+                onClick={() => setLoadFileModalOpen(true)}
+                sx={{
+                    position: "absolute",
+                    right: 0,
+                    top: isSelectedFiles ? null : 0,
+                    left: isSelectedFiles
+                        ? "93%"
+                        : null,
+                    transition: "left 0.3s ease",
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                }}
+            >
+                <CloudDownloadIcon />
+            </IconButton>
         </Tooltip>
-	)
-})
+    );
+});

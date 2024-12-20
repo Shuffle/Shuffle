@@ -141,6 +141,7 @@ const Header = (props) => {
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
   const [showTopbar, setShowTopbar] = useState(false) // Set to true to show top bar
+  const [selectedOrganization, setSelectedOrganization] = useState({});
   const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_51PXYYMEJjT17t98N20qEqItyt1fLQjrnn41lPeG2PjnSlZHTDNKHuisAbW00s4KAn86nGuqB9uSVU4ds8MutbnMU00DPXpZ8ZD" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
   let navigate = useNavigate();
   const classes = useStyles();
@@ -222,9 +223,44 @@ const Header = (props) => {
       window.location.host === "shuffler.io" ||
       window.location.host === "localhost:5002";
 
+
   const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
     ? window.location.pathname
     : "";
+
+
+    const handleGetOrg = (orgId) => {
+            fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+                .then((response) => {
+                    if (response.status === 401) {
+                    }
+    
+                    return response.json();
+                })
+                .then((responseJson) => {
+                    if (responseJson["success"] === false) {
+                        console.log("Error getting org: ", responseJson);
+                    } else {
+                        setSelectedOrganization(responseJson);
+                    }
+                })
+                .catch((error) => {
+                    console.log("Error getting org: ", error);
+                });
+    };
+
+
+    useEffect(() => {
+        if (isLoggedIn && userdata?.active_org?.id?.length > 0) {
+                handleGetOrg(userdata.active_org.id);
+        }
+    }, [isLoggedIn]);
 
   // DEBUG HERE
   const handleClickLogout = () => {
@@ -441,7 +477,7 @@ const Header = (props) => {
 			}) 
 		  </MenuItem>
 		</Link>
-        <Link to="/usecases2" style={hrefStyle}>
+        <Link to="/usecases" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -537,9 +573,9 @@ const Header = (props) => {
           isLoaded={isLoaded}
           isLoggedIn={isLoggedIn}
           globalUrl={globalUrl}
-
+          selectedOrganization={selectedOrganization}
           billingInfo={billingInfo}
-
+          isCloud={isCloud}
           userdata={userdata}
           stripeKey={stripeKey}
           setModalOpen={setModalOpen}
@@ -590,7 +626,7 @@ const Header = (props) => {
       </List>
       <List className={classes.menuList} component="nav">
         <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
-          <Link to="/usecases2" style={hrefStyle}>
+          <Link to="/usecases" style={hrefStyle}>
             <Button
               variant="text"
               color="secondary"

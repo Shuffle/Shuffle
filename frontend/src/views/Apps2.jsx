@@ -22,13 +22,13 @@ import {
 import { Context } from "../context/ContextApi.jsx";
 
 import {
-	Add as AddIcon,
-	Edit as EditIcon,
-	Search as SearchIcon,
-	Clear as ClearIcon,
-	Close as CloseIcon,
-	Cached as CachedIcon,
-	CloudDownload as CloudDownloadIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  Close as CloseIcon,
+  Cached as CachedIcon,
+  CloudDownload as CloudDownloadIcon,
 } from "@mui/icons-material";
 
 import InputAdornment from '@mui/material/InputAdornment';
@@ -1194,9 +1194,9 @@ const Apps2 = (props) => {
         for (var key in responseJson) {
           const app = responseJson[key];
 
-		  if (app.categories !== undefined && app.categories !== null && app?.categories.includes("Eradication")) {
-			  app.categories = ["EDR"]
-		  }
+          if (app.categories !== undefined && app.categories !== null && app?.categories.includes("Eradication")) {
+            app.categories = ["EDR"]
+          }
 
           if (app.is_valid && !(!app.activated && app.generated)) {
             privateapps.push(app);
@@ -1724,6 +1724,22 @@ const Apps2 = (props) => {
     setOpenModal(false)
   }
 
+  const tabStyle = {
+    textTransform: 'none',
+    marginRight: 20,
+    fontFamily: theme?.typography?.fontFamily,
+    fontSize: 16,
+    borderBottom: "5px solid transparent",
+    minHeight: "48px",
+    padding: "12px 16px",
+  }
+
+  const tabActive = {
+    borderBottom: "5px solid #FF8544",
+    borderRadius: "2px",
+    color: "#FF8544"
+  }
+
   return (
     <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
@@ -1837,12 +1853,35 @@ const Apps2 = (props) => {
             <Tabs
               value={currTab}
               onChange={(event, newTab) => handleTabChange(event, newTab)}
-              TabIndicatorProps={{ style: { height: '3px', borderRadius: 10, backgroundColor: "#FF8544" } }}
-              style={{ fontFamily: theme?.typography?.fontFamily, fontSize: 16 }}
+              style={{ 
+                fontFamily: theme?.typography?.fontFamily, 
+                fontSize: 16,
+                marginBottom: "-2px"
+              }}
+              TabIndicatorProps={{ style: { display: 'none' } }} 
             >
-              <Tab label="Organization Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily, fontSize: 16 }} />
-              <Tab label="My Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily, fontSize: 16 }} />
-              <Tab label="Discover Apps" style={{ textTransform: 'none', fontFamily: theme?.typography?.fontFamily, fontSize: 16 }} />
+              <Tab 
+                label="Organization Apps" 
+                style={{ 
+                  ...tabStyle,
+                  ...(currTab === 0 ? tabActive : {})
+                }} 
+              />
+              <Tab 
+                label="My Apps" 
+                style={{ 
+                  ...tabStyle,
+                  ...(currTab === 1 ? tabActive : {})
+                }} 
+              />
+              <Tab 
+                label="Discover Apps" 
+                style={{ 
+                  ...tabStyle,
+                  marginRight: 0,
+                  ...(currTab === 2 ? tabActive : {})
+                }} 
+              />
             </Tabs>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, height: 45, paddingRight: 25 }}>
