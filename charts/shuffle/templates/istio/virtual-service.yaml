@@ -1,0 +1,30 @@
+{{- if .Values.istio.enabled }}
+apiVersion: "{{ .Values.istio.apiVersion }}"
+kind: VirtualService
+metadata:
+  name: {{ template "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.istio.gateway.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.istio.virtualService.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  hosts: {{ .Values.istio.hosts }}
+  gateways:
+    - {{ include "common.names.fullname" . }}
+  http:
+    - match:
+        - uri:
+            prefix: /api
+      route:
+        - destination:
+            host: {{ include "shuffle.backend.name" . }}
+            port:
+              number: 5001
+    - route:
+        - destination:
+            host: {{ include "shuffle.frontend.name" . }}
+            port:
+              number: 8080
+    {{- end }}

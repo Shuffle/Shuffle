@@ -1,0 +1,72 @@
+{{- if .Values.orborus.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+metadata:
+  name: {{ template "shuffle.orborus.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.orborus.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.orborus.podLabels .Values.commonLabels ) "context" . ) }}
+  podSelector:
+    matchLabels: {{- include "shuffle.orborus.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    {{- if .Values.orborus.networkPolicy.allowExternalEgress }}
+    - {}
+    {{- else }}
+    # Allow DNS resolution with an in-cluster DNS server
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    # Allow access to backend
+    - ports:
+        - port: 5001
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.backend.matchLabels" . | nindent 14 }}
+    # Allow access to workers
+    - ports:
+        - port: 33333
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+    {{- if .Values.orborus.networkPolicy.extraEgress }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- end }}
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+      {{- if not .Values.orborus.networkPolicy.allowExternal }}
+      from:
+        # Allow traffic from workers
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+      {{- end }}
+    {{- if .Values.orborus.networkPolicy.extraIngress }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- end }}

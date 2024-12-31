@@ -1,0 +1,155 @@
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ template "shuffle.orborus.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.orborus.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.orborus.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.orborus.deploymentAnnotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.orborus.autoscaling.hpa.enabled }}
+  replicas: {{ .Values.orborus.replicaCount }}
+  {{- end }}
+  {{- if .Values.orborus.updateStrategy }}
+  strategy: {{- toYaml .Values.orborus.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.orborus.podLabels .Values.commonLabels) "context" .) }}
+  selector:
+    matchLabels: {{- include "shuffle.orborus.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  template:
+    metadata:
+      {{- if .Values.orborus.podAnnotations }}
+      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "shuffle.orborus.labels" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+    spec:
+      {{- include "shuffle.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ template "shuffle.orborus.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.orborus.automountServiceAccountToken }}
+      {{- if .Values.orborus.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.orborus.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.orborus.podAffinityPreset "component" "orborus" "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.orborus.podAntiAffinityPreset "component" "orborus" "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.orborus.nodeAffinityPreset.type "key" .Values.orborus.nodeAffinityPreset.key "values" .Values.orborus.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.orborus.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.orborus.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.orborus.priorityClassName }}
+      priorityClassName: {{ .Values.orborus.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.orborus.schedulerName }}
+      schedulerName: {{ .Values.orborus.schedulerName | quote }}
+      {{- end }}
+      {{- if .Values.orborus.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.orborus.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.orborus.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if .Values.orborus.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.orborus.terminationGracePeriodSeconds }}
+      {{- end }}
+      initContainers:
+        {{- if .Values.orborus.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.orborus.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: orborus
+          image: {{ template "shuffle.orborus.image" . }}
+          imagePullPolicy: {{ .Values.orborus.image.pullPolicy }}
+          {{- if .Values.orborus.containerSecurityContext.enabled }}
+          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.orborus.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.orborus.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.orborus.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: RUNNING_MODE
+              value: kubernetes
+            - name: IS_KUBERNETES
+              value: "true"
+            {{- if .Values.orborus.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "shuffle.orborus.name" . }}-env
+            {{- if .Values.orborus.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if .Values.orborus.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- if .Values.orborus.resources }}
+          resources: {{- toYaml .Values.orborus.resources | nindent 12 }}
+          {{- else if ne .Values.orborus.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" .Values.orborus.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          {{- if not .Values.diagnosticMode.enabled }}
+          {{- if .Values.orborus.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.orborus.livenessProbe.enabled }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.livenessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /
+              port: 8080
+          {{- end }}
+          {{- if .Values.orborus.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.orborus.readinessProbe.enabled }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.readinessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /
+              port: 8080
+          {{- end }}
+          {{- if .Values.orborus.customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.orborus.startupProbe.enabled }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.startupProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /
+              port: 8080
+          {{- end }}
+          {{- end }}
+          {{- if .Values.orborus.lifecycleHooks }}
+          lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.lifecycleHooks "context" $) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+          {{- if .Values.orborus.extraVolumeMounts }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
+        {{- if .Values.orborus.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        {{- if .Values.orborus.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
