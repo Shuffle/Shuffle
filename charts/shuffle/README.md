@@ -17,45 +17,52 @@ SPDX-License-Identifier: APACHE-2.0
 ## Usage
 
 ```sh
-# Lint chart
-helm lint .
-
-# Package chart
-helm package .
-
 # Install (the shuffle namespace is hardcoded into the shuffle source code)
-helm install shuffle oci://TODO -n shuffle
+helm install shuffle oci://TODO --namespace shuffle --create-namespace
 ```
 
 ## Secret Parameters
 
 The helm chart was designed to not contain any secret data and does not allow configuring secret data using helm values.
-Instead, secret values must be passed to services using `extraEnvVarsSecret`. The secrets need to be manually created.
+Instead, secret values must be passed to services using `extraEnvVarsSecret` or `extraEnvVars`.
 
-### Creating secrets using vault-secrets-operator
-
-If you are using [vault-secret-operator by Rico Berger](https://github.com/ricoberger/vault-secrets-operator),
-then you can create VaultSecret resources via Helm.
-Note that the resulting (Vault)Secret is prefixed with the release name of the chart.
-
-```yaml
-vault:
-  secrets:
-    - name: backend-env
-      type: Opaque
-      path: shuffle/backend/env
-```
+The secrets need to be manually created. It is possible to run this helm chart without specifying any secrets.
+You will be prompted to create an admin user when visiting the shuffle dashboard for the first time.
+Note that information will not be encrypted without specifying the `SHUFFLE_ENCRYPTION_MODIFIER` value.
 
 ### Mounting env variables into a service
 
-After creating a secret which holds the environment variables (either manually or via a VaultSecret), you can then
-use that secret to mount environment variables into a service via the `extraEnvVarsSecret` value.
-
-You can use helm templates for generating the secret name as shown in the example below.
+After creating secrets which hold sensitive information, you can mount them as environment variables into a
+service via the `extraEnvVarsSecret` or `extraEnvVars` values.
 
 ```yaml
 backend:
-  extraEnvVarsSecret: "{{ include \"common.names.fullname\" . }}-backend-env"
+  # Use a single secret, which holds environment variables.
+  # Remember that the secret keys must exactly match the environment variable names.
+  extraEnvVarsSecret: shuffle-backend-env
+
+  # Or mount each value explicitly
+  extraEnvVars:
+    - name: SHUFFLE_DEFAULT_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: "shuffle-initial-user"
+          key: username
+    - name: SHUFFLE_DEFAULT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: "shuffle-initial-user"
+          key: password
+    - name: SHUFFLE_DEFAULT_APIKEY
+      valueFrom:
+        secretKeyRef:
+          name: "shuffle-initial-user"
+          key: apikey
+    - name: SHUFFLE_ENCRYPTION_MODIFIER
+      valueFrom:
+        secretKeyRef:
+          name: "shuffle-encryption"
+          key: modifier
 ```
 
 ### Backend
@@ -567,4 +574,3 @@ SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-
