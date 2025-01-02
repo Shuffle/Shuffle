@@ -178,6 +178,22 @@
                     "description": "Number of backend replicas to deploy",
                     "default": 1
                 },
+                "containerPorts": {
+                    "type": "object",
+                    "properties": {
+                        "http": {
+                            "type": "number",
+                            "description": "backend HTTP container port",
+                            "default": 5001
+                        }
+                    }
+                },
+                "extraContainerPorts": {
+                    "type": "array",
+                    "description": "Optionally specify extra list of additional ports for backend containers",
+                    "default": [],
+                    "items": {}
+                },
                 "livenessProbe": {
                     "type": "object",
                     "properties": {
@@ -840,6 +856,27 @@
                     "description": "Number of frontend replicas to deploy",
                     "default": 1
                 },
+                "containerPorts": {
+                    "type": "object",
+                    "properties": {
+                        "http": {
+                            "type": "number",
+                            "description": "frontend HTTP container port",
+                            "default": 80
+                        },
+                        "https": {
+                            "type": "number",
+                            "description": "frontend HTTPS container port",
+                            "default": 443
+                        }
+                    }
+                },
+                "extraContainerPorts": {
+                    "type": "array",
+                    "description": "Optionally specify extra list of additional ports for frontend containers",
+                    "default": [],
+                    "items": {}
+                },
                 "livenessProbe": {
                     "type": "object",
                     "properties": {
@@ -976,7 +1013,7 @@
                         "enabled": {
                             "type": "boolean",
                             "description": "Enable frontend pods' Security Context",
-                            "default": true
+                            "default": false
                         },
                         "fsGroupChangePolicy": {
                             "type": "string",
@@ -1008,7 +1045,7 @@
                         "enabled": {
                             "type": "boolean",
                             "description": "Enabled frontend container' Security Context",
-                            "default": true
+                            "default": false
                         },
                         "runAsUser": {
                             "type": "number",
@@ -1436,6 +1473,22 @@
                     "type": "number",
                     "description": "Number of orborus replicas to deploy",
                     "default": 1
+                },
+                "containerPorts": {
+                    "type": "object",
+                    "properties": {
+                        "http": {
+                            "type": "number",
+                            "description": "orborus HTTP container port",
+                            "default": 8080
+                        }
+                    }
+                },
+                "extraContainerPorts": {
+                    "type": "array",
+                    "description": "Optionally specify extra list of additional ports for orborus containers",
+                    "default": [],
+                    "items": {}
                 },
                 "livenessProbe": {
                     "type": "object",

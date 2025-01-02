@@ -36,7 +36,10 @@ spec:
   ingress:
     {{ if .Values.frontend.networkPolicy.allowExternal }}
     - ports:
-        - port: 8080
+        - port: {{ .Values.frontend.containerPorts.http }}
+        {{- if .Values.frontend.containerPorts.https }}
+        - port: {{ .Values.frontend.containerPorts.https }}
+        {{- end }}
     {{- end }}
     {{- if .Values.frontend.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.frontend.networkPolicy.extraIngress "context" $ ) | nindent 4 }}

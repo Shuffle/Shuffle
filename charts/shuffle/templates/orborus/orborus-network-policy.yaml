@@ -31,7 +31,7 @@ spec:
               kubernetes.io/metadata.name: kube-system
     # Allow access to backend
     - ports:
-        - port: 5001
+        - port: {{ .Values.backend.containerPorts.http }}
           protocol: TCP
       to:
         - namespaceSelector:
@@ -55,7 +55,7 @@ spec:
     {{- end }}
   ingress:
     - ports:
-        - port: 8080
+        - port: {{ .Values.orborus.containerPorts.http }}
           protocol: TCP
       {{- if not .Values.orborus.networkPolicy.allowExternal }}
       from:

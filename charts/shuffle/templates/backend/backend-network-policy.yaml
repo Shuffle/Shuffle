@@ -35,7 +35,7 @@ spec:
     {{- end }}
   ingress:
     - ports:
-        - port: 5001
+        - port: {{ .Values.backend.containerPorts.http }}
           protocol: TCP
       {{- if not .Values.backend.networkPolicy.allowExternal }}
       from:

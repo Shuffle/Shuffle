@@ -21,10 +21,10 @@ spec:
         - destination:
             host: {{ include "shuffle.backend.name" . }}
             port:
-              number: 5001
+              number: {{ .Values.backend.containerPorts.http }}
     - route:
         - destination:
             host: {{ include "shuffle.frontend.name" . }}
             port:
-              number: 8080
+              number: {{ .Values.frontend.containerPorts.http }}
     {{- end }}

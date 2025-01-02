@@ -11,7 +11,7 @@ spec:
   type: ClusterIP
   ports:
     - name: http
-      port: 5001
+      port: {{ .Values.backend.containerPorts.http }}
       targetPort: http
       protocol: TCP
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.backend.podLabels .Values.commonLabels) "context" .) }}

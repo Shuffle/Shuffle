@@ -122,6 +122,17 @@ backend:
   ## @param backend.replicaCount Number of backend replicas to deploy
   ##
   replicaCount: 1
+  ## @param backend.containerPorts.http backend HTTP container port
+  ##
+  containerPorts:
+    http: 5001
+  ## @param backend.extraContainerPorts Optionally specify extra list of additional ports for backend containers
+  ## e.g:
+  ## extraContainerPorts:
+  ##   - name: myservice
+  ##     containerPort: 9090
+  ##
+  extraContainerPorts: []
   ## Configure extra options for backend containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param backend.livenessProbe.enabled Enable livenessProbe on backend containers
@@ -577,6 +588,19 @@ frontend:
   ## @param frontend.replicaCount Number of frontend replicas to deploy
   ##
   replicaCount: 1
+  ## @param frontend.containerPorts.http frontend HTTP container port
+  ## @param frontend.containerPorts.https frontend HTTPS container port
+  ##
+  containerPorts:
+    http: 80
+    https: 443
+  ## @param frontend.extraContainerPorts Optionally specify extra list of additional ports for frontend containers
+  ## e.g:
+  ## extraContainerPorts:
+  ##   - name: myservice
+  ##     containerPort: 9090
+  ##
+  extraContainerPorts: []
   ## Configure extra options for frontend containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param frontend.livenessProbe.enabled Enable livenessProbe on frontend containers
@@ -966,6 +990,17 @@ orborus:
   ## @param orborus.replicaCount Number of orborus replicas to deploy
   ##
   replicaCount: 1
+  ## @param orborus.containerPorts.http orborus HTTP container port
+  ##
+  containerPorts:
+    http: 8080
+  ## @param orborus.extraContainerPorts Optionally specify extra list of additional ports for orborus containers
+  ## e.g:
+  ## extraContainerPorts:
+  ##   - name: myservice
+  ##     containerPort: 9090
+  ##
+  extraContainerPorts: []
   ## Configure extra options for orborus containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param orborus.livenessProbe.enabled Enable livenessProbe on orborus containers

@@ -28,10 +28,10 @@ spec:
       to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: kube-system            
+              kubernetes.io/metadata.name: kube-system
     # Allow access to orborus
     - ports:
-        - port: 8080
+        - port: {{ .Values.orborus.containerPorts.http }}
           protocol: TCP
       to:
         - namespaceSelector:

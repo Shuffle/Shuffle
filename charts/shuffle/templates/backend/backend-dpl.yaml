@@ -144,7 +144,10 @@ spec:
           {{- end }}
           ports:
             - name: http
-              containerPort: 5001
+              containerPort: {{ .Values.backend.containerPorts.http }}
+            {{- if .Values.backend.extraContainerPorts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraContainerPorts "context" $) | nindent 12 }}
+            {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.backend.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.backend.customLivenessProbe "context" $) | nindent 12 }}
@@ -152,7 +155,7 @@ spec:
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.backend.livenessProbe "enabled") "context" $) | nindent 12 }}
             httpGet:
               path: /api/v1/health
-              port: 5001
+              port: {{ .Values.backend.containerPorts.http }}
           {{- end }}
           {{- if .Values.backend.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.backend.customReadinessProbe "context" $) | nindent 12 }}
@@ -160,7 +163,7 @@ spec:
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.backend.readinessProbe "enabled") "context" $) | nindent 12 }}
             httpGet:
               path: /api/v1/health
-              port: 5001
+              port: {{ .Values.backend.containerPorts.http }}
           {{- end }}
           {{- if .Values.backend.customStartupProbe }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.backend.customStartupProbe "context" $) | nindent 12 }}
@@ -168,7 +171,7 @@ spec:
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.backend.startupProbe "enabled") "context" $) | nindent 12 }}
             httpGet:
               path: /api/v1/health
-              port: 5001
+              port: {{ .Values.backend.containerPorts.http }}
           {{- end }}
           {{- end }}
           {{- if .Values.backend.lifecycleHooks }}

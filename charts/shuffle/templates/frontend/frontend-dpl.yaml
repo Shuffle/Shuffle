@@ -103,7 +103,14 @@ spec:
           {{- end }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.frontend.containerPorts.http }}
+            {{- if .Values.frontend.containerPorts.https }}
+            - name: https
+              containerPort: {{ .Values.frontend.containerPorts.https }}
+            {{- end }}
+            {{- if .Values.frontend.extraContainerPorts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.frontend.extraContainerPorts "context" $) | nindent 12 }}
+            {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.frontend.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.frontend.customLivenessProbe "context" $) | nindent 12 }}
@@ -111,7 +118,7 @@ spec:
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.frontend.livenessProbe "enabled") "context" $) | nindent 12 }}
             httpGet:
               path: /
-              port: 8080
+              port: {{ .Values.frontend.containerPorts.http }}
           {{- end }}
           {{- if .Values.frontend.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.frontend.customReadinessProbe "context" $) | nindent 12 }}
@@ -119,7 +126,7 @@ spec:
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.frontend.readinessProbe "enabled") "context" $) | nindent 12 }}
             httpGet:
               path: /
-              port: 8080
+              port: {{ .Values.frontend.containerPorts.http }}
           {{- end }}
           {{- if .Values.frontend.customStartupProbe }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.frontend.customStartupProbe "context" $) | nindent 12 }}
@@ -127,7 +134,7 @@ spec:
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.frontend.startupProbe "enabled") "context" $) | nindent 12 }}
             httpGet:
               path: /
-              port: 8080
+              port: {{ .Values.frontend.containerPorts.http }}
           {{- end }}
           {{- end }}
           {{- if .Values.frontend.lifecycleHooks }}
