@@ -20,6 +20,8 @@ Access the pod you want to debug by executing
 
 {{- end }}
 
-TODO
+To access shuffle using port-forwarding:
 
-{{- include "common.warnings.rollingTag" .Values.backend.image }}
+1. Run `kubectl port-forward -n shuffle svc/shuffle-frontend 8080:http`
+2. Visit http://localhost:8080 with your browser
+
