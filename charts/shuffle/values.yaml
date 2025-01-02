@@ -656,7 +656,7 @@ frontend:
   ## @param frontend.podSecurityContext.fsGroup Set fsGroup in frontend pods' Security Context
   ##
   podSecurityContext:
-    enabled: true
+    enabled: false
     fsGroupChangePolicy: Always
     sysctls: []
     supplementalGroups: []
@@ -675,7 +675,7 @@ frontend:
   ## @param frontend.containerSecurityContext.seccompProfile.type Set seccomp profile in frontend container
   ##
   containerSecurityContext:
-    enabled: true
+    enabled: false
     seLinuxOptions: {}
     runAsUser: 101
     runAsGroup: 101
