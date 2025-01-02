@@ -17,8 +17,8 @@ SPDX-License-Identifier: APACHE-2.0
 ## Usage
 
 ```sh
-# Install (the shuffle namespace is hardcoded into the shuffle source code)
-helm install shuffle oci://TODO --namespace shuffle --create-namespace
+# Install shuffle via helm (the shuffle namespace is hardcoded into the shuffle source code)
+helm install shuffle oci://ghcr.io/shuffle/shuffle/charts/shuffle --namespace shuffle --create-namespace
 ```
 
 ## Secret Parameters
@@ -581,4 +581,3 @@ SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-
