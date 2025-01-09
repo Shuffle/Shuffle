@@ -133,14 +133,18 @@ const DetectionExplorer = (props)  => {
 
   const handleConnectClick = () => {
 	if (detectionWorkflowId !== "") { 
+		console.log("Already have a workflow ID for this detection")
+		//toast.info(`Already have a detection workflow for ${detectionInfo?.category}`)
 		// FIXME: Show the Usecase UI for how to fix the workflow(s)
 		// Instead loading full workflow and showing it directly? Hmm
 		//toast.warn("Please reload the UI to load the detection status")
-		return
+		//return
 	}
 
     if (isDetectionActive) {
-		return
+		console.log("Already connected")
+		//toast.info(`Connected to ${detectionInfo?.category}`)
+		//return
 	}
 
 	if (detectionInfo.category === undefined || detectionInfo.category === null) {
@@ -276,7 +280,7 @@ const DetectionExplorer = (props)  => {
           }}
         >
           <Typography variant="h6" component="div">
-	  		{detectionInfo?.title} {filteredRules === undefined || filteredRules === null ? null : `(${filteredRules?.length} rules)`}
+	  		{detectionInfo?.title} {filteredRules === undefined || filteredRules === null ? null : `(${filteredRules?.length} rule${filteredRules?.length > 1 ? "s" : ""})`}
           </Typography>
 
 	  	  <div style={{display: "flex", }}>

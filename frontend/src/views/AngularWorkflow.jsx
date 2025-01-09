@@ -10021,7 +10021,14 @@ const releaseToConnectLabel = "Release to Connect"
 	  const small = props.small
 	  const actionString = props.action
       const [hover, setHover] = React.useState(false);
-	
+    React.useEffect(() => {
+      if(app.name === "Shuffle Tools"){
+        if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
+          loadAppConfig(app.id, false) 
+        }
+      }
+    }, [])
+    
 	  if (app === undefined || app === null) {
 		  return (
 			<img
@@ -10119,6 +10126,8 @@ const releaseToConnectLabel = "Release to Connect"
           }}
           key={app.id}
 		  dragging={false}
+      position={{x: 0, y: 0}}
+      defaultPosition={{x: 0, y: 0}}
         >
           <Paper
             square
@@ -10533,6 +10542,7 @@ const releaseToConnectLabel = "Release to Connect"
 							x: 0,
 							y: 0,
 					    }}
+              defaultPosition={{x: 0, y: 0}}
 					  >
         	          <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
 						  clickedApp(hit)
