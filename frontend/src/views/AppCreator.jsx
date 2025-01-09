@@ -5811,9 +5811,11 @@ const AppCreator = (defaultprops) => {
 	  					variant="outlined"
 	  					color="secondary"
 						onClick={() => {
-    						var urlParams = new URLSearchParams(window.location.search);
-    						if (!urlParams.has("id")) {
-								window.open(`/apis/${app.id}`, "_blank")
+    						var urlParams = new URLSearchParams(window.location.search)
+							if (urlParams.has("id")) {
+								window.open(`/apis/${urlParams.get("id")}`, "_blank")
+							} else if (props.match.params.appid !== undefined && props.match.params.appid !== null && props.match.params.appid.length > 0) {
+								window.open(`/apis/${props.match.params.appid}`, "_blank")
 							} else {
 								toast.error("Build the app first.")
 							}

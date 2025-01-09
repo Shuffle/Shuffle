@@ -12,18 +12,18 @@ const Admin2 = (props) => {
     const [orgRequest, setOrgRequest] = React.useState(true);
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
     const handleGetOrg = (orgId) => {
-        if (
-            serverside !== true &&
-            window.location.search !== undefined &&
-            window.location.search !== null
-        ) {
-            const urlSearchParams = new URLSearchParams(window.location.search);
-            const params = Object.fromEntries(urlSearchParams.entries());
-            const foundorgid = params["org_id"];
-            if (foundorgid !== undefined && foundorgid !== null) {
-                orgId = foundorgid;
-            }
-        }
+        // if (
+        //     serverside !== true &&
+        //     window.location.search !== undefined &&
+        //     window.location.search !== null
+        // ) {
+        //     const urlSearchParams = new URLSearchParams(window.location.search);
+        //     const params = Object.fromEntries(urlSearchParams.entries());
+        //     const foundorgid = params["org_id"];
+        //     if (foundorgid !== undefined && foundorgid !== null) {
+        //         orgId = foundorgid;
+        //     }
+        // }
         console.log("getting organization details for: ", orgId);
 
         // if (orgId === undefined) {
@@ -154,16 +154,15 @@ const Admin2 = (props) => {
             });
     };
 
-    const urlSearchParams = new URLSearchParams(window.location.search);
-    const params = Object.fromEntries(urlSearchParams.entries());
-    const foundOrgID = params["org_id"]  
     
     useEffect(() => {
-    
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        const params = Object.fromEntries(urlSearchParams.entries());
+        const foundOrgID = params["org_id"] 
         if(foundOrgID !== null && foundOrgID !== undefined && userdata?.support && foundOrgID?.length > 0) {
               handleClickChangeOrg(foundOrgID)
           }
-      }, [foundOrgID]);
+      }, [userdata]);
 
       const handleClickChangeOrg = (orgId) => {
         // Don't really care about the logout

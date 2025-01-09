@@ -2298,6 +2298,10 @@ func main() {
 				} else if incRequest.Type == "START_TENZIR" {
 					log.Printf("[INFO] Got job to start tenzir")
 
+					// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
+					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					tenzirDisabled = false 
+
 					err := deployTenzirNode()
 					if err != nil {
 						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
@@ -3456,6 +3460,7 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES") && !strings.Contains(err.Error(), "Kubernetes not implemented for Tenzir node")) && !strings.Contains(err.Error(), "Tenzir Node is already running") && !strings.Contains(err.Error(), "docker daemon") {
 
 			log.Printf("[ERROR] Tenzir node connection problem: %s", err)
+
 		} else {
 			tenzirDisabled = true
 			log.Printf("[ERROR] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)

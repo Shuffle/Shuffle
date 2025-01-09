@@ -3,11 +3,18 @@ export const Context = createContext();
 
 export const AppContext =(props) => {
 
+	const currentLocation = window?.location?.pathname;
+
     // Left side bar global states
     const [searchBarModalOpen, setSearchBarModalOpen] = useState(false);
-    const [leftSideBarOpenByClick, setLeftSideBarOpenByClick] = useState(false);
+    const [leftSideBarOpenByClick, setLeftSideBarOpenByClick] = useState(currentLocation?.includes('/workflows/') ? false : true)
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+    useEffect(() => {
+		if (currentLocation?.includes('/workflows/') && leftSideBarOpenByClick === true) {
+			setLeftSideBarOpenByClick(false)
+		}
+	}, [leftSideBarOpenByClick])
 
     //Calculate window width
     useEffect(() => {

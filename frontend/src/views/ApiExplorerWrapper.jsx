@@ -69,6 +69,7 @@ const ApiExplorerWrapper = (props) => {
   const [authenticationType, setAuthenticationType] = React.useState("");
   const [appAuthentication, setAppAuthentication] = useState([]);
   const [selectedMeta, setSelectedMeta] = useState(undefined);
+  const [appLoaded, setAppLoaded] = useState(false);
   const [selectedAction, setSelectedAction] = useState(
     {
       "app_name": selectedAppData.name,
@@ -258,6 +259,7 @@ const ApiExplorerWrapper = (props) => {
       parsedapp.body === undefined ? parsedapp : JSON.parse(parsedapp.body);
 
     setOpenapi(data);
+    setAppLoaded(true);
   };
 
   const handleAppAuthenticationType = (selectedAppData) => {
@@ -773,7 +775,7 @@ const ApiExplorerWrapper = (props) => {
     );
   };  
 
-  const skeletonLoader = (
+  const SkeletonLoader = () => (
     <Box
       sx={{
         display: "flex",
@@ -804,7 +806,7 @@ const ApiExplorerWrapper = (props) => {
           <Skeleton variant="text" width="100%" height={40} />
         </Stack>
       </Box>
-
+  
       <Box
         sx={{
           display: "flex",
@@ -829,21 +831,21 @@ const ApiExplorerWrapper = (props) => {
             }}
           >
             <Skeleton variant="text" width="100%" height={40} />
-
+  
             <Skeleton
               variant="text"
               width={100}
               height={20}
               sx={{ marginTop: 1 }}
             />
-
+  
             <Skeleton
               variant="rectangular"
               width="100%"
               height={30}
               sx={{ borderRadius: "8px", marginTop: 1 }}
             />
-
+  
             <Stack
               spacing={2}
               direction="row"
@@ -858,7 +860,7 @@ const ApiExplorerWrapper = (props) => {
               <Skeleton variant="text" width={50} height={30} />
               <Skeleton variant="text" width={50} height={30} />
             </Stack>
-
+  
             <Skeleton
               variant="rectangular"
               width="100%"
@@ -891,6 +893,7 @@ const ApiExplorerWrapper = (props) => {
       </Box>
     </Box>
   );
+  
 
   const AuthenticationData = (props) => {
     const selectedApp = props.app;
@@ -1756,7 +1759,10 @@ const ApiExplorerWrapper = (props) => {
 
   return (
     <Wrapper isLoggedIn={isLoggedIn} isLoaded={isLoaded}>
-          <Suspense fallback={skeletonLoader}>
+          {appLoaded === false ? (
+            <SkeletonLoader />
+          ) : (
+            <Suspense fallback={SkeletonLoader}>
             {authenticationModal}
             <ApiExplorer
               openapi={openapi}
@@ -1770,6 +1776,7 @@ const ApiExplorerWrapper = (props) => {
               isLoaded={isLoaded}
             />
           </Suspense>
+        )}
     </Wrapper>
   );
 };

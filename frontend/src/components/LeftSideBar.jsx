@@ -58,6 +58,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
   const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen} = useContext(Context);
+
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
     userdata?.active_org?.name || "Select Organziation"
@@ -261,17 +262,20 @@ useEffect(() => {
   },[currentPath]);
 
   useEffect(() => {
-    UpdateTabStatus();
-    const expandLeftNav1 = localStorage.getItem("expandLeftNav");
+    UpdateTabStatus()
+	
+    const expandLeftNav1 = localStorage.getItem("expandLeftNav")
     if (expandLeftNav1 === "false") {
-      setLeftSideBarOpenByClick(false);
-      setLeftSideBarOpenByClick(false);
+      setLeftSideBarOpenByClick(false)
     } else {
-      setLeftSideBarOpenByClick(true);
-      setLeftSideBarOpenByClick(true);
-      setExpandLeftNav(true);
+		const currentLocation = window?.location?.pathname
+		if (currentLocation?.includes('/workflows/')) {
+		} else {
+			setLeftSideBarOpenByClick(true)
+			setExpandLeftNav(true)
+		}
     }
-  }, []);
+  }, [])
 
   const getAvailableWorkflows = useCallback((amount) => {
   
@@ -533,7 +537,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0-rc
+          Version: 2.0.0-rc2
         </Typography>
       </Menu>
     </span>
@@ -590,6 +594,10 @@ useEffect(() => {
     const data = {
       org_id: orgId,
     };
+
+    if (userdata?.active_org?.id === orgId) {
+      return
+    }
 
     localStorage.setItem("globalUrl", "");
     localStorage.setItem("getting_started_sidebar", "open");
@@ -765,10 +773,17 @@ useEffect(() => {
 			"UK": "gb"
 		};
 
-    region = regionMapping[region_url] || "gb";
+    region = regionMapping[region_url] || "eu";
     
     return `https://flagcdn.com/48x36/${region}.png`;
   };
+
+  useEffect(() => {
+    if (window?.location?.pathname?.includes("/workflows/")) {
+      setExpandLeftNav(false);
+    }
+
+  }, [window?.location?.pathname]);
 
   return (
     <div
@@ -786,6 +801,18 @@ useEffect(() => {
 		zoom: 0.8, 
         height: "calc((100vh - 32px)*1.2)",
       }}
+      onMouseLeave={() => {
+        if (window?.location?.pathname?.includes("/workflows/")) {
+          setExpandLeftNav(false);
+        }
+      }}
+      onMouseOver={() => {
+        if (window?.location?.pathname?.includes("/workflows/")) {
+          setExpandLeftNav(true);
+        }
+      }
+      
+      }
     >
       {modalView}
       <Box
@@ -1169,10 +1196,6 @@ useEffect(() => {
               }}
               style={{
                 ...ButtonStyle,
-                backgroundColor:
-                  currentOpenTab === "security" 
-                    ? "#2f2f2f"
-                    : "transparent",
               }}
               onMouseOver={(event)=>{
                 event.currentTarget.style.backgroundColor = "#2f2f2f";
@@ -1443,6 +1466,8 @@ useEffect(() => {
           </Button>
 	  	  </Link>
         </Box>
+
+        {recentworkflows?.length > 0 ? 
         <Box
           style={{
             display: "flex",
@@ -1487,6 +1512,8 @@ useEffect(() => {
               }) }
           </Box>
         </Box>
+		: null }
+
       </Box>
       <Box
         style={{

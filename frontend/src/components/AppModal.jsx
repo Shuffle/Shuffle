@@ -11,6 +11,8 @@ import {
   Button,
   Stack,
   Avatar,
+  Skeleton,
+  Tooltip,
 } from '@mui/material';
 
 import CloseIcon from '@mui/icons-material/Close';
@@ -38,6 +40,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
   const [inputUsecase, setInputUsecase] = useState({})
   const [latestUsecase, setLatestUsecase] = useState([])
   const [foundAppUsecase, setFoundAppUsecase] = useState({})
+  const [usecaseLoading, setUsecaseLoading] = useState(false)
   const navigate = useNavigate();
   const parseUsecase = (subcase) => {
     const srcdata = findSpecificApp(frameworkData, subcase.type)
@@ -142,6 +145,19 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
         })
 
         setLatestUsecase(newUsecases)
+        if (newUsecases?.length > 0) {
+          const foundCategory = newUsecases?.find((category) =>
+            category?.list?.some((subcase) => subcase?.srcapp === app?.name || subcase?.dstapp === app?.name)
+          );
+    
+          const foundSubcase = foundCategory?.list?.find(
+            (subcase) => subcase?.srcapp === app?.name || subcase?.dstapp === app?.name
+          );
+    
+          setFoundAppUsecase(foundSubcase);
+        }
+        setUsecaseLoading(false)
+
         // Matching workflows with usecases
         if (responseJson.success !== false) {
           if (workflows !== undefined && workflows !== null && workflows.length > 0) {
@@ -275,22 +291,11 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
 
 
   useEffect(() => {
+    setUsecaseLoading(true)
     getAvailableWorkflows()
     getFramework()
   }, [app])
 
-
-  useEffect(() => {
-    const foundCategory = latestUsecase?.find((category) =>
-      category?.list?.some((subcase) => subcase?.srcapp === app?.name || subcase?.dstapp === app?.name)
-    );
-
-    const foundSubcase = foundCategory?.list?.find(
-      (subcase) => subcase?.srcapp === app?.name || subcase?.dstapp === app?.name
-    );
-
-    setFoundAppUsecase(foundSubcase);
-  }, [latestUsecase])
 
   const downloadApp = (inputdata) => {
     const id = inputdata.id;
@@ -389,9 +394,8 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
     newAppname = newAppname?.replaceAll("_", " ");
   }
 
-  var canEditApp = userdata.admin === "true" || userdata?.id === app?.owner || app?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === app?.reference_org) || !app?.generated
 
-
+  var canEditApp = userdata !== undefined && (userdata?.admin === "true" || userdata?.id === app?.owner || app?.owner === "" || (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org)) || !app?.generated
 
   return (
     <Dialog
@@ -501,28 +505,37 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
               app?.private_id !== undefined &&
               app?.private_id?.length > 0 &&
               app?.generated ? (
-              <Button
-                variant="contained"
+              <Tooltip title="Download OpenAPI"
+                placement="top"
+                arrow
                 sx={{
-                  bgcolor: '#494949',
-                  '&:hover': { bgcolor: '#494949' },
-                  textTransform: 'none',
-                  borderRadius: 1,
-                  minWidth: '45px',
-                  width: '45px',
-                  height: '40px',
-                  padding: 2,
-                  color: "#fff",
                   fontFamily: theme?.typography?.fontFamily
                 }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  downloadApp(app);
-                }}
               >
-                <CloudDownloadOutlined />
-              </Button>) : null}
+                <Button
+                  variant="contained"
+                  sx={{
+                    bgcolor: '#494949',
+                    '&:hover': { bgcolor: '#494949' },
+                    textTransform: 'none',
+                    borderRadius: 1,
+                    minWidth: '45px',
+                    width: '45px',
+                    height: '40px',
+                    padding: 2,
+                    color: "#fff",
+                    fontFamily: theme?.typography?.fontFamily
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    downloadApp(app);
+                  }}
+                >
+                  <CloudDownloadOutlined />
+                </Button>
+              </Tooltip>
+            ) : null}
             <Button
               variant="contained"
               sx={{
@@ -655,21 +668,32 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
           justifyContent: "start",
           width: "100%"
         }}>
-          <div style={{
-            fontFamily: theme?.typography?.fontFamily,
-            fontSize: "16px",
-            color: "#fff",
-            marginBottom: "16px",
-            fontWeight: 600
-          }}>
-            {
-              (foundAppUsecase?.srcapp !== undefined && foundAppUsecase?.dstapp !== undefined) ? (
-                "Connect " + foundAppUsecase?.srcapp?.replaceAll("_", " ") + " to " + foundAppUsecase?.dstapp?.replaceAll("_", " ")
-              ) : (
-                "Connect " + app?.name + " to any tool"
-              )
-            }
-          </div>
+          {usecaseLoading ? (
+            <Skeleton 
+              variant="text" 
+              width="55%" 
+              sx={{ 
+                fontSize: "16px",
+                mb: "16px",
+              }} 
+            />
+          ) : (
+            <div style={{
+              fontFamily: theme?.typography?.fontFamily,
+              fontSize: "16px",
+              color: "#fff",
+              marginBottom: "16px",
+              fontWeight: 600
+            }}>
+              {
+                (foundAppUsecase?.srcapp !== undefined && foundAppUsecase?.dstapp !== undefined) ? (
+                  "Connect " + foundAppUsecase?.srcapp?.replaceAll("_", " ") + " to " + foundAppUsecase?.dstapp?.replaceAll("_", " ")
+                ) : (
+                  "Connect " + app?.name.replaceAll("_", " ") + " to any tool"
+                )
+              }
+            </div>
+          )}
 
           <Box sx={{
             bgcolor: '#2F2F2F',
@@ -679,49 +703,56 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
             alignItems: 'center',
             mb: 3
           }}>
-            <Stack direction="row" spacing={-1}>
-              {
-                foundAppUsecase === undefined ? (
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-                    <Search sx={{ color: 'text.primary', zIndex: 10, fontSize: 18 }} />
-                  </Avatar>
-                ) : (
-                  <Avatar
-                    src={foundAppUsecase?.srcimg}
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      bgcolor: 'background.paper',
-                      border: 1,
-                      borderColor: 'divider',
-                      zIndex: 10
-                    }}
-                  />
-                )
-              }
-              {
-                foundAppUsecase === undefined ? (
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-                    <AddIcon sx={{ color: 'text.primary', zIndex: 10, fontSize: 18 }} />
-                  </Avatar>
-                ) : (
-                  <Avatar
-                    src={foundAppUsecase?.dstimg}
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      bgcolor: 'background.paper',
-                      border: 1,
-                      borderColor: 'divider',
-                      zIndex: 10
-                    }}
-                  />
-                )
-              }
-            </Stack>
-            <Typography sx={{ ml: 2, fontSize: "16px", letterSpacing: "0.5px" }}>
-              {foundAppUsecase?.name || "Search for a Usecase"}
-            </Typography>
+            {usecaseLoading ? (
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                <Stack direction="row" spacing={-1}>
+                  <Skeleton variant="circular" width={32} height={32} />
+                  <Skeleton variant="circular" width={32} height={32} />
+                </Stack>
+                <Skeleton variant="text" sx={{ flexGrow: 1 }} width={200} />
+              </Stack>
+            ) : (
+              <>
+                <Stack direction="row" spacing={-1}>
+                  {foundAppUsecase?.srcapp === undefined ? (
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }} src={app?.image_url || app?.large_image}>
+                    </Avatar>
+                  ) : (
+                    <Avatar
+                      src={foundAppUsecase?.srcimg}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: 'background.paper',
+                        border: 1,
+                        borderColor: 'divider',
+                        zIndex: 10
+                      }}
+                    />
+                  )}
+                  {foundAppUsecase?.dstapp === undefined ? (
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+                      <AddIcon sx={{ color: 'text.primary', zIndex: 10, fontSize: 18 }} />
+                    </Avatar>
+                  ) : (
+                    <Avatar
+                      src={foundAppUsecase?.dstimg}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: 'background.paper',
+                        border: 1,
+                        borderColor: 'divider',
+                        zIndex: 10
+                      }}
+                    />
+                  )}
+                </Stack>
+                <Typography sx={{ ml: 2, fontSize: "16px", letterSpacing: "0.5px" }}>
+                  {foundAppUsecase?.name || "Search for a Usecase"}
+                </Typography>
+              </>
+            )}
           </Box>
         </div>
 
@@ -742,10 +773,13 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
               minWidth: '200px'
             }}
             onClick={() => {
-              navigate("/usecases2")
+              navigate("/usecases")
             }}
+            disabled={usecaseLoading}
           >
-            Find a Usecase
+            {
+              (foundAppUsecase !== undefined && foundAppUsecase !== null && usecaseLoading === false) ? "See usecase" : "Find a Usecase"
+            }
           </Button>
         </div>
       </DialogContent>
