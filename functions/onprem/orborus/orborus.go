@@ -2302,11 +2302,16 @@ func main() {
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 					tenzirDisabled = false 
 
+					// Removed either way
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
 					err := deployTenzirNode()
 					if err != nil {
 						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
-							toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-						} else {
+							// Disabling until UI is updated
+							os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
+							tenzirDisabled = true 
+
 							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
 							err = shuffle.CreateOrgNotification(
 								ctx,
@@ -2322,9 +2327,6 @@ func main() {
 								return
 							}
 						}
-
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
 
 				} else {
@@ -2642,7 +2644,7 @@ func deployTenzirNode() error {
 	ctx := context.Background()
 	cacheKey := "tenzir-key"
 
-	imageName := "tenzir/tenzir:latest"
+	imageName := "frikky/shuffle:tenzir"
 	containerName := "tenzir-node"
 	containerStartOptions := container.StartOptions{}
 	_, err = shuffle.GetCache(ctx, cacheKey)
@@ -2827,9 +2829,13 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		},
 	}
 
+	// FIXME: Is this necessary? Seems to screw up networking: 
+	// conflicting options: hostname and the network mode
+	/*
 	if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	}
+	*/
 
 	resp, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
