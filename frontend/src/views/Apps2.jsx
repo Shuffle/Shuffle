@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext, useCallback, memo, useMemo, useRef } from "react";
 import theme from "../theme.jsx";
 import { isMobile } from "react-device-detect";
-import AppGrid from "../components/AppGrid.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   TextField, Button, Typography, MenuItem, Select, Tabs, Tab, Zoom,
@@ -76,171 +75,190 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
         onMouseOver={() => setMouseHoverIndex(index)}
         onMouseOut={() => setMouseHoverIndex(-1)}
       >
-        <ButtonBase
-          style={{
-            borderRadius: 6,
-            fontSize: 16,
-            overflow: "hidden",
-            display: "flex",
-            fontFamily: theme?.typography?.fontFamily,
-            width: '100%',
-            backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
+        <Tooltip
+          title="View app details"
+          placement="top"
+          componentsProps={{
+            tooltip: {
+              sx: {
+                backgroundColor: "rgba(33, 33, 33, 1)",
+                color: "rgba(241, 241, 241, 1)",
+                fontSize: 14,
+                border: "1px solid rgba(73, 73, 73, 1)",
+                fontFamily: theme?.typography?.fontFamily,
+              }
+            },
           }}
-          onClick={() => {
-            handleAppClick(data);
-          }}
+          arrow
         >
-          <img
-            alt={data.name}
-            src={data.small_image || data.large_image ? (data.small_image || data.large_image) : "/images/no_image.png"}
+          <ButtonBase
             style={{
-              width: 100,
-              height: 100,
               borderRadius: 6,
-              margin: 10,
-              border: "1px solid #212122",
-              boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
-            }}
-          />
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            width: 339,
-            gap: 8,
-            fontWeight: '400',
-            overflow: "hidden",
-            margin: "12px 0",
-            fontFamily: theme?.typography?.fontFamily
-          }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'row',
+              fontSize: 16,
               overflow: "hidden",
-              textOverflow: "ellipsis",
-              fontWeight: 600,
-              whiteSpace: "nowrap",
-              marginLeft: 8,
-              maxWidth: "90%",
-              gap: 8
-            }}>
-              <div style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                color: '#F1F1F1'
-              }}>
-                {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
-              </div>
-            </div>
-            <div style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              marginLeft: 8,
-              color: "rgba(158, 158, 158, 1)"
-            }}>
-              {data.categories ? data.categories.join(", ") : "NA"}
-            </div>
-            <div style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              width: "100%",
-              marginLeft: 8,
-              color: "rgba(158, 158, 158, 1)",
               display: "flex",
-              justifyContent: 'space-between',
-              paddingRight: 15,
-              height: 35,
+              fontFamily: theme?.typography?.fontFamily,
+              width: '100%',
+              backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
+            }}
+            onClick={() => {
+              handleAppClick(data);
+            }}
+          >
+            <img
+              alt={data.name}
+              src={data.small_image || data.large_image ? (data.small_image || data.large_image) : "/images/no_image.png"}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 6,
+                margin: 10,
+                border: "1px solid #212122",
+                boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
+              }}
+            />
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              width: 339,
+              gap: 8,
+              fontWeight: '400',
+              overflow: "hidden",
+              margin: "12px 0",
+              fontFamily: theme?.typography?.fontFamily,
             }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'row',
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                marginLeft: 8,
+                maxWidth: "90%",
+                gap: 8
+              }}>
+                <div style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  color: '#F1F1F1'
+                }}>
+                  {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                </div>
+              </div>
               <div style={{
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                color: "rgba(158, 158, 158, 1)",
+                marginLeft: 8,
+                color: "rgba(158, 158, 158, 1)"
               }}>
-                {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
-                  <span key={tagIndex}>
-                    {tag}
-                    {tagIndex < data.tags.length - 1 ? ", " : ""}
-                  </span>
-                ))}
+                {data.categories ? data.categories.join(", ") : "NA"}
               </div>
-              {/* Deactivate button */}
-              {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
+              <div style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                width: "100%",
+                marginLeft: 8,
+                color: "rgba(158, 158, 158, 1)",
+                display: "flex",
+                justifyContent: 'space-between',
+                paddingRight: 15,
+                height: 35,
+              }}>
                 <div style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: 'center',
-                  paddingRight: 20
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  color: "rgba(158, 158, 158, 1)",
                 }}>
-                  {
-                    canEditApp && (
-                      <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          if (canEditApp) {
-                            const editUrl = "/apps/edit/" + data?.id;
-                            navigate(editUrl)
-                          }
-                        }}
-                      >
-                        <EditIcon />
-                      </button>
-                    )
-                  }
-                  <Button
-                    className="deactivate-button"
-                    sx={{
-                      width: 110,
-                      height: 35,
-                      borderRadius: 0.75,
-                      bgcolor: "rgba(73, 73, 73, 1)",
-                      color: "rgba(241, 241, 241, 1)",
-                      textTransform: "none",
-                      fontSize: 16,
-                      fontFamily: theme?.typography?.fontFamily,
-                      transition: "background-color 0.3s ease",
-                      "&:hover": {
-                        bgcolor: "rgba(93, 93, 93, 1)",
-                      },
-                    }}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
-                      toast("Deactivating app. Please wait...");
-                      fetch(url, {
-                        method: 'GET',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json',
-                        },
-                        credentials: "include",
-                      })
-                        .then((response) => response.json())
-                        .then((responseJson) => {
-                          if (responseJson.success === false) {
-                            toast.error(responseJson.reason);
-                          } else {
-                            toast.success("App Deactivated Successfully.");
-                            fetchApps();
-                          }
-                        })
-                        .catch(error => {
-                          console.log("app error: ", error.toString());
-                        });
-                    }}
-                  >
-                    Deactivate
-                  </Button>
+                  {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
+                    <span key={tagIndex}>
+                      {tag}
+                      {tagIndex < data.tags.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
                 </div>
-              )}
+                {/* Deactivate button */}
+                {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
+                  <div style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: 'center',
+                    paddingRight: 20
+                  }}>
+                    {
+                      canEditApp && (
+                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (canEditApp) {
+                              const editUrl = "/apps/edit/" + data?.id;
+                              navigate(editUrl)
+                            }
+                          }}
+                        >
+                          <EditIcon />
+                        </button>
+                      )
+                    }
+                    <Button
+                      className="deactivate-button"
+                      sx={{
+                        width: 110,
+                        height: 35,
+                        borderRadius: 0.75,
+                        bgcolor: "rgba(73, 73, 73, 1)",
+                        color: "rgba(241, 241, 241, 1)",
+                        textTransform: "none",
+                        fontSize: 16,
+                        fontFamily: theme?.typography?.fontFamily,
+                        transition: "background-color 0.3s ease",
+                        "&:hover": {
+                          bgcolor: "rgba(93, 93, 93, 1)",
+                        },
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onMouseUp={(e) => e.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
+                        toast("Deactivating app. Please wait...");
+                        fetch(url, {
+                          method: 'GET',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                          },
+                          credentials: "include",
+                        })
+                          .then((response) => response.json())
+                          .then((responseJson) => {
+                            if (responseJson.success === false) {
+                              toast.error(responseJson.reason);
+                            } else {
+                              toast.success("App Deactivated Successfully.");
+                              fetchApps();
+                            }
+                          })
+                          .catch(error => {
+                            console.log("app error: ", error.toString());
+                          });
+                      }}
+                    >
+                      Deactivate
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </ButtonBase>
+          </ButtonBase>
+        </Tooltip>
       </Paper>
     </Grid>
   );
@@ -263,10 +281,11 @@ const Hits = ({
   const [allActivatedAppIds, setAllActivatedAppIds] = useState([]);
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     var baseurl = globalUrl;
+    setIsLoading(true)
     fetch(baseurl + "/api/v1/me", {
       credentials: "include",
       headers: {
@@ -361,7 +380,34 @@ const Hits = ({
         (
           <div>
             {hits?.length === 0 && searchQuery.length >= 0 ? (
-              <Typography>No apps found</Typography>
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 400,
+                gap: 16,
+                color: "#F1F1F1",
+                fontFamily: theme?.typography?.fontFamily
+              }}>
+                <SearchIcon style={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.7)' }} />
+                <Typography variant="h6" style={{ 
+                  fontFamily: theme?.typography?.fontFamily,
+                  textAlign: "center" 
+                }}>
+                  No apps found matching your search criteria
+                </Typography>
+                <Typography 
+                  variant="body1" 
+                  style={{ 
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textAlign: "center",
+                    maxWidth: 400
+                  }}
+                >
+                  Try adjusting your search terms or filters to find what you're looking for
+                </Typography>
+              </div>
             ) : (
               <div
                 style={{
@@ -413,194 +459,216 @@ const Hits = ({
                           setHoverEffect(-1);
                         }}
                       >
-                        <ButtonBase style={{
-                          borderRadius: 6,
-                          fontSize: 16,
-                          overflow: "hidden",
-                          display: "flex",
-                          width: '100%',
-                          backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121",
-                          fontFamily: theme?.typography?.fontFamily
-                        }}
-                          onClick={() => {
-                            console.log("App modal", data)
-                            handleAppClick(data);
+                        <Tooltip
+                          title="View app details"
+                          placement="top"
+                          componentsProps={{
+                            tooltip: {
+                              sx: {
+                                backgroundColor: "rgba(33, 33, 33, 1)",
+                                color: "rgba(241, 241, 241, 1)",
+                                fontSize: 14,
+                                border: "1px solid rgba(73, 73, 73, 1)",
+                                fontFamily: theme?.typography?.fontFamily,
+                              }
+                            },
                           }}
+                          arrow
                         >
-                          <img
-                            alt={data.name}
-                            src={data.image_url ? data.image_url : "/images/no_image.png"}
-                            style={{
-                              width: 100,
-                              height: 100,
-                              borderRadius: 6,
-                              margin: 10,
-                              border: "1px solid #212122",
-                              boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
-                            }}
-                          />
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "flex-start",
-                              width: 339,
-                              gap: 6,
-                              fontWeight: '400',
-                              overflow: "hidden",
-                              margin: "12px 0",
-                              fontFamily: theme?.typography?.fontFamily
+                          <ButtonBase style={{
+                            borderRadius: 6,
+                            fontSize: 16,
+                            overflow: "hidden",
+                            display: "flex",
+                            width: '100%',
+                            backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121",
+                            fontFamily: theme?.typography?.fontFamily
+                          }}
+                            onClick={() => {
+                              console.log("App modal", data)
+                              handleAppClick(data);
                             }}
                           >
-                            <div
+                            <img
+                              alt={data.name}
+                              src={data.image_url ? data.image_url : "/images/no_image.png"}
                               style={{
-                                display: 'flex',
-                                flexDirection: "row",
-                                overflow: "hidden",
-                                gap: 8,
-                                fontWeight: 600,
-                                maxWidth: "90%",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                color: '#F1F1F1'
+                                width: 100,
+                                height: 100,
+                                borderRadius: 6,
+                                margin: 10,
+                                border: "1px solid #212122",
+                                boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
                               }}
-                            >
-                              {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
-                              <div style={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                color: '#F1F1F1'
-                              }}>
-                                {normalizedString(data.name)}
-                              </div>
-                            </div>
-
-                            <div
-                              style={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                color: "rgba(158, 158, 158, 1)",
-                                marginTop: 5,
-                              }}
-                            >
-                              {data.categories !== null
-                                ? normalizedString(data.categories).join(", ")
-                                : "NA"}
-                            </div>
+                            />
                             <div
                               style={{
                                 display: "flex",
-                                justifyContent: 'space-between',
-                                width: "100%",
-                                textAlign: 'start',
-                                color: "rgba(158, 158, 158, 1)",
-                                height: 35,
-                                alignItems: 'center'
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                width: 339,
+                                gap: 6,
+                                fontWeight: '400',
+                                overflow: "hidden",
+                                fontFamily: theme?.typography?.fontFamily,
+                                marginTop: 8,
+                                marginLeft: 16,
                               }}
                             >
-                              <div style={{
-                                flex: 1
-                              }}>
-                                {hoverEffect === index && isCloud ? (
-                                  <div>
-                                    {data.tags && (
-                                      <Tooltip
-                                        title={data.tags.join(", ")}
-                                        placement="bottom"
-                                        componentsProps={{
-                                          tooltip: {
-                                            sx: {
-                                              backgroundColor: "rgba(33, 33, 33, 1)",
-                                              color: "rgba(241, 241, 241, 1)",
-                                              width: "auto",
-                                              height: "auto",
-                                              fontSize: 16,
-                                              border: "1px solid rgba(73, 73, 73, 1)",
-                                            }
-                                          }
-                                        }}
-                                      >
-                                        <span>
-                                          {data.tags.slice(0, 1).map((tag, tagIndex) => (
-                                            <span key={tagIndex}>
-                                              {normalizedString(tag)}
-                                              {tagIndex < 1 ? ", " : ""}
-                                            </span>
-                                          ))}
-                                        </span>
-                                      </Tooltip>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div style={{
-                                    width: 230,
-                                    textOverflow: "ellipsis",
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                  }}>
-                                    {data.tags &&
-                                      data.tags.map((tag, tagIndex) => (
-                                        <span key={tagIndex}>
-                                          {normalizedString(tag)}
-                                          {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                        </span>
-                                      ))}
-                                  </div>
-                                )}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: "row",
+                                  overflow: "hidden",
+                                  gap: 8,
+                                  fontWeight: 600,
+                                  maxWidth: "90%",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  color: '#F1F1F1'
+                                }}
+                              >
+                                {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
+                                <div style={{
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  color: '#F1F1F1'
+                                }}>
+                                  {normalizedString(data.name)}
+                                </div>
                               </div>
-                              <div style={{
-                                display: 'flex',
-                                justifyContent: 'flex-end',
-                                alignItems: 'center',
-                                paddingRight: 10,
-                                minWidth: 110
-                              }}>
-                                {hoverEffect === index && (
-                                  <div>
-                                    {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
-                                      <Button
-                                        style={{
-                                          width: 110,
-                                          height: 35,
-                                          borderRadius: 4,
-                                          backgroundColor: "rgba(73, 73, 73, 1)",
-                                          color: "rgba(241, 241, 241, 1)",
-                                          textTransform: "none",
-                                          fontFamily: theme?.typography?.fontFamily,
-                                          fontSize: 16,
-                                        }}
-                                        onClick={(event) => {
-                                          handleActivateButton(event, data, "deactivate");
-                                        }}>
-                                        Deactivate
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        style={{
-                                          backgroundColor: "#FF8544",
-                                          color: "black",
-                                          width: 102,
-                                          height: 35,
-                                          borderRadius: 4,
-                                          textTransform: "none",
-                                          fontFamily: theme?.typography?.fontFamily,
-                                          fontSize: 16
-                                        }}
-                                        onClick={(event) => {
-                                          handleActivateButton(event, data, "activate");
-                                        }}
-                                      >
-                                        Activate
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
+
+                              <div
+                                style={{
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  color: "rgba(158, 158, 158, 1)",
+                                  marginTop: 5,
+                                }}
+                              >
+                                {data.categories !== null
+                                  ? normalizedString(data.categories).join(", ")
+                                  : "NA"}
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: 'space-between',
+                                  width: "100%",
+                                  textAlign: 'start',
+                                  color: "rgba(158, 158, 158, 1)",
+                                  height: 35,
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <div style={{
+                                  flex: 1
+                                }}>
+                                  {hoverEffect === index && isCloud ? (
+                                    <div>
+                                      {data.tags && (
+                                        <Tooltip
+                                          title={data.tags.join(", ")}
+                                          placement="bottom"
+                                          componentsProps={{
+                                            tooltip: {
+                                              sx: {
+                                                backgroundColor: "rgba(33, 33, 33, 1)",
+                                                color: "rgba(241, 241, 241, 1)",
+                                                width: "auto",
+                                                height: "auto",
+                                                fontSize: 16,
+                                                border: "1px solid rgba(73, 73, 73, 1)",
+                                              }
+                                            }
+                                          }}
+                                        >
+                                          <span>
+                                            {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                              <span key={tagIndex}>
+                                                {normalizedString(tag)}
+                                                {tagIndex < 1 ? ", " : ""}
+                                              </span>
+                                            ))}
+                                          </span>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div style={{
+                                      width: 230,
+                                      textOverflow: "ellipsis",
+                                      overflow: 'hidden',
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      {data.tags &&
+                                        data.tags.map((tag, tagIndex) => (
+                                          <span key={tagIndex}>
+                                            {normalizedString(tag)}
+                                            {tagIndex < data.tags.length - 1 ? ", " : ""}
+                                          </span>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'flex-end',
+                                  alignItems: 'center',
+                                  paddingRight: 10,
+                                  minWidth: 110
+                                }}>
+                                  {hoverEffect === index && (
+                                    <div>
+                                      {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                        <Button
+                                          style={{
+                                            width: 110,
+                                            height: 35,
+                                            borderRadius: 4,
+                                            backgroundColor: "rgba(73, 73, 73, 1)",
+                                            color: "rgba(241, 241, 241, 1)",
+                                            textTransform: "none",
+                                            fontFamily: theme?.typography?.fontFamily,
+                                            fontSize: 16,
+                                          }}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          onMouseUp={(e) => e.stopPropagation()}
+                                          onClick={(event) => {
+                                            handleActivateButton(event, data, "deactivate");
+                                          }}>
+                                          Deactivate
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          style={{
+                                            backgroundColor: "#FF8544",
+                                            color: "black",
+                                            width: 102,
+                                            height: 35,
+                                            borderRadius: 4,
+                                            textTransform: "none",
+                                            fontFamily: theme?.typography?.fontFamily,
+                                            fontSize: 16
+                                          }}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          onMouseUp={(e) => e.stopPropagation()}
+                                          onClick={(event) => {
+                                            handleActivateButton(event, data, "activate");
+                                          }}
+                                        >
+                                          Activate
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </ButtonBase>
+                          </ButtonBase>
+                        </Tooltip>
                       </Paper>
                     </Zoom>
                   );
@@ -870,6 +938,42 @@ const filterApps = (apps, searchQuery, selectedCategory, selectedLabel) => {
 
     return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
   });
+};
+
+const LoginPrompt = () => {
+  const navigate = useNavigate();
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 400,
+      gap: 20,
+      color: "#F1F1F1",
+      fontFamily: theme?.typography?.fontFamily
+    }}>
+      <Typography variant="h6" style={{ fontFamily: theme?.typography?.fontFamily }}>
+        Log in to see your organization's apps
+      </Typography>
+      <Button
+        variant="contained"
+        onClick={() => navigate("/login")}
+        style={{
+          backgroundColor: "#FF8544",
+          color: "#1A1A1A",
+          textTransform: "none",
+          fontFamily: theme?.typography?.fontFamily,
+          fontSize: 16,
+          padding: "10px 20px",
+          borderRadius: 4,
+          fontWeight: 600
+        }}
+      >
+        Log In
+      </Button>
+    </div>
+  )
 };
 
 // Add this new component for the app skeleton
@@ -1761,7 +1865,7 @@ const Apps2 = (props) => {
         <div style={boxStyle}>
           <div style={{ display: "flex", flexDirection: "row", width: "100%", justifyContent: "space-between" }}>
             <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
-              Apps
+				{currTab === 0 ? "Org" : currTab === 1 ?  "Your" : "Discover"} Apps
             </Typography>
             {isCloud ? null : (
               <span style={{ display: "flex", gap: 15 }}>
@@ -1853,34 +1957,34 @@ const Apps2 = (props) => {
             <Tabs
               value={currTab}
               onChange={(event, newTab) => handleTabChange(event, newTab)}
-              style={{ 
-                fontFamily: theme?.typography?.fontFamily, 
+              style={{
+                fontFamily: theme?.typography?.fontFamily,
                 fontSize: 16,
                 marginBottom: "-2px"
               }}
-              TabIndicatorProps={{ style: { display: 'none' } }} 
+              TabIndicatorProps={{ style: { display: 'none' } }}
             >
-              <Tab 
-                label="Organization Apps" 
-                style={{ 
+              <Tab
+                label="Organization Apps"
+                style={{
                   ...tabStyle,
                   ...(currTab === 0 ? tabActive : {})
-                }} 
+                }}
               />
-              <Tab 
-                label="My Apps" 
-                style={{ 
+              <Tab
+                label="My Apps"
+                style={{
                   ...tabStyle,
                   ...(currTab === 1 ? tabActive : {})
-                }} 
+                }}
               />
-              <Tab 
-                label="Discover Apps" 
-                style={{ 
+              <Tab
+                label="Discover Apps"
+                style={{
                   ...tabStyle,
                   marginRight: 0,
                   ...(currTab === 2 ? tabActive : {})
-                }} 
+                }}
               />
             </Tabs>
           </div>
@@ -1895,6 +1999,7 @@ const Apps2 = (props) => {
                   fullWidth
                   variant="outlined"
                   placeholder="Search for apps"
+                  disabled={!isLoggedIn}
                   value={searchQuery}
                   id="shuffle_search_field"
                   onChange={handleSearchChange}
@@ -1945,6 +2050,7 @@ const Apps2 = (props) => {
                     variant="outlined"
                     value={selectedCategory}
                     onChange={handleCategoryChange}
+                    disabled={!isLoggedIn}
                     displayEmpty
                     multiple
                     style={{
@@ -2009,6 +2115,7 @@ const Apps2 = (props) => {
                     variant="outlined"
                     value={selectedLabel}
                     onChange={handleLabelChange}
+                    disabled={!isLoggedIn}
                     displayEmpty
                     multiple
                     style={{
@@ -2067,6 +2174,7 @@ const Apps2 = (props) => {
                 variant="contained"
                 color="primary"
                 onClick={handleCreateApp}
+                disabled={!isLoggedIn}
                 style={{
                   height: "100%",
                   width: '100%',
@@ -2092,51 +2200,55 @@ const Apps2 = (props) => {
                   {isLoading ? (
                     <LoadingGrid />
                   ) : (
-                    <>
-                      {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
-                        <div style={{
-                          marginTop: 16,
-                          width: "100%",
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
-                          gap: "20px",
-                          justifyContent: "space-between",
-                          alignItems: "start",
-                          padding: "0 10px",
-                          paddingBottom: 40
-                        }}>
-                          {appsToShow.map((data, index) => (
-                            <AppCard
-                              key={index}
-                              data={data}
-                              index={index}
-                              mouseHoverIndex={mouseHoverIndex}
-                              setMouseHoverIndex={setMouseHoverIndex}
-                              globalUrl={globalUrl}
-                              deactivatedIndexes={deactivatedIndexes}
-                              currTab={currTab}
-                              handleAppClick={handleAppClick}
-                              leftSideBarOpenByClick={leftSideBarOpenByClick}
+                    isLoggedIn && !isLoading ? (
+                      <>
+                        {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
+                          <div style={{
+                            marginTop: 16,
+                            width: "100%",
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                            gap: "20px",
+                            justifyContent: "space-between",
+                            alignItems: "start",
+                            padding: "0 10px",
+                            paddingBottom: 40
+                          }}>
+                            {appsToShow.map((data, index) => (
+                              <AppCard
+                                key={index}
+                                data={data}
+                                index={index}
+                                mouseHoverIndex={mouseHoverIndex}
+                                setMouseHoverIndex={setMouseHoverIndex}
+                                globalUrl={globalUrl}
+                                deactivatedIndexes={deactivatedIndexes}
+                                currTab={currTab}
+                                handleAppClick={handleAppClick}
+                                leftSideBarOpenByClick={leftSideBarOpenByClick}
+                                userdata={userdata}
+                                fetchApps={fetchApps}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <AppSelection
                               userdata={userdata}
-                              fetchApps={fetchApps}
+                              globalUrl={globalUrl}
+                              appFramework={appFramework}
+                              setAppFramework={setAppFramework}
+                              defaultSearch={defaultSearch}
+                              setDefaultSearch={setDefaultSearch}
+                              checkLogin={checkLogin}
+                              isAppPage={true}
                             />
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                          <AppSelection
-                            userdata={userdata}
-                            globalUrl={globalUrl}
-                            appFramework={appFramework}
-                            setAppFramework={setAppFramework}
-                            defaultSearch={defaultSearch}
-                            setDefaultSearch={setDefaultSearch}
-                            checkLogin={checkLogin}
-                            isAppPage={true}
-                          />
-                        </div>
-                      )}
-                    </>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <LoginPrompt />
+                    )
                   )}
                 </div>
               )
@@ -2147,41 +2259,45 @@ const Apps2 = (props) => {
                   {isLoading ? (
                     <LoadingGrid />
                   ) : (
-                    <>
-                      {appsToShow?.length > 0 && appsToShow !== undefined ? (
-                        <div style={{
-                          marginTop: 16,
-                          width: "100%",
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
-                          gap: "20px",
-                          justifyContent: "space-between",
-                          alignItems: "start",
-                          padding: "0 10px",
-                          paddingBottom: 40
-                        }}>
-                          {appsToShow.map((data, index) => (
-                            <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
-                              handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
-                              fetchApps={fetchApps}
+                    isLoggedIn && !isLoading ? (
+                      <>
+                        {appsToShow?.length > 0 && appsToShow !== undefined ? (
+                          <div style={{
+                            marginTop: 16,
+                            width: "100%",
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                            gap: "20px",
+                            justifyContent: "space-between",
+                            alignItems: "start",
+                            padding: "0 10px",
+                            paddingBottom: 40
+                          }}>
+                            {appsToShow.map((data, index) => (
+                              <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
+                                handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
+                                fetchApps={fetchApps}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <AppSelection
+                              userdata={userdata}
+                              globalUrl={globalUrl}
+                              appFramework={appFramework}
+                              setAppFramework={setAppFramework}
+                              defaultSearch={defaultSearch}
+                              setDefaultSearch={setDefaultSearch}
+                              checkLogin={checkLogin}
+                              isAppPage={true}
                             />
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                          <AppSelection
-                            userdata={userdata}
-                            globalUrl={globalUrl}
-                            appFramework={appFramework}
-                            setAppFramework={setAppFramework}
-                            defaultSearch={defaultSearch}
-                            setDefaultSearch={setDefaultSearch}
-                            checkLogin={checkLogin}
-                            isAppPage={true}
-                          />
-                        </div>
-                      )}
-                    </>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <LoginPrompt />
+                    )
                   )}
                 </div>
               )

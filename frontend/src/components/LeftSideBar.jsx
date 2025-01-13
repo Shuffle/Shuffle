@@ -58,6 +58,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
   const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen} = useContext(Context);
+
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
     userdata?.active_org?.name || "Select Organziation"
@@ -261,17 +262,20 @@ useEffect(() => {
   },[currentPath]);
 
   useEffect(() => {
-    UpdateTabStatus();
-    const expandLeftNav1 = localStorage.getItem("expandLeftNav");
+    UpdateTabStatus()
+	
+    const expandLeftNav1 = localStorage.getItem("expandLeftNav")
     if (expandLeftNav1 === "false") {
-      setLeftSideBarOpenByClick(false);
-      setLeftSideBarOpenByClick(false);
+      setLeftSideBarOpenByClick(false)
     } else {
-      setLeftSideBarOpenByClick(true);
-      setLeftSideBarOpenByClick(true);
-      setExpandLeftNav(true);
+		const currentLocation = window?.location?.pathname
+		if (currentLocation?.includes('/workflows/')) {
+		} else {
+			setLeftSideBarOpenByClick(true)
+			setExpandLeftNav(true)
+		}
     }
-  }, []);
+  }, [])
 
   const getAvailableWorkflows = useCallback((amount) => {
   
@@ -533,7 +537,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0-beta
+          Version: 2.0.0-rc2
         </Typography>
       </Menu>
     </span>
@@ -590,6 +594,10 @@ useEffect(() => {
     const data = {
       org_id: orgId,
     };
+
+    if (userdata?.active_org?.id === orgId) {
+      return
+    }
 
     localStorage.setItem("globalUrl", "");
     localStorage.setItem("getting_started_sidebar", "open");
@@ -662,7 +670,8 @@ useEffect(() => {
 };
 
   const getRegionTag = (region_url) => {
-    let regiontag = "UK";
+    //let regiontag = "UK";
+    let regiontag = "EU";
     if (
       region_url !== undefined &&
       region_url !== null &&
@@ -676,7 +685,7 @@ useEffect(() => {
         if (regiontag === "california") {
           regiontag = "US";
         } else if (regiontag === "frankfurt") {
-          regiontag = "EU";
+          regiontag = "EU-2";
         } else if (regiontag === "ca"){
           regiontag = "CA";
         }
@@ -764,10 +773,17 @@ useEffect(() => {
 			"UK": "gb"
 		};
 
-    region = regionMapping[region_url] || "gb";
+    region = regionMapping[region_url] || "eu";
     
     return `https://flagcdn.com/48x36/${region}.png`;
   };
+
+  useEffect(() => {
+    if (window?.location?.pathname?.includes("/workflows/")) {
+      setExpandLeftNav(false);
+    }
+
+  }, [window?.location?.pathname]);
 
   return (
     <div
@@ -785,6 +801,18 @@ useEffect(() => {
 		zoom: 0.8, 
         height: "calc((100vh - 32px)*1.2)",
       }}
+      onMouseLeave={() => {
+        if (window?.location?.pathname?.includes("/workflows/")) {
+          setExpandLeftNav(false);
+        }
+      }}
+      onMouseOver={() => {
+        if (window?.location?.pathname?.includes("/workflows/")) {
+          setExpandLeftNav(true);
+        }
+      }
+      
+      }
     >
       {modalView}
       <Box
@@ -905,7 +933,7 @@ useEffect(() => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>K</kbd>
+                          <kbd>Ctrl</kbd>+<kbd>K</kbd>
                         </span>
                       ),
                       disableUnderline: true,
@@ -1153,17 +1181,14 @@ useEffect(() => {
           >
 	  		<span style={{ display: "inline-block", width: "100%" }}> 
           <Link
-            to={userdata?.support ? "/dashboards/security" : "#"} 
+            to={"#"}
             style={{
               ...hrefStyle,
-              pointerEvents: userdata?.support ? "auto" : "none",
-			  cursor: "not-allowed",
+              pointerEvents: "auto", 
             }}
           >
             <Button
-              disabled={true}
               onClick={(event) => {
-                if (!userdata?.support) return;
                 setOpenSecurityTab(true);
                 setOpenautomateTab(false);
                 setCurrentOpenTab("security");
@@ -1171,21 +1196,12 @@ useEffect(() => {
               }}
               style={{
                 ...ButtonStyle,
-                backgroundColor:
-                  ((currentOpenTab === "security" && currentPath.includes("/security")) ||
-                  (!expandLeftNav &&
-                    (currentPath.includes("detections") || currentPath.includes("response"))))
-                    ? "#2f2f2f"
-                    : "transparent",
-                cursor: userdata?.support ? "pointer" : "not-allowed",
               }}
               onMouseOver={(event)=>{
                 event.currentTarget.style.backgroundColor = "#2f2f2f";
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = ((currentOpenTab === "security" && currentPath.includes("/security")) ||
-                (!expandLeftNav &&
-                  (currentPath.includes("detections") || currentPath.includes("response"))))
+                event.currentTarget.style.backgroundColor = currentOpenTab === "security"
                   ? "#2f2f2f"
                   : "transparent";
               }}
@@ -1203,14 +1219,12 @@ useEffect(() => {
                   display: expandLeftNav ? "inline" : "none",
                   marginRight: "auto",
                   fontSize: 18,
-                  color: userdata?.support
-                    ? currentOpenTab === "security" && currentPath.includes("/security")
+                  color: currentOpenTab === "security" 
                       ? "#F1F1F1"
                       : "#C8C8C8"
-                    : "#6F6F6F", 
                 }}
               >
-               	Content 
+               	Discover	
               </span>
             </Button>
           </Link>
@@ -1452,6 +1466,8 @@ useEffect(() => {
           </Button>
 	  	  </Link>
         </Box>
+
+        {recentworkflows?.length > 0 ? 
         <Box
           style={{
             display: "flex",
@@ -1496,6 +1512,8 @@ useEffect(() => {
               }) }
           </Box>
         </Box>
+		: null }
+
       </Box>
       <Box
         style={{

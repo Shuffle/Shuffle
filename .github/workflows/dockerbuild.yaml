@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main 
+      - nightly
     paths:
       - "**"
       - "!.github/**"
@@ -20,19 +20,19 @@ jobs:
         include:
           - app: frontend
             path: frontend
-            version: 2.0.0
+            version: nightly
             experimental: true
           - app: backend
             path: backend
-            version: 2.0.0
+            version: nightly
             experimental: true
           - app: orborus
             path: functions/onprem/orborus
-            version: 2.0.0
+            version: nightly
             experimental: true
           - app: worker
             path: functions/onprem/worker
-            version: 2.0.0
+            version: nightly
             experimental: true
     steps:
       - name: Checkout
@@ -74,11 +74,8 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:latest
             frikky/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            frikky/shuffle-${{ matrix.app }}:latest
             frikky/shuffle:${{ matrix.app }}
 
       - name: Image digest

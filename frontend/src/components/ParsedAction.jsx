@@ -1484,6 +1484,14 @@ const ParsedAction = (props) => {
 	
 
   const selectedAppIcon = selectedAction.large_image
+
+  var newAppname = selectedAction?.name?.charAt(0).toUpperCase() + selectedAction?.name?.substring(1)
+  if (newAppname === undefined || newAppname === null) {
+	  newAppname = ""
+  } else {
+	  newAppname = newAppname.replaceAll("_", " ")
+  }
+
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
 
@@ -1506,11 +1514,9 @@ const ParsedAction = (props) => {
 					    border: "2px solid rgba(255,255,255,0.3)",
 					  }} />
 		  		  </Tooltip>
+
 				  <h3 style={{ }}>
-					{(
-					  selectedAction?.app_name?.charAt(0).toUpperCase() +
-					  selectedAction?.app_name?.substring(1)
-					)?.replaceAll("_", " ")}
+					{newAppname}
 				  </h3>
 		  	  </div>
               <div style={{display: "flex", marginTop: 0, }}>

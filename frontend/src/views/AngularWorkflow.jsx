@@ -399,7 +399,7 @@ const AngularWorkflow = (defaultprops) => {
   props.match = {}
   props.match.params = params
 
-  const { leftSideBarOpenByClick, windowWidth } = useContext(Context)
+  const { setLeftSideBarOpenByClick, leftSideBarOpenByClick, windowWidth } = useContext(Context)
   const [workflowAsCode, setWorkflowAsCode] = useState(false);
 
   var to_be_copied = "";
@@ -8662,6 +8662,9 @@ const releaseToConnectLabel = "Release to Connect"
     getApps()
     fetchUsecases()
 
+  	setLeftSideBarOpenByClick(false)
+    localStorage.setItem("expandLeftNav", false)
+
     const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
 
     // FIXME: Don't check specific one here
@@ -10018,7 +10021,14 @@ const releaseToConnectLabel = "Release to Connect"
 	  const small = props.small
 	  const actionString = props.action
       const [hover, setHover] = React.useState(false);
-	
+    React.useEffect(() => {
+      if(app.name === "Shuffle Tools"){
+        if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
+          loadAppConfig(app.id, false) 
+        }
+      }
+    }, [])
+    
 	  if (app === undefined || app === null) {
 		  return (
 			<img
@@ -10116,6 +10126,8 @@ const releaseToConnectLabel = "Release to Connect"
           }}
           key={app.id}
 		  dragging={false}
+      position={{x: 0, y: 0}}
+      defaultPosition={{x: 0, y: 0}}
         >
           <Paper
             square
@@ -10530,6 +10542,7 @@ const releaseToConnectLabel = "Release to Connect"
 							x: 0,
 							y: 0,
 					    }}
+              defaultPosition={{x: 0, y: 0}}
 					  >
         	          <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
 						  clickedApp(hit)
@@ -10568,6 +10581,9 @@ const releaseToConnectLabel = "Release to Connect"
     const CustomAppHits = connectHits(AppHits)
 
 	var shuffleToolsApp = apps.find((app) => app.name === "Shuffle Tools")
+	if (shuffleToolsApp !== undefined && shuffleToolsApp !== null) {
+		shuffleToolsApp = JSON.parse(JSON.stringify(shuffleToolsApp))
+	}
 
 	var viewedApps = []
     return (
@@ -10620,24 +10636,24 @@ const releaseToConnectLabel = "Release to Connect"
 				<div style={{
 					display: "flex", 
 				}}>
-					<ParsedAppPaper small={true} action={"repeat_back_to_me"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"repeat_back_to_me"} app={shuffleToolsApp} />
 					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"filter_list"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"filter_list"} app={shuffleToolsApp} />
 					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"execute_python"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"execute_python"} app={shuffleToolsApp} />
 					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"parse_ioc"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"parse_ioc"} app={shuffleToolsApp} />
 				</div>
 				<div style={{
 					display: "flex", 
 				}}>
-					<ParsedAppPaper small={true} action={"set_cache_value"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"set_cache_value"} app={shuffleToolsApp} />
 					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"get_file_meta"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"get_file_meta"} app={shuffleToolsApp} />
 					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"merge_lists"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"merge_lists"} app={shuffleToolsApp} />
 					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"send_sms_shuffle"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<ParsedAppPaper small={true} action={"send_sms_shuffle"} app={shuffleToolsApp} />
 				</div>
 			  </div>
 		  : null}
@@ -16242,7 +16258,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 		  {!distributedFromParent ? 
 			isCorrectOrg ? null :
-			<Typography variant="body2">
+			<Typography variant="body2" style={{marginLeft: 10, }}>
 				<b>Warning</b>: Change <span
 			  		style={{color: "#FF8544", cursor: "pointer", pointerEvents: "auto", }}
 			  		onClick={() => {
@@ -16313,7 +16329,7 @@ const releaseToConnectLabel = "Release to Connect"
 			  	>Active Organization</span> to edit this Workflow.
 			</Typography>
 			:
-			<Typography variant="body2" color="textSecondary">
+			<Typography variant="body2" color="textSecondary" style={{marginLeft: 10, }}>
 				Warning: This workflow is controlled by your parent org and may not be editable.
 			</Typography>
 		  }

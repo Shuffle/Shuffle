@@ -199,7 +199,9 @@ func skipCheckInCleanup(name string) bool {
 		strings.HasPrefix(name, "orborus") ||
 		strings.HasPrefix(name, "shuffle-orborus") ||
 		strings.HasPrefix(name, "opensearch") ||
-		strings.HasPrefix(name, "shuffle-opensearch")
+		strings.HasPrefix(name, "shuffle-opensearch") ||
+		strings.HasPrefix(name, "memcached") ||
+		strings.HasPrefix(name, "shuffle-memcached")
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
@@ -608,8 +610,7 @@ func deployServiceWorkers(image string) {
 				Condition: swarm.RestartPolicyConditionOnFailure,
 			},
 			Placement: &swarm.Placement{
-				Constraints: []string{
-				},
+				Constraints: []string{},
 			},
 		},
 	}
@@ -2152,7 +2153,7 @@ func main() {
 			}
 
 			if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" && os.Getenv("SHUFFLE_SCALE_REPLICAS") == "" {
-				go AutoScale(ctx)
+				// go AutoScale(ctx)
 			}
 			hasStarted = true
 		}
@@ -2297,11 +2298,20 @@ func main() {
 				} else if incRequest.Type == "START_TENZIR" {
 					log.Printf("[INFO] Got job to start tenzir")
 
+					// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
+					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					tenzirDisabled = false 
+
+					// Removed either way
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
 					err := deployTenzirNode()
 					if err != nil {
 						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
-							toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-						} else {
+							// Disabling until UI is updated
+							os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
+							tenzirDisabled = true 
+
 							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
 							err = shuffle.CreateOrgNotification(
 								ctx,
@@ -2317,9 +2327,6 @@ func main() {
 								return
 							}
 						}
-
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
 
 				} else {
@@ -2620,7 +2627,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 func deployTenzirNode() error {
 	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" || os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
 		// return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
-		log.Printf("[INFO] Pipelines are enabled by user")
+		//log.Printf("[INFO] Pipelines are enabled by user")
 	} else {
 		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES") 
 	}
@@ -2637,7 +2644,7 @@ func deployTenzirNode() error {
 	ctx := context.Background()
 	cacheKey := "tenzir-key"
 
-	imageName := "tenzir/tenzir:latest"
+	imageName := "frikky/shuffle:tenzir"
 	containerName := "tenzir-node"
 	containerStartOptions := container.StartOptions{}
 	_, err = shuffle.GetCache(ctx, cacheKey)
@@ -2822,9 +2829,13 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		},
 	}
 
+	// FIXME: Is this necessary? Seems to screw up networking: 
+	// conflicting options: hostname and the network mode
+	/*
 	if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	}
+	*/
 
 	resp, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
@@ -3455,6 +3466,7 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES") && !strings.Contains(err.Error(), "Kubernetes not implemented for Tenzir node")) && !strings.Contains(err.Error(), "Tenzir Node is already running") && !strings.Contains(err.Error(), "docker daemon") {
 
 			log.Printf("[ERROR] Tenzir node connection problem: %s", err)
+
 		} else {
 			tenzirDisabled = true
 			log.Printf("[ERROR] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)

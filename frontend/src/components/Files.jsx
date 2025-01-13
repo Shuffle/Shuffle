@@ -22,6 +22,9 @@ import {
 	DialogActions,
 	Typography,
 	Skeleton,
+	Checkbox,
+	Chip,
+	Menu,
 } from "@mui/material";
 
 import {
@@ -35,6 +38,7 @@ import {
   Publish as PublishIcon,
   Clear as ClearIcon,
   Add as AddIcon,
+  SelectAll,
 } from "@mui/icons-material";
 
 import Dropzone from "../components/Dropzone.jsx";
@@ -61,6 +65,14 @@ const Files = memo((props) => {
   const [downloadBranch, setDownloadBranch] = React.useState("main");
   const [downloadFolder, setDownloadFolder] = React.useState("translation_standards");
   const [contentLoading, setContentLoading] = React.useState(false)
+  const [selectAllChecked, setSelectAllChecked] = React.useState(false)
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [selectedFileId, setSelectedFileId] = useState([])
+  const [showFileCategoryPopup, setShowFileCategoryPopup] = useState(false)
+  const [updateToThisCategory, setUpdateToThisCategory] = useState("")
+  const [showDistributionPopup, setShowDistributionPopup] = useState(false)
+  const [selectedSubOrg, setSelectedSubOrg] = useState([])
+  const [fileIdSelectedForDistribution, setFileIdSelectedForDistribution] = useState("")
   //const alert = useAlert();
   const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1", "response"]
   var upload = "";
@@ -79,6 +91,56 @@ const Files = memo((props) => {
     }
 
   }
+
+	const changeDistribution = (id, selectedSubOrg) => {	
+
+		editFileConfig(id, "suborg_distribute", [...new Set(selectedSubOrg)])
+	}
+
+	const editFileConfig = (id, parentAction, selectedSubOrg) => {
+			const data = {
+				id: id,
+				action: parentAction !== undefined && parentAction !== null ? parentAction : "change_category",
+				selected_suborgs: selectedSubOrg,
+			}
+
+			const url = globalUrl + "/api/v1/files/" + id + "/config";
+
+			fetch(url, {
+				mode: "cors",
+				method: "POST",
+				body: JSON.stringify(data),
+				credentials: "include",
+				crossDomain: true,
+				withCredentials: true,
+				headers: {
+					"Content-Type": "application/json; charset=utf-8",
+				},
+			})
+				.then((response) =>
+					response.json().then((responseJson) => {
+						if (responseJson["success"] === false) {
+							toast("Failed overwriting files");
+						} else {
+							toast("Successfully updated file!");
+							setTimeout(() => {
+								getFiles();
+							}, 1000);
+						}
+					})
+				)
+				.catch((error) => {
+					toast("Err: " + error.toString());
+				});
+	};
+
+	const handleFileCheckboxChange = (index) => {
+		setSelectedFiles((prevSelected) => {
+			const updatedSelected = [...prevSelected];
+			updatedSelected[index] = !updatedSelected[index];
+			return updatedSelected;
+		});
+	};
 
   const runUpdateText = (text) =>{
     fetch(`${globalUrl}/api/v1/files/${openFileId}/edit`, {
@@ -137,6 +199,7 @@ const Files = memo((props) => {
         if (responseJson.files !== undefined && responseJson.files !== null) {
           	setFiles(responseJson.files);
 			setShowLoader(false)
+			setShowDistributionPopup(false)
         } else if (responseJson.list !== undefined && responseJson.list !== null) {
 			// Set the "namespace" field in all items
 			if (namespace !== undefined && namespace !== null) {
@@ -152,6 +215,7 @@ const Files = memo((props) => {
 		} else {
           setFiles([]);
 		  setShowLoader(false)
+		  setShowDistributionPopup(false)
         }
 
 	    if (namespace === undefined || namespace === null || namespace === "default") {
@@ -256,7 +320,7 @@ const Files = memo((props) => {
 		  zIndex: 1000,
 		  minWidth: "800px",
 		  minHeight: "320px",
-		  overflow: "hidden",
+		  overflow: "auto",
 		  '& .MuiDialogContent-root': {
 			backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
 		  },
@@ -399,6 +463,127 @@ const Files = memo((props) => {
       </DialogActions>
     </Dialog>
    : null
+
+   const handleSelectSubOrg = (id, action) => {
+    if (action === "all") {
+        const childOrgs = userdata.orgs.filter(
+            (data) => data.creator_org === userdata.active_org.id
+        );
+        setSelectedSubOrg((prev) => {
+            if (prev.length === childOrgs.length) {
+                // If all child orgs are already selected, clear the selection
+                return [];
+            } else {
+                // Otherwise, select all child org IDs
+                return childOrgs.map((data) => data.id);
+            }
+        });
+    } else if (action === "none") {
+        setSelectedSubOrg([]);
+    } else {
+        setSelectedSubOrg((prev) => {
+            if (prev.includes(id)) {
+                return prev.filter((data) => data !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
+    }
+	};
+
+  const fileDistributionModal = showDistributionPopup ? (
+	<Dialog
+		open={showDistributionPopup}
+		onClose={() => setShowDistributionPopup(false)}
+		PaperProps={{
+			sx: {
+				borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+				border: theme?.palette?.DialogStyle?.border,
+				fontFamily: theme?.typography?.fontFamily,
+				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				zIndex: 1000,
+				minWidth: "600px",
+				minHeight: "320px",
+				overflow: "auto",
+				'& .MuiDialogContent-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				},
+				'& .MuiDialogTitle-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				},
+				'& .MuiDialogActions-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				},
+			},
+		}}
+	>
+		<DialogTitle>
+			<div style={{ color: "rgba(255,255,255,0.9)" }}>
+				Select sub-org to distribute files
+			</div>
+		</DialogTitle>
+		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+			<MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
+			<MenuItem value="all" onClick={()=> {handleSelectSubOrg(null, "all")}}>All</MenuItem>
+			{userdata.orgs.map((data, index) => {
+				if (data.creator_org !== userdata.active_org.id) {
+					return null;
+				}
+
+				const imagesize = 22;
+				const imageStyle = {
+					width: imagesize,
+					height: imagesize,
+					pointerEvents: "none",
+					marginRight: 10,
+					marginLeft: data.id === userdata.active_org.id ? 0 : 20,
+				};
+
+				const image = data.image === "" ? (
+					<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+				) : (
+					<img alt={data.name} src={data.image} style={imageStyle} />
+				);
+
+				return (
+					<MenuItem
+						key={index}
+						value={data.id}
+						onClick={() => handleSelectSubOrg(data.id)}
+						style={{ display: "flex", alignItems: "center" }}
+					>
+						<Checkbox
+							checked={selectedSubOrg.includes(data.id)}
+						/>
+						{image}
+						<span style={{ marginLeft: 8 }}>{data.name}</span>
+					</MenuItem>
+				);
+			})}
+
+			<div style={{ display: "flex", marginTop: 20 }}>
+				<Button
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#ff8544"  }}
+					onClick={() => setShowDistributionPopup(false)}
+					color="primary"
+				>
+					Cancel
+				</Button>
+				<Button
+					variant="contained"
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544", marginLeft: 10 }}
+					onClick={() => {
+						changeDistribution(fileIdSelectedForDistribution, selectedSubOrg);
+					}}
+					color="primary"
+				>
+					Submit
+				</Button>
+			</div>
+		</DialogContent>
+		</Dialog>
+
+  ): null
 
   const deleteFile = (file) => {
     fetch(globalUrl + "/api/v1/files/" + file.id, {
@@ -636,7 +821,7 @@ const Files = memo((props) => {
 
     setTimeout(() => {
       getFiles()
-    }, 2500);
+    }, 3000);
   };
 
   const uploadFile = (e) => {
@@ -649,6 +834,68 @@ const Files = memo((props) => {
     uploadFiles(files);
   };
 
+
+  const handleUpdateFileCategory = (namespace) => {
+	
+	if (selectedFiles.length === 0 && !selectAllChecked) {
+		toast("Please select files to update category")
+		return
+	}
+
+	if (namespace === undefined || namespace === null || namespace === "") {
+		toast("Please select a category to update files to")
+		return
+	}	
+
+	const url = globalUrl + `/api/v1/files/namespaces/${namespace}/share`
+
+	const data = {
+		SelectedFiles: selectedFileId,
+	}
+
+	setShowLoader(true)
+
+	fetch(url, {
+		mode: "cors",
+		method: "POST",
+		body: JSON.stringify(data),
+		credentials: "include",
+		crossDomain: true,
+		withCredentials: true,
+		headers: {
+			"Content-Type": "application/json; charset=utf-8",
+		},
+	})
+		.then((response) =>
+			response.json().then((responseJson) => {
+				if (responseJson["success"] === false) {
+					toast("Failed overwriting files");
+				} else {
+					setSelectAllChecked(false)
+					setSelectedFiles([])
+					setSelectedFileId([])
+					setShowFileCategoryPopup(false)
+					setSelectedCategory(namespace)
+					setTimeout(() => {
+						getFiles();
+						toast("Successfully updated file!");
+						if (window.location.search.includes("category=")) {
+							const newurl = window.location.href.replace(/category=[^&]+/, `category=${namespace}`)
+							window.history.pushState({ path: newurl }, "", newurl)
+						} else {
+							window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${namespace}`)
+						}
+
+					}, 1000);
+				}
+			}
+		))
+		.catch((error) => {
+			toast("Err: " + error.toString());
+		});
+		
+  }
+
 	return (
 		<Dropzone
 			style={{
@@ -659,6 +906,7 @@ const Files = memo((props) => {
 			}}
 			onDrop={uploadFile}
 		>
+			{fileDistributionModal}
 			<div style={{width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121',borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
 
         		<div style={{height: "100%", maxHeight: 1700,overflowY: 'auto', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
@@ -739,13 +987,18 @@ const Files = memo((props) => {
 							}}
 							value={selectedCategory}
 							onChange={(event) => {
+								if (selectAllChecked || selectedFiles.length > 0) {
+									setUpdateToThisCategory(event.target.value)
+									setShowFileCategoryPopup(true)
+									return
+								}
 								setSelectedCategory(event.target.value)
-
 								if (event.target.value === "all" || event.target.value === "default") {
   									getFiles() 
 								} else {
 									getFiles(event.target.value)
 								}
+									
 
 								// Add it to the url as a query
 								if (window.location.search.includes("category=")) {
@@ -768,14 +1021,41 @@ const Files = memo((props) => {
 								);
 							})}
 						</Select>
+						<Dialog 
+						PaperProps={{
+							sx: {
+								borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+								border: theme?.palette?.DialogStyle?.border,
+								fontFamily: theme?.typography?.fontFamily,
+								backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+								zIndex: 1000,
+								'& .MuiDialogContent-root': {
+									backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+								},
+								'& .MuiDialogTitle-root': {
+									backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+								},
+								'& .MuiDialogActions-root': {
+									backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+								},
+							},
+						}} open={showFileCategoryPopup} onClose={() => setShowFileCategoryPopup(false)}>
+							<DialogTitle>File Categories</DialogTitle>
+							<DialogContent>
+								Please note that your selected files ({selectedFileId?.length}) will be moved to the <kbd>{updateToThisCategory}</kbd> category.
+							</DialogContent>
+							<DialogActions>
+								<Button onClick={() => setShowFileCategoryPopup(false)} style={{fontSize: 16, textTransform: 'none'}}>Close</Button>
+								<Button onClick={() => handleUpdateFileCategory(updateToThisCategory)} style={{fontSize: 16, textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544"}}>Update</Button>
+							</DialogActions>
+						</Dialog>
 					</FormControl>
 				) : null}
 				<div style={{display: "inline-flex", position:"relative", top: 8}}>
 				{renderTextBox ? 
-				
 					<Tooltip title={"Close"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15 }}
+							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
 							color="primary"
 							onClick={() => {
 								setRenderTextBox(false);
@@ -803,10 +1083,24 @@ const Files = memo((props) => {
 				{renderTextBox && <TextField
 					onKeyPress={(event)=>{
 						handleKeyDown(event);
+						if(event.key === 'Enter' && selectedFileId.length > 0){
+							setShowFileCategoryPopup(true)
+							setUpdateToThisCategory(event.target.value)
+						}
+							
+					}}
+					style={{
+						height: 35,
+						width: 200,
+						marginTop: 0,
 					}}
 					InputProps={{
 						style: {
 							color: "white",
+							height: 35,
+							fontSize: 16,
+							borderRadius: 4,
+							paddingTop: 0,
 						},
 					}}
 					color="primary"
@@ -816,7 +1110,6 @@ const Files = memo((props) => {
 					defaultValue={""}
 					autoFocus
 				/>}</div>
-
 				<ShuffleCodeEditor
 					isCloud={isCloud}
 					expansionModalOpen={openEditor}
@@ -852,30 +1145,70 @@ const Files = memo((props) => {
 						tableLayout: "auto", 
 						display: "table", 
 						minWidth: 800,
-						overflowX: "auto"
+						overflowX: "auto",
+						paddingBottom: 0,
 					}}
 					>
-					<ListItem style={{width:isSelectedFiles?"100%":null, borderBottom:isSelectedFiles?"1px solid #494949":null, display: 'table-row'}}>
-					{["Name", "Workflow", "Md5", "Status", "Filesize", "Actions"].map((header, index) => (
-                        <ListItemText
-                            key={index}
-                            primary={header}
-                            style={{
-                                display: "table-cell",
-                                padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
-                                whiteSpace: "nowrap",
-                                textOverflow: "ellipsis",
-                                borderBottom: "1px solid #494949",
-                                verticalAlign: "middle"
-                            }}
-							primaryTypographyProps={{
+					<ListItem
+						style={{
+							borderBottom: "1px solid #494949" ,
+							display: "table-row"
+						}}
+						>
+						{[
+							<Tooltip title={"Select all files"} style={{}} aria-label={""}>
+								<Checkbox 
+								sx={{padding: 0}}
+								onChange={() => {
+									setSelectAllChecked((prev) => !prev);
+									setSelectedFiles((prev) => {
+										if (prev.length === files.length) {
+											return []
+										} else {
+											return files.map((_, index) => !prev.includes(index))
+										}
+									})
+									if (selectAllChecked) {
+										setSelectedFileId([])
+									} else {
+										setSelectedFileId(
+											files
+												.filter((file) => file.namespace === selectedCategory)
+												.map((file) => file.id) 
+										);
+									}
+								}}
+							/>
+							</Tooltip>,
+							"Name",
+							"Workflow",
+							"Md5",
+							"Status",
+							"Filesize",
+							"Actions",
+							"Distribution"
+						]
+							.filter(Boolean)
+							.map((header, index) => (
+							<ListItemText
+								key={index}
+								primary={header}
+								style={{
+								display: "table-cell",
+								padding: index === 0 ? "0px 8px 8px 15px" : "0px 8px 8px 8px",
+								whiteSpace: "nowrap",
+								textOverflow: "ellipsis",
+								borderBottom: "1px solid #494949",
+								verticalAlign: "middle"
+								}}
+								primaryTypographyProps={{
 								style: {
-									paddingLeft: 10,
+									paddingLeft: 10
 								}
-							}}
-                        />
-                    ))}
-					</ListItem>
+								}}
+							/>
+							))}
+						</ListItem>
 					{showLoader ? 
 					[...Array(6)].map((_, rowIndex) => (
                         <ListItem
@@ -885,7 +1218,7 @@ const Files = memo((props) => {
                                 backgroundColor: "#212121",
                             }}
                         >
-                            {Array(6)
+                            {Array(8)
                                 .fill()
                                 .map((_, colIndex) => (
                                     <ListItemText
@@ -928,7 +1261,7 @@ const Files = memo((props) => {
 								if (index % 2 === 0) {
 									bgColor = isSelectedFiles ? "#1A1A1A":"#1f2023";
 								}
-	
+								const isDistributed = file?.suborg_distribution?.length > 0 ? true : false;
 								const filenamesplit = file.filename.split(".")
 								const iseditable = file.filesize < 2000000 && file.status === "active" && allowedFileTypes.includes(filenamesplit[filenamesplit.length-1])
 								return (
@@ -953,6 +1286,26 @@ const Files = memo((props) => {
 											primary={new Date(file.updated_at * 1000).toISOString()}
 										/>
 										*/}
+										<ListItemText
+											style={{
+												display: 'table-cell',
+												overflow: "hidden",
+												textAlign: "center",
+											}}
+										>
+											<Checkbox
+												style={{ padding: 0 }}
+												disabled={file.org_id !== selectedOrganization.id}
+												checked={!!selectedFiles[index] || selectAllChecked}
+												onChange={() => {handleFileCheckboxChange(index); setSelectedFileId(prev => {
+													if (prev.includes(file.id)) {
+														return prev.filter((item) => item !== file.id)
+													} else {
+														return [...prev, file.id]
+													}
+												})}}
+											/>
+										</ListItemText>
 										<ListItemText
 											primaryTypographyProps={{
 												style: {
@@ -1064,7 +1417,7 @@ const Files = memo((props) => {
 												>
 													<span>
 														<IconButton
-															disabled={!iseditable}
+															disabled={!iseditable || file.org_id !== selectedOrganization.id}
 															style = {{padding: "6px", }}
 															onClick={() => {
 																setOpenEditor(true)
@@ -1137,7 +1490,6 @@ const Files = memo((props) => {
 													<IconButton
 														style = {{padding: "6px"}}
 														onClick={() => {
-																console.log("file is : ", file)
 																navigator.clipboard.writeText(file.id);
 																document.execCommand("copy");
 	
@@ -1154,7 +1506,7 @@ const Files = memo((props) => {
 												>
 													<span>
 														<IconButton
-															disabled={file.status !== "active"}
+															disabled={file.status !== "active" || file.org_id !== selectedOrganization.id}
 															style={{ padding: "6px" }}
 															onClick={() => {
 															deleteFile(file);
@@ -1166,7 +1518,7 @@ const Files = memo((props) => {
 															viewBox="0 0 24 24"
 															xmlns="http://www.w3.org/2000/svg"
 															style={{
-																stroke: file.status === "active" ? "#fd4c62" : "#c8c8c8",
+																stroke: file.status === "active"  && file.org_id === selectedOrganization.id ? "#fd4c62" : "#c8c8c8",
 															}}
 															>
 															<path
@@ -1192,6 +1544,46 @@ const Files = memo((props) => {
 												// overflow: "hidden",
 											}}
 										/>
+										<ListItemText primaryTypographyProps={{
+                                    style: {
+                                      padding: 8
+                                    }
+                                  }} style={{ display: "table-cell", textAlign: 'center', verticalAlign: 'middle'}} >
+                                  {selectedOrganization.id !== undefined && file?.org_id !== selectedOrganization.id ?
+                                      <Tooltip
+                                          title="Parent organization controlled file. You can use, but not modify this file. Contact an admin of your parent organization if you need changes to this."
+                                          placement="top"
+                                      >
+                                          <Chip
+                                              label={"Parent"}
+                                              variant="contained"
+                                              color="secondary"
+                                              style={{display: "table-cell",}}
+                                          />
+                                      </Tooltip>
+                                      :
+                                      <Tooltip
+                                          title="Distributed to sub-organizations. This means the sub organizations can use this file, but can not modify it."
+                                          placement="top"
+                                      >
+                                          <Checkbox
+                                              disabled={selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ? true : false}
+                                              checked={isDistributed}
+                                              style={{ }}
+                                              color="secondary"
+                                              onClick={() => {
+												setShowDistributionPopup(true)
+												if(file?.suborg_distribution?.length > 0){
+													setSelectedSubOrg(file.suborg_distribution)
+												}else{
+													setSelectedSubOrg([])
+												}
+												setFileIdSelectedForDistribution(file.id)
+                                              }}
+                                          />
+                                      </Tooltip>
+                                  }
+                              </ListItemText>
 									</ListItem>
 								);
 							})

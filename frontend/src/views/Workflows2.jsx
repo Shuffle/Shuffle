@@ -716,6 +716,8 @@ const Workflows2 = (props) => {
     const [videoViewOpen, setVideoViewOpen] = React.useState(false)
     const [gettingStartedItems, setGettingStartedItems] = React.useState([])
     const [selectedWorkflowIndexes, setSelectedWorkflowIndexes] = React.useState([])
+    const [page, setPage] = React.useState(0);
+    const [pageSize, setPageSize] = React.useState(100);
     const [highlightIds, setHighlightIds] = React.useState([])
 
     const [apps, setApps] = React.useState([]);
@@ -751,15 +753,6 @@ const Workflows2 = (props) => {
         navigate(`${location.pathname}?${queryParams.toString()}`);
     };
 
-    useEffect(() => {
-        if (currTab === 2) {
-            setIsLoadingPublicWorkflow(true);
-            // Simulate loading time for the Algolia search results
-            setTimeout(() => {
-                setIsLoadingPublicWorkflow(false);
-            }, 2500);
-        }
-    }, [currTab])
 
 
 
@@ -1319,8 +1312,17 @@ const Workflows2 = (props) => {
                 return response.json();
             })
             .then((responseJson) => {
-                console.log("Response : /api/v1/workflows", responseJson)
-                if (responseJson !== undefined) {
+                if (responseJson !== undefined && responseJson !== null) {
+					if (responseJson.success === false) {
+					} else if (responseJson.length === 0) {
+                        // When there are no workflows, we can set the loading to false
+                        setIsLoadingWorkflow(false)
+						if (currTab !== 2) {
+							toast("No workflows found. Showing workflow discovery")
+							setCurrTab(2)
+						}
+					}
+
                     var newarray = []
                     for (var wfkey in responseJson) {
                         const wf = responseJson[wfkey]
@@ -2476,6 +2478,7 @@ const Workflows2 = (props) => {
             }
         }
 
+
         return (
             <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
                 <Paper square style={paperAppStyle}>
@@ -2530,7 +2533,7 @@ const Workflows2 = (props) => {
                                         maxWidth: 310,
                                         padding: "12px 0",
                                     }}>
-                                        {(data?.image !== undefined || data?.image_url !== undefined) ? (
+                                        {(data?.image !== undefined || (data?.image_url !== undefined && data?.image_url.length > 0)) ? (
                                             <div style={{
                                                 marginBottom: 15,
                                                 borderRadius: theme.palette?.borderRadius,
@@ -3364,7 +3367,15 @@ const Workflows2 = (props) => {
                     className={classes.datagrid}
                     rows={rows}
                     columns={columns}
-                    pageSize={100}
+                    page={page}
+                    onPageChange={(newPage) => {
+                        setPage(newPage)
+                    }}
+                    pageSize={pageSize}
+                    onPageSizeChange={(newPageSize) => {
+                        setPageSize(newPageSize);
+                    }}
+                    rowsPerPageOptions={[25, 50, 100, 150]}
                     checkboxSelection
                     autoHeight
                     density="standard"
@@ -3955,7 +3966,7 @@ const Workflows2 = (props) => {
             setIsLoadingWorkflow(false);
 
         }
-    }, [currTab, workflows, userdata, filteredWorkflows])
+    }, [currTab, workflows, userdata, filteredWorkflows, filters])
 
 
 
@@ -4243,7 +4254,7 @@ const Workflows2 = (props) => {
                         margin: "auto",
                     }}>
                         <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
-                            Workflows
+							{currTab === 0 ? "Org" : currTab === 1 ?  "Your" : "Discover"} Workflows
                         </Typography>
 
                         <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
@@ -4258,21 +4269,21 @@ const Workflows2 = (props) => {
                                 TabIndicatorProps={{ style: { display: 'none' } }}
                             >
                                 <Tab
-                                    label="Organization Apps"
+                                    label="Organization Workflows"
                                     style={{
                                         ...tabStyle,
                                         ...(currTab === 0 ? tabActive : {})
                                     }}
                                 />
                                 <Tab
-                                    label="My Apps"
+                                    label="My Workflows"
                                     style={{
                                         ...tabStyle,
                                         ...(currTab === 1 ? tabActive : {})
                                     }}
                                 />
                                 <Tab
-                                    label="Discover Apps"
+                                    label="Discover Workflows"
                                     style={{
                                         ...tabStyle,
                                         marginRight: 0,

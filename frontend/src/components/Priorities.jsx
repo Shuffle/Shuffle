@@ -409,8 +409,8 @@ const NotificationItem = memo((props) => {
 			{data.read === false ?
 				<Chip
 					label={"Unread"}
-					variant="outlined"
-					color="primary"
+					variant="contained"
+					color="secondary"
 					style={{marginRight: 15, height: 25, }}
 				  />
 			: 
@@ -435,15 +435,12 @@ const NotificationItem = memo((props) => {
 			{data.description}
 		</Typography >
 		<div style={{ display: "flex" }}>
+		<ButtonGroup style={{marginTop: 15, minHeight: 50, maxHeight: 50, }}>
   <Button
     style={{
-      marginTop: 15,
       textTransform: "none",
-      fontSize: 16,
-      marginRight: 5,
       border: "1px solid #ff8544",
       color: "#ff8544",
-      width: 130,
       opacity: data.reference_url ? 1 : 0.5,
       cursor: data.reference_url ? "pointer" : "not-allowed",
     }}
@@ -459,54 +456,44 @@ const NotificationItem = memo((props) => {
 
   {data.read === false ? (
     <Button
-      sx={{
-        marginTop: "15px",
-        border: "none",
-        textTransform: "none",
-        fontSize: 16,
-        color: "#ffffff",
-        marginRight: "5px",
-        backgroundColor: "transparent",
-        "&:hover": { backgroundColor: "transparent" },
-      }}
+	  variant="outlined"
+	  color="secondary"
+	  style={{
+		  height: 50, 
+	  }}
       onClick={() => {
         dismissNotification(data.id);
       }}
     >
-      Dismiss
+     	Mark Read 
     </Button>
   ) : null}
 
-  <Tooltip
-    title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting."
-    placement="top"
-  >
-    <Button
-      style={{
-        marginTop: 15,
-        textTransform: "none",
-        fontSize: 16,
-        width: 130,
-        border: data.ignored
-          ? "1px solid #2bc07e"
-          : "1px solid #ff8544",
-        color: data.ignored ? "#ffffff" : "#ff8544",
-        backgroundColor: data.ignored ? "#2bc07e" : "transparent",
-        opacity: data.ignored || data.dismissable ? 1 : 0.5,
-        cursor: data.dismissable ? "pointer" : "not-allowed",
-      }}
-      disabled={!data.dismissable}
-      onClick={() => {
-        if (data.ignored) {
-          dismissNotification(data.id, false);
-        } else {
-          dismissNotification(data.id, true);
-        }
-      }}
-    >
-      {data.ignored ? "Re-enable" : "Disable"}
-    </Button>
-  </Tooltip>
+	  <Tooltip
+		title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting."
+		placement="top"
+	  >
+		<Button
+		  variant="outlined"
+		  color="secondary"
+		  style={{
+			textTransform: "none",
+			opacity: data.ignored || data.dismissable ? 1 : 0.5,
+			cursor: data.dismissable ? "pointer" : "not-allowed",
+		  }}
+		  disabled={!data.dismissable}
+		  onClick={() => {
+			if (data.ignored) {
+			  dismissNotification(data.id, false);
+			} else {
+			  dismissNotification(data.id, true);
+			}
+		  }}
+		>
+		  {data.ignored ? "Re-enable" : "Disable"}
+		</Button>
+	  </Tooltip>
+  </ButtonGroup> 
 
   <Typography
     variant="body2"

@@ -537,6 +537,7 @@ const CacheView = memo((props) => {
                                         padding: "15px 5px",
                                         maxHeight: 300,
                                         verticalAlign: "middle",
+                                        maxWidth: 300,
 									}}
                                     primary={validate.valid ?
                                             <ReactJson
