@@ -1843,7 +1843,10 @@ const CodeEditor = (props) => {
 												variant='body2'
 												color='textSecondary'
 											>
-												Output is based on the last VALID run of the node(s) you are referencing. Only updates when you refresh the Workflow Window.
+												Output is based on the last VALID run of the node(s) you are referencing. Refresh the page to get updated Variable values.&nbsp;
+												{selectedAction?.name === "execute_python" ?
+													"For Python: exit() to stop a python script ANYWHERE."
+												: null}
 											</Typography>
 											<Typography variant="body2" style={{ maxHeight: 150, overflow: "auto", marginTop: 20, }}>
 												No test output yet.
