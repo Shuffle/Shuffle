@@ -20,9 +20,6 @@ jobs:
           - app: backend
             path: backend
             experimental: true
-          - app: app_sdk
-            path: backend/app_sdk
-            experimental: true
           - app: orborus
             path: functions/onprem/orborus
             experimental: true
