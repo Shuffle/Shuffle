@@ -3,6 +3,7 @@ on:
   release:
     types: [published]
     branches:
+      - main
       - nightly
 
 jobs:
