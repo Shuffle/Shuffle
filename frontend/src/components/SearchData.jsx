@@ -387,7 +387,7 @@ const SearchData = props => {
           if (responseJson.success === false) {
             toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io for more info`) 
 		  } else {
-			  toast(`App successfully ${type}d. Please refresh the page to use it.`)
+			  toast(`App successfully ${type}d. It may now be used in your workflows.`)
 		  }
         })
         .catch(error => {

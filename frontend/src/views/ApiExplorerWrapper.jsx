@@ -101,8 +101,8 @@ const ApiExplorerWrapper = (props) => {
   }, [selectedAppData, openapi])
 
   useEffect(() => {
+    getAppData(appid)
     if (appid !== undefined && appid !== null && appid.length !== 0) {
-      getAppData(appid)
   	  HandleGetLocations() 
     }
 
@@ -157,13 +157,17 @@ const ApiExplorerWrapper = (props) => {
 			}
 
 			if (!found) {
-				toast.error("Failed to get app data or App doesn't exist (1). Redirecting..");
+				toast.error(`Failed to get API data for '${appname}' (1). Contact support@shuffler.io if this persists.`, {
+					"autoClose": 10000,
+				})
 				setTimeout(()=>{
 					navigate("/search?tab=apps");
 				},3000)
 			}
 		} else {
-			toast.error("Failed to get app data or App doesn't exist (2). Redirecting..");
+			toast.error(`Failed to get API data for '${appname}' (2). Contact support@shuffler.io if this persists.`, {
+				"autoClose": 10000,
+			})
 			setTimeout(()=>{
 				navigate("/search?tab=apps");
 			},3000)
@@ -177,6 +181,11 @@ const ApiExplorerWrapper = (props) => {
   // Fetch data when appid is available
   const getAppData = useCallback((appid) => {
     if (appid === undefined || appid === null || appid.length === 0) {
+	  toast.error("No API data to load (4). Please contact support@shuffler.io if this persists.")
+        
+	  setTimeout(() => {
+	  	navigate("/search?tab=apps")
+	  }, 3000)
       return
     }
 	
@@ -197,9 +206,9 @@ const ApiExplorerWrapper = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           toast.error("Failed to get app data or App doesn't exist (3). Redirecting..");
-          setTimeout(()=>{
-            navigate("/search?tab=apps");
-          },3000)
+          setTimeout(() => {
+            navigate("/search?tab=apps")
+          }, 3000)
           return;
         }
         return response.json();
@@ -1790,7 +1799,7 @@ const Wrapper = ({children, isLoaded,isLoggedIn})=>{
 
   return(
     
-    <div className="api-explorer-wrapper" style={{ paddingLeft: (isLoggedIn && isLoaded) ? leftSideBarOpenByClick ? 280 : 100 : 0, transition: 'padding-left 0.3s ease' }}>
+    <div className="api-explorer-wrapper" style={{ zoom: 0.8, paddingLeft: (isLoggedIn && isLoaded) ? leftSideBarOpenByClick ? 280 : 100 : 0, transition: 'padding-left 0.3s ease' }}>
       {children}
     </div>
   )

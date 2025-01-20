@@ -92,6 +92,7 @@ import {
 	SquareFoot as SquareFootIcon,
 	Storage as StorageIcon,
 	Check as CheckIcon,
+	PriorityHigh as PriorityHighIcon,
 } from '@mui/icons-material';
 
 export const useStyles = makeStyles({
@@ -165,6 +166,7 @@ const ParsedAction = (props) => {
 
 	expansionModalOpen,
 	setExpansionModalOpen,
+	fixExample,
 
 	listCache,
 	setActiveDialog,
@@ -258,7 +260,7 @@ const ParsedAction = (props) => {
 
 		  if (param.required === false && param.name.startsWith("${") && param.name.endsWith("}")) {
 			  // Check if it's a required param
-			  param.autocompleted = false 
+			  param.autocompleted = true 
 			  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
 				if (selectedAction.required_body_fields.includes(param.name)) {
 					param.required = true
@@ -281,6 +283,7 @@ const ParsedAction = (props) => {
 		  }
 
 		  if (param.field_active === true) {
+			  param.autocompleted = true 
 			  generated_optional.push(param)
 			  continue
 		  }
@@ -298,8 +301,8 @@ const ParsedAction = (props) => {
 	  const newparams = auth
 		  .concat(bodyfield)
 		  .concat(required)
-		  .concat(special_optional)
 		  .concat(generated_optional)
+		  .concat(special_optional)
 		  .concat(optional)
 
 	  var newkeyorder = []
@@ -1492,6 +1495,7 @@ const ParsedAction = (props) => {
 	  newAppname = newAppname.replaceAll("_", " ")
   }
 
+  var optionalFound = false 
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
 
@@ -3122,91 +3126,6 @@ const ParsedAction = (props) => {
 					}}
 				  />
 				 </Tabs>
-				 {/*
-				 	<ButtonGroup fullWidth>
-					  <Tooltip
-						color="secondary"
-						title={
-							"Show all body fields instead of the body itself"
-						}
-						placement="top"
-					  >
-							<Button 
-				 				variant={hideBody === true ? "outlined" : "contained"} 
-				 				color="primary" 
-				 				style={{textTransform: "none",}}
-				 				onClick={() => {
-								// Set localstorage
-								localStorage.setItem("hideBody", "true")
-								
-								setHideBody(false)
-								const updatedParameters = selectedActionParameters.map((param) => {
-									if (param.name === "body") {
-										return {
-											...param,
-											id: "UNTOGGLED",
-										}
-									}
-
-									if (param.description === openApiFieldDesc) {
-									  // Check required fields here
-									  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
-										// Look for the field name in the required_body_fields
-										if (selectedAction.required_body_fields.includes(param.name)) {
-									  		param.required = true
-										} else {
-											param.required = false
-										}
-									  } 
-
-									  return { ...param, field_active: true }
-									}
-
-									return param
-								})
-				
-								setSelectedActionParameters(updatedParameters)
-							}}>
-								Simplified	
-							</Button>
-				 		</Tooltip>
-					    <Tooltip
-					      color="secondary"
-					      title={
-					      	"Show the body as it is"
-					      }
-					      placement="top"
-					    >
-							<Button 
-				 				variant={hideBody === true ? "contained" : "outlined" }  
-				 				color="primary" 
-				 				style={{textTransform: "none",}}
-				 				onClick={() => {
-								localStorage.setItem("hideBody", "false")
-								setHideBody(true)
-								// Make sure the body field is shown
-								const updatedParameters = selectedActionParameters.map((param) => {
-									if (param.name === "body") {
-										return {
-											...param,
-											id: "TOGGLED",
-										}
-									}
-
-									if (param.description === openApiFieldDesc) {
-									  return { ...param, field_active: false }
-									}
-
-									return param
-								})
-				
-								setSelectedActionParameters(updatedParameters)
-							}}>
-								Advanced
-							</Button>
-				 	    </Tooltip>
-				 	</ButtonGroup>
-					*/}
 			 	</div>
 			   )
 
@@ -3551,7 +3470,7 @@ const ParsedAction = (props) => {
                 }}
               />
 			</Tooltip>
-            );
+            )
 		
 						// Finds headers from a string to be used for autocompletion
 						const findHeaders = (inputdata) => {
@@ -4087,9 +4006,24 @@ const ParsedAction = (props) => {
                     };
 
                     var parsedPaths = [];
-                    if (typeof innerdata.example === "object") {
-                      parsedPaths = GetParsedPaths(innerdata.example, "");
-                    }
+                    if (innerdata.type === "workflow_variable") {
+						// Try to parse the value if it's a string that could be JSON
+						  if (typeof innerdata.value === "string") {
+							try {
+							  const parsedValue = JSON.parse(innerdata.value)
+							  if (typeof parsedValue === "object") {
+								parsedPaths = GetParsedPaths(parsedValue, "");
+							  }
+							} catch (e) {
+							  // Not valid JSON, use the value directly
+							  parsedPaths = GetParsedPaths(innerdata.value, "");
+							}
+						  } else if (typeof innerdata.value === "object") {
+							parsedPaths = GetParsedPaths(innerdata.value, "");
+						  }
+					} else if (typeof innerdata.example === "object") {
+						parsedPaths = GetParsedPaths(innerdata.example, "");
+					}
 
 					const coverColor = "#82ccc3"
 					//menuPosition.left -= 50
@@ -4270,8 +4204,14 @@ const ParsedAction = (props) => {
 				data.variant = "STATIC_VALUE"
 			}
 
+			const isFirstOptional = optionalFound === false && data.configuration === false && data.required === false ? true : false
+			if (optionalFound === false && data.configuration === false && data.required === false) {
+				optionalFound = true
+			}
+
             return (
-              <div key={data.name}>
+              <div key={data.name} style={{marginTop: isFirstOptional ? 55 : 5, }}>
+				{isFirstOptional ? <Divider style={{backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 20, }} /> : null}
                 {showButtonField === true ? hideBodyButtonValue : null} 
                 <div
                   style={{ marginTop: 20, marginBottom: 0, display: "flex" }}
@@ -4297,6 +4237,20 @@ const ParsedAction = (props) => {
                   ) : null}
 
 				  {hasAutocomplete === true ? 
+		  			data.field_active === true ? 
+						<Tooltip
+							color="primary"
+							title={"This is an advanced field, simplified to make it easier to use. NOT required according to the API documentation."}
+							placement="top"
+						>
+							<PriorityHighIcon 
+					  		style={{ 
+								color: "rgba(255,255,255,0.5)" ,
+								marginRight: 0, 
+							}}/>
+						</Tooltip>
+
+						:
 				  	<Tooltip
 				  		color="primary"
 				  		title={"Field was autocompleted by Shuffle based on previous actions (same fields or parent nodes)"}
@@ -4316,7 +4270,7 @@ const ParsedAction = (props) => {
 				  		title={"Explore your keys in Datastore"}
 				  		placement="top"
 				  	>
-						<a href="/admin?tab=cache" target="_blank" style={{textDecoration: "none"}}>
+						<a href="/admin?tab=datastore" target="_blank" style={{textDecoration: "none"}}>
 							<StorageIcon style={{ 
 								color: "#FF8544",
 								marginRight: 10, 
@@ -4351,14 +4305,16 @@ const ParsedAction = (props) => {
 									parsedvalue = ""
 								}
 
+								//console.log("Required fields: ", selectedActionParameters[count])
+
 								setEditorData({
 									"name": data.name,
-									"value": parsedvalue,
+									"value": fixExample(parsedvalue),
 									"field_number": count,
 									"actionlist": actionlist,
 									"field_id": clickedFieldId,
 
-									"example": selectedActionParameters[count].example,
+									"example": fixExample(selectedActionParameters[count].example),
 								})
 							}}
 						/>

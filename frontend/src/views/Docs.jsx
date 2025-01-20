@@ -383,6 +383,7 @@ const Docs = (defaultprops) => {
         if (hash.includes('?')) {
             hash = hash.split('?')[0]
         }
+
         if (hash) {
             const element = document.getElementById(hash.toLowerCase())
             if (element) {
@@ -526,7 +527,7 @@ const Docs = (defaultprops) => {
                         backgroundColor: theme.palette.inputColor,
                         padding: 15,
                         borderRadius: theme.palette?.borderRadius,
-                        marginBottom: 30,
+                        marginBottom: 25,
                         display: "flex",
                     }}
                 >
@@ -618,7 +619,8 @@ const Docs = (defaultprops) => {
                     <Divider
                         style={{
                             width: "90%",
-                            marginTop: 40,
+                            marginTop: 60,
+							marginBottom: 20, 
                             backgroundColor: theme.palette.inputColor,
                         }}
                     />
@@ -664,6 +666,8 @@ const Docs = (defaultprops) => {
         minHeight: "93vh",
         maxHeight: "93vh",
         marginTop: 70,
+		maxWidth: 250, 
+		overflow: "hidden", 
     }
 
     const fetchDocList = () => {
@@ -705,8 +709,7 @@ const Docs = (defaultprops) => {
                     // Find <img> tags and translate them into ![]() format
                     const imgRegex = /<img.*?src="(.*?)"/g;
                     const tocRegex = /^## Table of contents[\s\S]*?(?=^## )|^## Table of contents[\s\S]*$/gm;
-                    const newdata = responseJson.reason.replace(imgRegex, '![]($1)')
-                        .replace(tocRegex, "");
+                    const newdata = responseJson.reason.replace(imgRegex, '![]($1)').replace(tocRegex, "");
                     setData(newdata);
                     if (docId === undefined) {
                         document.title = "Shuffle documentation introduction";
@@ -782,88 +785,6 @@ const Docs = (defaultprops) => {
         fetchDocs(props.match.params.key);
     }
 
-    //    const parseElementScroll = () => {
-    //        const offset = 45;
-    //        var parent = document.getElementById("markdown_wrapper_outer");
-    //        if (parent !== null) {
-    //            //console.log("IN PARENT")
-    //            var elements = parent.getElementsByTagName("h2");
-    //
-    //            const name = window.location.hash
-    //                .slice(1, window.location.hash.length)
-    //                .toLowerCase()
-    //                .split("%20")
-    //                .join(" ")
-    //                .split("_")
-    //                .join(" ")
-    //                .split("-")
-    //                .join(" ")
-    //                .split("?")[0]
-    //
-    //            //console.log(name)
-    //            var found = false;
-    //            for (var key in elements) {
-    //                const element = elements[key];
-    //                if (element.innerHTML === undefined) {
-    //                    continue;
-    //                }
-    //
-    //                // Fix location..
-    //                if (element.innerHTML.toLowerCase() === name) {
-    //                    //console.log(element.offsetTop)
-    //                    element.scrollIntoView({ behavior: "smooth" });
-    //                    //element.scrollTo({
-    //                    //	top: element.offsetTop+offset,
-    //                    //	behavior: "smooth"
-    //                    //})
-    //                    found = true;
-    //                    //element.scrollTo({
-    //                    //	top: element.offsetTop-100,
-    //                    //	behavior: "smooth"
-    //                    //})
-    //                }
-    //            }
-    //
-    //            // H#
-    //            if (!found) {
-    //                elements = parent.getElementsByTagName("h3");
-    //                //console.log("NAMe: ", name)
-    //                found = false;
-    //                for (key in elements) {
-    //                    const element = elements[key];
-    //                    if (element.innerHTML === undefined) {
-    //                        continue;
-    //                    }
-    //
-    //                    // Fix location..
-    //                    if (element.innerHTML.toLowerCase() === name) {
-    //                        element.scrollIntoView({ behavior: "smooth" });
-    //                        //element.scrollTo({
-    //                        //	top: element.offsetTop-offset,
-    //                        //	behavior: "smooth"
-    //                        //})
-    //                        found = true;
-    //                        //element.scrollTo({
-    //                        //	top: element.offsetTop-100,
-    //                        //	behavior: "smooth"
-    //                        //})
-    //                    }
-    //                }
-    //            }
-    //        }
-    //        //console.log(element)
-    //
-    //        //console.log("NAME: ", name)
-    //        //console.log(document.body.innerHTML)
-    //        //   parent = document.getElementById(parent);
-    //
-    //        //var descendants = parent.getElementsByTagName(tagname);
-    //
-    //        // this.scrollDiv.current.scrollIntoView({ behavior: 'smooth' });
-    //
-    //        //$(".parent").find("h2:contains('Statistics')").parent();
-    //    };
-
     const markdownStyle = {
         color: "rgba(255, 255, 255, 0.90)",
         overflow: "hidden",
@@ -872,7 +793,7 @@ const Docs = (defaultprops) => {
         maxWidth: "100%",
         minWidth: "100%",
         overflow: "hidden",
-        fontSize: isMobile ? "1.3rem" : "1.1rem",
+        fontSize: isMobile ? "1.3rem" : "0.8rem",
     };
 
     const alertNote = {
@@ -1084,25 +1005,23 @@ const Docs = (defaultprops) => {
                 <div style={IndexBar}>
                     {tocLines.length > 0 ?
                         (
-                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table Of Content</h4>
+                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table of Content</h4>
 
                         ) : null}
                     <nav>
                         {tocLines.map((data, index) => {
                             return (
-                                <div className="toc">
+                                <div className="toc"
+								>
                                     <ListItemButton
                                         key={data.text}
                                         href={`#${data.id}`}
                                         style={{
-                                            color: activeId === data.id ? "#f86a3e" : "inherit",
-                                            textDecoration: "none",
                                             fontSize: "14px",
                                             fontWeight: 400,
-                                            padding: "4px 0",
-                                            paddingLeft: "8px",
-                                            paddingRight: "8px",
+											padding: "4px 8px 4px 8px",
                                             lineHeight: "20px",
+                                            color: activeId === data.id ? "#f86a3e" : "rgba(255,255,255,0.6)", 
                                         }}
                                         onClick={(e) => {
                                             handleCollapse(index)

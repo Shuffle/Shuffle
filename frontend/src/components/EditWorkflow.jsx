@@ -647,7 +647,7 @@ const EditWorkflow = (props) => {
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
 											<Typography variant="body2" style={{ marginTop: 10, color: "rgba(255,255,255,0.7)" }}>
-												Your organization does not have any suborgs yet OR your user may not have access to available suborgs. Please <a href="/admin?tab=suborgs" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">make one</a> or get access to suborgs by another admin, then try again.
+												Your organization does not have any suborgs yet OR your user may not have access to available suborgs. Please <a href="/admin?tab=tenants" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">make one</a> or get access to suborgs by another admin, then try again.
 											</Typography>
 											:
 											<Typography variant="body2" style={{ marginTop: 10, color: "rgba(255,255,255,0.7)" }}>
@@ -738,7 +738,7 @@ const EditWorkflow = (props) => {
 											})}
 										</Select>
 									:
-									<Link to={"/admin?tab=suborgs"} style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">
+									<Link to={"/admin?tab=tenants"} style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">
 										<Typography variant="body2" style={{ marginTop: 10, }}>
 											Create a sub-org to distribute workflows to suborgs.
 										</Typography>
@@ -753,7 +753,7 @@ const EditWorkflow = (props) => {
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
-									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides your <a href="/admin?admin_tab=organization" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=priorities" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">notifications</a> if it fails.
+									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides your <a href="/admin?admin_tab=org_config" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=notifications" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">notifications</a> if it fails.
 								</Typography>
 								<Grid container style={{ marginTop: 10, }} spacing={2}>
 									<Grid item xs={6} style={{}}>

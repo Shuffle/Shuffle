@@ -1567,7 +1567,7 @@ const Files = memo((props) => {
                                           placement="top"
                                       >
                                           <Checkbox
-                                              disabled={selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ? true : false}
+                                              disabled={userdata?.active_org?.role !== "admin" || (selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ) ? true : false}
                                               checked={isDistributed}
                                               style={{ }}
                                               color="secondary"

@@ -568,6 +568,9 @@ const AngularWorkflow = (defaultprops) => {
 	  }
   }, [editWorkflowModalOpen])
 
+  const dragRef = React.useRef(false);
+
+
   // New for generated stuff
 const releaseToConnectLabel = "Release to Connect"
   const integrationApps =  [{
@@ -696,11 +699,32 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		if (loadedApps.includes(appId)) {
-			return
+			console.log("App already loaded: ", appId)
+
+			// 1. Find the app and check if it has actions
+			// 2. If it doesn't have actions, reload once again 
+			var should_reload = false
+			for (var i = 0; i < apps.length; i++) {
+				const curapp = apps[i]
+				if (curapp.id !== appId) {
+					continue
+				}
+
+				if (curapp.actions === undefined || curapp.actions === null || curapp.actions.length === 0 || curapp.actions.length === 1) {
+					should_reload = true
+					break
+				}
+			}
+
+			if (!should_reload) {
+				return
+			}
 		}
 
-		loadedApps.push(appId)
-		setLoadedApps(loadedApps)
+		if (!loadedApps.includes(appId)) {
+			loadedApps.push(appId)
+			setLoadedApps(loadedApps)
+		}
 
 		const appUrl = `${globalUrl}/api/v1/apps/${appId}/config?openapi=false`
 		fetch(appUrl, {
@@ -2331,6 +2355,35 @@ const releaseToConnectLabel = "Release to Connect"
     return success
   };
 
+	const fixExample = (input, required) => {
+		if (input === undefined || input === null || input.length === 0) {
+			return ""
+		}
+
+
+		// 1. Find anything matching ${variable} 
+		// 2. If it is required, replace it with REQUIRED
+		// 3. If it is not required, replace it with empty
+
+		// Check if it is a string or not
+		var newExample = input
+		if (typeof newExample !== "string") {
+			return newExample
+		}
+
+		const found = newExample.match(/\${(.*?)}/g)
+		if (found === null || found === undefined || found.length === 0) {
+			return newExample
+		}
+
+		for (var i = 0; i < found.length; i++) {
+			//newExample = newExample.replace(found[i], "REQUIRED")
+			newExample = newExample.replace(found[i], "REPLACE_ME")
+		}
+
+		return newExample
+	}
+
   const monitorUpdates = () => {
     var firstnode = cy.getElementById(workflow.start);
     if (firstnode.length === 0) {
@@ -3656,7 +3709,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  setWorkflows([responseJson])
         } else {
           getAppAuthentication();
-          getEnvironments();
+          getEnvironments(responseJson.org_id)
 
           getSettings();
           getFiles()
@@ -6864,7 +6917,9 @@ const releaseToConnectLabel = "Release to Connect"
           }
         }
 
-        if (showEnvCnt > 1) {
+		// Always showing for now
+        //if (showEnvCnt > 1) {
+        if (showEnvCnt > 0) {
           setShowEnvironment(true)
         }
 
@@ -10018,15 +10073,37 @@ const releaseToConnectLabel = "Release to Connect"
 
     const ParsedAppPaper = (props) => {
       const app = props.app
-	  const small = props.small
-	  const actionString = props.action
+	    const small = props.small
+	    const actionString = props.action
+
       const [hover, setHover] = React.useState(false);
-    React.useEffect(() => {
-      if(app.name === "Shuffle Tools"){
-        if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
-          loadAppConfig(app.id, false) 
+
+      // Prevent hover effects during drag
+      const handleMouseMove = React.useCallback((e) => {
+        if (dragRef.current) {
+          setHover(false);
         }
-      }
+      }, []);
+
+        React.useEffect(() => {
+    // Add mousemove listener to track dragging
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [handleMouseMove]);
+
+
+    React.useEffect(() => {
+		  if (props.skip_load === true) {
+			  return
+		  }
+
+        if (app.name === "Shuffle Tools"){
+          if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
+            loadAppConfig(app.id, false) 
+          }
+        }
     }, [])
     
 	  if (app === undefined || app === null) {
@@ -10115,13 +10192,20 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 		
 	  newAppStyle.backgroundColor = theme.palette.backgroundColor
-
       return (
         <Draggable
+          onStart={() => {
+            dragRef.current = true;
+            newAppStyle.zIndex = 9999
+
+          }}
           onDrag={(e) => {
+            newAppStyle.zIndex = 9999
             handleAppDrag(e, app)
           }}
           onStop={(e) => {
+            dragRef.current = false;
+            newAppStyle.zIndex = "none"
             handleDragStop(e, app)
           }}
           key={app.id}
@@ -10132,18 +10216,18 @@ const releaseToConnectLabel = "Release to Connect"
           <Paper
             square
             style={newAppStyle}
-            onMouseOver={(e) => {
-			  e.preventDefault()
-			  e.stopPropagation()
-
-              setHover(true)
-
-			  if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
-			  	loadAppConfig(app.id, false) 
-			  }
-
+            onMouseEnter={(e) => {
+              if (!dragRef.current) {
+                e.preventDefault();
+                e.stopPropagation();
+                setHover(true);
+    
+                if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
+                  loadAppConfig(app.id, false);
+                }
+              }
             }}
-            onMouseOut={() => {
+            onMouseLeave={() => {
               setHover(false);
             }}
             onClick={() => {
@@ -10586,6 +10670,27 @@ const releaseToConnectLabel = "Release to Connect"
 	}
 
 	var viewedApps = []
+
+    const QuickAccessSection = ({title, items, renderItem}) => (
+      <div style={{marginBottom: 25}}>
+        <Typography 
+          variant="body1" 
+          color="textSecondary" 
+          style={{marginTop: 20, marginLeft: 5}}
+        >
+          {title}
+        </Typography>
+        <div style={{display: "flex", flexWrap: "wrap", gap: 5}}>
+          {items.map((item, index) => renderItem(item, index))}
+        </div>
+      </div>
+    );
+    
+    // Popular Shuffle Tools actions
+    const popularActions = [
+      ["repeat_back_to_me", "filter_list", "execute_python", "parse_ioc"],
+      ["set_cache_value", "get_file_meta", "merge_lists", "send_sms_shuffle"] 
+    ];
     return (
       <div style={appViewStyle}>
         <div style={{ flex: "1", zoom: 0.9, }}>
@@ -10628,59 +10733,37 @@ const releaseToConnectLabel = "Release to Connect"
             }}
           />
 
-		  {shuffleToolsApp !== undefined && shuffleToolsApp !== null && document?.getElementById("appsearch")?.value?.length === 0 ?
-			  <div style={{marginBottom: 25, }}>
-				<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
-					Popular Actions
-				</Typography> 
-				<div style={{
-					display: "flex", 
-				}}>
-					<ParsedAppPaper small={true} action={"repeat_back_to_me"} app={shuffleToolsApp} />
-					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"filter_list"} app={shuffleToolsApp} />
-					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"execute_python"} app={shuffleToolsApp} />
-					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"parse_ioc"} app={shuffleToolsApp} />
-				</div>
-				<div style={{
-					display: "flex", 
-				}}>
-					<ParsedAppPaper small={true} action={"set_cache_value"} app={shuffleToolsApp} />
-					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"get_file_meta"} app={shuffleToolsApp} />
-					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"merge_lists"} app={shuffleToolsApp} />
-					<div style={{marginLeft: 5, }}/>
-					<ParsedAppPaper small={true} action={"send_sms_shuffle"} app={shuffleToolsApp} />
-				</div>
-			  </div>
-		  : null}
 
-		  {document?.getElementById("appsearch")?.value?.length === 0 ?
-			  <div style={{marginBottom: 25, }}>
-				<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
-					Triggers
-				</Typography> 
-				<div style={{
-					display: "flex", 
-				}}>
-					{triggers.map((trigger, index) => {
-						if (trigger.trigger_type === "PIPELINE") {  
-							return null
-						}
-
-
-						return(
-							<div key={index} style={{marginLeft: index !== 0 ? 5 : 0, }}>
-								<ParsedAppPaper small={true} action={trigger.name} app={JSON.parse(JSON.stringify(trigger))} />
-							</div>
-						)
-					})}
-				</div>
-			  </div>
-		  : null}
+		  {shuffleToolsApp && !document?.getElementById("appsearch")?.value?.length && (
+			<QuickAccessSection
+			  title="Popular Actions"
+			  items={popularActions.flat()}
+			  renderItem={(action) => (
+				<ParsedAppPaper 
+				  key={action}
+				  small={true} 
+				  action={action}
+				  app={shuffleToolsApp}
+				  skip_load={true}
+				/>
+			  )}
+			/>
+		  )}
+      
+		  {!document?.getElementById("appsearch")?.value?.length && (
+			<QuickAccessSection
+			  title="Triggers" 
+			  items={triggers.filter(t => t.trigger_type !== "PIPELINE")}
+			  renderItem={(trigger, index) => (
+				<ParsedAppPaper
+				  key={index}
+				  small={true}
+				  action={trigger.name}
+				  app={JSON.parse(JSON.stringify(trigger))}
+				/>
+			  )}
+			/>
+		  )}
 
 		  <Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
 			Your Apps
@@ -13942,8 +14025,23 @@ const releaseToConnectLabel = "Release to Connect"
                   };
       
                   var parsedPaths = [];
-                  console.log("Found example data: ", innerdata.example)
-                  if (typeof innerdata.example === "object") {
+
+                  if (innerdata.type === "workflow_variable") {
+                    // Try to parse the value if it's a string that could be JSON
+                      if (typeof innerdata.value === "string") {
+                        try {
+                          const parsedValue = JSON.parse(innerdata.value)
+                          if (typeof parsedValue === "object") {
+                            parsedPaths = GetParsedPaths(parsedValue, "");
+                          }
+                        } catch (e) {
+                          // Not valid JSON, use the value directly
+                          parsedPaths = GetParsedPaths(innerdata.value, "");
+                        }
+                      } else if (typeof innerdata.value === "object") {
+                        parsedPaths = GetParsedPaths(innerdata.value, "");
+                      }
+                  } else if (typeof innerdata.example === "object") {
                     parsedPaths = GetParsedPaths(innerdata.example, "");
                   }
       
@@ -16531,7 +16629,7 @@ const releaseToConnectLabel = "Release to Connect"
 		}
         </div>	
 
-			{showEnvironment === true && environments.length > 1 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
+			{showEnvironment === true && environments.length > 0 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
 			    <FormControl fullWidth style={{marginTop: 15, pointerEvents: "auto", maxWidth: 250, }}>
 
 					<InputLabel
@@ -16555,6 +16653,10 @@ const releaseToConnectLabel = "Release to Connect"
 						style: {
 							height: 40,
 						}
+					}}
+					onClick={(e) => {
+						console.log("CLICK!")
+  						getEnvironments(workflow.org_id)
 					}}
 					onChange={(e) => {
   					  setLastSaved(false)
@@ -16600,8 +16702,9 @@ const releaseToConnectLabel = "Release to Connect"
 						>
 
 						  {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
+
 							  <a href={`/admin?tab=locations&env=${data.Name}`} target="_blank" style={{textDecoration: "none",}}>
-								  <Tooltip title={"Click to configure this location"} placement="top">
+								  <Tooltip title={"Click to configure this runtime location"} placement="top">
 									  <Chip
 										style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
 										label={"Stopped"}
@@ -16610,6 +16713,7 @@ const releaseToConnectLabel = "Release to Connect"
 										onClick={(e) => {
 											e.preventDefault()
 											e.stopPropagation()
+
 											window.open(`/admin?tab=locations&env=${data.Name}`, "_blank", "noopener,noreferrer")
 										}}
 
@@ -16617,7 +16721,21 @@ const releaseToConnectLabel = "Release to Connect"
 									  />
 								  </Tooltip>
 							  </a>
-							: null}
+							  :
+							  <Chip
+								key={index}
+								style={{
+									color: green,
+									borderColor: green,
+								}}
+								label={"Running"}
+								onClick={() => {
+								  //handleChipClick
+								}}
+								variant="outlined"
+								color="primary"
+							  />
+						  }
 
 						  {data.default === true ?
 							  <Chip
@@ -18000,7 +18118,7 @@ const releaseToConnectLabel = "Release to Connect"
               setWorkflow(workflow)
 
               getAppAuthentication();
-              getEnvironments();
+              getEnvironments(workflow.org_id)
               getWorkflowExecution(props.match.params.key, "");
               getAvailableWorkflows(-1);
               getSettings();
@@ -19020,7 +19138,7 @@ const releaseToConnectLabel = "Release to Connect"
 							  	onClick={(e) => {
 									e.preventDefault()
 									e.stopPropagation()
-									window.open(`/admin?admin_tab=priorities&workflow=${data.workflow.id}&execution_id=${data.execution_id}`, "_blank")
+									window.open(`/admin?admin_tab=notifications&workflow=${data.workflow.id}&execution_id=${data.execution_id}`, "_blank")
 								}}
 							  />
 							</Tooltip>
@@ -19075,7 +19193,7 @@ const releaseToConnectLabel = "Release to Connect"
           )}
         </div>
       ) : (
-        <div style={{ padding: isMobile ? "0px 10px 25px 10px" : "25px 15px 25px 15px", maxWidth: isMobile ? "100%" : "100%", overflowX: "hidden" }}>
+        <div style={{ padding: isMobile ? "0px 10px 50px 10px" : "25px 15px 150px 15px", maxWidth: isMobile ? "100%" : "100%", overflowX: "hidden", }}>
 
           
             <Breadcrumbs
@@ -19129,7 +19247,7 @@ const releaseToConnectLabel = "Release to Connect"
               marginBottom: 10,
             }}
           />
-          <div style={{ display: "flex", marginLeft: 10, }}>
+          <div style={{ display: "flex", paddingLeft: 10, paddingRight: 10, position: "sticky", top: 0, zIndex: 12500, backgroundColor: theme.palette.platformColor, borderRadius: theme.palette.borderRadius, border: "2px solid rgba(255,255,255,0.3)", marginBottom: 10, }}>
             <h2>Details</h2>
             <Tooltip
               color="primary"
@@ -19269,7 +19387,7 @@ const releaseToConnectLabel = "Release to Connect"
 						onClick={(e) => {
 							e.preventDefault()
 							e.stopPropagation()
-							window.open(`/admin?admin_tab=priorities&workflow=${executionData.workflow.id}&execution_id=${executionData.execution_id}`, "_blank")
+							window.open(`/admin?admin_tab=notifications&workflow=${executionData.workflow.id}&execution_id=${executionData.execution_id}`, "_blank")
 						}}
 					  />
                   </Button>
@@ -20190,7 +20308,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
 	  if (stringjson.includes("kms/")) {
-		  return "KMS authentication most likely failed. Check your notifications for more details on this page: /admin?admin_tab=priorities. If you need help with KMS, please contact support@shuffler.io"
+		  return "KMS authentication most likely failed. Check your notifications for more details on this page: /admin?admin_tab=notifications. If you need help with KMS, please contact support@shuffler.io"
 	  }
 
 	  if (stringjson.includes("invalidurl")) {
@@ -20208,7 +20326,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
 	  if (isCloud && stringjson.toLowerCase().includes("timeout error")) {
-		  return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=locationsto create an environment to connect to"
+		  return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=locations to create an environment to connect to"
 	  }
 
 	  if (stringjson.toLowerCase().includes("invalid header")) {
@@ -20218,7 +20336,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 	  if (stringjson.includes("connectionerror")) {
 		  if (stringjson.includes("kms")) {
-			  return "KMS authentication most likely failed (2). Check your notifications for more details on this page: /admin?admin_tab=priorities&kms=true. If you need help with KMS, please contact support@shuffler.io"
+			  return "KMS authentication most likely failed (2). Check your notifications for more details on this page: /admin?admin_tab=notifications&kms=true. If you need help with KMS, please contact support@shuffler.io"
 		  }
 
 		  return "The URL is incorrect, or Shuffle can't reach it. Set up a Shuffle Environment in the same VLAN, or whitelist Shuffle's IPs."
@@ -20696,6 +20814,7 @@ const releaseToConnectLabel = "Release to Connect"
 				setExpansionModalOpen={setCodeEditorModalOpen}
 				setEditorData={setEditorData}
 				setAiQueryModalOpen={setAiQueryModalOpen}
+				fixExample={fixExample} 
 			  />
         	</div> 
 		</Fade>
@@ -22583,6 +22702,8 @@ const releaseToConnectLabel = "Release to Connect"
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
 				activeDialog={activeDialog}
 				setActiveDialog={setActiveDialog}
+				environment={selectedActionEnvironment}
+
 
   				setAiQueryModalOpen={setAiQueryModalOpen}
 	  		/>

@@ -100,6 +100,8 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
   const [ExampleBody, setExampleBody] = useState({});
   const [filteredActions, setFilteredActions] = useState([]);
 
+  const [firstSendDone, setFirstSendDone] = useState(false)
+
   const getJsonObject = (properties) => {
 
     let jsonObject = {};
@@ -1425,18 +1427,20 @@ const ActionsList = memo(({
 };
 
   const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
+    const query = e?.target?.value?.toLowerCase().replaceAll("_", " ");
+
+    setSearchQuery(query)
     if (query.length === 0) {
-      setVisibleActions(actions);
+      setVisibleActions(actions)
     } else {
       setVisibleActions(
-        actions.filter((action) =>
-          action.name.toLowerCase().includes(searchQuery.toLowerCase())
+        actions?.filter((action) =>
+          action?.name?.toLowerCase()?.replaceAll("_", " ")?.includes(searchQuery)
         )
-      );
+      )
     }
-  };
+  }
+
   return (
     <div style={{ maxWidth: '350px', width: "25%", overflow: 'hidden', marginLeft: !(isLoggedIn || isLoaded) ? 5 : 0}}>
     <div style={{ borderBottom: '1px solid #494949', paddingTop: 10, paddingBottom: 10}}>
@@ -1465,7 +1469,7 @@ const ActionsList = memo(({
      </div>
       <TextField
         value={searchQuery}
-        placeholder="Search here"
+        placeholder="Search endpoints"
         onChange={handleSearch}
         InputProps={{
           startAdornment: (
@@ -2035,6 +2039,7 @@ const Action = memo((
           }, [editorRef.current]);
           
           
+		const actionname = action?.name.charAt(0).toUpperCase() + action?.name.slice(1).replaceAll("_", " ")
         return (
           <div
             ref={actionRef}
@@ -2042,6 +2047,7 @@ const Action = memo((
             data-index={index}
             key={action.name.replace(/ /g, "-").replace(/_/g, "-")}
             style={{ 
+			  marginTop: 50, 
               display: "flex", 
               flexDirection: "row", 
               minHeight: 400,
@@ -2066,7 +2072,7 @@ const Action = memo((
                       color: "rgba(241, 241, 241, 1)",
                     }}
                   >
-                    {action.name}
+                    {actionname}
               </Typography>
               <div
                 style={{
@@ -2259,6 +2265,13 @@ const Action = memo((
                   }}
                   disabled={disableExecuteButton}
                   onClick={() => {
+					/*
+					if (!firstSendDone) {
+						setFirstSendDone(true)
+        				setCurTab(2)
+					}
+					*/
+
                     if (actionUrl.length === 0) {
                       toast.error("URL cannot be empty");
                       return;

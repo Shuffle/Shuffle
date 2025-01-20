@@ -114,7 +114,9 @@ const CodeEditor = (props) => {
 		editorData,
 
 		setAiQueryModalOpen,
-		fullScreenMode
+		fullScreenMode,
+		environment,
+		fixExample,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -189,8 +191,27 @@ const CodeEditor = (props) => {
 			tmpVariables.push('$' + actionlist[i].autocomplete.toLowerCase())
 
 			var parsedPaths = []
-			if (typeof actionlist[i].example === "object") {
-				parsedPaths = GetParsedPaths(actionlist[i].example, "");
+			if (actionlist[i].type === "workflow_variable") {
+				// Try to parse the value if it's a string that could be JSON
+				if (typeof actionlist[i].value === "string") {
+					try {
+						const parsedValue = JSON.parse(actionlist[i].value)
+						if (typeof parsedValue === "object") {
+							parsedPaths = GetParsedPaths(parsedValue, "");
+						}
+					} catch (e) {
+						// Not valid JSON, skip parsing
+						continue
+					}
+				} else if (typeof actionlist[i].value === "object") {
+					// Direct object/array value
+					parsedPaths = GetParsedPaths(actionlist[i].value, "");
+				}
+			} else {
+				// Handle regular action results
+				if (typeof actionlist[i].example === "object") {
+					parsedPaths = GetParsedPaths(actionlist[i].example, "");
+				}
 			}
 
 			for (var key in parsedPaths) {
@@ -596,7 +617,7 @@ const CodeEditor = (props) => {
 		var code_lines = value.split('\n')
 		for (var i = 0; i < code_lines.length; i++) {
 			var current_code_line = code_lines[i]
-			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g);
+			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g)
 
 			if (!variable_occurence) {
 				continue;
@@ -651,6 +672,75 @@ const CodeEditor = (props) => {
 							endRow: i,
 							endCol: endCh,
 							className: correctVariable ? "good-marker" : "bad-marker",
+							type: "text",
+						})
+					}
+
+					setMarkers(newMarkers)
+				}
+
+
+			} catch (e) {
+				console.log("Error in color highlighting: ", e);
+			}
+		}
+
+		var code_lines = value.split('\n')
+		for (var i = 0; i < code_lines.length; i++) {
+			var current_code_line = code_lines[i]
+
+			// Look for REPLACE_ME
+			var variable_occurence = current_code_line.match(/REPLACE_ME/g)
+
+			if (!variable_occurence) {
+				continue;
+			}
+
+			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0])
+			variable_occurence = new_occurences
+
+			// Find the start position of REPLACE_ME and highlight it
+			var dollar_occurence = []
+			for (let ch = 0; ch < current_code_line.length; ch++) {
+				// Not allowing it then lol
+				if (ch + 9 >= current_code_line.length) {
+					continue
+				}
+
+				// Rofl - at least it is specific
+				if (current_code_line[ch] === 'R' && current_code_line[ch + 1] === 'E' && current_code_line[ch + 2] === 'P' && current_code_line[ch + 3] === 'L' && current_code_line[ch + 4] === 'A' && current_code_line[ch + 5] === 'C' && current_code_line[ch + 6] === 'E' && current_code_line[ch + 7] === '_' && current_code_line[ch + 8] === 'M' && current_code_line[ch + 9] === 'E') {
+					dollar_occurence.push(ch)
+				}
+			}
+
+			try {
+				if (variable_occurence.length === 0) {
+					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #282828; border-radius: 0px; color: #b8bb26"})
+					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #; border-radius: 0px; color: inherit"})
+				}
+
+				for (let occ = 0; occ < variable_occurence.length; occ++) {
+					const fixedVariable = variable_occurence[occ]
+
+					var startCh = dollar_occurence[occ]
+					var endCh = dollar_occurence[occ] + 10
+					try {
+						newMarkers.push({
+							startRow: i,
+							startCol: startCh,
+							endRow: i,
+							endCol: endCh,
+							className: "bad-marker",
+							type: "text",
+						})
+					} catch (e) {
+						console.log("Error in color highlighting: ", e);
+						newMarkers.push({
+							startRow: i,
+							startCol: startCh,
+							endRow: i,
+							endCol: endCh,
+							className: "bad-marker",
 							type: "text",
 						})
 					}
@@ -720,6 +810,34 @@ const CodeEditor = (props) => {
 						const fixedVariable = fixVariable(found[i])
 
 						var valuefound = false
+
+						  // First check if it's a workflow variable
+						  if (actionlist !== undefined && actionlist.length > 0) {
+							const workflowVar = actionlist?.find(item => 
+								item.type === "workflow_variable" && 
+								`$${item.autocomplete.toLowerCase()}` === fixedVariable.toLowerCase()
+							)
+	
+							if (workflowVar && workflowVar.example) {
+								valuefound = true
+								try {
+									// Try to parse the example value if it's stored as a JSON string
+									if (typeof workflowVar.example === "string" && 
+									   (workflowVar.example.startsWith("[") || workflowVar.example.startsWith("{"))) {
+										const parsedExample = JSON.parse(workflowVar.example)
+										input = input.replace(found[i], JSON.stringify(parsedExample), -1)
+									} else {
+										input = input.replace(found[i], workflowVar.example, -1)
+									}
+									continue
+								} catch (e) {
+									console.log("Error parsing workflow variable:", e)
+									input = input.replace(found[i], workflowVar.example, -1)
+									continue
+								}
+							}
+						}
+	
 						for (var j = 0; j < actionlist.length; j++) {
 							if (fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()) {
 								continue
@@ -750,9 +868,26 @@ const CodeEditor = (props) => {
 							var shouldbreak = false
 							for (var k = 0; k < actionlist.length; k++) {
 								var parsedPaths = []
-								if (typeof actionlist[k].example === "object") {
-									parsedPaths = GetParsedPaths(actionlist[k].example, "");
-								}
+								
+								    // Handle both workflow variables and regular actions
+									if (actionlist[k].type === "workflow_variable") {
+										// Try to parse the value if it's a string that could be JSON
+										if (typeof actionlist[k].value === "string") {
+											try {
+												const parsedValue = JSON.parse(actionlist[k].value)
+												if (typeof parsedValue === "object") {
+													parsedPaths = GetParsedPaths(parsedValue, "");
+												}
+											} catch (e) {
+												// Not valid JSON, use the value directly
+												parsedPaths = GetParsedPaths(actionlist[k].value, "");
+											}
+										} else if (typeof actionlist[k].value === "object") {
+											parsedPaths = GetParsedPaths(actionlist[k].value, "");
+										}
+									} else if (typeof actionlist[k].example === "object") {
+										parsedPaths = GetParsedPaths(actionlist[k].example, "");
+								}				
 
 								for (var key in parsedPaths) {
 									const fullpath = "$" + actionlist[k].autocomplete.toLowerCase() + parsedPaths[key].autocomplete.toLowerCase()
@@ -766,7 +901,22 @@ const CodeEditor = (props) => {
 
 									var new_input = ""
 									try {
-										new_input = FindJsonPath(fullpath, actionlist[k].example)
+										const sourceData = actionlist[k].type === "workflow_variable" ? 
+										(() => {
+											// Try to parse the value if it's a JSON string
+											if (typeof actionlist[k].value === "string") {
+												try {
+													return JSON.parse(actionlist[k].value);
+												} catch (e) {
+													// If parsing fails, return the original string value
+													return actionlist[k].value;
+												}
+											}
+											return actionlist[k].value;
+										})() : 
+										actionlist[k].example;
+	
+										new_input = FindJsonPath(fullpath, sourceData)	
 									} catch (e) {
 										console.log("ERR IN INPUT: ", e)
 									}
@@ -789,8 +939,9 @@ const CodeEditor = (props) => {
 										}
 									}
 
-									input = input.replace(fixedVariable, new_input, -1)
-									input = input.replace(found[i], new_input, -1)
+									// Replace both the fixed and original variable to handle both #0 and # cases
+									input = input.replace(found[i], new_input)
+									input = input.replace(fixedVariable, new_input)
 
 									shouldbreak = true
 									break
@@ -876,8 +1027,12 @@ const CodeEditor = (props) => {
 		}
 
 		if (edited === false) {
-			if (!item.value.includes("{%") && !item.value.includes("{{")) {
-				setlocalcodedata(localcodedata + " | " + item.value + " }}")
+			if (item.value.includes("{%") || item.value.includes("{{")) {
+				if (!item.value.includes("}}") && !item.value.includes("%}")) {
+					setlocalcodedata(localcodedata + " | " + item.value + " }}")
+				} else {
+					setlocalcodedata(localcodedata + item.value)
+				}
 			} else {
 				setlocalcodedata(localcodedata + item.value)
 			}
@@ -899,7 +1054,7 @@ const CodeEditor = (props) => {
 		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : selectedAction.name === "execute_bash" ? "execute_bash" : "repeat_back_to_me"
 		const params = actionname === "execute_python" ? [{ "name": "code", "value": inputdata }] : actionname === "execute_bash" ? [{ "name": "code", "value": inputdata }, { "name": "shuffle_input", "value": "", }] : [{ "name": "call", "value": inputdata }]
 
-		const actiondata = { "description": "Repeats the call parameter", "id": "", "name": actionname, "label": "", "node_type": "", "environment": "", "sharing": false, "private_id": "", "public_id": "", "app_id": appid, "tags": null, "authentication": [], "tested": false, "parameters": params, "execution_variable": { "description": "", "id": "", "name": "", "value": "" }, "returns": { "description": "", "example": "", "id": "", "schema": { "type": "string" } }, "authentication_id": "", "example": "", "auth_not_required": false, "source_workflow": "", "run_magic_output": false, "run_magic_input": false, "execution_delay": 0, "app_name": "Shuffle Tools", "app_version": "1.2.0", "selectedAuthentication": {} }
+		const actiondata = { "description": "Repeats the call parameter", "id": "", "name": actionname, "label": "", "node_type": "", "environment": environment?.Name, "sharing": false, "private_id": "", "public_id": "", "app_id": appid, "tags": null, "authentication": [], "tested": false, "parameters": params, "execution_variable": { "description": "", "id": "", "name": "", "value": "" }, "returns": { "description": "", "example": "", "id": "", "schema": { "type": "string" } }, "authentication_id": "", "example": "", "auth_not_required": false, "source_workflow": "", "run_magic_output": false, "run_magic_input": false, "execution_delay": 0, "app_name": "Shuffle Tools", "app_version": "1.2.0", "selectedAuthentication": {} }
 
 		setExecutionResult({
 			"valid": false,
@@ -1396,7 +1551,22 @@ const CodeEditor = (props) => {
 												};
 
 												var parsedPaths = [];
-												if (typeof innerdata.example === "object") {
+												if (innerdata.type === "workflow_variable") {
+													// Try to parse the value if it's a string that could be JSON
+													  if (typeof innerdata.value === "string") {
+														try {
+														  const parsedValue = JSON.parse(innerdata.value)
+														  if (typeof parsedValue === "object") {
+															parsedPaths = GetParsedPaths(parsedValue, "");
+														  }
+														} catch (e) {
+														  // Not valid JSON, use the value directly
+														  parsedPaths = GetParsedPaths(innerdata.value, "");
+														}
+													  } else if (typeof innerdata.value === "object") {
+														parsedPaths = GetParsedPaths(innerdata.value, "");
+													  }
+												  } else if (typeof innerdata.example === "object") {
 													parsedPaths = GetParsedPaths(innerdata.example, "");
 												}
 
@@ -1585,7 +1755,13 @@ const CodeEditor = (props) => {
 									}}
 									disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
 									onClick={() => {
-										setlocalcodedata(editorData.example)
+										if (fixExample !== undefined) {
+											const newExample = fixExample(editorData.example)
+											setlocalcodedata(newExample)
+										} else {
+											console.log("No fix example available!")
+											setlocalcodedata(editorData.example)
+										}
 									}}
 									color="secondary"
 								>
