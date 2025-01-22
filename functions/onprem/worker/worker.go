@@ -1459,6 +1459,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 		}
 
 		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -3072,6 +3073,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 	}
 
 	overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -3520,6 +3522,7 @@ func baseDeploy() {
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 		}
 
 		if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
