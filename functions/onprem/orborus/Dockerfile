@@ -7,11 +7,11 @@ COPY orborus.go /app/orborus.go
 COPY go.mod /app/go.mod
 
 RUN go get
-RUN go build -v
+#RUN go build -v
 
-# Enabled CGO January 2025
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o orborus.
-#RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
+# Enabled CGO January 2025 (?)
+#RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o orborus.
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 
 FROM alpine:3.15.0
 RUN apk add --no-cache bash tzdata
