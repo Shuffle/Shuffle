@@ -35,7 +35,7 @@ sudo swapoff -a                           # Disable swap
 
 4. Run docker-compose.
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
 5. Recommended for Opensearch to work well
