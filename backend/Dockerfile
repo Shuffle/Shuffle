@@ -24,13 +24,13 @@ RUN go get -v
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o webapp .
 
 # Certificate build - gets required certs
-#FROM alpine:latest as certs
+FROM alpine:latest as certs
+RUN apk add --update ca-certificates
 
 # Sets up the final image
 FROM alpine:3.17.0
 
 # FIXME: Install cgo because CGO_ENABLED=1 during build
-RUN apk add --update ca-certificates
 RUN apk add --no-cache libc6-compat
 RUN apk add --no-cache libstdc++
 
