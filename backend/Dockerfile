@@ -15,8 +15,8 @@ RUN wget -O /app_sdk/app_base.py https://raw.githubusercontent.com/Shuffle/app_s
 ADD ./app_gen /app_gen
 
 RUN go get -v
-RUN go mod tidy
-RUN go clean -modcache
+#RUN go mod tidy
+#RUN go clean -modcache
 
 # From November 2022, CGO is enabled due to packages
 # that we use requiring it. This is a temporary fix
