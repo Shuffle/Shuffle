@@ -128,7 +128,7 @@ import {
   ErrorOutline as ErrorOutlineIcon, 
 
   ArrowForward as ArrowForwardIcon,
-
+  OpenInFull as OpenInFullIcon, 
 } from "@mui/icons-material";
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 //import * as cytoscape from "cytoscape";
@@ -499,6 +499,9 @@ const AngularWorkflow = (defaultprops) => {
   const [activeDialog, setActiveDialog] = React.useState("");
   const [visited, setVisited] = React.useState([]);
   const [allRevisions, setAllRevisions] = useState([])
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const [subflowActionList, setSubflowActionList] = React.useState([]);
 
   const [apps, setApps] = React.useState([]);
   const [filteredApps, setFilteredApps] = React.useState([]);
@@ -699,7 +702,7 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		if (loadedApps.includes(appId)) {
-			console.log("App already loaded: ", appId)
+			//console.log("App already loaded: ", appId)
 
 			// 1. Find the app and check if it has actions
 			// 2. If it doesn't have actions, reload once again 
@@ -1018,6 +1021,127 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 	  }
   }, [workflow])
+
+  useEffect(() => {
+    // if (subflowActionList.length === 0) {
+      const newActionList = [];
+      // FIXME: Have previous execution values in here
+      newActionList.push({
+        type: "Execution Argument",
+        name: "Execution Argument",
+        value: "$exec",
+        highlight: "exec",
+        autocomplete: "exec",
+        example: "hello",
+      })
+      newActionList.push({
+        type: "Shuffle Database",
+        name: "Shuffle Database",
+        value: "$shuffle_cache",
+        highlight: "shuffle_db",
+        autocomplete: "shuffle_cache",
+        example: "hello",
+      })
+      if (
+        workflow.workflow_variables !== null &&
+        workflow.workflow_variables !== undefined &&
+        workflow.workflow_variables.length > 0
+      ) {
+        for (let varkey in workflow.workflow_variables) {
+          const item = workflow.workflow_variables[varkey];
+          newActionList.push({
+            type: "workflow_variable",
+            name: item.name,
+            value: item.value,
+            id: item.id,
+            autocomplete: `${item.name.split(" ").join("_")}`,
+            example: item.value,
+          });
+        }
+      }
+
+      // FIXME: Add values from previous executions if they exist
+      if (
+        workflow.execution_variables !== null &&
+        workflow.execution_variables !== undefined &&
+        workflow.execution_variables.length > 0
+      ) {
+        for (let varkey in workflow.execution_variables) {
+          const item = workflow.execution_variables[varkey];
+          newActionList.push({
+            type: "execution_variable",
+            name: item.name,
+            value: item.value,
+            id: item.id,
+            autocomplete: `${item.name.split(" ").join("_")}`,
+            example: "",
+          });
+        }
+      }
+
+      var parents = getParents(selectedTrigger);
+      if (parents.length > 1) {
+        for (let parentkey in parents) {
+          const item = parents[parentkey];
+          if (item.label === "Execution Argument") {
+            continue;
+          }
+
+          var exampledata = item.example === undefined ? "" : item.example;
+          // Find previous execution and their variables
+          if (workflowExecutions.length > 0) {
+            // Look for the ID
+            for (let execkey in workflowExecutions) {
+              if (
+                workflowExecutions[execkey].results === undefined ||
+                workflowExecutions[execkey].results === null
+              ) {
+                continue;
+              }
+
+              var foundResult = workflowExecutions[execkey].results.find(
+                (result) => result.action.id === item.id
+              );
+              if (foundResult === undefined) {
+                continue;
+              }
+
+              const validated = validateJson(foundResult.result)
+              if (validated.valid) {
+                exampledata = validateJson.result
+                break
+              }
+            }
+          }
+
+          // 1. Take
+          const actionvalue = {
+            type: "action",
+            id: item.id,
+            name: item.label,
+            autocomplete: `${item?.label?.split(" ")?.join("_")}`,
+            example: exampledata,
+          }
+          newActionList.push(actionvalue);
+        }
+      }
+
+      setSubflowActionList(newActionList);
+  }, [workflow.workflow_variables, workflow.execution_variables, workflow, selectedTrigger]); 
+
+
+  useEffect(() => {
+
+    const found = workflows?.find(w => w.id === workflow?.triggers[selectedTriggerIndex]?.parameters[0]?.value);
+
+    setSubworkflow(found)
+
+    if(found){
+      const startNode = found.actions?.find((action) => action.id === workflow?.triggers[selectedTriggerIndex]?.parameters[3]?.value)
+      setSubworkflowStartnode(startNode)
+    }
+
+  }, [selectedTrigger,selectedTriggerIndex])
 
   useEffect(() => {
 	  // Current variable + future state controlled
@@ -1920,7 +2044,7 @@ const releaseToConnectLabel = "Release to Connect"
       })
   }
 
-  const saveWorkflow = (curworkflow, executionArgument, startNode, duplicationOrg) => {
+  const saveWorkflow = (curworkflow, executionArgument, startNode, duplicationOrg, skip_popup) => {
     var success = false;
 
     if (isCloud && !isLoggedIn) {
@@ -2015,62 +2139,82 @@ const releaseToConnectLabel = "Release to Connect"
 
     	  } else {
     	    if (type === "ACTION") {
-    	      const cyelement = cyelements[cyelementsKey].data();
+    	      const cyelement = cyelements[cyelementsKey].data()
     	      const elementid =
     	        cyelement.id === undefined || cyelement.id === null
     	          ? cyelement["_id"]
     	          : cyelement.id;
 
-    	      var curworkflowAction = useworkflow.actions.find(
-    	        (a) =>
-    	          a !== undefined &&
-    	          (a["id"] === elementid || a["_id"] === elementid)
-    	      );
+    	      var curworkflowAction = useworkflow.actions.find((a) => a !== undefined && (a["id"] === elementid || a["_id"] === elementid))
+
     	      if (curworkflowAction === undefined) {
-    	        curworkflowAction = cyelements[cyelementsKey].data();
+    	        curworkflowAction = cyelements[cyelementsKey].data()
     	      }
 
     	      curworkflowAction.position = cyelements[cyelementsKey].position();
 
-          // workaround to fix some edgecases
-		  if (
-			curworkflowAction.parameters === "" ||
-			curworkflowAction.parameters === null
-		  ) {
-			curworkflowAction.parameters = [];
-		  }
+			  // workaround to fix some edgecases
+			  if (curworkflowAction.parameters === "" || curworkflowAction.parameters === null) {
+				curworkflowAction.parameters = [];
+			  }
 
-		  if (
-			curworkflowAction.example === undefined ||
-			curworkflowAction.example === "" ||
-			curworkflowAction.example === null
-		  ) {
-			if (cyelements[cyelementsKey].data().example !== undefined) {
-			  curworkflowAction.example = cyelements[cyelementsKey].data().example;
-			}
-		  }
+			  if (
+				curworkflowAction.example === undefined ||
+				curworkflowAction.example === "" ||
+				curworkflowAction.example === null
+			  ) {
+				if (cyelements[cyelementsKey].data().example !== undefined) {
+				  curworkflowAction.example = cyelements[cyelementsKey].data().example;
+				}
+			  }
 
-          // Override just in this place
-          curworkflowAction.errors = [];
-          curworkflowAction.isValid = true;
+			  // Override just in this place
+			  //console.log("WORKFLOWACTION: ", curworkflowAction, "CY: ", cyelements[cyelementsKey].data())
+			  const foundLabel = cyelements[cyelementsKey].data("label")
+			  if (foundLabel !== undefined && foundLabel !== null && foundLabel.length > 0) {
+				  curworkflowAction.label = foundLabel
+			  }
 
-		  // Cleans up OpenAPI items
-		  var newparams = [];
-		  for (let parametersKey in curworkflowAction.parameters) {
-			const thisitem = curworkflowAction.parameters[parametersKey];
-			if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
-			  continue;
-			}
+			  const foundAuth = cyelements[cyelementsKey].data("authentication_id")
+			  if (foundAuth !== undefined && foundAuth !== null && foundAuth.length > 0) {
+				  curworkflowAction.authentication_id = foundAuth
+			  }
 
-			if (thisitem.value !== undefined && thisitem.value !== null && Array.isArray(thisitem.value)) {
-				thisitem.value = thisitem.value.join(",")
-			}
+			  const executionDelay = cyelements[cyelementsKey].data("execution_delay")
+			  if (executionDelay !== undefined && executionDelay !== null && executionDelay.length > 0) {
+				  curworkflowAction.execution_delay = executionDelay
+			  }
 
-            newparams.push(thisitem);
-          }
+			  const executionVariable = cyelements[cyelementsKey].data("execution_variable")
+			  if (executionVariable !== undefined && executionVariable !== null) { 
+				  curworkflowAction.execution_variable = executionVariable
+			  }
 
-          curworkflowAction.parameters = newparams;
-          newActions.push(curworkflowAction);
+			  const cyParams = cyelements[cyelementsKey].data("parameters")
+			  if (cyParams !== undefined && cyParams !== null && cyParams.length > 0) {
+				  curworkflowAction.parameters = cyParams
+			  }
+
+			  curworkflowAction.errors = [];
+			  curworkflowAction.isValid = true;
+
+			  // Cleans up OpenAPI items
+			  var newparams = [];
+			  for (let parametersKey in curworkflowAction.parameters) {
+				const thisitem = curworkflowAction.parameters[parametersKey];
+				if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
+				  continue;
+				}
+
+				if (thisitem.value !== undefined && thisitem.value !== null && Array.isArray(thisitem.value)) {
+					thisitem.value = thisitem.value.join(",")
+				}
+
+				newparams.push(thisitem);
+			  }
+
+			  curworkflowAction.parameters = newparams;
+			  newActions.push(curworkflowAction);
         } else if (type === "TRIGGER") {
           if (useworkflow.triggers === undefined || useworkflow.triggers === null) {
             useworkflow.triggers = [];
@@ -2224,7 +2368,7 @@ const releaseToConnectLabel = "Release to Connect"
         if (executionArgument !== undefined && startNode !== undefined) {
           //console.log("Running execution AFTER saving");
           setSavingState(0);
-          executeWorkflow(executionArgument, startNode, true);
+          executeWorkflow(executionArgument, startNode, true, skip_popup);
           return;
         }
 
@@ -2411,11 +2555,11 @@ const releaseToConnectLabel = "Release to Connect"
     return true;
   };
 
-  const executeWorkflow = (executionArgument, startNode, hasSaved) => {
+  const executeWorkflow = (executionArgument, startNode, hasSaved, skip_popup) => {
 
     if (hasSaved === false) {
       setExecutionRequestStarted(true)
-      saveWorkflow(workflow, executionArgument, startNode);
+      saveWorkflow(workflow, executionArgument, startNode, undefined, skip_popup);
       //console.log("FIXME: Might have forgotten to save before executing.");
       return;
     }
@@ -2439,7 +2583,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 	  // FIXME: Check if any node contains $exec in a param
 	  // If they do, show a popup asking if they want to execute it without an execution argument, or to use a previous one
-	  if (executionArgument === undefined || executionArgument === null || executionArgument.length === 0)
+	  if (skip_popup !== true && executionArgument === undefined || executionArgument === null || executionArgument.length === 0)
 
 		  if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
 			  var foundmissing = false
@@ -4937,8 +5081,6 @@ const releaseToConnectLabel = "Release to Connect"
 		  }, 100)
 
 		  const findaction = data.label
-		  console.log("CLICKED: ", findaction, apps.length)
-
 		  for (let appkey in apps) {
 			  const curapp = apps[appkey]
 			  if (curapp.name !== parentitem.app_name) {
@@ -5312,7 +5454,12 @@ const releaseToConnectLabel = "Release to Connect"
         setSelectedComment({})
 
 		// FIXME: is this what is mapping it an actual action in the workflow? wtf?
-        var curaction = workflow.actions.find((a) => a.id === data.id)
+        var curactionIndex = workflow.actions.findIndex((a) => a.id === data.id)
+        var curaction = undefined
+		if (curactionIndex >= 0) {
+			curaction = workflow.actions[curactionIndex]
+		}
+
         if (!curaction || curaction === undefined) {
           if (data.id !== undefined && data.app_name !== undefined) {
             workflow.actions.push(data)
@@ -5330,10 +5477,16 @@ const releaseToConnectLabel = "Release to Connect"
           }
         }
 
-		// FIXME: This change may cause... something
+		// FIXME: This change may have caused... something
+		// FIXME: Somehow there is a referencing problem between the action in 
+		// cytoscape and the one in the "workflow.actions" state
         curaction = data
+		//workflow.actions[curactionIndex] = curaction
+		
+		//const data = event.target.data()
+		//event.target.data(curaction)
+		//event.target.data(curaction)
 
-        //var newapps = JSON.parse(JSON.stringify(apps))
         var newapps = apps
         if (apps === null || apps === undefined || apps.length === 0) {
           newapps = filteredApps
@@ -6363,7 +6516,6 @@ const releaseToConnectLabel = "Release to Connect"
   const onNodeAdded = (event) => {
     const node = event.target;
     const nodedata = JSON.parse(JSON.stringify(event.target.data()))
-
 
     if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)) {
       return
@@ -8663,7 +8815,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  })
 	  .then((responseJson) => {
 		if (responseJson === null) {
-			console.log("No revisions found")
+			//console.log("No revisions found")
 			return
 		}
 
@@ -9015,7 +9167,7 @@ const releaseToConnectLabel = "Release to Connect"
   }
 
     toast("Creating schedule") 
-    const data = {
+	var data = {
       name: trigger.name,
       frequency: workflow.triggers[triggerindex].parameters[0].value,
       execution_argument: workflow.triggers[triggerindex].parameters[1].value,
@@ -9023,6 +9175,18 @@ const releaseToConnectLabel = "Release to Connect"
       id: trigger.id,
       start: mappedStartnode,
     }
+
+	if (data.frequency === undefined || data.frequency === null || data.frequency.length === 0) {
+		if (isCloud || selectedTrigger?.environment === "cloud") {
+			data.frequency = "*/25 * * * *" 
+			workflow.triggers[triggerindex].parameters[0].value = "*/25 * * * *"
+		} else {
+			data.frequency = "60"
+			workflow.triggers[triggerindex].parameters[0].value = "60"
+		}
+
+		setWorkflow(workflow)
+	}
 
     fetch(
       `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule`,
@@ -9698,9 +9862,9 @@ const releaseToConnectLabel = "Release to Connect"
 
   const handleDragStop = (e, app) => {
     var currentnode = cy.getElementById(newNodeId);
-    if (currentnode === undefined || currentnode === null || currentnode.length === 0
-    ) {
-      return;
+
+    if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
+    	return;
     }
 
 	if (parsedApp === undefined || parsedApp === null || parsedApp.data === undefined || parsedApp.data === null) {
@@ -9709,9 +9873,10 @@ const releaseToConnectLabel = "Release to Connect"
 		return
 	}
 
+
     // Using remove & replace, as this triggers the function
     // onNodeAdded() with this node after it's added
-	console.log("Nodedata: ", parsedApp.data)
+	//console.log("DRAG STOP 3: ", parsedApp.data)
     currentnode.remove()
 
     parsedApp.data.finished = true
@@ -9822,6 +9987,18 @@ const releaseToConnectLabel = "Release to Connect"
         newAppData.authentication_id = "";
         newAppData.selectedAuthentication = {};
       }
+	
+	  /*
+	  if (workflow.actions === undefined || workflow.actions === null) {
+		  workflow.actions = []
+	  }
+
+	  for (var key in workflow.actions) {
+		  const action = workflow.actions[key]
+		  console.log("Action: ", action)
+	  }
+	  */
+
 
       parsedApp.data = newAppData;
       cy.add(parsedApp)
@@ -9847,7 +10024,6 @@ const releaseToConnectLabel = "Release to Connect"
 
   const handleAppDrag = (e, app) => {
     const cycontainer = cy.container()
-
 
 	// Handling drag of public apps
 	if (app.objectID !== undefined && app.objectID !== null && app.objectID.length > 0) {
@@ -10044,11 +10220,11 @@ const releaseToConnectLabel = "Release to Connect"
             x: e.pageX - cycontainer.offsetLeft,
             y: e.pageY - cycontainer.offsetTop,
           },
-        };
+        }
 
-        parsedApp = nodeToBeAdded;
-        cy.add(nodeToBeAdded);
-        return;
+        parsedApp = nodeToBeAdded
+        cy.add(nodeToBeAdded)
+        return
       }
     } else {
 	}
@@ -11003,13 +11179,6 @@ const releaseToConnectLabel = "Release to Connect"
 					continue
 				}
 			}
-
-			/*
-			console.log("PARAM CHANGE: ", param, newSelectedAction.parameters[newParamIndex])
-			if (param?.value?.includes("Secret. Replaced") && (param.configuration !== true || newSelectedAction.parameters[newParamIndex].configuration !== true)) {
-				continue
-			}
-			*/
 
     	    newSelectedAction.parameters[newParamIndex].value = param.value
     	    newSelectedAction.parameters[newParamIndex].autocompleted = true
@@ -12608,7 +12777,6 @@ const releaseToConnectLabel = "Release to Connect"
       };
 
       const menuClick = (event) => {
-        console.log("MENU CLICK");
         setOpen(!open);
         setAnchorEl(event.currentTarget);
       };
@@ -13161,156 +13329,6 @@ const releaseToConnectLabel = "Release to Connect"
     );
   };
 
-  const SubflowSidebar = () => {
-    const [menuPosition, setMenuPosition] = useState(null);
-    const [showDropdown, setShowDropdown] = React.useState(false);
-    const [actionlist, setActionlist] = React.useState([]);
-
-    if (actionlist.length === 0) {
-      // FIXME: Have previous execution values in here
-      actionlist.push({
-        type: "Execution Argument",
-        name: "Execution Argument",
-        value: "$exec",
-        highlight: "exec",
-        autocomplete: "exec",
-        example: "hello",
-      })
-      actionlist.push({
-        type: "Shuffle Database",
-        name: "Shuffle Database",
-        value: "$shuffle_cache",
-        highlight: "shuffle_db",
-        autocomplete: "shuffle_cache",
-        example: "hello",
-      })
-      if (
-        workflow.workflow_variables !== null &&
-        workflow.workflow_variables !== undefined &&
-        workflow.workflow_variables.length > 0
-      ) {
-        for (let varkey in workflow.workflow_variables) {
-          const item = workflow.workflow_variables[varkey];
-          actionlist.push({
-            type: "workflow_variable",
-            name: item.name,
-            value: item.value,
-            id: item.id,
-            autocomplete: `${item.name.split(" ").join("_")}`,
-            example: item.value,
-          });
-        }
-      }
-
-      // FIXME: Add values from previous executions if they exist
-      if (
-        workflow.execution_variables !== null &&
-        workflow.execution_variables !== undefined &&
-        workflow.execution_variables.length > 0
-      ) {
-        for (let varkey in workflow.execution_variables) {
-          const item = workflow.execution_variables[varkey];
-          actionlist.push({
-            type: "execution_variable",
-            name: item.name,
-            value: item.value,
-            id: item.id,
-            autocomplete: `${item.name.split(" ").join("_")}`,
-            example: "",
-          });
-        }
-      }
-
-      var parents = getParents(selectedTrigger);
-      if (parents.length > 1) {
-        for (let parentkey in parents) {
-          const item = parents[parentkey];
-          if (item.label === "Execution Argument") {
-            continue;
-          }
-
-          var exampledata = item.example === undefined ? "" : item.example;
-          // Find previous execution and their variables
-          if (workflowExecutions.length > 0) {
-            // Look for the ID
-            for (let execkey in workflowExecutions) {
-              if (
-                workflowExecutions[execkey].results === undefined ||
-                workflowExecutions[execkey].results === null
-              ) {
-                continue;
-              }
-
-              var foundResult = workflowExecutions[execkey].results.find(
-                (result) => result.action.id === item.id
-              );
-              if (foundResult === undefined) {
-                continue;
-              }
-
-              const validated = validateJson(foundResult.result)
-              if (validated.valid) {
-                exampledata = validateJson.result
-                break
-              }
-            }
-          }
-
-          // 1. Take
-          const actionvalue = {
-            type: "action",
-            id: item.id,
-            name: item.label,
-            autocomplete: `${item?.label?.split(" ")?.join("_")}`,
-            example: exampledata,
-          }
-          actionlist.push(actionvalue);
-        }
-      }
-
-      setActionlist(actionlist);
-    }
-
-
-      const handleMenuClose = () => {
-        setUpdate(Math.random());
-        setMenuPosition(null);
-      };
-
-      const handleItemClick = (values) => {
-        console.log("VALUES: ", values)
-        if (values === undefined || values === null || values.length === 0) {
-          return;
-        }
-
-
-        /*
-        workflow.triggers[selectedTriggerIndex].parameters[1].value
-          .trim()
-          .endsWith("$")
-          ? values[0].autocomplete
-          : "$" + values[0].autocomplete;
-
-        for (var key in values) {
-          if (key === 0 || values[key].autocomplete.length === 0) {
-            continue;
-          }
-
-          toComplete += values[key].autocomplete
-        }
-        */
-
-        console.log("SELECTED TRIGGER: ", selectedTrigger)
-        if (selectedTrigger.name === "Shuffle Workflow") {
-          const toComplete = selectedTrigger.parameters[1].value + "$" + values[0].autocomplete
-          selectedTrigger.parameters[1].value = toComplete
-          setSelectedTrigger(selectedTrigger)
-        }
-
-        setUpdate(Math.random());
-        setShowDropdown(false);
-        setMenuPosition(null);
-      };
 
       const iconStyle = {
         marginRight: 15,
@@ -13372,7 +13390,7 @@ const releaseToConnectLabel = "Release to Connect"
         */
       }
 
-      const handleSubflowStartnodeSelection = (e) => {
+      var handleSubflowStartnodeSelection = (e) => {
         setSubworkflowStartnode(e.target.value);
 
         if (e.target.value === null || e.target.value === undefined) {
@@ -13445,7 +13463,51 @@ const releaseToConnectLabel = "Release to Connect"
 
         setWorkflow(workflow);
       }
+    }
 
+    const handleMenuClose = () => {
+      setUpdate(Math.random());
+      setMenuPosition(null);
+    };
+
+    const handleItemClick = (values) => {
+      console.log("VALUES: ", values)
+      if (values === undefined || values === null || values.length === 0) {
+        return;
+      }
+
+
+      /*
+      workflow.triggers[selectedTriggerIndex].parameters[1].value
+        .trim()
+        .endsWith("$")
+        ? values[0].autocomplete
+        : "$" + values[0].autocomplete;
+
+      for (var key in values) {
+        if (key === 0 || values[key].autocomplete.length === 0) {
+          continue;
+        }
+
+        toComplete += values[key].autocomplete
+      }
+      */
+
+      if (selectedTrigger.name === "Shuffle Workflow") {
+        const toComplete = workflow?.triggers?.[selectedTriggerIndex]?.parameters?.[1]?.value + "$" + values[0]?.autocomplete
+        // selectedTrigger.parameters[1].value = toComplete
+        workflow.triggers[selectedTriggerIndex].parameters[1].value = toComplete
+        const foundfield = document.getElementById("subflow_exec_field")
+        if (foundfield !== undefined && foundfield !== null) {
+            foundfield.value = toComplete
+        }
+        setWorkflow(workflow)
+      }
+
+      setUpdate(Math.random());
+      setShowDropdown(false);
+      setMenuPosition(null);
+    };
       
 	  const subflowtypes = [
 		  {
@@ -13456,7 +13518,26 @@ const releaseToConnectLabel = "Release to Connect"
 	  	  }
 	  ]
 
-      return (
+    const handleSubflowParamChange = (value) => {
+      
+      if (!workflow?.triggers || !workflow.triggers[selectedTriggerIndex]?.parameters) {
+        console.log("Required workflow properties are undefined")
+        return
+      }
+
+      if (!workflow.triggers[selectedTriggerIndex].parameters[1]) {
+        workflow.triggers[selectedTriggerIndex].parameters[1] = {
+          name: "execution_argument", 
+          value: ""
+        }
+      }
+
+      workflow.triggers[selectedTriggerIndex].parameters[1].value = value
+      setWorkflow(workflow)
+      setLastSaved(false)
+    }
+
+ const SubflowSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null : 
         <div style={appApiViewStyle}>
 		  <span style={{display: "flex", }}>
 		    <h3 style={{ marginBottom: "5px", flex: 3, }}>
@@ -13540,16 +13621,20 @@ const releaseToConnectLabel = "Release to Connect"
               <Typography>Name</Typography>
               <TextField
                 style={{
-                  backgroundColor: theme.palette.inputColor,
+                  backgroundColor: "#212121",
                   borderRadius: theme.palette?.borderRadius,
+                  marginTop: 3,
                 }}
                 InputProps={{
                   style: {
-                  },
+                    color: "white"
+                  }
                 }}
+                size="small"
                 fullWidth
                 color="primary"
                 placeholder={selectedTrigger.label}
+                defaultValue={selectedTrigger?.label}
                 onChange={selectedTriggerChange}
               />
             </div>
@@ -13564,14 +13649,18 @@ const releaseToConnectLabel = "Release to Connect"
                     <Typography>Delay</Typography>
                     <TextField
                       style={{
-                        backgroundColor: theme.palette.inputColor,
+                        backgroundColor: "#212121",
+                        marginTop: 3,
 						maxWidth: 50,
                       }}
                       InputProps={{
-                        style: theme.palette.innerTextfieldStyle,
+                        style: {
+                          color: "white"
+                        }
                       }}
+                      size="small"
                       placeholder={selectedTrigger.execution_delay}
-                      defaultValue={selectedAction.execution_delay}
+                      defaultValue={selectedTrigger?.execution_delay || 0}
                       onChange={(event) => {
                         if (isNaN(event.target.value)) {
                           console.log("NAN: ", event.target.value)
@@ -13662,8 +13751,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <Autocomplete
                   id="subflow_search"
                   autoHighlight
-				  freeSolo
-                  value={subworkflow}
+                  value={subworkflow || "No Workflow Selected"}
                   classes={{ inputRoot: classes.inputRoot }}
                   ListboxProps={{
                     style: {
@@ -13754,6 +13842,7 @@ const releaseToConnectLabel = "Release to Connect"
 									value: data
 								}
 							})
+              document.activeElement.blur();
 						  }}
                         >
 						  <PolylineIcon style={{ marginRight: 8 }} />
@@ -13862,6 +13951,7 @@ const releaseToConnectLabel = "Release to Connect"
 									value: action 
 								} 
 							})
+              document.activeElement.blur()
 						  }}
                           style={{
                             backgroundColor: theme.palette.inputColor,
@@ -13889,15 +13979,43 @@ const releaseToConnectLabel = "Release to Connect"
               <div
                 style={{
                   marginTop: "20px",
-                  marginBottom: "7px",
+                  marginBottom: "5px",
                   display: "flex",
+                  width:"100%",
                 }}
               >
-                <div style={{ flex: "10" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                   <b>Execution Argument</b>
+                  <Tooltip title="Expand editor window" placement="top">
+                    <IconButton
+                    onClick={(event) => {
+                      event.preventDefault()
+                      setCodeEditorModalOpen(true)
+                      setActiveDialog("codeeditor")
+                      var parsedvalue = workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
+                      
+                      setEditorData({
+                        "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
+                        "value": parsedvalue,
+                        "field_number": 1,
+                        "actionlist": subflowActionList,
+                        "field_id": "subflow_exec_field",
+                      })
+                    }}
+                    >
+                    <OpenInFullIcon 
+                        style={{ 
+                        color: "rgba(255,255,255,0.7)", 
+                        height: 20, 
+                        width: 20 
+                      }} 
+                    />
+                  </IconButton>
+                  </Tooltip>
                 </div>
               </div>
               <TextField
+                id="subflow_exec_field"
                 style={theme.palette.textFieldStyle}
                 InputProps={{
                   style: {
@@ -13926,13 +14044,12 @@ const releaseToConnectLabel = "Release to Connect"
                 color="primary"
                 placeholder="Some execution data"
                 defaultValue={
-                  workflow.triggers[selectedTriggerIndex].parameters[1].value
+                  workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
                 }
-                onBlur={(e) => {
-      			  setLastSaved(false)
-
+                onChange={(e) => {
                   workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
                   setWorkflow(workflow)
+                  setLastSaved(false)
                 }}
               />
               {!showDropdown ? null :
@@ -13949,7 +14066,7 @@ const releaseToConnectLabel = "Release to Connect"
                   marginTop: 2,
                 }}
               >
-                {actionlist.map((innerdata) => {
+                {subflowActionList.map((innerdata) => {
                   const icon =
                     innerdata.type === "action" ? (
                       <AppsIcon style={{ marginRight: 10 }} />
@@ -14123,17 +14240,16 @@ const releaseToConnectLabel = "Release to Connect"
                         overflow: "hidden",
                       }}
                       onClick={() => {
-                        console.log("CLICKED: ", innerdata);
                         console.log(innerdata.example)
                         handleItemClick([innerdata]);
                       }}
                     >
-                      <Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+                      <Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition?.top-200, left: menuPosition?.left-455, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
       
                         <MenuItem
                           key={innerdata.name}
                           style={{
-                            backgroundColor: theme.palette.inputColor,
+                            // backgroundColor: theme.palette.inputColor,
                             marginLeft: 15,
                             color: "white",
                             minWidth: 250,
@@ -14177,7 +14293,7 @@ const releaseToConnectLabel = "Release to Connect"
                             <MenuItem
                               key={pathdata.name}
                               style={{
-                                backgroundColor: theme.palette.inputColor,
+                                // backgroundColor: theme.palette.inputColor,
                                 color: "white",
                                 minWidth: 250,
                                 maxWidth: 250,
@@ -14218,7 +14334,7 @@ const releaseToConnectLabel = "Release to Connect"
                     <MenuItem
                       key={innerdata.name}
                       style={{
-                        backgroundColor: theme.palette.inputColor,
+                        // backgroundColor: theme.palette.inputColor,
                         color: "white",
                       }}
                       value={innerdata}
@@ -14301,11 +14417,7 @@ const releaseToConnectLabel = "Release to Connect"
           </div>
 		  */}
         </div>
-      );
-    }
-
-    return null;
-  };
+ 
 
   const CommentSidebar = () => {
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
@@ -14705,7 +14817,6 @@ const releaseToConnectLabel = "Release to Connect"
                     >
                       <MenuItem 
 					  	onClick={() => {
-							console.log("CLICK: ", app)
 							const newValue = app
 
                   			if (newValue !== undefined && newValue !== null) {
@@ -16164,7 +16275,7 @@ const releaseToConnectLabel = "Release to Connect"
 				  selectedTrigger.status === "running"
                 }
                 defaultValue={
-					selectedTrigger.parameters === undefined ? "" : selectedTrigger.parameters[0]?.value
+					selectedTrigger.parameters === undefined ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *"  : "60" : selectedTrigger.parameters[0]?.value
                 }
                 color="primary"
                 placeholder=""
@@ -16636,7 +16747,7 @@ const releaseToConnectLabel = "Release to Connect"
 					  id="execution_location"
 					  style={{ color: "rgba(255,255,255,0.7)", marginLeft: 40, }}
 					>
-						Location
+						Runtime Location
 					</InputLabel>
 					<Select
 					labelId="execution_location"
@@ -16655,7 +16766,6 @@ const releaseToConnectLabel = "Release to Connect"
 						}
 					}}
 					onClick={(e) => {
-						console.log("CLICK!")
   						getEnvironments(workflow.org_id)
 					}}
 					onChange={(e) => {
@@ -16727,6 +16837,8 @@ const releaseToConnectLabel = "Release to Connect"
 								style={{
 									color: green,
 									borderColor: green,
+									marginLeft: 0, 
+									padding: 0, marginRight: 10, 
 								}}
 								label={"Running"}
 								onClick={() => {
@@ -16746,8 +16858,7 @@ const releaseToConnectLabel = "Release to Connect"
 							  />
 							  : null}
 
-
-						  {data.Name}
+						{data.Name}
 						</MenuItem>
 					  );
 					})}
@@ -18655,8 +18766,6 @@ const releaseToConnectLabel = "Release to Connect"
               left: event.screenY,
             }
 
-            console.log("POS CLICK: ", pos)
-
             setAnchorPosition(pos)
           }}
           onSelect={(select) => {
@@ -19260,10 +19369,12 @@ const releaseToConnectLabel = "Release to Connect"
                   color="primary"
                   style={{ float: "right", marginTop: 20, marginLeft: 10 }}
                   onClick={() => {
+					const skip_popup = true
                     executeWorkflow(
                       executionData.execution_argument,
                       executionData.start,
-                      lastSaved
+                      lastSaved,
+					  skip_popup,
                     )
 
                     if (executionText === undefined || executionText === null || executionText.length === 0) {
@@ -20823,7 +20934,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
 	  {/* Most important: Actions. But these are a lot more complex */}
-	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT") ?
+	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT" || selectedTrigger.trigger_type === "SUBFLOW") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
 			  {Object.getOwnPropertyNames(selectedTrigger)?.length > 0 ? 
 				selectedTrigger.trigger_type === "SCHEDULE" ? 
@@ -20834,17 +20945,19 @@ const releaseToConnectLabel = "Release to Connect"
 					WebhookSidebar
         : selectedTrigger.trigger_type === "USERINPUT" ? 
           UserinputSidebar
+        : selectedTrigger.trigger_type === "SUBFLOW" ?
+          SubflowSidebar
 				: null 
 			  : null}
 		  </div>
 	  : null}
-
+{/* 
     {
       rightSideBarOpen && selectedTrigger?.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger)?.length > 0   ? 
       <div id="rightside_actions" style={rightsidebarStyle}>
         <SubflowSidebar/>
         </div> : null
-    }
+    } */}
 	  
 	  {/*
       <RightSideBar
@@ -22499,15 +22612,94 @@ const releaseToConnectLabel = "Release to Connect"
 			</div>
 		</div>
 
-	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
-		// Check if event.target.value is an array. If it is, split with comma
+	const changeActionParameterCodeMirror = (event, count, data, actionlist, parametername) => {
 
+		// FIXME: This exists ONLY to make sure focus + blur actually changes the field value
+		// in fields from ParsedAction.jsx such as rightside_field_2
+		const simulateTyping = (inputElement, text) => {
+		  if (!inputElement) {
+			console.error("Target element not found!")
+			return;
+		  }
+
+		  //console.log("Simulating typing for: ", text, "in", inputElement)
+
+		  inputElement.value = "" 
+		  setTimeout(() => {
+			  text.split("").forEach((char, index) => {
+				setTimeout(() => {
+					inputElement.value = text.slice(0, index + 1)
+
+					// Simulate an event object like React's synthetic event
+					const event = {
+					  target: {
+						value: inputElement.value,
+					  },
+					};
+
+					// Find the onChange handler, assuming you're calling it from here
+					if (typeof inputElement.onchange === 'function') {
+					  inputElement.onchange(event); // Call onChange with the synthetic event
+					}
+
+					// Dispatch the input event for React's internal event system
+					const inputEvent = new Event("input", { bubbles: true });
+					inputElement.dispatchEvent(inputEvent);
+
+				}, 10)
+			  })
+		  }, 50)
+
+		  setTimeout(() => {
+		  	inputElement.focus()
+		  }, 500)
+		};
+
+		// Check if event.target.value is an array. If it is, split with comma
+		if (parametername !== undefined && parametername.startsWith("${") && parametername.endsWith("}")) {
+			var paramcheckIndex = selectedAction.parameters.findIndex(param => param.name === parametername)
+			if (paramcheckIndex !== -1) {
+				// Replace the value in the field
+				const toReplace = data.replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+				selectedAction.parameters[paramcheckIndex].value = toReplace
+				setSelectedAction(selectedAction)
+				setUpdate(Math.random())
+
+				// Find the fieldname
+				const clickedFieldId = "rightside_field_" + count;
+				const clickedField = document.getElementById(clickedFieldId)
+				if (clickedField !== undefined && clickedField !== null) {
+					simulateTyping(clickedField, toReplace)
+
+					/*
+					clickedField.value = toReplace
+					const newEvent = new Event("input", { bubbles: true })
+				    Object.defineProperty(event, "target", {
+					  value: { ...clickedField, value: toReplace },
+				      writable: false,
+				    })
+
+
+					//const newEvent = new Event("input", { bubbles: true })
+      				clickedField.dispatchEvent(newEvent)
+					console.log("Found field: ", clickedField)
+					*/
+				}
+
+				//toast("Replaced field!")
+
+				return
+			}
+		}
+		
 		if (data.startsWith("${") && data.endsWith("}")) {
+			console.log("Changing field with variable: ", data)
+
 			// PARAM FIX - Gonna use the ID field, even though it's a hack
-			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+			var paramcheck = selectedAction.parameters.find(param => param.name === "body")
 			if (paramcheck !== undefined) {
 				// Escapes all double quotes
-				const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+				const toReplace = event.target.value.replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
 				if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 					paramcheck["value_replace"] = [{
 						"key": data.name,
@@ -22532,8 +22724,8 @@ const releaseToConnectLabel = "Release to Connect"
 					//selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
 					selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
 				}
+
 				setSelectedAction(selectedAction)
-				//setUpdate(Math.random())
 				return
 			}
 		}
@@ -22686,9 +22878,10 @@ const releaseToConnectLabel = "Release to Connect"
 				workflowExecutions={workflowExecutions}
 				getParents={getParents}
 				selectedAction={selectedAction}
+        selectedTrigger={selectedTrigger}
 				aiSubmit={aiSubmit}
 				toolsAppId={toolsApp.id}
-
+        handleSubflowParamChange={handleSubflowParamChange}
 				codedata={editorData.value}
 				setcodedata={setcodedata}
 

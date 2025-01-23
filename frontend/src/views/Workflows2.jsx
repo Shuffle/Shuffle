@@ -649,7 +649,6 @@ const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
 
 const Workflows2 = (props) => {
     const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
-    const { leftSideBarOpenByClick } = useContext(Context);
     const location = useLocation();
     const navigate = useNavigate();
     const [currTab, setCurrTab] = useState(0);

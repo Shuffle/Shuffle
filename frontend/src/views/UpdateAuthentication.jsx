@@ -148,7 +148,7 @@ const SetAuthentication = (props) => {
 	console.log("App: ", app)
 	
 	return (
-		<div style={{width: 1000, margin: "auto", marginTop: 50, }}>
+		<div style={{width: 1000, margin: "auto", paddingTop: 50, }}>
 			{loadFail !== "" ? 
 				loadFail
 				:

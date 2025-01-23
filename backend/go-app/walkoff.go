@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/docker/api/types/image"
 
 	//gyaml "github.com/ghodss/yaml"
 
@@ -4094,12 +4094,12 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
 				if len(appSdk) == 0 {
-					_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
+					_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", image.PullOptions{})
 					if err != nil {
 						log.Printf("[WARNING] Failed to download new App SDK: %s", err)
 					}
 				} else {
-					_, err := dockercli.ImagePull(ctx, fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", "ghcr.io", "frikky", appSdk), types.ImagePullOptions{})
+					_, err := dockercli.ImagePull(ctx, fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", "ghcr.io", "frikky", appSdk), image.PullOptions{})
 					if err != nil {
 						log.Printf("[WARNING] Failed to download new App SDK %s: %s", err)
 					}

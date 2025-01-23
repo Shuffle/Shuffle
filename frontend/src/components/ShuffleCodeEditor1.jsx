@@ -14,6 +14,7 @@ import {
 	Menu,
 	MenuItem,
 	Button,
+	ButtonGroup,
 } from '@mui/material';
 
 import theme from '../theme.jsx';
@@ -77,16 +78,21 @@ const liquidFilters = [
 	{ "name": "URL decode ", "value": `url_decode`, "example": `{{ "https://www.google.com/search?q=hello%20world" | url_decode }}` },
 	{ "name": "base64_encode", "value": `base64_encode`, "example": `{{ "https://www.google.com/search?q=hello%20world" | base64_encode }}` },
 	{ "name": "base64_decode", "value": `base64_decode`, "example": `{{ "aGVsbG8K" | base64_encode }}` },
-]
-
-const mathFilters = [
 	{ "name": "Plus", "value": "plus: 1", "example": `{{ "1" | plus: 1 }}` },
 	{ "name": "Minus", "value": "minus: 1", "example": `{{ "1" | minus: 1 }}` },
 ]
 
 const pythonFilters = [
-	{ "name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": `` },
-	{ "name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": `` },
+	{ "name": "Hello World", "value": `print("hello world")`, "example": `` },
+	{ "name": "Using Shuffle variables", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"{\"sample\": \"string\", \"int\": 1}\"\"\"\n  \njsondata = json.loads(nodevalue)\nprint(jsondata)`, "example": `` },
+	{ "name": "Print Execution ID", "value": `print(self.current_execution_id)`, "example": `` },
+	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
+	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"name\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
+
+	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
+	{ "name": "Run an App Action", "value": `response = self.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
+	{ "name": "Run a Singul AI Action", "value": `response = self.create_ticket(app="jira/iris/ticketingsystem", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": true, },
+
 ]
 
 const extensions = []
@@ -105,6 +111,7 @@ const CodeEditor = (props) => {
 		toolsAppId,
 		parameterName,
 		selectedAction,
+		selectedTrigger,
 		workflowExecutions,
 		getParents,
 		activeDialog,
@@ -112,7 +119,7 @@ const CodeEditor = (props) => {
 		fieldname,
 		contentLoading,
 		editorData,
-
+		handleSubflowParamChange,
 		setAiQueryModalOpen,
 		fullScreenMode,
 		environment,
@@ -1010,12 +1017,14 @@ const CodeEditor = (props) => {
 				var currentLineData = codedatasplit[currentLine]
 
 				// Remove newlines from item.value
+				/*
 				if (item.value.includes("% python %")) {
 					item.value = item.value.replaceAll("\n", ";")
 					item.value = item.value.replaceAll("python %};", "python %}")
 				} else {
 					item.value = item.value.replaceAll("\n", "")
 				}
+				*/
 
 				currentLineData = currentLineData.slice(0, currentCharacter) + item.value + currentLineData.slice(currentCharacter)
 				codedatasplit[currentLine] = currentLineData
@@ -1093,9 +1102,9 @@ const CodeEditor = (props) => {
 					toast(responseJson.reason)
 					newResult = { "valid": false, "result": responseJson.reason }
 				} else if (responseJson.success === true) {
-					newResult = { "valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution." }
+					newResult = { "valid": false, "result": "Result is Empty or Couldn't finish execution (1). If using python, use print('value') to see the result" }
 				} else {
-					newResult = { "valid": false, "result": "Couldn't finish execution (2). Please fill all the required fields, and validate the execution." }
+					newResult = { "valid": false, "result": "Result is Empty or Couldn't finish execution (2). If using python, use print('value') to see the result" }
 				}
 
 				if (responseJson.errors !== undefined && responseJson.errors !== null && responseJson.errors.length > 0) {
@@ -1187,7 +1196,6 @@ const CodeEditor = (props) => {
 					overflowY: "auto",
 					whiteSpace: "pre-wrap",
 					wordWrap: "break-word",
-					backgroundColor: "rgba(40,40,40,1)",
 					zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 				}}
 
@@ -1213,6 +1221,7 @@ const CodeEditor = (props) => {
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
+				navigate("")
 				console.log("In closer")
 
 				if (changeActionParameterCodeMirror !== undefined) {
@@ -1237,7 +1246,7 @@ const CodeEditor = (props) => {
 					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
 					minHeight: isMobile ? "100%" : "auto",
 					maxHeight: isMobile ? "100%" : 700,
-					border: theme.palette.defaultBorder,
+					border: "3px solid rgba(255,255,255,0.3)",
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
 					// zoom: 0.8, 
 					backgroundColor: "black",
@@ -1291,6 +1300,7 @@ const CodeEditor = (props) => {
 						color: "grey",
 					}}
 					onClick={() => {
+						navigate("")
 						setExpansionModalOpen(false)
 					}}
 				>
@@ -1337,413 +1347,374 @@ const CodeEditor = (props) => {
 							*/}
 								{isFileEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
-										{selectedAction?.name === "execute_python" ?
-											<Typography variant="body1" style={{ marginTop: 5, }}>
-												Run Python Code
-											</Typography>
-											:
-											selectedAction.name === "execute_bash" ?
-												<Typography variant="body1" style={{ marginTop: 5, }}>
-													Run Bash Code
-												</Typography>
-												:
-												<div style={{ display: "flex", }}>
-													<Button
-														id="basic-button"
-														aria-haspopup="true"
-														aria-controls={liquidOpen ? 'basic-menu' : undefined}
-														aria-expanded={liquidOpen ? 'true' : undefined}
-														variant="outlined"
-														color="secondary"
-														style={{
-															textTransform: "none",
-															width: 100,
-														}}
-														onClick={(event) => {
-															setAnchorEl(event.currentTarget);
-														}}
-													>
-														Filters
-													</Button>
-													<Menu
-														id="basic-menu"
-														anchorEl={anchorEl}
-														open={liquidOpen}
-														onClose={() => {
-															setAnchorEl(null);
-														}}
-														MenuListProps={{
-															'aria-labelledby': 'basic-button',
-														}}
-													>
-														{liquidFilters.map((item, index) => {
-															return (
-																<MenuItem key={index} onClick={() => {
-																	handleClick(item)
-																}}>{item.name}</MenuItem>
-															)
-														})}
-													</Menu>
-													<Button
-														id="basic-button"
-														aria-haspopup="true"
-														aria-controls={mathOpen ? 'basic-menu' : undefined}
-														aria-expanded={mathOpen ? 'true' : undefined}
-														variant="outlined"
-														color="secondary"
-														style={{
-															textTransform: "none",
-															width: 100,
-														}}
-														onClick={(event) => {
-															setAnchorEl2(event.currentTarget);
-														}}
-													>
-														Math
-													</Button>
-													<Menu
-														id="basic-menu"
-														anchorEl={anchorEl2}
-														open={mathOpen}
-														onClose={() => {
-															setAnchorEl2(null);
-														}}
-														MenuListProps={{
-															'aria-labelledby': 'basic-button',
-														}}
-													>
-														{mathFilters.map((item, index) => {
-															return (
-																<MenuItem key={index} onClick={() => {
-																	handleClick(item)
-																}}>{item.name}</MenuItem>
-															)
-														})}
-													</Menu>
-													<Button
-														id="basic-button"
-														aria-haspopup="true"
-														aria-controls={pythonOpen ? 'basic-menu' : undefined}
-														aria-expanded={pythonOpen ? 'true' : undefined}
-														variant="outlined"
-														color="secondary"
-														style={{
-															textTransform: "none",
-															width: 100,
-														}}
-														onClick={(event) => {
-															setAnchorEl3(event.currentTarget);
-														}}
-													>
-														Python
-													</Button>
-													<Menu
-														id="basic-menu"
-														anchorEl={anchorEl3}
-														open={pythonOpen}
-														onClose={() => {
-															setAnchorEl3(null);
-														}}
-														MenuListProps={{
-															'aria-labelledby': 'basic-button',
-														}}
-													>
-														{pythonFilters.map((item, index) => {
-															return (
-																<MenuItem key={index} onClick={() => {
-																	handleClick(item)
-																}}>{item.name}</MenuItem>
-															)
-														})}
-													</Menu>
-												</div>
-										}
+										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={liquidOpen ? 'basic-menu' : undefined}
+												aria-expanded={liquidOpen ? 'true' : undefined}
+												variant="outlined"
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 120,
+												}}
+												onClick={(event) => {
+													setAnchorEl(event.currentTarget);
+												}}
+											>
+												Liquid Filters
+											</Button>
+											<Menu
+												id="basic-menu"
+												anchorEl={anchorEl}
+												open={liquidOpen}
+												onClose={() => {
+													setAnchorEl(null);
+												}}
+												MenuListProps={{
+													'aria-labelledby': 'basic-button',
+												}}
+											>
+												{liquidFilters.map((item, index) => {
+													return (
+														<MenuItem key={index} onClick={() => {
+															handleClick(item)
+														}}>{item.name}</MenuItem>
+													)
+												})}
+											</Menu>
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={pythonOpen ? 'basic-menu' : undefined}
+												aria-expanded={pythonOpen ? 'true' : undefined}
+												variant="outlined"
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 120,
+												}}
+												onClick={(event) => {
+													setAnchorEl3(event.currentTarget);
+												}}
+											>
+												Python Code
+											</Button>
+											<Menu
+												id="basic-menu"
+												anchorEl={anchorEl3}
+												open={pythonOpen}
+												onClose={() => {
+													setAnchorEl3(null);
+												}}
+												MenuListProps={{
+													'aria-labelledby': 'basic-button',
+												}}
+											>
+												{pythonFilters.map((item, index) => {
+													return (
+														<MenuItem key={index} onClick={() => {
+															if (item.disabled) {
+																toast.error("This feature may not work in your environment yet, and is awaiting updates to the Shuffle python execution environment.", { autoClose: 10000 })
+															}
 
-										<Button
-											id="basic-button"
-											aria-haspopup="true"
-											aria-controls={!!menuPosition ? 'basic-menu' : undefined}
-											aria-expanded={!!menuPosition ? 'true' : undefined}
-											variant="outlined"
-											color="secondary"
-											style={{
-												textTransform: "none",
-												width: 130,
-												marginLeft: 20,
-											}}
-											onClick={(event) => {
-												setMenuPosition({
-													top: event.pageY,
-													left: event.pageX,
-												})
-											}}
-										>
-											<AddIcon /> Autocomplete
-										</Button>
-										<Menu
-											anchorReference="anchorPosition"
-											anchorPosition={menuPosition}
+															if (selectedAction.name !== "execute_python") {
+																var newitem = JSON.parse(JSON.stringify(item))
+																newitem.value = `{% python %}\n${item.value}\n{% endpython %}`
+																handleClick(newitem)
+															} else {
+																handleClick(item)
+															}
+														}}>{item.name}</MenuItem>
+													)
+												})}
+											</Menu>
 
-											anchorOrigin={{
-												vertical: 'bottom',
-												horizontal: 'left',
-											}}
-											keepMounted
-											transformOrigin={{
-												vertical: 'top',
-												horizontal: 'left',
-											}}
-											//MenuListProps={{
-											//	style: adjustPosition(), 
-											//}}
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+												aria-expanded={!!menuPosition ? 'true' : undefined}
+												variant="outlined"
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 130,
+												}}
+												onClick={(event) => {
+													setMenuPosition({
+														top: event.pageY,
+														left: event.pageX,
+													})
+												}}
+											>
+												<AddIcon /> Autocomplete
+											</Button>
 
-											onClose={() => {
-												handleMenuClose();
-											}}
-											open={!!menuPosition}
-											style={{
-												color: "white",
-												marginTop: 2,
-												maxHeight: 650,
-											}}
-										>
-											{actionlist?.map((innerdata) => {
-												const icon =
-													innerdata.type === "action" ? (
-														<AppsIcon style={{ marginRight: 10 }} />
-													) : innerdata.type === "workflow_variable" ||
-														innerdata.type === "execution_variable" ? (
-														<FavoriteBorderIcon style={{ marginRight: 10 }} />
-													) : (
-														<ScheduleIcon style={{ marginRight: 10 }} />
-													);
+											<Menu
+												anchorReference="anchorPosition"
+												anchorPosition={menuPosition}
 
-												const handleExecArgumentHover = (inside) => {
-													var exec_text_field = document.getElementById(
-														"execution_argument_input_field"
-													);
-													if (exec_text_field !== null) {
-														if (inside) {
-															exec_text_field.style.border = "2px solid #f85a3e";
-														} else {
-															exec_text_field.style.border = "";
+												anchorOrigin={{
+													vertical: 'bottom',
+													horizontal: 'left',
+												}}
+												keepMounted
+												transformOrigin={{
+													vertical: 'top',
+													horizontal: 'left',
+												}}
+												//MenuListProps={{
+												//	style: adjustPosition(), 
+												//}}
+
+												onClose={() => {
+													handleMenuClose();
+												}}
+												open={!!menuPosition}
+												style={{
+													color: "white",
+													marginTop: 2,
+													maxHeight: 650,
+												}}
+											>
+												{actionlist?.map((innerdata) => {
+													const icon =
+														innerdata.type === "action" ? (
+															<AppsIcon style={{ marginRight: 10 }} />
+														) : innerdata.type === "workflow_variable" ||
+															innerdata.type === "execution_variable" ? (
+															<FavoriteBorderIcon style={{ marginRight: 10 }} />
+														) : (
+															<ScheduleIcon style={{ marginRight: 10 }} />
+														);
+
+													const handleExecArgumentHover = (inside) => {
+														var exec_text_field = document.getElementById(
+															"execution_argument_input_field"
+														);
+														if (exec_text_field !== null) {
+															if (inside) {
+																exec_text_field.style.border = "2px solid #f85a3e";
+															} else {
+																exec_text_field.style.border = "";
+															}
 														}
-													}
-												};
+													};
 
-												const handleActionHover = (inside, actionId) => {
-												};
+													const handleActionHover = (inside, actionId) => {
+													};
 
-												const handleMouseover = () => {
-													if (innerdata.type === "Execution Argument") {
-														handleExecArgumentHover(true);
-													} else if (innerdata.type === "action") {
-														handleActionHover(true, innerdata.id);
-													}
-												};
+													const handleMouseover = () => {
+														if (innerdata.type === "Execution Argument") {
+															handleExecArgumentHover(true);
+														} else if (innerdata.type === "action") {
+															handleActionHover(true, innerdata.id);
+														}
+													};
 
-												const handleMouseOut = () => {
-													if (innerdata.type === "Execution Argument") {
-														handleExecArgumentHover(false);
-													} else if (innerdata.type === "action") {
-														handleActionHover(false, innerdata.id);
-													}
-												};
+													const handleMouseOut = () => {
+														if (innerdata.type === "Execution Argument") {
+															handleExecArgumentHover(false);
+														} else if (innerdata.type === "action") {
+															handleActionHover(false, innerdata.id);
+														}
+													};
 
-												var parsedPaths = [];
-												if (innerdata.type === "workflow_variable") {
-													// Try to parse the value if it's a string that could be JSON
-													  if (typeof innerdata.value === "string") {
-														try {
-														  const parsedValue = JSON.parse(innerdata.value)
-														  if (typeof parsedValue === "object") {
-															parsedPaths = GetParsedPaths(parsedValue, "");
+													var parsedPaths = [];
+													if (innerdata.type === "workflow_variable") {
+														// Try to parse the value if it's a string that could be JSON
+														  if (typeof innerdata.value === "string") {
+															try {
+															  const parsedValue = JSON.parse(innerdata.value)
+															  if (typeof parsedValue === "object") {
+																parsedPaths = GetParsedPaths(parsedValue, "");
+															  }
+															} catch (e) {
+															  // Not valid JSON, use the value directly
+															  parsedPaths = GetParsedPaths(innerdata.value, "");
+															}
+														  } else if (typeof innerdata.value === "object") {
+															parsedPaths = GetParsedPaths(innerdata.value, "");
 														  }
-														} catch (e) {
-														  // Not valid JSON, use the value directly
-														  parsedPaths = GetParsedPaths(innerdata.value, "");
-														}
-													  } else if (typeof innerdata.value === "object") {
-														parsedPaths = GetParsedPaths(innerdata.value, "");
-													  }
-												  } else if (typeof innerdata.example === "object") {
-													parsedPaths = GetParsedPaths(innerdata.example, "");
-												}
-
-												const coverColor = "#82ccc3"
-												//menuPosition.left -= 50
-												//menuPosition.top -= 250 
-												//console.log("POS: ", menuPosition1)
-												var menuPosition1 = menuPosition
-												if (menuPosition1 === null) {
-													menuPosition1 = {
-														"left": 0,
-														"top": 0,
+													  } else if (typeof innerdata.example === "object") {
+														parsedPaths = GetParsedPaths(innerdata.example, "");
 													}
-												} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
-													menuPosition1.top = 0
-												} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
-													menuPosition1.left = 0
-												}
 
-												//console.log("POS1: ", menuPosition1)
-
-												return parsedPaths.length > 0 ? (
-													<NestedMenuItem
-														key={innerdata.name}
-														label={
-															<div style={{ display: "flex", marginLeft: 0, }}>
-																{icon} {innerdata.name}
-															</div>
+													const coverColor = "#82ccc3"
+													//menuPosition.left -= 50
+													//menuPosition.top -= 250 
+													//console.log("POS: ", menuPosition1)
+													var menuPosition1 = menuPosition
+													if (menuPosition1 === null) {
+														menuPosition1 = {
+															"left": 0,
+															"top": 0,
 														}
-														parentMenuOpen={!!menuPosition}
-														style={{
-															color: "white",
-															minWidth: 250,
-															maxWidth: 250,
-															maxHeight: 50,
-															overflow: "hidden",
-														}}
-														onClick={() => {
-															console.log("CLICKED: ", innerdata);
-															console.log(innerdata.example)
+													} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
+														menuPosition1.top = 0
+													} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
+														menuPosition1.left = 0
+													}
 
-															//const handleClick = (item) => {
-															handleItemClick([innerdata]);
-														}}
-													>
-														<Paper style={{ minHeight: 550, maxHeight: 550, minWidth: 275, maxWidth: 275, position: "fixed", left: menuPosition1.left - 270, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)", }}>
-															<MenuItem
-																key={innerdata.name}
-																style={{
-																	marginLeft: 15,
-																	color: "white",
-																	minWidth: 250,
-																	maxWidth: 250,
-																	padding: 0,
-																	position: "relative",
-																}}
-																value={innerdata}
-																onMouseOver={() => {
-																	//console.log("HOVER: ", pathdata);
-																}}
-																onClick={() => {
-																	handleItemClick([innerdata]);
-																}}
-															>
-																<Typography variant="h6" style={{ paddingBottom: 5 }}>
-																	{innerdata.name}
-																</Typography>
-															</MenuItem>
-															{parsedPaths.map((pathdata, index) => {
-																// FIXME: Should be recursive in here
-																//<VpnKeyIcon style={iconStyle} />
-																const icon =
-																	pathdata.type === "value" ? (
-																		<span style={{ marginLeft: 9, }} />
-																	) : pathdata.type === "list" ? (
-																		<FormatListNumberedIcon style={{ marginLeft: 9, marginRight: 10, }} />
-																	) : (
-																		<CircleIcon style={{ marginLeft: 9, marginRight: 10, color: coverColor }} />
-																	);
-																//<ExpandMoreIcon style={iconStyle} />
+													//console.log("POS1: ", menuPosition1)
 
-																const indentation_count = (pathdata.name.match(/\./g) || []).length + 1
-																//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
-																const boxPadding = 0
-																const namesplit = pathdata.name.split(".")
-																const newname = namesplit[namesplit.length - 1]
-																return (
-																	<MenuItem
-																		key={pathdata.name}
-																		style={{
-																			color: "white",
-																			minWidth: 250,
-																			maxWidth: 250,
-																			padding: boxPadding,
-																		}}
-																		value={pathdata}
-																		onMouseOver={() => {
-																			//console.log("HOVER: ", pathdata);
-																		}}
-																		onClick={() => {
-																			handleItemClick([innerdata, pathdata]);
-																		}}
-																	>
-																		<Tooltip
-																			color="primary"
-																			title={`Ex. value: ${pathdata.value}`}
-																			placement="left"
-																		>
-																			<div style={{ display: "flex", height: 30, }}>
-																				{Array(indentation_count).fill().map((subdata, subindex) => {
-																					return (
-																						<div key={subindex} style={{ marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor, }} />
-																					)
-																				})}
-																				{icon} {newname}
-																				{pathdata.type === "list" ? <SquareFootIcon style={{ marginleft: 10, }} onClick={(e) => {
-																					e.preventDefault()
-																					e.stopPropagation()
+													return parsedPaths.length > 0 ? (
+														<NestedMenuItem
+															key={innerdata.name}
+															label={
+																<div style={{ display: "flex", marginLeft: 0, }}>
+																	{icon} {innerdata.name}
+																</div>
+															}
+															parentMenuOpen={!!menuPosition}
+															style={{
+																color: "white",
+																minWidth: 250,
+																maxWidth: 250,
+																maxHeight: 50,
+																overflow: "hidden",
+															}}
+															onClick={() => {
+																console.log(innerdata.example)
 
-																					console.log("INNER: ", innerdata, pathdata)
-
-																					// Removing .list from autocomplete
-																					var newname = pathdata.name
-																					if (newname.length > 5) {
-																						newname = newname.slice(0, newname.length - 5)
-																					}
-
-																					//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
-																					//selectedAction.parameters[count].value = selectedActionParameters[count].value;
-																					//setSelectedAction(selectedAction);
-																					//setShowDropdown(false);
-																					setMenuPosition(null);
-
-																					// innerdata.name
-																					// pathdata.name
-																					//handleItemClick([innerdata, newpathdata])
-																					//console.log("CLICK LENGTH!")
-																				}} /> : null}
-																			</div>
-																		</Tooltip>
-																	</MenuItem>
-																);
-															})}
-														</Paper>
-													</NestedMenuItem>
-												) : (
-													<MenuItem
-														key={innerdata.name}
-														style={{
-															backgroundColor: theme.palette.inputColor,
-															color: "white",
-															minWidth: 250,
-															maxWidth: 250,
-															marginRight: 0,
-														}}
-														value={innerdata}
-														onMouseOver={() => handleMouseover()}
-														onMouseOut={() => {
-															handleMouseOut();
-														}}
-														onClick={() => {
-															handleItemClick([innerdata]);
-														}}
-													>
-														<Tooltip
-															color="primary"
-															title={`Value: ${innerdata.value}`}
-															placement="left"
+																//const handleClick = (item) => {
+																handleItemClick([innerdata]);
+															}}
 														>
-															<div style={{ display: "flex" }}>
-																{icon} {innerdata.name}
-															</div>
-														</Tooltip>
-													</MenuItem>
-												);
-											})}
-										</Menu>
+															<Paper style={{ minHeight: 550, maxHeight: 550, minWidth: 275, maxWidth: 275, position: "fixed", left: menuPosition1.left - 270, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)", }}>
+																<MenuItem
+																	key={innerdata.name}
+																	style={{
+																		marginLeft: 15,
+																		color: "white",
+																		minWidth: 250,
+																		maxWidth: 250,
+																		padding: 0,
+																		position: "relative",
+																	}}
+																	value={innerdata}
+																	onMouseOver={() => {
+																		//console.log("HOVER: ", pathdata);
+																	}}
+																	onClick={() => {
+																		handleItemClick([innerdata]);
+																	}}
+																>
+																	<Typography variant="h6" style={{ paddingBottom: 5 }}>
+																		{innerdata.name}
+																	</Typography>
+																</MenuItem>
+																{parsedPaths.map((pathdata, index) => {
+																	// FIXME: Should be recursive in here
+																	//<VpnKeyIcon style={iconStyle} />
+																	const icon =
+																		pathdata.type === "value" ? (
+																			<span style={{ marginLeft: 9, }} />
+																		) : pathdata.type === "list" ? (
+																			<FormatListNumberedIcon style={{ marginLeft: 9, marginRight: 10, }} />
+																		) : (
+																			<CircleIcon style={{ marginLeft: 9, marginRight: 10, color: coverColor }} />
+																		);
+																	//<ExpandMoreIcon style={iconStyle} />
+
+																	const indentation_count = (pathdata.name.match(/\./g) || []).length + 1
+																	//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+																	const boxPadding = 0
+																	const namesplit = pathdata.name.split(".")
+																	const newname = namesplit[namesplit.length - 1]
+																	return (
+																		<MenuItem
+																			key={pathdata.name}
+																			style={{
+																				color: "white",
+																				minWidth: 250,
+																				maxWidth: 250,
+																				padding: boxPadding,
+																			}}
+																			value={pathdata}
+																			onMouseOver={() => {
+																				//console.log("HOVER: ", pathdata);
+																			}}
+																			onClick={() => {
+																				handleItemClick([innerdata, pathdata]);
+																			}}
+																		>
+																			<Tooltip
+																				color="primary"
+																				title={`Ex. value: ${pathdata.value}`}
+																				placement="left"
+																			>
+																				<div style={{ display: "flex", height: 30, }}>
+																					{Array(indentation_count).fill().map((subdata, subindex) => {
+																						return (
+																							<div key={subindex} style={{ marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor, }} />
+																						)
+																					})}
+																					{icon} {newname}
+																					{pathdata.type === "list" ? <SquareFootIcon style={{ marginleft: 10, }} onClick={(e) => {
+																						e.preventDefault()
+																						e.stopPropagation()
+
+																						console.log("INNER: ", innerdata, pathdata)
+
+																						// Removing .list from autocomplete
+																						var newname = pathdata.name
+																						if (newname.length > 5) {
+																							newname = newname.slice(0, newname.length - 5)
+																						}
+
+																						//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+																						//selectedAction.parameters[count].value = selectedActionParameters[count].value;
+																						//setSelectedAction(selectedAction);
+																						//setShowDropdown(false);
+																						setMenuPosition(null);
+
+																						// innerdata.name
+																						// pathdata.name
+																						//handleItemClick([innerdata, newpathdata])
+																					}} /> : null}
+																				</div>
+																			</Tooltip>
+																		</MenuItem>
+																	);
+																})}
+															</Paper>
+														</NestedMenuItem>
+													) : (
+														<MenuItem
+															key={innerdata.name}
+															style={{
+																backgroundColor: theme.palette.inputColor,
+																color: "white",
+																minWidth: 250,
+																maxWidth: 250,
+																marginRight: 0,
+															}}
+															value={innerdata}
+															onMouseOver={() => handleMouseover()}
+															onMouseOut={() => {
+																handleMouseOut();
+															}}
+															onClick={() => {
+																handleItemClick([innerdata]);
+															}}
+														>
+															<Tooltip
+																color="primary"
+																title={`Value: ${innerdata.value}`}
+																placement="left"
+															>
+																<div style={{ display: "flex" }}>
+																	{icon} {innerdata.name}
+																</div>
+															</Tooltip>
+														</MenuItem>
+													);
+												})}
+											</Menu>
+										</ButtonGroup>
 									</div>
 								}
 
@@ -1890,8 +1861,7 @@ const CodeEditor = (props) => {
 								>
 									<div>
 										<span style={{ color: "white" }}>
-
-											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Expected Output for '${selectedAction.name}'`}
+											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Expected Output'`}
 										</span>
 									</div>
 
@@ -2055,6 +2025,7 @@ const CodeEditor = (props) => {
 					variant="outlined"
 					color="secondary"
 					onClick={() => {
+						navigate("")
 						setExpansionModalOpen(false);
 					}}
 				>
@@ -2070,6 +2041,15 @@ const CodeEditor = (props) => {
 						marginTop: 5,
 					}}
 					onClick={(event) => {
+						/*
+						const clickedFieldId = "rightside_field_" + fieldCount 
+						const clickedField = document.getElementById(clickedFieldId)
+						if (clickedField !== undefined && clickedField !== null) {
+							clickedField.focus()
+						}
+						*/
+
+						navigate("")
 						// Take localcodedata through the Shuffle JSON parser just in case
 						// This is to make it so we don't need to handle these fixes on the
 						// backend by itself
@@ -2087,7 +2067,7 @@ const CodeEditor = (props) => {
 							setExpansionModalOpen(false)
 						} else if (changeActionParameterCodeMirror !== undefined) {
 							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
-							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
+							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist, parameterName)
 							setExpansionModalOpen(false)
 							setcodedata(fixedcodedata)
 						}
@@ -2097,7 +2077,12 @@ const CodeEditor = (props) => {
 							const foundfield = document.getElementById(fieldname)
 							if (foundfield !== undefined && foundfield !== null) {
 								foundfield.value = fixedcodedata
+								if(selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger.name === "Shuffle Workflow") {
+									handleSubflowParamChange(fixedcodedata)
+								}
 							}
+						} else {
+							//toast("No fieldname found: " + fieldname)
 						}
 
 						setExpansionModalOpen(false)

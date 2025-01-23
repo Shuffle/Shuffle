@@ -500,7 +500,7 @@ useEffect(() => {
 			}) 
 		  </MenuItem>
 		</Link>
-        <Link to="/usecases" style={hrefStyle}>
+        <Link to="/workflows" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -801,18 +801,6 @@ useEffect(() => {
 		zoom: 0.8, 
         height: "calc((100vh - 32px)*1.2)",
       }}
-      onMouseLeave={() => {
-        if (window?.location?.pathname?.includes("/workflows/")) {
-          setExpandLeftNav(false);
-        }
-      }}
-      onMouseOver={() => {
-        if (window?.location?.pathname?.includes("/workflows/")) {
-          setExpandLeftNav(true);
-        }
-      }
-      
-      }
     >
       {modalView}
       <Box
@@ -822,6 +810,17 @@ useEffect(() => {
           justifyContent: "space-between",
           alignItems: "center",
           padding: "24px 16px 24px 27px",
+        }}
+        onMouseOver={()=>{
+          if(window?.location?.pathname?.includes("/workflows/")) {
+            setExpandLeftNav(true)
+          }
+        }}
+
+        onMouseLeave={()=>{
+          if(window?.location?.pathname?.includes("/workflows/")) {
+            setExpandLeftNav(false)
+          }
         }}
       >
         <a href="/" style={{ textDecoration: "none" }}>

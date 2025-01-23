@@ -238,6 +238,7 @@ const ParsedAction = (props) => {
 	  var generated_optional = []
 
 	  var keyorder = []
+
 	  for (let paramkey in selectedActionParameters) {
 		  var param = selectedActionParameters[paramkey]
 		  keyorder.push(param.name)
@@ -258,10 +259,15 @@ const ParsedAction = (props) => {
 			  continue
 		  }
 
+		  //if (param.name.startsWith("${") && param.name.endsWith("}")) {
+		  //    console.log("PARAM: ", param)
+		  //}
+
 		  if (param.required === false && param.name.startsWith("${") && param.name.endsWith("}")) {
 			  // Check if it's a required param
 			  param.autocompleted = true 
 			  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
+
 				if (selectedAction.required_body_fields.includes(param.name)) {
 					param.required = true
 				}
@@ -502,7 +508,6 @@ const ParsedAction = (props) => {
     //setStartNode(selectedAction.id)
   };
 
-
     useEffect(() => {
 		// Only set app action name if it has changed
 		if (selectedAction.label !== appActionName) {
@@ -732,17 +737,18 @@ const ParsedAction = (props) => {
 			}
 			return {...param, value: paramvalue, error: message}
 		});	
+
 		setSelectedActionParameters(newParameters);
         setActionlist(newActionList);
     }, [workflow.execution_variables, paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
 
-	useEffect(() => {
-		selectedNameChange(appActionName)
+		useEffect(() => {
+			selectedNameChange(appActionName)
 
-		if (actionDelayChange !== undefined) {
-			actionDelayChange(delay) 
-		}
-	  },[appActionName,delay])
+			if (actionDelayChange !== undefined) {
+				actionDelayChange(delay) 
+			}
+	  	},[appActionName,delay])
 	 
 		const handleParamChange = (event, count,data) => {
 			const newParams = [...selectedActionParameters];
@@ -828,14 +834,14 @@ const ParsedAction = (props) => {
         
         if (paramcheck !== undefined) {
           // Escapes all double quotes
-          var toReplace = event.target.value.trim()
+          //var toReplace = event.target.value.trim()
+          var toReplace = event.target.value
 
 
 		  if (!toReplace.startsWith("{") && !toReplace.startsWith("[")) {
 		  	toReplace = toReplace.replaceAll('\\"', '"').replaceAll('"', '\\"')
 		  }
 
-          console.log("REPLACE WITH: ", toReplace);
           if (
             paramcheck["value_replace"] === undefined ||
             paramcheck["value_replace"] === null
@@ -1711,13 +1717,11 @@ const ParsedAction = (props) => {
 								color="primary"
 								placeholder={selectedAction.label}
 								value={appActionName}
-								onChange={
-									(event) => {
-										let newValue = event.target.value
-										newValue = newValue.replaceAll(" ", "_")
-										setAppActionName(newValue)
-									}
-								}
+								onChange={(event) => {
+									let newValue = event.target.value
+									newValue = newValue.replaceAll(" ", "_")
+									setAppActionName(newValue)
+								}}
 								onBlur={(e) => {
 									// Copy the name value
 									const name = e.target.value
@@ -1905,14 +1909,14 @@ const ParsedAction = (props) => {
 													}
 	
 												}
-            					} catch (e) {
+            								} catch (e) {
 												console.log("Failed value replacement based on index: ", e)
 											}
 										}
 									}
 
-									setWorkflow(workflow);
-                  					setUpdate(Math.random());
+									setWorkflow(workflow)
+                  					setUpdate(Math.random())
 									setPrevActionName(name)
 								}}
 							/>
@@ -2137,6 +2141,7 @@ const ParsedAction = (props) => {
                   color: "white",
                 }}
                 value="authgroups"
+				disabled
               >
                 <em>Auth Groups</em>
               </MenuItem>
@@ -2897,6 +2902,10 @@ const ParsedAction = (props) => {
               }
 
               authWritten = true;
+			  return null
+
+			  /*
+			  // FIXME: Is this part necessary to show?
               return (
                 <Typography
                   key={count}
@@ -2908,6 +2917,7 @@ const ParsedAction = (props) => {
                   Authentication fields are hidden
                 </Typography>
               );
+			  */
             }
 
 
@@ -3107,6 +3117,7 @@ const ParsedAction = (props) => {
 						localStorage.setItem("hideBody", "false")
 						setHideBody(true)
 						// Make sure the body field is shown
+						var foundvalue = false
 						const updatedParameters = selectedActionParameters.map((param) => {
 							if (param.name === "body") {
 								return {
@@ -3116,11 +3127,19 @@ const ParsedAction = (props) => {
 							}
 
 							if (param.description === openApiFieldDesc) {
+							  if (param.value.length > 0) {
+								  foundvalue = true
+							  }
+
 							  return { ...param, field_active: false }
 							}
 
 							return param
 						})
+
+						if (foundvalue === true) {
+							toast.info("Please fill either Simple fields OR Advanced body, not both")
+						}
 		
 						setSelectedActionParameters(updatedParameters)
 					}}
@@ -3440,9 +3459,7 @@ const ParsedAction = (props) => {
                 }
                 placeholder={placeholder}
                 onChange={(event) => {
-                  //changeActionParameterCodemirror(event, count, data)
-                //   changeActionParameter(event, count, data);
-				handleParamChange(event, count, data)
+					handleParamChange(event, count, data)
                 }}
 				onFocus={(event) => {
 					// Get local storage key "disabled_ui_box" and check if it's true
@@ -3453,6 +3470,8 @@ const ParsedAction = (props) => {
 					}
 				}}
                 onBlur={(event) => {
+					handleParamChange(event, count, data)
+
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {
 						setLastSaved(false)
@@ -3815,7 +3834,7 @@ const ParsedAction = (props) => {
             }
 
             if (data.field_active === false) {
-				console.log("Field not active: ", data?.name)
+				//console.log("Field not active: ", data?.name)
               	return null
             }
 
@@ -4060,7 +4079,6 @@ const ParsedAction = (props) => {
                           overflow: "hidden",
                         }}
                         onClick={() => {
-                          console.log("CLICKED: ", innerdata);
                           console.log(innerdata.example)
                           handleItemClick([innerdata]);
                         }}
@@ -4240,14 +4258,14 @@ const ParsedAction = (props) => {
 		  			data.field_active === true ? 
 						<Tooltip
 							color="primary"
-							title={"This is an advanced field, simplified to make it easier to use. NOT required according to the API documentation."}
+							title={"This is an Simplified field to make the body easier to use. NOT required according to the API documentation. If this is filled, it will be overridden in the Advanced Body"}
 							placement="top"
 						>
 							<PriorityHighIcon 
-					  		style={{ 
-								color: "rgba(255,255,255,0.5)" ,
-								marginRight: 0, 
-							}}/>
+								style={{ 
+									color: "rgba(255,255,255,0.5)" ,
+									marginRight: 0, 
+								}}/>
 						</Tooltip>
 
 						:
@@ -4294,7 +4312,20 @@ const ParsedAction = (props) => {
 
 						<OpenInFullIcon
 							style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
+							onMouseOver={(event) => {
+								const clickedField = document.getElementById(clickedFieldId) 
+								if (clickedField !== null) {
+									clickedField.focus()
+								}
+							}}
 							onClick={(event) => {
+								// Set focus to the Textfield we just clicked
+								// This is to ensure focus is set correctly at all times with blur
+								const clickedField = document.getElementById(clickedFieldId) 
+								if (clickedField !== null) {
+									clickedField.focus()
+								}
+
 								event.preventDefault()
 								setFieldCount(count)
 								setExpansionModalOpen(true)
@@ -4305,20 +4336,22 @@ const ParsedAction = (props) => {
 									parsedvalue = ""
 								}
 
-								//console.log("Required fields: ", selectedActionParameters[count])
+						//console.log("Required fields: ", selectedActionParameters[count])
+						navigate(`?action_id=${selectedAction.id}&field=${data.name}&action_name=${selectedAction.name}`)
+						setEditorData({
+							"name": data.name,
+							"value": fixExample(parsedvalue),
+							"field_number": count,
+							"actionlist": actionlist,
+							"field_id": clickedFieldId,
 
-								setEditorData({
-									"name": data.name,
-									"value": fixExample(parsedvalue),
-									"field_number": count,
-									"actionlist": actionlist,
-									"field_id": clickedFieldId,
+              "example": fixExample(selectedActionParameters[count].example),
+            })
 
-									"example": fixExample(selectedActionParameters[count].example),
-								})
-							}}
-						/>
-					</Tooltip>
+          }}
+        />
+      </Tooltip>
+
 
                 </div>
                 {datafield}

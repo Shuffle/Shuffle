@@ -215,7 +215,12 @@ const ApiExplorerWrapper = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          handleDecodeOfOpenApiData(responseJson);
+		  if (responseJson.openapi === undefined || responseJson.openapi === null) {
+			  toast.warning("Loaded App, but no API found. Redirecting to app search..")
+			  navigate(`/apps/${appid}`)
+		  } else {
+          	handleDecodeOfOpenApiData(responseJson);
+		  }
         } else {
           toast.error("Failed to get app data or App doesn't exist (4)");
         }

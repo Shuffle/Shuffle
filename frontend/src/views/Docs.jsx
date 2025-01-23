@@ -100,7 +100,7 @@ export const CopyToClipboard = (props) => {
     )
 }
 
-export const Paragrah = (props) => {
+export const Paragraph = (props) => {
     const element = React.createElement(
         `p`,
         {},
@@ -123,7 +123,7 @@ export const Paragrah = (props) => {
 
 
     return (
-        <div>
+        <div> 
             {element}
         </div>
     )
@@ -793,7 +793,7 @@ const Docs = (defaultprops) => {
         maxWidth: "100%",
         minWidth: "100%",
         overflow: "hidden",
-        fontSize: isMobile ? "1.3rem" : "0.8rem",
+        fontSize: isMobile ? "1.3rem" : "1rem",
     };
 
     const alertNote = {
@@ -935,7 +935,7 @@ const Docs = (defaultprops) => {
         h5: Heading,
         h6: Heading,
         a:  OuterLink,
-        p:  Paragrah,
+        p:  Paragraph,
         blockquote: Blockquote,
     }
 
