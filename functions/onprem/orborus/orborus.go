@@ -3653,7 +3653,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				//log.Printf("[DEBUG] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {

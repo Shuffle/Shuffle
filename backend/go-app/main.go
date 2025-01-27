@@ -4842,7 +4842,7 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - add org check too, and not just owner
 	// Check workflow.Sharing == private / public / org  too
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
-		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+		if workflow.OrgId == user.ActiveOrg.Id  {
 			log.Printf("[AUDIT] User %s is accessing workflow %s as admin (public)", user.Username, workflow.ID)
 		} else {
 			log.Printf("[AUDIT] Wrong user (%s) for workflow %s (public)", user.Username, workflow.ID)
