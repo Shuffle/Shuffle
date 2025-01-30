@@ -1642,7 +1642,7 @@ const RunWorkflow = (defaultprops) => {
 			maxHeight: 500, 
 			position: "absolute", 
 			left: 150, 
-			top: 0, 
+			top: 75, 
 			border: "1px solid rgba(255,255,255,0.3)",
 			borderRadius: theme.palette?.borderRadius,
 

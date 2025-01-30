@@ -287,7 +287,7 @@ const WorkflowValidationTimeline = (props) => {
 	var scheduleNotStarted = false
 
 	if (workflow.validation !== undefined && workflow.validation !== null && workflow.validation.validation_ran === false) {
-		console.log("Validation didn't run. Why?")
+		console.log("Validation didn't run or get set for workflow. Why?")
 		return null
 	}
 
@@ -367,10 +367,13 @@ const WorkflowValidationTimeline = (props) => {
 						action.result = foundResult
 
 						action.status = foundResult.status
-					} 
+					} else {
+						action.status = "SUCCESS"
+					}
 				}
 
 				const lastitem = index === relevantactions.length - 1
+
 				if (!lastitem) {
 					if (action.app_name === "Shuffle Tools") {
 						if (action.status === "SUCCESS") {
@@ -386,9 +389,10 @@ const WorkflowValidationTimeline = (props) => {
 									nodecolor = grey 
 									branchcolor = grey 
 								}
+							} else {
+								nodecolor = green
+								branchcolor = green
 							}
-
-
 						} else if (action.status === "SKIPPED") {
 							branchcolor = grey
 						} else {
@@ -489,7 +493,7 @@ const WorkflowValidationTimeline = (props) => {
 
 				if (!showMiddle && relevantactions.length > 2 && index > 0 && index === relevantactions.length - 2) {
 					if (founderror.length > 0) {
-						middleError += founderror+"\n"
+						middleError += action.label+": "+founderror+"\n\n"
 
 						middleBranchColor = branchcolor
 					}
@@ -497,11 +501,18 @@ const WorkflowValidationTimeline = (props) => {
 					if (index === relevantactions.length-2 && relevantactions.length > 2) {
 
 						const selectedIcon = middleError.length > 0 ? 
-							<Tooltip title={
-								<Typography variant="body1" style={{margin: 5, whiteSpace: "pre-line", }}>
-									{middleError}
-								</Typography>
-							}>
+							<Tooltip 
+								title={
+									<Typography variant="body1" style={{margin: 5, whiteSpace: "pre-line", }}>
+										{middleError}
+									</Typography>
+								}
+								inputProps={{
+									paperProps: {
+										backgroundColor: "red",
+									}
+								}}
+							>
 								<IconButton style={{width: 30, height: 30, backgroundColor: "rgba(255,255,255,0.0)", borderRadius: 30, marginTop: 2, }}>
 									<ErrorOutlineIcon style={{color: "red", }} /> 
 								</IconButton>
@@ -517,7 +528,7 @@ const WorkflowValidationTimeline = (props) => {
 				// Returns for anything non-middle
 				if (relevantactions.length > 2 && index >= 1 && index < relevantactions.length - 2) {
 					if (founderror.length > 0) {
-						middleError += founderror+"\n"
+						middleError += action.label+": "+founderror+"\n\n"
 					}
 
 					return null

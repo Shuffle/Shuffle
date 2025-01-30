@@ -71,7 +71,8 @@ const EditWorkflow = (props) => {
 	const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
 	const [submitLoading, setSubmitLoading] = React.useState(false);
-	const [showMoreClicked, setShowMoreClicked] = React.useState(expanded === true ? true : false);
+	//const [showMoreClicked, setShowMoreClicked] = React.useState(expanded === true ? true : false);
+	const [showMoreClicked, setShowMoreClicked] = React.useState(true);
 
 	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
 
@@ -244,15 +245,13 @@ const EditWorkflow = (props) => {
 							Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 						</Typography>
 
-						{/*
-				<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
-					<WorkflowValidationTimeline 
-					
-					  apps={apps}
-					  workflow={workflow}
-					/>
-				</div>
-				*/}
+						<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
+							<WorkflowValidationTimeline 
+							
+							  apps={apps}
+							  workflow={workflow}
+							/>
+						</div>
 
 						{showUpload === true ?
 							<div style={{ float: "right" }}>
@@ -290,7 +289,7 @@ const EditWorkflow = (props) => {
 					bottom: 0, 
 					zIndex: 1002, 
 					backgroundColor: theme.palette.backgroundColor,
-					height: 50, 
+					height: 75, 
 					paddingTop: 20, 
 					paddingLeft: 75, 
 				}}>
@@ -327,12 +326,17 @@ const EditWorkflow = (props) => {
 
 							innerWorkflow.name = name
 							innerWorkflow.description = description
+
 							if (newWorkflowTags.length > 0) {
 								innerWorkflow.tags = newWorkflowTags
+							} else {
+								innerWorkflow.tags = []
 							}
 
 							if (selectedUsecases.length > 0) {
 								innerWorkflow.usecase_ids = selectedUsecases
+							} else {
+								innerWorkflow.usecase_ids = []
 							}
 
 							if (dueDate > 0) {
@@ -361,7 +365,6 @@ const EditWorkflow = (props) => {
 								setWorkflow({})
 							} else {
 								setWorkflow(innerWorkflow)
-								console.log("editing workflow: ", innerWorkflow)
 							}
 
 							setSubmitLoading(true)
@@ -505,7 +508,7 @@ const EditWorkflow = (props) => {
 											color: "white",
 										},
 									}}
-									multiLine
+									multiline
 									rows={3}
 									color="primary"
 									defaultValue={innerWorkflow.description}
@@ -537,81 +540,10 @@ const EditWorkflow = (props) => {
 
 										</RadioGroup>
 									</FormControl>
-									<LocalizationProvider dateAdapter={AdapterDayjs}>
-										<DatePicker
-											sx={{
-												marginTop: 3,
-												marginLeft: 3,
-											}}
-											value={dueDate}
-											label="Due Date"
-											format="YYYY-MM-DD"
-											onChange={(newValue) => {
-												setDueDate(newValue)
-											}}
-										/>
-									</LocalizationProvider>
 								</div>
 								<div />
 
-								<FormControl style={{ marginTop: 15, }}>
-									<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
-									<RadioGroup
-										row
-										aria-labelledby="demo-row-radio-buttons-group-label"
-										name="row-radio-buttons-group"
-										defaultValue={innerWorkflow.workflow_type}
-										onChange={(e) => {
-											console.log("Data: ", e.target.value)
-
-											innerWorkflow.workflow_type = e.target.value
-											setInnerWorkflow(innerWorkflow)
-										}}
-									>
-										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
-										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
-										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
-
-									</RadioGroup>
-								</FormControl>
-
-
-								<TextField
-									onBlur={(event) => {
-										innerWorkflow.blogpost = event.target.value
-										setInnerWorkflow(innerWorkflow)
-									}}
-									InputProps={{
-										style: {
-											color: "white",
-										},
-									}}
-									color="primary"
-									defaultValue={innerWorkflow.blogpost}
-									placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
-									rows="1"
-									label="blogpost"
-									margin="dense"
-									fullWidth
-								/>
-								<TextField
-									onBlur={(event) => {
-										innerWorkflow.video = event.target.value
-										setInnerWorkflow(innerWorkflow)
-									}}
-									InputProps={{
-										style: {
-											color: "white",
-										},
-									}}
-									color="primary"
-									defaultValue={innerWorkflow.video}
-									placeholder="A youtube or loom link to the video"
-									rows="1"
-									label="Video"
-									margin="dense"
-									fullWidth
-								/>
+								
 
 								<TextField
 									onBlur={(event) => {
@@ -1165,6 +1097,87 @@ const EditWorkflow = (props) => {
 
 							</div>
 						</> : null*/}
+
+						<Typography variant="h4" style={{ marginTop: 100, }}>
+							Publishing
+						</Typography>
+						<Typography variant="body1" color="textSecondary" style={{ marginTop: 10, }}>
+							Publishing is related to making the workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to everyone. The details below will help a user understand this better. When a workflow is published, you keep the original, and a copy enters the workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator account</a>, if you have one. You can always unpublish the workflow after. To publish it, click the three dots next to the workflow.
+						</Typography>
+
+						<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
+							<DatePicker
+								sx={{
+									marginTop: 3,
+									marginLeft: 3,
+								}}
+								value={dueDate}
+								label="Due Date"
+								format="YYYY-MM-DD"
+								onChange={(newValue) => {
+									setDueDate(newValue)
+								}}
+							/>
+						</LocalizationProvider>
+
+						<FormControl style={{ marginTop: 15, }}>
+							<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
+							<RadioGroup
+								row
+								aria-labelledby="demo-row-radio-buttons-group-label"
+								name="row-radio-buttons-group"
+								defaultValue={innerWorkflow.workflow_type}
+								onChange={(e) => {
+									console.log("Data: ", e.target.value)
+
+									innerWorkflow.workflow_type = e.target.value
+									setInnerWorkflow(innerWorkflow)
+								}}
+							>
+								<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+								<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+								<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+
+							</RadioGroup>
+						</FormControl>
+
+
+						<TextField
+							onBlur={(event) => {
+								innerWorkflow.blogpost = event.target.value
+								setInnerWorkflow(innerWorkflow)
+							}}
+							InputProps={{
+								style: {
+									color: "white",
+								},
+							}}
+							color="primary"
+							defaultValue={innerWorkflow.blogpost}
+							placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
+							rows="1"
+							label="blogpost"
+							margin="dense"
+							fullWidth
+						/>
+						<TextField
+							onBlur={(event) => {
+								innerWorkflow.video = event.target.value
+								setInnerWorkflow(innerWorkflow)
+							}}
+							InputProps={{
+								style: {
+									color: "white",
+								},
+							}}
+							color="primary"
+							defaultValue={innerWorkflow.video}
+							placeholder="A youtube or loom link to the video"
+							rows="1"
+							label="Video"
+							margin="dense"
+							fullWidth
+						/>
 
 						<Tooltip color="primary" title={"Add more details"} placement="top">
 							<Button

@@ -26,6 +26,7 @@ import {
 	Close as CloseIcon,
 	East as EastIcon, 
 	Interests as InterestsIcon,
+	OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 
 import {
@@ -35,7 +36,8 @@ import {
 	grey,
 } from "../views/AngularWorkflow.jsx"
 
-import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
+//import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup2.jsx";
+import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup2.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx";
 import FixWorkflowValidationErrors from "../components/FixWorkflowValidationErrors.jsx";
@@ -47,9 +49,11 @@ const WorkflowTemplatePopup = (props) => {
 		isModalOpenDefault,
 		setIsClicked,
 		inputWorkflowId,
+		inputWorkflow,
 	} = props;
 
-	const [isActive, setIsActive] = useState(workflowBuilt === true);
+	const [isActive, setIsActive] = useState(workflowBuilt === true || (workflowBuilt !== undefined && workflowBuilt !== null && workflowBuilt?.length > 0) || (inputWorkflow !== undefined && inputWorkflow !== null && inputWorkflow.id !== undefined && inputWorkflow.id !== null && inputWorkflow.id !== "") ? true : false)
+
 	const [isHovered, setIsHovered] = useState(false);
 	const [modalOpen, setModalOpen] = useState(isModalOpenDefault === true ? true : false)
 	const [errorMessage, setErrorMessage] = useState("");
@@ -65,7 +69,7 @@ const WorkflowTemplatePopup = (props) => {
 	const [showTryitOut, setShowTryitout] = React.useState(showTryit === true ? true : false)
 
 	const [loadingWorkflow, setLoadingWorkflow] = React.useState(false)
-	const [workflow, setWorkflow] = useState({});
+	const [workflow, setWorkflow] = useState(inputWorkflow !== undefined && inputWorkflow !== null && inputWorkflow.id !== undefined && inputWorkflow.id !== null && inputWorkflow.id !== "" ? inputWorkflow : {})
 	const [_, setUpdate] = useState(0)
 
 	const fetchWorkflow = (id) => {
@@ -455,7 +459,7 @@ const WorkflowTemplatePopup = (props) => {
 				//console.log("Error in workflow template: ", responseJson.error);
 				setRequestSent(false)
 
-				const defaultMessage = "Error: Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io if you want manual help building this usecase until the AI system is handled."
+				const defaultMessage = "Error: Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io if you want manual help building this usecase." 
 				if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason !== "") {
 					setErrorMessage(defaultMessage + "\n\n" + responseJson.reason)
 				} else {
@@ -535,8 +539,8 @@ const WorkflowTemplatePopup = (props) => {
         	        style: {
 						backgroundColor: "black",
         	            color: "white",
-        	            minWidth: isHomePage ? null : isMobile ? 300 : 850,
-        	            maxWidth: isHomePage ? null : isMobile ? 300 : 850,
+        	            minWidth: isHomePage ? null : isMobile ? 300 : 750,
+        	            maxWidth: isHomePage ? null : isMobile ? 300 : 750,
 						paddingTop: isMobile ? null : 75, 
 						itemAlign: "center",
         	        },
@@ -564,7 +568,7 @@ const WorkflowTemplatePopup = (props) => {
 					{title === undefined || title === null || title === "" ? null : 
 						<span>
 							<Typography variant="body2" color="textSecondary" style={{marginTop: 25, }}>
-								Selected Workflow:
+								Selected Usecase:
 							</Typography> 
 							<div style={{marginBottom: 0, }} id="workflow-template">
 								<WorkflowTemplatePopup2 
@@ -575,9 +579,10 @@ const WorkflowTemplatePopup = (props) => {
 									dstapp={dstapp}
 									title={title}
 									description={description}
-									visualOnly={true} 
 
+									visualOnly={true} 
 									workflowBuilt={workflowBuilt}
+									inputWorkflow={workflow}
 									shownColor={shownColor}
 								/>
 
@@ -585,7 +590,7 @@ const WorkflowTemplatePopup = (props) => {
 						</span>
 					}
 
-					<div style={{marginTop: 15, }}>
+					<div style={{marginTop: 0, }}>
 						{/* Fix the timeline when errors are fixed.. how? */}
 						<WorkflowValidationTimeline
 							workflow={workflow}
@@ -601,21 +606,23 @@ const WorkflowTemplatePopup = (props) => {
 					</div>
 
 					{workflowLoading === true ? 
-						<div style={{marginTop: 75, textAlign: "center", }}>
-							<Typography variant="h4"> Generating the Workflow...
+						<div style={{marginTop: 60, textAlign: "center", }}>
+							<Typography variant="h4"> Generating Workflows...
 							</Typography> 
 							<CircularProgress style={{marginLeft: 0, marginTop: 25, }}/> 
 						</div>
 						:
 						<div>
-							{usecaseDetails === undefined ? null :
-								<Typography variant="h6" style={{marginTop: 75, }}>
-									{usecaseDetails?.description}
+							{usecaseDetails === undefined || usecaseDetails === null || workflow.id !== undefined ? null :
+								<Typography variant="body1" style={{marginTop: 60, }} color="textSecondary">
+									{usecaseDetails?.description} 
 								</Typography> 
 							}
-							<Typography variant="h6" style={{marginTop: 75, }}>
-								{errorMessage !== "" ? errorMessage : ""}
-							</Typography> 
+							{errorMessage !== "" ?
+								<Typography variant="h6" style={{marginTop: 75, }}>
+									{errorMessage !== "" ? errorMessage : ""}
+								</Typography> 
+							: null}
 							{showLoginButton ?
           						<Link to="/register?message=Please login to create workflows&view=usecases"
           						  style={{
@@ -643,6 +650,7 @@ const WorkflowTemplatePopup = (props) => {
 										variant="outlined"
 										style={{
 											textTransform: "none",
+											marginTop: 15, 
 										}}
 										onClick={() => {
 											//setWorkflowLoading(true)
@@ -730,11 +738,11 @@ const WorkflowTemplatePopup = (props) => {
 
 	const parsedDescription = description !== undefined && description !== null ? description.replaceAll("_", " ") : ""
 
-	const boxHeight = 104
+	const boxHeight = visualOnly ? 75 : 104
 	const highlightColor = shownColor !== undefined && shownColor !== null && shownColor !== "" ? shownColor : "#f85a3e"
 
 	var hasInterest = false
-	if (userdata.interests !== undefined && userdata.interests !== null && userdata.interests.length > 0) {
+	if (userdata?.interests !== undefined && userdata?.interests !== null && userdata?.interests?.length > 0) {
 		const comparisonTitle = title === undefined || title === null ? "" : title.trim().toLowerCase().replaceAll(" ", "_")
 		for (var interestkey in userdata.interests) {
 			if (userdata.interests[interestkey].name === undefined || userdata.interests[interestkey].name === null || userdata.interests[interestkey].name === "") {
@@ -742,12 +750,12 @@ const WorkflowTemplatePopup = (props) => {
 			}
 
 			if (modalOpen) { 
-				console.log("COMPARE: ", userdata.interests[interestkey].name.trim().toLowerCase().replaceAll(" ", "_"), comparisonTitle)
+				//console.log("COMPARE: ", userdata.interests[interestkey].name.trim().toLowerCase().replaceAll(" ", "_"), comparisonTitle)
 			}
 
 			if (userdata.interests[interestkey].name.trim().toLowerCase().replaceAll(" ", "_") === comparisonTitle) {
 				if (modalOpen) { 
-					console.log("FOUND: ", comparisonTitle)
+					//console.log("FOUND: ", comparisonTitle)
 				}
 
 				hasInterest = true
@@ -791,7 +799,16 @@ const WorkflowTemplatePopup = (props) => {
 				}}
 				onClick={() => {
 					if (visualOnly === true) {
-						console.log("Not showing more than visuals.")
+						console.log("Not showing more than visuals. Workflow built: ", workflowBuilt, workflow)
+
+						if (workflowBuilt !== undefined && workflowBuilt !== null && workflowBuilt?.length > 0) { 
+							window.open("/workflows/" + workflowBuilt, "_blank")
+						} else if (workflow.id !== undefined && workflow.id !== null && workflow.id !== "") {
+							window.open("/workflows/" + workflow.id, "_blank")
+						} else {
+							toast("Click 'Try this usecase' to generate workflows for this usecase.")
+						}
+
 						return
 					}
 
@@ -822,7 +839,7 @@ const WorkflowTemplatePopup = (props) => {
 					: null}
 
 					<div style={{ display: "flex", itemAlign: "left", textAlign: "left", }}>
-						<div style={{display: "flex", flex: 1, marginLeft: 25, marginTop: showTryitOut && !isActive ? 14 : 30, }}>
+						<div style={{display: "flex", flex: 1, marginLeft: 25, marginTop: visualOnly ? 18 : showTryitOut && !isActive ? 14 : 30, }}>
 							<div style={{zIndex: 51}}>
 								{img1 !== undefined && img1 !== "" && srcapp !== undefined && srcapp !== "" ?
 									<Tooltip title={srcapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
@@ -849,7 +866,7 @@ const WorkflowTemplatePopup = (props) => {
 							}	
 
 						</div>
-						<div style={{ marginLeft: 20, overflow: "hidden", maxHeight: 30, marginTop: showTryitOut && !isActive ? 8 : 23, }}>
+						<div style={{ marginLeft: 20, overflow: "hidden", maxHeight: 30, marginTop: visualOnly ? 12 : showTryitOut && !isActive ? 8 : 23, }}>
 							<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16, fontWeight: isHomePage ? 600 : null, textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" : "rgba(241, 241, 241, 1)"}} >
 								<b>{parsedTitle}</b>
 							</Typography>
@@ -858,13 +875,19 @@ const WorkflowTemplatePopup = (props) => {
 				</div>
 
 				<div>
+
 					{isActive === true && errorMessage === "" ?
-						<Tooltip title="You already have workflows that are based on this usecase" placement="top">
-							<CheckIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: theme.palette.green, top: 10, right: 10, }} /> 
-						</Tooltip>
+						visualOnly === true ? 
+							<Tooltip title="Open the workflow in a new tab" placement="top">
+								<OpenInNewIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", top: 22, right: 20, }} /> 
+							</Tooltip>
+							:
+							<Tooltip title="You already have workflows that are based on this usecase" placement="top">
+								<CheckIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: theme.palette.green, top: 10, right: 10, }} /> 
+							</Tooltip>
 					: ""}
 
-					{!isActive && hasInterest === true ?
+					{!isActive && hasInterest === true && !visualOnly ?
 						<Tooltip title="Your team has shown interest in this usecase previously." placement="top">
 							<InterestsIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: "rgba(254, 204, 0, 0.5)", top: 10, right: 10, }} />
 						</Tooltip>
@@ -872,7 +895,7 @@ const WorkflowTemplatePopup = (props) => {
 				</div>
 
 
-				{showTryitOut && !isActive ? 
+				{showTryitOut && !isActive && !visualOnly ? 
 					<Fade in={showTryitOut} timeout={300}>
 						<Button
 							variant="text"
@@ -898,4 +921,4 @@ const WorkflowTemplatePopup = (props) => {
 	)
 }
 
-export default WorkflowTemplatePopup 
+export default WorkflowTemplatePopup

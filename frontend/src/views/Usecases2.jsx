@@ -621,7 +621,7 @@ const UsecaseListComponent = (props) => {
 								parsedUsecase.dstapp = newsubcase.dstapp
 
 
-								var workflowBuilt = false
+								var workflowBuilt = "" 
 								const newname = subcase.name.toLowerCase().replaceAll(" ", "_")
 								for (var workflowkey in workflows) {
 									const workflow = workflows[workflowkey]
@@ -635,7 +635,7 @@ const UsecaseListComponent = (props) => {
 
 									//console.log("WORKFLOW: ", newname, newusecases)
 									if (newusecases.includes(newname)) {
-										workflowBuilt = true
+										workflowBuilt = workflow.id 
 										break
 									}
 								}
@@ -676,6 +676,7 @@ const UsecaseListComponent = (props) => {
 											showTryit={false}
 											shownColor={""}
 											workflowBuilt={workflowBuilt} 
+											inputWorkflowId={workflowBuilt}
 											usecaseDetails={usecaseDetails}
 										/>
 

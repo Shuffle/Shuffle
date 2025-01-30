@@ -90,8 +90,8 @@ const pythonFilters = [
 	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"name\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
 
 	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
-	{ "name": "Run an App Action", "value": `response = self.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
-	{ "name": "Run a Singul AI Action", "value": `response = self.create_ticket(app="jira/iris/ticketingsystem", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": true, },
+	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
+	{ "name": "Run a Singul AI Action", "value": `response = singul.create_ticket(app="jira/iris/ticketingsystem", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": true, },
 
 ]
 
@@ -1416,7 +1416,7 @@ const CodeEditor = (props) => {
 													return (
 														<MenuItem key={index} onClick={() => {
 															if (item.disabled) {
-																toast.error("This feature may not work in your environment yet, and is awaiting updates to the Shuffle python execution environment.", { autoClose: 10000 })
+																toast.error("This feature may not work in your environment until you update your Shuffle Tools app.", { autoClose: 10000 })
 															}
 
 															if (selectedAction.name !== "execute_python") {

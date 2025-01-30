@@ -92,6 +92,7 @@ import {
     ArrowRight as ArrowRightIcon,
     Visibility as VisibilityIcon,
     EditNote as EditNoteIcon,
+	ErrorOutline as ErrorOutlineIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -107,6 +108,8 @@ import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinementList } from 'react-instantsearch-dom';
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
+
+import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240");
@@ -1114,12 +1117,9 @@ const Workflows2 = (props) => {
                 <Button
                     style={{}}
                     onClick={() => {
-                        console.log("Editing: ", editingWorkflow);
                         if (selectedWorkflowId) {
                             deleteWorkflow(selectedWorkflowId)
-                            setTimeout(() => {
-                                getAvailableWorkflows();
-                            }, 1000);
+
                         } else if (selectedWorkflowIndexes.length > 0) {
                             // Do backwards so it doesn't change 
                             toast("Starting deletion of workflows. This might take a while.")
@@ -1130,13 +1130,13 @@ const Workflows2 = (props) => {
                                 }
                             }
 
-                            setTimeout(() => {
-                                getAvailableWorkflows()
-                            }, 1000);
-
+							setTimeout(() => {
+								getAvailableWorkflows()
+							}, 5000)
                             setSelectedWorkflowIndexes([]);
                         }
-                        setDeleteModalOpen(false);
+
+                        setDeleteModalOpen(false)
                     }}
                     color="primary"
                 >
@@ -2807,6 +2807,7 @@ const Workflows2 = (props) => {
                                 {workflowMenuButtons}
                             </div>
                         ) : null}
+
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
                                 <div style={{ position: "absolute", top: 45, right: 8, }}>
@@ -2821,10 +2822,33 @@ const Workflows2 = (props) => {
                                     >
                                         <EditNoteIcon />
                                     </IconButton>
-                                    {workflowMenuButtons}
                                 </div>
                             </Tooltip>
-                            : null}
+                        : null}
+
+						{(data?.validation?.validation_ran === true && data?.validation?.valid === false && data?.validation?.errors?.length > 0 ) ?                            
+							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} errors. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
+                                <div style={{ position: "absolute", top: 45, right: 8, }}>
+                                    <IconButton
+                                        aria-label="more"
+                                        aria-controls="long-menu"
+                                        aria-haspopup="true"
+                                        onClick={() => {
+                                            window.open(`/admin?admin_tab=notifications&workflow_id=${data.id}`, "_blank")
+                                        }}
+                                        style={{ 
+											padding: "0px", 
+											color: "#979797",
+										}}
+                                    >
+										<ErrorOutlineIcon style={{ 
+											marginRight: 2, 
+										}} />
+                                    </IconButton>
+                                </div>
+                            </Tooltip>
+
+						: null}
                     </Grid>
                 </Paper>
             </div>

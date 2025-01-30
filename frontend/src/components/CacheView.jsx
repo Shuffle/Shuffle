@@ -390,6 +390,10 @@ const CacheView = memo((props) => {
                     variant="contained"
                     style={{ borderRadius: "2px", backgroundColor: "#ff8544",color: "#1a1a1a", textTransform:"none" }}
                     onClick={() => {
+                        if (value === "") {
+                            toast("Key or Value can not be empty");
+                            return;
+                        }
                         {editCache ? editOrgCache(orgId) : addOrgCache(orgId)}
 						setKey("")
 						setValue("")
@@ -503,7 +507,7 @@ const CacheView = memo((props) => {
 	>
 		<DialogTitle>
 			<div style={{ color: "rgba(255,255,255,0.9)" }}>
-				Select sub-org to distribute files
+				Select sub-org to distribute Datastore key
 			</div>
 		</DialogTitle>
 		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
@@ -714,7 +718,9 @@ const CacheView = memo((props) => {
                                         display: "table-cell",
                                         overflow: "hidden",
                                         verticalAlign: "middle",
-                                        padding: "8px 8px 8px 15px"
+                                        padding: "8px 8px 8px 15px",
+                                        maxWidth: 200,
+                                        overflowX: "auto",
                                     }}
                                     primary={data.key}
                                 />
@@ -872,14 +878,16 @@ const CacheView = memo((props) => {
                                         style={{display: "table-cell", textAlign: 'center', verticalAlign: 'middle', }}
                                         />
                                       :
-                                      <Tooltip
+                                      <ListItemText
+                                        primary={
+                                            <Tooltip
                                           title="Distributed to sub-organizations. This means the sub organizations can use this datastore key, but can not modify it."
                                           placement="top"
                                       >
                                           <Checkbox
                                               disabled={ userdata?.active_org?.role !== "admin" || (selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" )? true : false}
                                               checked={isDistributed}
-                                              style={{ }}
+                                              style={{ margin: "auto" }}
                                               color="secondary"
                                               onClick={() => {
 												setShowDistributionPopup(true)
@@ -892,6 +900,9 @@ const CacheView = memo((props) => {
                                               }}
                                           />
                                       </Tooltip>
+                                        }
+                                        style={{display: "table-cell", textAlign: 'center', verticalAlign: 'middle', }}
+                                        />
                                   }
                             </ListItem>
                         );

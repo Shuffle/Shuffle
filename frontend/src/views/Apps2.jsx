@@ -1853,6 +1853,7 @@ const Apps2 = (props) => {
           app={selectedApp}
           userdata={userdata}
           globalUrl={globalUrl}
+          getApps={getApps}
         />
         <AppCreationModal
           open={createAppModalOpen}

@@ -1258,7 +1258,6 @@ const Apps = (props) => {
                 style={{
                   width: 150,
                   backgroundColor: theme.palette.surfaceColor,
-                  backgroundColor: inputColor,
                   color: "white",
                   height: 35,
                   marginleft: 10,

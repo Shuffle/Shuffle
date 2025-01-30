@@ -5435,6 +5435,7 @@ const AppCreator = (defaultprops) => {
         minWidth: 174,
         minHeight: 174,
         objectFit: "contain",
+		borderRadius: theme.palette?.borderRadius,
       }}
     />
   );
@@ -5450,6 +5451,7 @@ const AppCreator = (defaultprops) => {
         margin: "auto",
         marginTop: 30,
         marginLeft: 40,
+		borderRadius: theme.palette?.borderRadius,
       }}
       onClick={() => {
         upload.click();
@@ -5832,6 +5834,7 @@ const AppCreator = (defaultprops) => {
 							//setOpenApiModal(true)
 							toast.info("Action merging & fork management coming soon")
 						}}
+	  					disabled={true}
 	  					style={{marginLeft: 10, }}
 					>
 						<CallMergeIcon 
@@ -5846,7 +5849,7 @@ const AppCreator = (defaultprops) => {
           href="https://shuffler.io/docs/app_creation#app-creator-instructions"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
-          Click here to learn more about app creation
+          Click to learn more about app creation
         </a>
         <div
           style={{
@@ -5940,7 +5943,6 @@ const AppCreator = (defaultprops) => {
             <TextField
               required
               style={{
-				paddingTop: 5,
 				marginTop: 5, 
                 marginRight: 15,
                 backgroundColor: inputColor,
