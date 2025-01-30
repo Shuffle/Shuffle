@@ -3252,9 +3252,9 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		err = shuffle.SetUser(ctx, &user, true)
 		if err != nil {
 			log.Printf("[ERROR] Failed adding verification for user %s: %s", user.Username, err)
-			resp.WriteHeader(500)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
-			return
+			//resp.WriteHeader(500)
+			//resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
+			//return
 		}
 	}
 
