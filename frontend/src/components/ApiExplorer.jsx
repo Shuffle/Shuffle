@@ -1183,6 +1183,7 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
         }
       }
     }
+
     var prefixCheck = "/v1";
     if (parentUrl.includes("/")) {
       const urlsplit = parentUrl.split("/");
@@ -1242,7 +1243,7 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
       }
     }
 
-    newActions = newActions2;
+    newActions = newActions2
 
     // Rearrange them by which has action_label
     const firstActions = newActions.filter(
@@ -1257,9 +1258,9 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
         data.action_label === null ||
         data.action_label === "No Label"
     );
-    newActions = firstActions.concat(secondActions);
-    setActions(newActions);
-    setExampleBody(newActions[0]?.body);
+    newActions = firstActions.concat(secondActions)
+    setActions(newActions)
+    setExampleBody(newActions[0]?.body)
   }, [openapi]);
 
   return (
@@ -1546,7 +1547,7 @@ const ActionsList = memo(({
                   overflow: "hidden",
                 }}
               >
-                {action.name.replaceAll("_", " ")}
+                {action?.name?.replaceAll("_", " ")}
               </span>
             </Button>
           ))
@@ -1798,7 +1799,7 @@ const Action = memo((
                   response.result = JSON.parse(response.result);
                 } catch (parseError) {
                   console.error("Error parsing result:", parseError);
-                  toast.error("Error parsing response result.");
+                  //toast.error("Error parsing response result.");
                 }
               }
             
@@ -2228,11 +2229,12 @@ const Action = memo((
                   }}
 
                   onChange={(e) => {
-                    const newUrl = e.target.value;
+                    const newUrl = e.target.value
                     setActionUrl(newUrl);
                     const params = extractParamsFromText(newUrl);
                     setRequestParams(params);
-                  
+
+
                     if (newUrl.startsWith("http://") || newUrl.startsWith("https://")) {
                       try {
                         const url = new URL(newUrl);
@@ -2241,9 +2243,12 @@ const Action = memo((
                   
                         setPath(newPath);
                       } catch (error) {
-                        console.error("Invalid URL:", error);
+                        console.error("Invalid URL:", newUrl, error);
+						toast("The URL is not a valid one. Please check and try again.")
                       }
-                    }                  
+                    } else {
+						//toast("The URL needs to start with http:// or https://")
+					}
                   }}
                 />
                 

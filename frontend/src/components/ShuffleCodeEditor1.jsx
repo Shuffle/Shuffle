@@ -15,6 +15,7 @@ import {
 	MenuItem,
 	Button,
 	ButtonGroup,
+	Collapse,
 } from '@mui/material';
 
 import theme from '../theme.jsx';
@@ -23,6 +24,7 @@ import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
+import Draggable from "react-draggable";
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -152,6 +154,7 @@ const CodeEditor = (props) => {
 	const [anchorEl3, setAnchorEl3] = React.useState(null);
 	const [mainVariables, setMainVariables] = React.useState([]);
 	const [availableVariables, setAvailableVariables] = React.useState([]);
+	const [sourceDataOpen, setSourceDataOpen] = React.useState(false);
 
 	const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
 
@@ -1150,18 +1153,21 @@ const CodeEditor = (props) => {
 	// Define a custom completer for the Ace Editor
 	const customCompleter = {
 		getCompletions: function(editor, session, pos, prefix, callback) {
-			console.log("CUSTOM COMPLETER: ", prefix)
-
 			callback(null, availableVariables.map((variable) => {
-				console.log("CUSTOM VAR: ", variable)
+				//console.log("CUSTOM VAR: ", variable)
 
 				return ({
 					caption: variable,
 					value: variable,
-					meta: 'custom',
+					meta: 'var',
 				})
 			}))
 		}
+	}
+
+	const editorLoad = (editor) => {
+		console.log("EDITOR: ", editor)
+		editor.completers = [customCompleter]
 	}
 
 	if (fullScreenMode) {
@@ -1187,7 +1193,6 @@ const CodeEditor = (props) => {
 				highlightActiveLine={false}
 
 				enableBasicAutocompletion={true}
-				completers={[customCompleter]}
 
 				style={{
 					wordBreak: "break-word",
@@ -1212,12 +1217,146 @@ const CodeEditor = (props) => {
 		)
 	}
 
+
+	const ValueBox = (props) => {
+		const { name, value } = props
+
+		const [dragging, setDragging] = React.useState(false)
+		const [hovering, setHovering] = React.useState(false)
+
+		if (name === undefined || name === null || name.length === 0) {
+			return null
+		}
+
+		if (value === undefined || value === null || value.length === 0) {
+			return null
+		}
+
+		return (
+			<Draggable
+			  style={{
+				  position: "absolute",
+				  zIndex: 15000,
+			  }}
+			  onDrag={(e) => {
+				  e.preventDefault()
+				  // Check if inside div.ace_content
+				  if (e.srcElement.className === "ace_content") {
+					  // Input on the correct line. Each line is: 
+					  // Show some tooltip at mouse cursor that shows "Insert Action"
+
+					  // Append the text to the DOM
+				  } else {
+					  //console.log("PAGEX: ", e.pageX, e.pageY)
+					  //console.log("OffsetX: ", e.offsetX, e.offsetY)
+					  //console.log("E: ", e)
+				  }
+
+				  if (!dragging) {
+				  	setDragging(true)
+				  }
+			  }}
+			  onStop={(e) => {
+				  if (e.srcElement.className === "ace_content") {
+					  console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
+
+					  const usedposition = e.offsetY
+					  if (usedposition  === undefined || usedposition === null) {
+						  toast.info("Error: LayerY is undefined or null. Please contact support@shuffler.io")
+						  return
+					  }
+
+					  if (usedposition  === 0) {
+						  usedposition = 1
+					  }
+
+					  const lineheight = 15
+					  const codedatasplit = localcodedata.split('\n')
+					  if (codedatasplit === undefined || codedatasplit === null || codedatasplit.length === 0) {
+						  return
+					  }
+
+					  // Int 
+					  const lineposition = parseInt(usedposition/lineheight)
+
+					  // Find the correct line
+					  if (lineposition > codedatasplit.length) {
+						  codedatasplit[codedatasplit.length-1] += value
+					  } else {
+						  codedatasplit[lineposition] += value
+					  }
+
+
+					  //e.srcElement.layerY
+					  setlocalcodedata(codedatasplit.join('\n'))
+				  }
+
+				  setDragging(false)
+			  }}
+			  dragging={dragging}
+			  position={{ 
+				  x: 0, 
+				  y: 0,
+			  }}
+			  onMouseHover={() => {
+			  	setHovering(true)
+			  }}
+			  onMouseLeave={() => {
+			  	setHovering(false)
+			  }}
+			>
+				<div 
+					style={{
+						cursor: dragging ? "grabbing" : "grab", 
+						minWidth: 100, 
+						border: "1px solid rgba(255,255,255,0.5)", 
+						borderRadius: theme.palette.borderRadius/2, 
+						marginRight: 10, 
+						padding: 5, 
+					}}
+				>
+					{value}
+				</div>
+			</Draggable>
+		)
+	}
+
+	const SourceDataOption = (option) => {
+		const { innerdata, parsedPaths, defaultExpanded } = option
+
+		const [expanded, setExpanded] = React.useState(defaultExpanded === true ? true : false)
+
+
+		return (
+			<div style={{minHeight: 40, marginTop: 10, }}>
+				<div style={{
+					cursor: "pointer", 
+					display: "flex", 
+					position: "relative", 
+				}} onClick={() => {
+					setExpanded(!expanded)
+				}}>
+					<ValueBox name={innerdata?.name} value={innerdata?.value} />
+					<Typography style={{marginTop: 5, maxWidth: 150, maxHeight: 40, overflow: "hidden", }}>
+						{innerdata?.name}
+					</Typography>
+				</div>
+				<Collapse in={expanded}>
+					HELO
+				</Collapse>
+			</div>
+		)
+	}
+
 	return (
 		<Dialog
 			aria-labelledby="draggable-dialog-title"
 			// disableBackdropClick={true}
 			disableEnforceFocus={true}
-			style={{ pointerEvents: "none", zIndex: activeDialog === "codeeditor" ? 1200 : 1100 }}
+			style={{ 
+				pointerEvents: "none", 
+				zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+			}}
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
@@ -1248,7 +1387,6 @@ const CodeEditor = (props) => {
 					maxHeight: isMobile ? "100%" : 700,
 					border: "3px solid rgba(255,255,255,0.3)",
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					// zoom: 0.8, 
 					backgroundColor: "black",
 				},
 			}}
@@ -1308,7 +1446,92 @@ const CodeEditor = (props) => {
 				</IconButton>
 			</Tooltip>
 			<div style={{ display: "flex" }}>
-				<div style={{ flex: 1, }}>
+				{sourceDataOpen ? 
+					<div style={{ minWidth: 350, maxWidth: 350, marginLeft: 5, borderRight: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", marginRight: 10, }}>
+						<Typography variant="h6">
+							Source Data
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							Drag the data you want into the text editor
+						</Typography>
+
+						{actionlist?.map((innerdata) => {
+							const icon =
+								innerdata.type === "action" ? (
+									<AppsIcon style={{ marginRight: 10 }} />
+								) : innerdata.type === "workflow_variable" ||
+									innerdata.type === "execution_variable" ? (
+									<FavoriteBorderIcon style={{ marginRight: 10 }} />
+								) : (
+									<ScheduleIcon style={{ marginRight: 10 }} />
+								);
+
+							const handleExecArgumentHover = (inside) => {
+								var exec_text_field = document.getElementById(
+									"execution_argument_input_field"
+								);
+								if (exec_text_field !== null) {
+									if (inside) {
+										exec_text_field.style.border = "2px solid #f85a3e";
+									} else {
+										exec_text_field.style.border = "";
+									}
+								}
+							};
+
+							const handleActionHover = (inside, actionId) => {
+								};
+
+							const handleMouseover = () => {
+								if (innerdata.type === "Execution Argument") {
+									handleExecArgumentHover(true);
+								} else if (innerdata.type === "action") {
+									handleActionHover(true, innerdata.id);
+								}
+							};
+
+							const handleMouseOut = () => {
+								if (innerdata.type === "Execution Argument") {
+									handleExecArgumentHover(false);
+								} else if (innerdata.type === "action") {
+									handleActionHover(false, innerdata.id);
+								}
+							};
+
+							var parsedPaths = [];
+							if (innerdata.type === "workflow_variable") {
+								// Try to parse the value if it's a string that could be JSON
+								  if (typeof innerdata.value === "string") {
+									try {
+									  const parsedValue = JSON.parse(innerdata.value)
+									  if (typeof parsedValue === "object") {
+										parsedPaths = GetParsedPaths(parsedValue, "");
+									  }
+									} catch (e) {
+									  // Not valid JSON, use the value directly
+									  parsedPaths = GetParsedPaths(innerdata.value, "");
+									}
+								  } else if (typeof innerdata.value === "object") {
+									parsedPaths = GetParsedPaths(innerdata.value, "");
+								  }
+							  } else if (typeof innerdata.example === "object") {
+								parsedPaths = GetParsedPaths(innerdata.example, "");
+							}
+
+							const coverColor = "#82ccc3"
+
+							if (innerdata?.name === "Execution Argument") {
+								innerdata.name = "Runtime Argument"
+							}
+
+							return (
+								<SourceDataOption innerdata={innerdata} parsedPaths={parsedPaths} />
+							)
+						})}
+					</div>
+				: null}
+
+				<div style={{ flex: 3, }}>
 					{isFileEditor ?
 						<div
 							style={{
@@ -1348,6 +1571,26 @@ const CodeEditor = (props) => {
 								{isFileEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
 										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
+											{/*
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+												aria-expanded={!!menuPosition ? 'true' : undefined}
+												variant={!sourceDataOpen ? "contained" : "outlined"}
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 175,
+												}}
+												onClick={(event) => {
+													setSourceDataOpen(!sourceDataOpen)
+												}}
+											>
+												<AddIcon /> Show Source Data 
+											</Button>
+											*/}
+
 											<Button
 												id="basic-button"
 												aria-haspopup="true"
@@ -1401,6 +1644,26 @@ const CodeEditor = (props) => {
 											>
 												Python Code
 											</Button>
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+												aria-expanded={!!menuPosition ? 'true' : undefined}
+												variant={"outlined"}
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 130,
+												}}
+												onClick={(event) => {
+													setMenuPosition({
+														top: event.pageY,
+														left: event.pageX,
+													})
+												}}
+											>
+												<AddIcon /> Autocomplete
+											</Button>
 											<Menu
 												id="basic-menu"
 												anchorEl={anchorEl3}
@@ -1431,26 +1694,6 @@ const CodeEditor = (props) => {
 												})}
 											</Menu>
 
-											<Button
-												id="basic-button"
-												aria-haspopup="true"
-												aria-controls={!!menuPosition ? 'basic-menu' : undefined}
-												aria-expanded={!!menuPosition ? 'true' : undefined}
-												variant="outlined"
-												color="secondary"
-												style={{
-													textTransform: "none",
-													width: 130,
-												}}
-												onClick={(event) => {
-													setMenuPosition({
-														top: event.pageY,
-														left: event.pageX,
-													})
-												}}
-											>
-												<AddIcon /> Autocomplete
-											</Button>
 
 											<Menu
 												anchorReference="anchorPosition"
@@ -1774,13 +2017,19 @@ const CodeEditor = (props) => {
 						</div>
 					}
 
-					<div style={{
-						borderRadius: theme.palette?.borderRadius,
-						position: "relative",
-						paddingTop: 0,
-						// minHeight: 548,
-						// overflow: "hidden",
-					}}>
+					<div 
+						style={{
+							borderRadius: theme.palette?.borderRadius,
+							position: "relative",
+							paddingTop: 0,
+						}}
+						onDragOver={(e) => {
+							console.log("DRAGGING OVER: ", e)
+						}}
+						onDrop={(e) => {
+							console.log("DROP: ", e)
+						}}
+					>	
 						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
 							<AceEditor
 								id="shuffle-codeeditor"
@@ -1806,9 +2055,12 @@ const CodeEditor = (props) => {
 									wordWrap: "break-word",
 									backgroundColor: "rgba(40,40,40,1)",
 									zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+
+									
 								}}
 								onLoad={(editor) => {
 									highlight_variables(localcodedata)
+									editorLoad(editor)
 								}}
 								onCursorChange={(cursorPosition, editor, value) => {
 									setCurrentCharacter(cursorPosition.cursor.column)
@@ -1847,8 +2099,15 @@ const CodeEditor = (props) => {
 					</div>
 				</div>
 
-				{isFileEditor ? null :
-					<div style={{ flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", }}>
+				{isFileEditor  ? null :
+					<div style={{ 
+						flex: sourceDataOpen ? 1.5 : 3, 
+						marginLeft: 5, 
+						borderLeft: "1px solid rgba(255,255,255,0.3)", 
+						paddingLeft: 5, 
+						overflow: "hidden", 
+						transitions: "all 1s ease-in-out",
+					}}>
 						<div>
 							{isMobile ? null :
 								<DialogTitle
@@ -1861,7 +2120,7 @@ const CodeEditor = (props) => {
 								>
 									<div>
 										<span style={{ color: "white" }}>
-											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Expected Output'`}
+											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Output`}
 										</span>
 									</div>
 

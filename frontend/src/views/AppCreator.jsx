@@ -3167,6 +3167,12 @@ const AppCreator = (defaultprops) => {
 			  setOauth2Scopes(chips)
 			  setUpdate(Math.random())
 		  }}
+		  onBlur={(e) => {
+			  var newchips = oauth2Scopes
+			  newchips.push(e.target.value)
+			  setOauth2Scopes(newchips)
+			  setUpdate(Math.random())
+		  }}
 		/>
       </div>
     ) : null;
