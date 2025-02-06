@@ -416,9 +416,13 @@ const AppGrid = (props) => {
                 >
                   {hits.map((data, index) => {
                     const appUrl =
-                      isCloud
-                        ? `/apps/${data.objectID}?queryID=${data.__queryID}`
-                        : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
+                              isCloud === true ?
+                              `/apps/${data.id}`
+                                : `https://shuffler.io/apps/${data.objectID}`;
+
+                              if (data.name === "" && data.id === "") {
+                                return null
+                              }
 
                     return (
                       <Zoom
@@ -1732,13 +1736,13 @@ const AppGrid = (props) => {
                             };
 
                             const appUrl =
-                              isCloud === true
-                                ? `/apps/${data.id}`
+                              isCloud === true ?
+                               `/apps/${data.id}`
                                 : `https://shuffler.io/apps/${data.id}`;
 
-							if (data.name === "" && data.id === "") {
-								return null
-							}
+                              if (data.name === "" && data.id === "") {
+                                return null
+                              }
 
                             return (
                               <Zoom

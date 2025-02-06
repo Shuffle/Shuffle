@@ -6243,7 +6243,7 @@ const AppCreator = (defaultprops) => {
 						{testView}
 					*/}
 
-	  	<div style={{height: 50, padding: 15, display: "flex", marginTop: 35, position: "fixed", bottom: 0, left: 0, width: "100%", backgroundColor: theme.palette?.backgroundColor, borderTop: "1px solid rgba(255,255,255,0.3)",}}>
+	  	<div style={{height: isCloud ? 50 : 80, padding: 15, display: "flex", marginTop: 35, position: "fixed", bottom: 0, left: 0, width: "100%", backgroundColor: theme.palette?.backgroundColor, borderTop: "1px solid rgba(255,255,255,0.3)",}}>
 	  		<div style={{width: 450, margin: "auto", display: "flex", textAlign: "center", }}>
 				{appDownloadData.length > 0 ?
 					<Tooltip title="Download the OpenAPI specification for the App" placement="bottom">
