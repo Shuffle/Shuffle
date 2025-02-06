@@ -4,35 +4,36 @@ import { Link, Route, Routes, BrowserRouter, useNavigate } from "react-router-do
 import { CookiesProvider } from "react-cookie";
 import { removeCookies, useCookies } from "react-cookie";
 
-import Workflows from "./views/Workflows";
-import GettingStarted from "./views/GettingStarted";
+import Workflows from "./views/Workflows.jsx";
+import GettingStarted from "./views/GettingStarted.jsx";
 import AngularWorkflow from "./views/AngularWorkflow.jsx";
 
 import Header from "./components/NewHeader.jsx";
 import HealthPage from "./components/HealthPage.jsx";
 
 //import Header from "./components/Header.jsx";
-import theme from "./theme";
-import Apps from "./views/Apps";
+import theme from "./theme.jsx";
+import Apps from "./views/Apps.jsx";
 import Apps2 from "./views/Apps2.jsx";
-import AppCreator from "./views/AppCreator";
+import AppCreator from "./views/AppCreator.jsx";
 import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import DashboardView from "./views/DashboardViews.jsx";
-import AdminSetup from "./views/AdminSetup";
-import Admin from "./views/Admin";
+import AdminSetup from "./views/AdminSetup.jsx";
+import Admin from "./views/Admin.jsx";
 import Docs from "./views/Docs.jsx";
 import Usecases2 from "./views/Usecases2.jsx";
 //import Introduction from "./views/Introduction";
-import SetAuthentication from "./views/SetAuthentication";
-import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
+import SetAuthentication from "./views/SetAuthentication.jsx";
+import SetAuthenticationSSO from "./views/SetAuthenticationSSO.jsx";
 import Search from "./views/Search.jsx";
 import RunWorkflow from "./views/RunWorkflow.jsx";
+import Admin2 from "./views/Admin2.jsx";
 
-import LoginPage from "./views/LoginPage";
-import SettingsPage from "./views/SettingsPage";
+import LoginPage from "./views/LoginPage.jsx";
+import SettingsPage from "./views/SettingsPage.jsx";
 import KeepAlive from "./views/KeepAlive.jsx";
 
 import { ThemeProvider } from "@mui/material/styles";
@@ -40,8 +41,8 @@ import CssBaseline from '@mui/material/CssBaseline';
 
 import UpdateAuthentication from "./views/UpdateAuthentication.jsx";
 import FrameworkWrapper from "./views/FrameworkWrapper.jsx";
-import ScrollToTop from "./components/ScrollToTop";
-import AlertTemplate from "./components/AlertTemplate";
+import ScrollToTop from "./components/ScrollToTop.jsx";
+import AlertTemplate from "./components/AlertTemplate.js";
 import { isMobile } from "react-device-detect";
 import RuntimeDebugger from "./components/RuntimeDebugger.jsx"
 
@@ -58,6 +59,7 @@ import Drift from "react-driftjs";
 
 import { AppContext } from './context/ContextApi.jsx';
 import Workflows2 from "./views/Workflows2.jsx";
+import AppExplorer from "./views/AppExplorer.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -207,37 +209,27 @@ const App = (message, props) => {
 		}
 
 		
-			{curpath.includes("/workflows") && curpath.includes("/run") ? 
-				<div style={{ height: 60, }} />
-				:
-				isLoggedIn ? 
-					<div style={{ position: 'fixed', top: 16, left: 10, zIndex: 100000 }}>
-						<LeftSideBar userdata={userdata} globalUrl={globalUrl} serverside={false} notifications={notifications} />
+					{ window?.location?.pathname === "/"  || window?.location?.pathname === "/training" || !(isLoggedIn && isLoaded) ? (
+						<div style={{ minHeight: 68, maxHeight: 68 }}>
+						<Header
+						notifications={notifications}
+						setNotifications={setNotifications}
+						userdata={userdata}
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						globalUrl={globalUrl}
+						setIsLoggedIn={setIsLoggedIn}
+						isLoggedIn={isLoggedIn}
+						curpath={curpath}
+						{...props}
+						/>
 					</div>
-				:
-				<div style={{ minHeight: 68, maxHeight: 68, }}>
-				<Header
-					billingInfo={{}}
-
-					notifications={notifications}
-					setNotifications={setNotifications}
-					checkLogin={checkLogin}
-					cookies={cookies}
-					removeCookie={removeCookie}
-					isLoaded={isLoaded}
-					globalUrl={globalUrl}
-					setIsLoggedIn={setIsLoggedIn}
-					isLoggedIn={isLoggedIn}
-					userdata={userdata}
-
-					curpath={curpath}
-					serverside={false}
-					isMobile={false}
-
-					{...props}
-				/>
-			</div> 
-			}
+					) : (
+						<div style={{ position: 'fixed', top: 32, left: 10, zIndex: 100000 }}>
+						  <LeftSideBar checkLogin={checkLogin} userdata={userdata} globalUrl={globalUrl} notifications={notifications} />
+						</div>
+					) }
 		
 				{/*
         <div style={{ height: 60 }} />
@@ -262,7 +254,7 @@ const App = (message, props) => {
         	/>
         	<Route
         	  exact
-        	  path="/admin"
+        	  path="/admin2"
         	  element={
         	    <Admin
         	      userdata={userdata}
@@ -279,6 +271,24 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+					exact
+					path="/admin"
+					element={
+						<Admin2
+							cookies={cookies}
+							removeCookie={removeCookie}
+							isLoaded={isLoaded}
+							isLoggedIn={isLoggedIn}
+							notifications={notifications}
+							setNotifications={setNotifications}
+							globalUrl={globalUrl}
+							checkLogin={checkLogin}
+							userdata={userdata}
+							{...props}
+						/>
+					}
+				/>
 					<Route exact path="/search" element={<Search serverside={false} isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} {...props} /> } />
         	<Route
         	  exact
@@ -387,7 +397,7 @@ const App = (message, props) => {
         	/>
         	<Route
         	  exact
-        	  path="/usecases"
+        	  path="/usecases2"
         	  element={
         	    <Dashboard
 				  userdata={userdata}
@@ -400,7 +410,7 @@ const App = (message, props) => {
         	/>
 			<Route
         	  exact
-        	  path="/usecases2"
+        	  path="/usecases"
         	  element={
         	    <Usecases2
 				  userdata={userdata}
@@ -426,7 +436,7 @@ const App = (message, props) => {
 			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
         	<Route
         	  exact
-        	  path="/apps"
+        	  path="/apps2"
         	  element={
 				<Apps
 					isLoaded={isLoaded}
@@ -439,7 +449,7 @@ const App = (message, props) => {
         	/>
 			<Route
         	  exact
-        	  path="/apps2"
+        	  path="/apps"
         	  element={
 				<Apps2
 					serverside={false} 
@@ -466,7 +476,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
+			{/* <Route exact path="/apps/:appid" element={<AppExplorer userdata={userdata} isLoggedIn={isLoggedIn} isLoaded={isLoaded}  globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
+			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded}globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} /> */}
 			<Route
 				exact
 				path="/detections/sigma"
@@ -474,7 +485,7 @@ const App = (message, props) => {
 			/>
         	<Route
         	  exact
-        	  path="/workflows"
+        	  path="/workflows2"
         	  element={
         	    <Workflows
 				  checkLogin={checkLogin}
@@ -491,7 +502,7 @@ const App = (message, props) => {
         	/>
 			<Route
         	  exact
-        	  path="/workflows2"
+        	  path="/workflows"
         	  element={
         	    <Workflows2
 				  checkLogin={checkLogin}
@@ -554,6 +565,7 @@ const App = (message, props) => {
         	      isMobile={isMobile}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
         	      {...props}
         	    />
         	  }
@@ -567,6 +579,7 @@ const App = (message, props) => {
         	      isMobile={isMobile}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
         	      {...props}
         	    />
         	  }

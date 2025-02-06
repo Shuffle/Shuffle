@@ -12,6 +12,14 @@ const Admin2 = (props) => {
     const [orgRequest, setOrgRequest] = React.useState(true);
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
+	if (document !== undefined) {
+		if (selectedOrganization?.name !== undefined) {
+			document.title = selectedOrganization?.name + " - Admin - Shuffle"
+		} else {
+  			document.title = "Admin - Shuffle"
+		}
+	}
+
     const handleGetOrg = (orgId) => {
 
         fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
@@ -103,7 +111,8 @@ const Admin2 = (props) => {
                         setSelectedStatus(leads);
                     }
 
-                    setSelectedOrganization(responseJson);
+
+                    setSelectedOrganization(responseJson)
                     var lists = {
                         active: {
                             triggers: [],
@@ -309,7 +318,7 @@ const Admin2 = (props) => {
 
     return (
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 0.9}}>
-            <AdminNavBar userdata={userdata} isLoaded={isLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud} serverside={serverside} />
+            <AdminNavBar userdata={userdata} isLoaded={isLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud}/>
         </div>
     );
 };

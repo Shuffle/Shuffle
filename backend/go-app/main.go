@@ -1048,6 +1048,20 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	licensed := shuffle.IsLicensed(ctx, *org)
 
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
+	if err != nil {
+		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	orgApps := workflowapps
+	activatedAppIds := []string{}
+	for _, app := range orgApps {
+		activatedAppIds = append(activatedAppIds, app.ID)
+	}
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1069,6 +1083,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Interests:  orgInterests,
 		Priorities: orgPriorities,
 		Licensed:   licensed,
+		ActiveApps: activatedAppIds,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -3175,7 +3190,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	err = shuffle.DeployAppToDatastore(ctx, api)
 	//func DeployAppToDatastore(ctx context.Context, workflowapp WorkflowApp, bucketName string) error {
 	if err != nil {
-		log.Printf("Failed adding app to db: %s", err)
+		log.Printf("[ERROR] Failed adding app to db: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed adding app to db: %s"}`, err)))
 		return
@@ -3184,7 +3199,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	// 2. Get all the required code
 	appbase, staticBaseline, err := shuffle.GetAppbase()
 	if err != nil {
-		log.Printf("Failed getting appbase: %s", err)
+		log.Printf("[ERROR] Failed getting appbase: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed getting appbase code"}`))
 		return
@@ -4842,7 +4857,7 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - add org check too, and not just owner
 	// Check workflow.Sharing == private / public / org  too
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
-		if workflow.OrgId == user.ActiveOrg.Id  {
+		if workflow.OrgId == user.ActiveOrg.Id {
 			log.Printf("[AUDIT] User %s is accessing workflow %s as admin (public)", user.Username, workflow.ID)
 		} else {
 			log.Printf("[AUDIT] Wrong user (%s) for workflow %s (public)", user.Username, workflow.ID)
@@ -5107,6 +5122,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
+	r.HandleFunc("/api/v1/authentication/group", shuffle.AddAppAuthenticationGroup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/group", shuffle.GetAppAuthenticationGroup).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/group/{key}", shuffle.DeleteAppAuthenticationGroup).Methods("DELETE", "OPTIONS")
+
+	r.HandleFunc("/api/v1/authentication/groups", shuffle.AddAppAuthenticationGroup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/groups", shuffle.GetAppAuthenticationGroup).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/groups/{key}", shuffle.DeleteAppAuthenticationGroup).Methods("DELETE", "OPTIONS")
 	// Related to use-cases that are not directly workflows.
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
@@ -5173,9 +5195,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/github/register", shuffle.HandleNewGithubRegister).Methods("PUT", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/pipelines/{key}", handlePipelineCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
+
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
@@ -5204,8 +5228,13 @@ func initHandlers() {
 
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
+	r.HandleFunc("/api/v1/getenvironments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/setenvironments", shuffle.HandleSetEnvironments).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/stats", shuffle.HandleGetenvStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/config", shuffle.HandleSetenvConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
@@ -5214,8 +5243,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/delete_cache", shuffle.HandleDeleteCacheKeyPost).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/config", shuffle.HandleCacheConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
@@ -5242,6 +5273,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}/config", shuffle.HandleSetFileConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/files/namespaces/{namespace}/share", shuffle.HandleShareNamespace).Methods("POST", "OPTIONS")
 
 	// This structure is horrendous. Needs fixing after we got the prototype up
 	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")

@@ -477,7 +477,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-      window.location.host === "shuffler.io" || window.location.host === "localhost:3000"
+      window.location.host === "shuffler.io"
       ? true
       : false;
 
@@ -574,8 +574,10 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
                   {newAppname}
                 </Typography>
                 <Link
-                  to={"/apps/" + (app?.id || app?.objectID)}
+                  to={isCloud ? "/apps/" + (app?.id || app?.objectID) : `https://shuffler.io/apps/${app?.objectID || app?.id}`}
                   style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <IconButton
                     style={{

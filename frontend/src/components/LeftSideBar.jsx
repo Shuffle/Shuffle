@@ -889,7 +889,7 @@ useEffect(() => {
           </Button>
         </Box>
       </Box>
-      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{!leftSideBarOpenByClick && setExpandLeftNav(true)}} onMouseLeave={()=>{!leftSideBarOpenByClick && setExpandLeftNav(false);setOpenAutocomplete(false)}}>
+      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(true)}} onMouseLeave={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(false);setOpenAutocomplete(false)}}>
       <Box
             sx={{
               display: "flex",
