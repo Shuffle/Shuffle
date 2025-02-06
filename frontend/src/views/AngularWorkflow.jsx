@@ -2204,7 +2204,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     if (curworkflow.actions === undefined || curworkflow.actions === null || curworkflow.actions.length === 0) {
-      console.log("Can't save without actions")
+	  toast.error("The workflow is empty. Please add at least one action.")
       return
     }
 
@@ -3844,7 +3844,137 @@ const AngularWorkflow = (defaultprops) => {
       });
 
     return apps
-  };
+  }
+
+  const findWorkflowDiff = (parentWorkflow, childWorkflow) => {
+	  var diff = {
+		  "different": false,
+		  "environment": false,
+		  "actions": [],
+		  "triggers": [],
+	  }
+
+	  if (parentWorkflow.actions === undefined || parentWorkflow.actions === null || parentWorkflow.actions.length === 0) {
+		  console.log("Parent workflow actions are empty")
+		  return diff
+	  }
+
+	  if (childWorkflow.actions === undefined || childWorkflow.actions === null || childWorkflow.actions.length === 0) {
+		  console.log("Child workflow actions are empty")
+		  return diff
+	  }
+
+
+	  var parentEnvironment = ""
+	  var childEnvironment = ""
+	  for (var parentKey in parentWorkflow.actions) {
+		  const parentAction = parentWorkflow.actions[parentKey]
+		  if (parentAction.environment !== undefined && parentAction.environment !== null && parentAction.environment !== "") {
+			  parentEnvironment = parentAction.environment
+		  }
+
+		  var actionDiff = {
+			  parameters: []
+		  }
+
+		  var found = false
+		  for (var childKey in childWorkflow.actions) {
+			  const childAction = childWorkflow.actions[childKey]
+			  if (childAction.environment !== undefined && childAction.environment !== null && childAction.environment !== "") {
+				  childEnvironment = childAction.environment
+			  }
+
+			  if (childAction.id !== parentAction.id) {
+		  		  found = true 
+				  continue
+			  }
+
+			  if (childAction.label !== parentAction.label) {
+				  actionDiff.label_change = true
+			  }
+
+			  /*
+			  if (childAction.app_id !== parentAction.app_id) {
+				  actionDiff.app_id = true
+			  }
+			  */
+
+			  if (childAction.app_name !== parentAction.app_name) {
+				  actionDiff.app_name = true
+			  }
+
+			  if (childAction.app_version !== parentAction.app_version) {
+				  actionDiff.app_version = true
+			  }
+
+			  if (childAction.name !== parentAction.name) {
+				  actionDiff.name = true
+			  }
+
+			  // Irrelevant
+			  //if (childAction.environment !== parentAction.environment) {
+			  //    actionDiff.environment = true
+			  //}
+
+			  if (childAction.authentication_id !== parentAction.authentication_id) {
+				  actionDiff.authentication_id = true
+			  }
+
+			  if (parentAction.parameters === undefined || parentAction.parameters === null || parentAction.parameters.length === 0 || childAction.parameters === undefined || childAction.parameters === null || childAction.parameters.length === 0) {
+				  continue
+			  }
+
+			  for (var parentParamIndex in parentAction.parameters) {
+				  const parentParam = parentAction.parameters[parentParamIndex]
+				  for (var childParamIndex in childAction.parameters) {
+					  const childParam = childAction.parameters[childParamIndex]
+					  if (childParam.name !== parentParam.name) {
+						  continue
+					  }
+
+					  if (childParam.value !== parentParam.value) {
+						  actionDiff.parameters.push(childParam.name) 
+					  }
+				  }
+			  }
+		  }
+
+		  if (actionDiff.parameters.length > 0) {
+			  actionDiff.params = true
+		  }
+
+		  if (!found) {
+			  actionDiff.new = true
+		  }
+
+		  console.log("ACTIONDIFF: ", actionDiff)
+		  if (actionDiff !== undefined && actionDiff !== null && Object.keys(actionDiff).length > 1) {
+			  actionDiff.label = parentAction.label.replaceAll("_", " ")
+			  actionDiff.id = parentAction.id
+			  actionDiff.large_image = parentAction.large_image
+			  diff.actions.push(actionDiff)
+		  }
+	  }
+
+	  if (childEnvironment !== parentEnvironment) {
+		  diff.environment = true
+	  }
+
+
+	  // loop diff and find if ANY key is true
+	  for (var key in diff) {
+		  try {
+			  if (diff[key] === true || diff[key].length > 0) {
+				  diff.different = true
+				  break
+			  }
+		  } catch (e) {
+			  console.log("Error in diff: ", e)
+		  }
+	  }
+
+	  return diff 
+  }
 
   const getChildWorkflows = (parentWorkflowId) => {
     //toast("Loading child workflows 1 (should be 2)")
@@ -3875,6 +4005,14 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success !== false) {
+
+		  for (var key in responseJson) {
+			  const diff = findWorkflowDiff(originalWorkflow, responseJson[key])
+			  if (diff !== undefined && diff !== null) {
+				  responseJson[key].diff = diff
+			  }
+		  }
+
           setSuborgWorkflows(responseJson)
         }
       })
@@ -5085,9 +5223,6 @@ const AngularWorkflow = (defaultprops) => {
 
         if (inputAction !== undefined) {
           console.log("In input action! Should check params if they match, and add suggestions")
-
-          console.log("ORIGINAL PARAMS: ", originalParams)
-          console.log("RESPONSE PARAMS: ", responseJson.parameters)
 
           if (responseJson.parameters === undefined || responseJson.parameters.length === 0) {
             return
@@ -8699,7 +8834,6 @@ const AngularWorkflow = (defaultprops) => {
 
 		if (inParent === false) {
 			if (trigger.parent_controlled === true) {
-				console.log("Setting trigger as parent controlled")
 				inParent = true
 			}
 		}
@@ -8977,22 +9111,7 @@ const AngularWorkflow = (defaultprops) => {
       setSelectedEdge({})
       setSelectedAction({})
     }
-
-    // An attempt at NOT unselecting when removing
-    /*
-    setTimeout(() => {
-      if (parsedSelection.data() !== undefined) {
-        if (parsedSelection.data("id") !== selectedNode.data("id")) {
-          console.log("SHOULD SELECT SINCE ID IS DIFFERENT")
-
-          parsedSelection.select()
-        }
-      }
-
-      console.log("Parsed: ", parsedSelection.data("id"), selectedNode.data("id"))
-    }, 2500)
-    */
-  };
+  }
 
 
   if (isLoaded && setupSent === false) {
@@ -16941,8 +17060,8 @@ const AngularWorkflow = (defaultprops) => {
             	      pointerEvents: "auto",
             	      backgroundColor: theme.palette.inputColor,
             	      color: "white",
-            	      maxWidth: 250,
-            	      minWidth: 250,
+            	      maxWidth: 300,
+            	      minWidth: 300,
             	      borderRadius: theme.palette?.borderRadius,
             	      height: 40,
             	    }}
@@ -17063,7 +17182,10 @@ const AngularWorkflow = (defaultprops) => {
             	    label="Suborg Distribution"
             	    fullWidth
             	  >
-            	    <MenuItem key={originalWorkflow.org_id} value={originalWorkflow.org_id}>
+            	    <MenuItem 
+			  			key={originalWorkflow.org_id} 
+			  			value={originalWorkflow.org_id}
+				  	>
             	      
 						<Chip
 						  style={{ marginLeft: 0, padding: 0, marginRight: 0, }}
@@ -17075,6 +17197,7 @@ const AngularWorkflow = (defaultprops) => {
 							e.stopPropagation()
 						  }}
 			  			/> {userdata.active_org.large_image}{" "}
+
             	    	<span style={{ marginLeft: 8 }}>
             	        	{userdata.active_org.name}
             	      	</span>
@@ -17129,13 +17252,84 @@ const AngularWorkflow = (defaultprops) => {
             	          />
             	        )
 
+						var orgDiff = {
+							different: false,
+						}
+						const foundMatchingWorkflow = suborgWorkflows?.find((workflow) => workflow.org_id === data.id)
+						if (foundMatchingWorkflow.diff !== undefined && foundMatchingWorkflow.diff !== null) {
+							orgDiff = foundMatchingWorkflow.diff
+						}
+
+						//console.log("DIFF: ", orgDiff)
 
             	      return (
-            	        <MenuItem key={index} value={data.id}>
-            	          {image}{" "}
-            	          <span style={{ marginLeft: 8 }}>
-            	            {data.name}
-            	          </span>
+            	        <MenuItem key={index} value={data.id} style={{display: "flex", }}>
+						  <span style={{flex: 10, }}>
+							  {image}{" "}
+							  <span style={{ marginLeft: 8 }}>
+								{data.name}
+							  </span>
+						  </span>
+
+						  {orgDiff.different === true ? 
+							  <Tooltip placement="right" sx={{ maxWidth: 500, }} 
+							    componentsProps={{
+    								tooltip: {
+    								  sx: { maxWidth: 500, whiteSpace: "normal" }
+    								}
+  								}}
+							    title={
+								 <div style={{ overflow: "auto", }}>
+								   <Typography variant="body1" style={{margin: 16, }}>
+								  	<b>Changes:</b>
+								  	<br/>
+
+								  	{orgDiff.environment === true &&
+										<span>- Environment<br/></span>
+									}
+
+								  	{orgDiff?.actions?.length > 0 &&
+										<span>- Actions ({orgDiff.actions.length}): <br/>
+											{orgDiff.actions.map((orgDiffAction, index) => {
+												console.log("DIFF: ", orgDiffAction)
+												var formattedError = ""
+
+												var paramchanges = ""
+												for (var diffActionKey in orgDiffAction) {
+													if (diffActionKey !== "id" && diffActionKey !== "label" && diffActionKey !== "parameters" && diffActionKey !== "params" && diffActionKey !== "large_image") {
+														if (formattedError.length > 0) {
+															formattedError += ", "
+														}
+														formattedError += diffActionKey 
+													}
+
+													if (diffActionKey === "parameters") {
+														paramchanges = orgDiffAction[diffActionKey].join(", ")
+													}
+												}
+
+												if (paramchanges.length > 0) {
+													formattedError += paramchanges 
+												}
+
+												return (
+													<li>
+														<Tooltip title={orgDiffAction.label} arrow placement="left">
+															<img alt={orgDiffAction.label} src={orgDiffAction.large_image} style={{width: 20, height: 20, borderRadius: theme.palette.borderRadius, marginRight: 10, }}/>
+														</Tooltip>
+														{formattedError}
+													</li>
+												)
+											})}
+										</span>
+									}
+
+								  </Typography>
+								</div>
+							  }>
+								<WarningIcon style={{color: theme.palette.distributionColor, marginLeft: 25, flex: 1, }}/>
+							  </Tooltip>
+						  : null}
             	        </MenuItem>
             	      )
             	    })}
@@ -17210,7 +17404,7 @@ const AngularWorkflow = (defaultprops) => {
           	    }}
           	    onChange={(e) => {
           	      setLastSaved(false)
-          	      const env = environments.find((a) => a.Name === e.target.value);
+          	      const env = environments.find((a) => a.Name === e.target.value)
           	      setSelectedActionEnvironment(env)
           	      selectedAction.environment = env.Name
           	      setSelectedAction(selectedAction)
@@ -17881,7 +18075,7 @@ const AngularWorkflow = (defaultprops) => {
     setSelectedApp({})
     setWorkflow(inputworkflow)
 
-	if (workflow.id === originalWorkflow.id) {
+	if (inputworkflow.id === originalWorkflow.id) {
 		if (selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null) {
 			setOriginalSelectedEnvironment(selectedActionEnvironment)
 		}
@@ -17890,6 +18084,7 @@ const AngularWorkflow = (defaultprops) => {
 	if (inputworkflow.id === originalWorkflow.id && originalSelectedEnvironment !== undefined && originalSelectedEnvironment !== null && originalSelectedEnvironment.Name !== undefined && originalSelectedEnvironment.Name !== null) {
 		setSelectedActionEnvironment(originalSelectedEnvironment)
 	} else {
+		//console.log("Checking input workflow actions for env: ", inputworkflow.actions)
 		if (inputworkflow.actions !== undefined && inputworkflow.actions !== null && inputworkflow.actions.length > 0) {
 
 			for (var actionkey in inputworkflow.actions) {
@@ -21410,6 +21605,9 @@ const AngularWorkflow = (defaultprops) => {
                 setEditorData={setEditorData}
                 setAiQueryModalOpen={setAiQueryModalOpen}
                 fixExample={fixExample}
+
+		  		suborgWorkflows={suborgWorkflows}
+		  		originalWorkflow={originalWorkflow}
               />
             </div>
           </Fade>

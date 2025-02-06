@@ -2479,7 +2479,7 @@ const Workflows2 = (props) => {
 
 
         return (
-            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
+            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
                 <Paper square style={paperAppStyle}>
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2563,13 +2563,13 @@ const Workflows2 = (props) => {
                                         {(isDistributed || hasSuborgs) && (
                                             <div style={{
                                                 backgroundColor: "rgba(64,224,208,0.1)", // Matching the teal color used in border
-                                                border: "1px solid #40E0D0",
+                                                border: `1px solid ${theme.palette.distributionColor}`,
                                                 borderRadius: 4,
                                                 padding: "8px 12px",
                                                 marginTop: 8,
                                             }}>
                                                 <Typography variant="body2" style={{
-                                                    color: "#40E0D0",
+                                                    color: theme.palette.distributionColor,
                                                     display: "flex",
                                                     alignItems: "center",
                                                     gap: 8,
@@ -2834,7 +2834,7 @@ const Workflows2 = (props) => {
                                         aria-controls="long-menu"
                                         aria-haspopup="true"
                                         onClick={() => {
-                                            window.open(`/admin?admin_tab=notifications&workflow_id=${data.id}`, "_blank")
+                                            window.open(`/admin?admin_tab=notifications&workflow=${data.id}`, "_blank")
                                         }}
                                         style={{ 
 											padding: "0px", 

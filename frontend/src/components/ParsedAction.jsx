@@ -93,6 +93,7 @@ import {
 	Storage as StorageIcon,
 	Check as CheckIcon,
 	PriorityHigh as PriorityHighIcon,
+	Restore as RestoreIcon,
 } from '@mui/icons-material';
 
 export const useStyles = makeStyles({
@@ -175,6 +176,9 @@ const ParsedAction = (props) => {
 		setEditorData,
 		setcodedata,
 		setAiQueryModalOpen,
+
+		suborgWorkflows,
+		originalWorkflow,
 	} = props;
 
 	let navigate = useNavigate()
@@ -199,6 +203,7 @@ const ParsedAction = (props) => {
 	const [showAutocomplete, setShowAutocomplete] = React.useState(false);
 	const [menuPosition, setMenuPosition] = useState(null);
 	const [uiBox, setUiBox] = useState(null);
+	const [parentAction, setParentAction] = useState(null);
 	const isIntegration = selectedAction.app_id === "integration"
 	const isAgent = selectedAction.app_id === "shuffle_agent"
 	const [distributeAuthToSuborgs, setDistributeAuthToSuborgs] = useState(selectedAction?.selectedAuthentication?.suborg_distributed || false)
@@ -614,6 +619,26 @@ const ParsedAction = (props) => {
 		// Only set selected variable parameter if it is null or undefined
 		if (!selectedVariableParameter && workflow.workflow_variables?.length > 0) {
 			setSelectedVariableParameter(workflow.workflow_variables[0].name);
+		}
+
+		if (selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0 && originalWorkflow?.id !== undefined && originalWorkflow?.id !== null && originalWorkflow?.id !== workflow?.id && originalWorkflow?.actions !== undefined && originalWorkflow?.actions !== null && originalWorkflow?.actions.length > 0) {
+			// Due to ID remapping of actions not happening, this is easy
+			for (var key in originalWorkflow.actions) {
+				const curparentAction = originalWorkflow.actions[key]
+
+				if (curparentAction.id === selectedAction.id) {
+					if (curparentAction.parameters === undefined || curparentAction.parameters === null || curparentAction.parameters.length === 0) {
+						console.log("Parent parameters missing!")
+						break
+					}
+
+					if (curparentAction.id !== parentAction?.id) {
+						setParentAction(curparentAction)
+					}
+
+					break
+				}
+			}
 		}
 	}, [selectedAction, selectedApp, setNewSelectedAction, workflow, workflowExecutions, getParents])
 
@@ -2067,7 +2092,55 @@ const ParsedAction = (props) => {
 				selectedAction.authentication.length > 0 ? (
 
 				<div style={{ marginTop: 15, position: "relative", }}>
-					<Typography style={{ color: "rgba(255,255,255,0.7)" }}>Authentication</Typography>
+					<div style={{display: "flex", }}>
+						<Typography style={{ color: "rgba(255,255,255,0.7)", flex: 10, }}>
+							Authentication
+						</Typography>
+
+						{parentAction?.authentication_id !== undefined && parentAction?.authentication_id !== null && parentAction?.authentication_id !== "" && parentAction?.authentication_id !== selectedAction?.authentication_id ? 
+							<Tooltip title={`Parent authentication is different. Reset..`} placement="top" arrow>
+								<RestoreIcon 
+									style={{
+										marginRight: 10, 
+										marginBottom: 5, 
+										cursor: "pointer", 
+										color: theme.palette.distributionColor,
+									}}
+									onClick={() => {
+										selectedAction.authentication_id = parentAction.authentication_id
+
+										// Check if we can select the parent auth or not
+										console.log("Changing selected auth to parent: ", parentAction, selectedAction.authentication)
+										if (selectedAction.authentication !== undefined && selectedAction.authentication !== null && selectedAction.authentication.length > 0) {
+											var found = false
+											for (var key in selectedAction.authentication) {
+												if (selectedAction.authentication[key].id === parentAction.authentication_id) {
+													selectedAction.selectedAuthentication = selectedAction.authentication[key]
+													found = true
+													break
+												}
+											}
+
+											if (!found) {
+												toast.error("Couldn't find parent authentication. Is it distributed to this suborg?")
+											}
+										} else {
+											toast.warning("No matching authentication found for this app. Is it distributed to this suborg?")
+											selectedAction.selectedAuthentication = {
+												"id": parentAction.authentication_id,
+												"name": "Parent auth",
+												"label": "Parent auth",
+											}
+										}
+
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random())
+									}}
+								/>
+							</Tooltip>
+
+						: null}
+					</div>
 					<Tooltip 
 						arrow
 						title={
@@ -4369,6 +4442,14 @@ const ParsedAction = (props) => {
 										}
 									}
 
+									var parentParamValue = ""
+									if (parentAction !== undefined && parentAction !== null && parentAction !== "" && parentAction.parameters !== undefined && parentAction.parameters !== null) {
+										const foundParamIndex = parentAction.parameters.findIndex((param) => param.name === data.name)
+										if (foundParamIndex !== -1) {
+											parentParamValue = parentAction.parameters[foundParamIndex].value
+										}
+									}
+
 									return (
 										<div key={data.name} style={{ marginTop: isFirstOptional ? 55 : 5, }}>
 											{isFirstOptional ? <Divider style={{ backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 20, }} /> : null}
@@ -4449,6 +4530,25 @@ const ParsedAction = (props) => {
 												>
 													{tmpitem} <span style={{ color: theme.palette.main }}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
 												</div>
+
+												{parentParamValue !== undefined && parentParamValue !== null && parentParamValue !== "" && parentParamValue !== data.value ?
+													<Tooltip title={`Parent value is different. Click to reset.`} placement="top" arrow>
+														<RestoreIcon 
+															style={{
+																marginRight: 10, 
+																marginBottom: 5, 
+																cursor: "pointer", 
+																color: theme.palette.distributionColor,
+															}}
+															onClick={() => {
+																selectedActionParameters[count].value = parentParamValue
+																selectedAction.parameters[count].value = parentParamValue
+																setSelectedAction(selectedAction)
+																setUpdate(Math.random())
+															}}
+														/>
+													</Tooltip>
+												: null}
 
 												<Tooltip title="Expand editor window" placement="top">
 

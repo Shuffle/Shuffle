@@ -24,6 +24,7 @@ const theme = createTheme(adaptV4Theme({
     //platformColor: "#1c1c1d",
     platformColor: "#212121",
     backgroundColor: "#1a1a1a",
+	distributionColor: "#40E0D0",
 
     green: "#5cc879",
     borderRadius: 10,
