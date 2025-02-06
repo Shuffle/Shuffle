@@ -104,9 +104,10 @@ const EditWorkflow = (props) => {
 			const foundScroll = document.getElementById(scrollTo)
 			if (foundScroll !== null) {
 				// Smooth scroll
-				foundScroll.scrollIntoView({ behavior: "smooth" })
+				foundScroll.scrollIntoView({ 
+					behavior: "smooth",
+				})
 			}
-
 		}, 200)
 		setScrollDone(true)
 
@@ -565,12 +566,11 @@ const EditWorkflow = (props) => {
 									fullWidth
 								/>
 
-								<Divider style={{ marginTop: 20, marginBottom: 20, }} />
+								<Divider id="mssp_control" style={{ marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h4" style={{ marginTop: 50, }}>
 									MSSP controls
 								</Typography>
-
 
 								<Typography variant="body1" style={{ marginTop: 50, }}>
 									MSSP Suborg Distribution (<b>beta</b> - contact support@shuffler.io for more info)

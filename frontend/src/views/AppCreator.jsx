@@ -276,7 +276,14 @@ export const appCategories = [
 		"color": "#FFC107",
 		"icon": "network",
 		"action_labels": ["Get Rules", "Allow IP", "Block IP",],
-	}, {
+	}, 
+	{
+		"name": "AI",
+		"color": "#FFC107",
+		"icon": "AI",
+		"action_labels": ["Answer Question", "Run Action"],
+	},
+	{
 		"name": "Other",
 		"color": "#FFC107",
 		"icon": "other",
@@ -418,6 +425,7 @@ const AppCreator = (defaultprops) => {
   const [appBuilding, setAppBuilding] = useState(false);
   const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
+  const [newAppGroup, setNewAppGroup] = useState("")
 
   const [oauth2Scopes, setOauth2Scopes] = useState([]);
   const [oauth2Type, setOauth2Type] = useState("delegated");
@@ -4622,23 +4630,25 @@ const AppCreator = (defaultprops) => {
 				}}
 			/>
 			*/}
-      <h4>Choose a Category</h4>
-      <Select
-        fullWidth
-        SelectDisplayProps={{
-          style: {
-            marginLeft: 10,
-          },
-        }}
-        onChange={(e) => {
-          setNewWorkflowCategories([e.target.value]);
-          setUpdate("added " + e.target.value);
-        }}
-        value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
-        
-        style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
-      >
-        {categories.map((data, index) => {
+	  <div style={{display: "flex", }}>
+	  	  <div style={{flex: 2, }}>
+			  <h4>Choose a Category</h4>
+			  <Select
+				fullWidth
+				SelectDisplayProps={{
+				  style: {
+					marginLeft: 10,
+				  },
+				}}
+				onChange={(e) => {
+				  setNewWorkflowCategories([e.target.value]);
+				  setUpdate("added " + e.target.value);
+				}}
+				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+				
+				style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
+			  >
+				{categories.map((data, index) => {
 					if (data === undefined || data === null || data === "" || data === undefined || data === null || data === "") {
 						return null
 					}
@@ -4651,9 +4661,38 @@ const AppCreator = (defaultprops) => {
 						>
 							{data.name}
 						</MenuItem>
-        	)
+					)
 				})}
-      </Select>
+			  </Select>
+	  	</div>
+	    {/*
+	  	<div style={{flex: 1, marginLeft: 25, }}>
+	  		<Tooltip title="Helps when searching for apps. E.g. Google or Microsoft are their own groups." placement="top">
+	  			<h4 style={{marginBottom: 0, }}>Group</h4>
+	  		</Tooltip>
+	  		<TextField
+	  			style={{ 
+				}}
+	  			fullWidth
+	  			placeholder="Group"
+	  			type="text"
+	  			id="standard-required"
+	  			margin="normal"
+	  			variant="outlined"
+	  			defaultValue={newAppGroup}
+	  			onChange={(e) => {
+	  				setNewAppGroup(e.target.value)
+	  				setUpdate("group added "+e.target.value)
+	  			}}
+	  			InputProps={{
+	  				style: {
+	  					color: "white",
+	  				},
+	  			}}
+	  		/>
+	  	</div>
+		*/}
+	  </div>
       <h4>Tags</h4>
       <MuiChipsInput
         style={{ marginTop: 10 }}

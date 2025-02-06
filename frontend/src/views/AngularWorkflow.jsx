@@ -72,9 +72,9 @@ import {
   ButtonGroup,
 } from "@mui/material";
 
-import CodeIcon from '@mui/icons-material/Code';
 
 import {
+  Code as CodeIcon, 
   Folder as FolderIcon,
   VerifiedUser as VerifiedUserIcon,
   CheckCircle as CheckCircleIcon,
@@ -419,6 +419,7 @@ const AngularWorkflow = (defaultprops) => {
   const [workflow, setWorkflow] = React.useState({});
   const [currentWorkflow, setCurrentWorkflow] = React.useState({}); // only for suborg distribution
   const [originalWorkflow, setOriginalWorkflow] = React.useState({});
+  const [originalSelectedEnvironment, setOriginalSelectedEnvironment] = React.useState({});
   const [subworkflow, setSubworkflow] = React.useState({});
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
   const [leftViewOpen, setLeftViewOpen] = React.useState(isMobile ? false : true);
@@ -576,7 +577,60 @@ const AngularWorkflow = (defaultprops) => {
 
   // New for generated stuff
   const releaseToConnectLabel = "Release to Connect"
-  const integrationApps = [{
+  const integrationApps = [
+	{
+		"id": "shuffle_agent",
+		"name": "AI Agent",
+		"type": "ACTION",
+		"app_version": "1.0.0",
+		"loop_versions": ["1.0.0"],
+		"authentication": {
+			"type": "",
+		},
+		"description": "AI Agent",
+		"actions": [{
+			"name": "Run LLM",
+			"description": "Run an LLM query against any tool you want",
+			"label": "Run LLM",
+			"parameters": [
+				{
+					"name": "app_name",
+					"value": "Shuffle AI",
+					"required": true,
+					"description": "The name of the app to run the LLM query against",
+				},
+				/*
+				{
+					"name": "model",
+					"value": "default",
+					"required": true,
+					"description": "The model to use for the LLM query",
+				},
+				*/
+				{
+					"name": "input",
+					"value": "Take the data below and run the LLM query\n\n$exec",
+					"required": true,
+					"multiline": true,
+					"description": "The input data for the LLM query",
+				},
+				{
+					"name": "action",
+					"value": "",
+					"required": true,
+					"description": "The action to perform automatically after the LLM query",
+					"options": [
+						"Nothing",
+						"Create ticket",
+						"List tickets",
+						"Get specific ticket",
+					],
+					"multiselect": true,
+				},
+			]
+		}]
+	},
+	{
     "id": "integration",
     "name": "Singul",
     "type": "ACTION",
@@ -697,7 +751,17 @@ const AngularWorkflow = (defaultprops) => {
       return
     }
 
-    if (appId === "integration") {
+    if (appId === "integration" || appId === "shuffle_agent") {
+	  if (appId === "shuffle_agent") {
+		  // Get the apps for OpenAI, Gemini, Mistral, DeepSeek 
+  		  loadAppConfig("1275a420a6a8b8d782483ac0c22f492c") // Shuffle AI 
+  		  loadAppConfig("5d19dd82517870c68d40cacad9b5ca91") // OpenAI
+  		  //loadAppConfig("5d19dd82517870c68d40cacad9b5ca91") // Gemini
+  		  //loadAppConfig("5d19dd82517870c68d40cacad9b5ca91") // DeepSeek 
+
+  		  //loadAppConfig("5d19dd82517870c68d40cacad9b5ca91") // Mistral
+	  }
+
       return
     }
 
@@ -729,11 +793,18 @@ const AngularWorkflow = (defaultprops) => {
       setLoadedApps(loadedApps)
     }
 
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+		headers["Org-Id"] = workflow.org_id
+	}
+
     const appUrl = `${globalUrl}/api/v1/apps/${appId}/config?openapi=false`
     fetch(appUrl, {
-      headers: {
-        Accept: "application/json",
-      },
+      headers: headers,
       credentials: "include",
     })
       .then((response) => {
@@ -742,9 +813,29 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
 
         if (responseJson.success === true && responseJson.app !== undefined && responseJson.app !== null && responseJson.app.length > 0) {
+
           // Base64 decode into json
           const foundapp = JSON.parse(atob(responseJson.app))
           const selectedAppActions = selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions
+		  if (apps !== undefined && apps !== null && apps.length > 0 && (selectedAppActions.length === 0 || selectedAppActions.length === 1)) {
+			  for (var appkey in apps) {
+				  const loopedApp = apps[appkey]
+				  if (loopedApp.id !== appId) {
+					  continue
+				  }
+
+				  if (loopedApp.actions === undefined || loopedApp.actions === null || loopedApp.actions.length === 0) {
+					  break
+				  }
+
+				  if (loopedApp.actions.length > selectedAppActions.length) {
+					  selectedAppActions = loopedApp.actions
+				  }
+					  
+				  break
+			  }
+		  }
+
           if (foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > selectedAppActions.length) {
 
             if (select) {
@@ -752,15 +843,17 @@ const AngularWorkflow = (defaultprops) => {
             }
 
             if (apps === undefined || apps === null || apps.length === 0) {
-              console.log("LOAD APPS!")
-            }
+				console.log("No apps to update :(")
+  			  	getApps() 
+				return 
+            } 
 
             for (var i = 0; i < apps.length; i++) {
               if (apps[i].id !== foundapp.id) {
                 continue
               }
 
-              apps[i] = foundapp
+              apps[i].actions = foundapp.actions
               setApps(apps)
               setFilteredApps(apps)
 
@@ -768,7 +861,9 @@ const AngularWorkflow = (defaultprops) => {
               localStorage.setItem("apps", JSON.stringify(apps))
               break
             }
-          }
+          } else {
+			  console.log("Found app, but no actions: ", foundapp)
+		  }
 
           if (cy !== undefined && cy !== null) {
 
@@ -830,7 +925,7 @@ const AngularWorkflow = (defaultprops) => {
 
       })
       .catch((error) => {
-        console.log(`Failed side-loading app ${appId}: ${error}`)
+        //console.log(`Failed side-loading app ${appId}: ${error}`)
       })
   }
 
@@ -1017,7 +1112,7 @@ const AngularWorkflow = (defaultprops) => {
               return false;
             },
           })
-        }, 50)
+        }, 200)
       }
     }
   }, [workflow])
@@ -1131,9 +1226,7 @@ const AngularWorkflow = (defaultprops) => {
 
 
   useEffect(() => {
-
     const found = workflows?.find(w => w.id === workflow?.triggers[selectedTriggerIndex]?.parameters[0]?.value);
-
     setSubworkflow(found)
 
     if (found) {
@@ -1141,7 +1234,69 @@ const AngularWorkflow = (defaultprops) => {
       setSubworkflowStartnode(startNode)
     }
 
-  }, [selectedTrigger, selectedTriggerIndex])
+	/*
+	// Multi-tenant sometimes gives us shit :(
+	if (selectedTrigger === undefined || selectedTrigger === null || selectedTrigger.id === undefined || selectedTrigger.id === null && selectedTriggerIndex >= 0) {
+		if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > selectedTriggerIndex) {
+			setSelectedTrigger(workflow.triggers[selectedTriggerIndex])
+		}
+	}
+	*/
+
+	// Check if the running state is correct or not according to allTriggers
+	if (allTriggers !== undefined && allTriggers !== null) { 
+		// Find the active trigger
+		if (selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger.id !== undefined && selectedTrigger.id !== null) {
+
+			var useTriggers = allTriggers
+			if (allTriggers.pipelines === undefined || allTriggers.pipelines === null || allTriggers.pipelines.length === 0) { 
+				useTriggers.pipelines = []
+			}
+
+			if (allTriggers.schedules === undefined || allTriggers.schedules === null || allTriggers.schedules.length === 0) {
+				useTriggers.schedules = []
+			}
+
+			if (allTriggers.webhooks === undefined || allTriggers.webhooks === null || allTriggers.webhooks.length === 0) {
+				useTriggers.webhooks = []
+			}
+
+			// Check pipelines, schedules and webhooks at once 
+			const allTriggersInOne = useTriggers.pipelines.concat(useTriggers.schedules).concat(useTriggers.webhooks) 
+			for (let triggerkey in allTriggersInOne) {
+				const curtrigger = allTriggersInOne[triggerkey]
+				if (curtrigger.id === selectedTrigger.id) {
+					if (curtrigger.status === undefined || curtrigger.status === null) {
+						continue
+					}
+
+					if (curtrigger.running === undefined || curtrigger.running === null) {
+						continue
+					}
+
+					var changed = false
+					if (curtrigger.status !== selectedTrigger.status) {
+						changed = true
+						selectedTrigger.status = curtrigger.status
+					}
+
+					if (curtrigger.running !== selectedTrigger.running) {
+						changed = true
+						selectedTrigger.running = curtrigger.running
+					}
+
+					if (changed) {
+						console.log("TRIGGER FIX: ", selectedTrigger)
+						setSelectedTrigger(selectedTrigger)
+					}
+
+					break
+				}
+			}
+		}
+	}
+
+  }, [allTriggers, selectedTrigger, selectedTriggerIndex])
 
   useEffect(() => {
     // Current variable + future state controlled
@@ -1476,7 +1631,7 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
-  const getWorkflowExecution = (id, execution_id, filter) => {
+  const getWorkflowExecution = (id, execution_id, filter, orgId) => {
     var url = `${globalUrl}/api/v2/workflows/${id}/executions`
     var method = "GET"
     if (filter === undefined || filter === null || filter.toUpperCase() === "ALL") {
@@ -1501,6 +1656,10 @@ const AngularWorkflow = (defaultprops) => {
     if (currentWorkflow?.org_id?.length > 0 && currentWorkflow?.org_id !== undefined && currentWorkflow?.org_id !== null) {
       headers["Org-Id"] = currentWorkflow.org_id;
     }
+
+	if (orgId !== undefined && orgId !== null && orgId.length > 0) {
+		headers["Org-Id"] = orgId
+	}
 
     var formattedBody = {
       method: method,
@@ -1949,7 +2108,7 @@ const AngularWorkflow = (defaultprops) => {
           }
         }
 
-        getWorkflowExecution(props.match.params.key, "");
+        getWorkflowExecution(props.match.params.key, "", executionFilter);
       } else if (responseJson.status === "FINISHED") {
         setExecutionRunning(false);
         stop();
@@ -2880,12 +3039,18 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const getApps = () => {
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+		headers["Org-Id"] = workflow.org_id
+	}
+
     fetch(globalUrl + "/api/v1/apps", {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: headers,
       credentials: "include",
     })
       .then((response) => {
@@ -2941,6 +3106,16 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson.success === false) {
           return
         }
+
+		// Find app with ID "794e51c3c1a8b24b89ccc573a3defc47" (gmail) to force-break it,
+		// as to ensure the autocorrect works. 
+		/*
+		const foundAppIndex = responseJson.findIndex((app) => app.id === "794e51c3c1a8b24b89ccc573a3defc47")
+		if (foundAppIndex !== -1) {
+			responseJson[foundAppIndex].actions = responseJson[foundAppIndex].actions.slice(0, 1)
+			console.log("GMAIL APP: ", responseJson[foundAppIndex])
+		}
+		*/
 
         // Used for e.g. Liquid testing
         const foundTools = responseJson.find((app) => app.name === "Shuffle Tools")
@@ -3682,8 +3857,6 @@ const AngularWorkflow = (defaultprops) => {
 
     const orgId = originalWorkflow.org_id === undefined || originalWorkflow.org_id === null || originalWorkflow.org_id === "" ? "" : originalWorkflow.org_id
 
-    //toast("Loading child workflows 2: " + orgId)
-
     fetch(`${globalUrl}/api/v1/workflows/${parentWorkflowId}/child_workflows`, {
       method: "GET",
       headers: {
@@ -3837,12 +4010,24 @@ const AngularWorkflow = (defaultprops) => {
           setWorkflows([responseJson])
           setCurrentWorkflow(responseJson)
         } else {
-          getAppAuthentication();
-          getEnvironments(responseJson.org_id)
+          getAppAuthentication()
+
+		  var defaultEnvironmentName = undefined
+		  if (responseJson.actions !== undefined && responseJson.actions !== null && responseJson.actions.length > 0) {
+			  for (var i = 0; i < responseJson.actions.length; i++) {
+				  const curaction = responseJson.actions[i]
+				  if (curaction.environment !== undefined && curaction.environment !== null && curaction.environment.length > 0) {
+					  defaultEnvironmentName = curaction.environment
+					  break
+				  }
+			  }
+		  }
+
+          getEnvironments(responseJson.org_id, defaultEnvironmentName)
 
           getFiles()
-          getWorkflowExecution(props.match.params.key, "");
-          getAvailableWorkflows(-1);
+          getWorkflowExecution(responseJson.id, "")
+          getAvailableWorkflows(-1)
         }
 
 
@@ -5267,24 +5452,36 @@ const AngularWorkflow = (defaultprops) => {
 
           return
         } else if (data.buttonType === "set_startnode" && data.type !== "TRIGGER") {
-          //console.log("STARTNODE")
-          //event.preventDefault()
-          //event.stopPropagation()
+		  // Find any node that has isStartNode set to true and set it to false	
+		  const foundNodes = cy.nodes().jsons()
+		  var relevantNodes = []
+		  for (var nodekey in foundNodes) {
+			const node = foundNodes[nodekey]
+			if (node.data.isStartNode === true) {
+				relevantNodes.push(node)
+			}
+		  }
 
-          const parentNode = cy.getElementById(data.attachedTo);
+          const parentNode = cy.getElementById(data.attachedTo)
           if (parentNode !== null && parentNode !== undefined) {
-            var oldstartnode = cy.getElementById(workflow.start);
-            if (
-              oldstartnode !== null &&
-              oldstartnode !== undefined &&
-              oldstartnode.length > 0
-            ) {
-              try {
-                oldstartnode[0].data("isStartNode", false);
-              } catch (e) {
-                console.log("Startnode error: ", e);
-              }
-            }
+			for (var nodekey in relevantNodes) {
+				const node = relevantNodes[nodekey]
+				var oldstartnode = cy.getElementById(node.data.id);
+				if (
+				  oldstartnode !== null &&
+				  oldstartnode !== undefined &&
+				  oldstartnode.length > 0
+				) {
+				  try {
+					console.log("Old startnodes: ", oldstartnode)
+					for(var i = 0; i < oldstartnode.length; i++) {
+						oldstartnode[i].data("isStartNode", false);
+					}
+				  } catch (e) {
+					console.log("Startnode error: ", e);
+				  }
+				}
+			}
 
             workflow.start = parentNode.data("id");
             setLastSaved(false);
@@ -5485,7 +5682,7 @@ const AngularWorkflow = (defaultprops) => {
         )
 
         if (curapp === undefined || curapp === null) {
-          console.log("Couldn't find app with that ID - checking with name & version")
+          console.log(`Couldn't find app with ID '${curaction.app_id}' - checking with name & version`)
 
           curapp = newapps.find((a) =>
             a.name === curaction.app_name &&
@@ -5507,7 +5704,6 @@ const AngularWorkflow = (defaultprops) => {
         if (curaction.template === true && curaction.name !== undefined) {
           //newapps.
           const parsedname = curaction.name.replaceAll(" ", "_").toLowerCase()
-          console.log("FIND AN ACTION AMONG THE APPS THAT MATCHES NAME: ", parsedname)
 
           curaction.matching_actions = []
           for (var newAppskey in newapps) {
@@ -5793,9 +5989,22 @@ const AngularWorkflow = (defaultprops) => {
         )
 
         if (trigger_index === -1) {
-          workflow.triggers.push(data)
-          trigger_index = workflow.triggers.length - 1
-          setWorkflow(workflow)
+
+		  // Don't do this in suborg workflows.
+		  if (originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null) {
+			  toast("RE-adding missing trigger node onclick")
+			  workflow.triggers.push(data)
+			  trigger_index = workflow.triggers.length - 1
+			  setWorkflow(workflow)
+		  }
+
+		  for (var triggerkey in workflow.triggers) {
+			  const curtrigger = workflow.triggers[triggerkey]
+			  if (curtrigger.name === data.name) {
+				  trigger_index = triggerkey
+				  break
+			  }
+		  }
         }
 
         if (data.app_name === "Shuffle Workflow" || data.app_name === "User Input") {
@@ -5806,8 +6015,47 @@ const AngularWorkflow = (defaultprops) => {
           } else {
             getAvailableWorkflows(trigger_index);
           }
-        } else if (data.app_name === "Webhook") {
+        } else if (data.app_name === "Schedule") {
+			if (data.replacement_for_trigger !== undefined && data.replacement_for_trigger !== null && data.replacement_for_trigger.length > 0) {
+				toast.warning("This schedule is controlled by the parent workflow. If you want additional schedule control, please add a custom schedule to this workflow.", {
+					autoClose: 30000,
+				})
+        		event.target.unselect()
+				return
+			}
+
+        } else if (data.app_name === "Webhook" && trigger_index >= 0) {
+		  if (workflow.triggers[trigger_index] !== undefined && workflow.triggers[trigger_index] !== null &&
+			  (	workflow.triggers[trigger_index].parameters === undefined || 
+				workflow.triggers[trigger_index].parameters === null || 
+				workflow.triggers[trigger_index].parameters.length === 0)
+		  	  ) {
+			  workflow.triggers[trigger_index].parameters = [
+				{
+				  name: "url",
+				  value: referenceUrl + "webhook_" + selectedTrigger.id,
+				},
+				{
+				  name: "tmp",
+				  value: "webhook_" + selectedTrigger.id,
+				},
+				{
+				  name: "auth_headers",
+				  value: "",
+				},
+				{
+				  name: "custom_response_body",
+				  value: "",
+				},
+				{
+				  name: "await_response",
+				  value: "v1",
+				},
+			  ]
+		  }
+
           if (workflow.triggers[trigger_index].parameters !== undefined && workflow.triggers[trigger_index].parameters !== null && workflow.triggers[trigger_index].parameters.length > 0) {
+
             workflow.triggers[trigger_index].parameters[0] = {
               name: "url",
               value: referenceUrl + "webhook_" + workflow.triggers[trigger_index].id,
@@ -5820,8 +6068,10 @@ const AngularWorkflow = (defaultprops) => {
                 value: "v1,"
               })
             }
+
+            //workflow.triggers[selectedTriggerIndex].parameters[0].value !== undefined &&
           }
-        } else if (data.app_name === "Pipeline") {
+        } else if (data.app_name === "Pipeline" && trigger_index >= 0) {
 
           // Check if environment is set
           if (data.environment === undefined || data.environment === null || data.environment === "" || data.environment.toLowerCase() === "cloud") {
@@ -6299,7 +6549,7 @@ const AngularWorkflow = (defaultprops) => {
         return
       }
 
-      console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
+      //console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
       if (sourcenode.data("type") === "TRIGGER") {
         if (sourcenode.data("app_name") !== "Shuffle Workflow" && sourcenode.data("app_name") !== "User Input") {
           setTimeout(() => {
@@ -6347,7 +6597,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const eventTarget = event.target.target()
-    console.log("BUTTON ADDED! Find parent from: ", eventTarget)
     if (eventTarget.data("isButton") === true) {
       const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
       event.target.remove()
@@ -6414,12 +6663,17 @@ const AngularWorkflow = (defaultprops) => {
       if (edge.target === workflow.start) {
         targetnode = workflow.triggers.findIndex(
           (data) => data.id === edge.source
-        );
+        )
+
         if (targetnode === -1) {
           if (targetnode.type !== "TRIGGER") {
-            toast("Can't make arrow to starting node");
-            event.target.remove();
-            break;
+			  console.log("SOURCENODE: ", sourcenode.data())
+			  if (sourcenode.data("type") === "TRIGGER" && sourcenode.data("app_name") !== "Shuffle Workflow" && sourcenode.data("app_name") !== "User Input") {
+			  } else {
+				toast("Can't make branch to starting node");
+				event.target.remove()
+				break
+			  }
           }
 
           found = true;
@@ -6648,10 +6902,8 @@ const AngularWorkflow = (defaultprops) => {
 
       if (edgeToBeAdded.data.source !== edgeToBeAdded.data.target && edgeToBeAdded.data.source !== undefined && edgeToBeAdded.data.target !== undefined) {
         if (nodedata.name !== "User Input" && nodedata.name !== "Shuffle Workflow") {
-          console.log("NAME: ", nodedata.name)
           if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
-            console.log("Edge handle: ", edgeToBeAdded)
-            cy.add(edgeToBeAdded);
+            cy.add(edgeToBeAdded)
           }
         }
       }
@@ -7010,7 +7262,7 @@ const AngularWorkflow = (defaultprops) => {
     document.addEventListener("paste", handlePaste);
   };
 
-  const getEnvironments = (orgId) => {
+  const getEnvironments = (orgId, defaultEnvironmentName) => {
     var headers = {
       "Content-Type": "application/json",
       "Accept": "application/json",
@@ -7064,7 +7316,7 @@ const AngularWorkflow = (defaultprops) => {
           for (let jsonkey in responseJson) {
             if (!responseJson[jsonkey].archived) {
               setDefaultEnvironmentIndex(jsonkey)
-              break;
+              break
             }
           }
         }
@@ -7079,22 +7331,16 @@ const AngularWorkflow = (defaultprops) => {
           setEnvironments(responseJson)
         }
 
-        /*
-        setTimeout(() => {
-          console.log("ACTIONS: ", workflow.actions)
-          if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
-            for (var actionkey in workflow.actions) {
-              if (workflow.actions[actionkey].environment !== undefined && workflow.actions[actionkey].environment !== null && workflow.actions[actionkey].environment.length > 0) {
-    
-                const env = environments.findIndex((data) => data.Name === workflow.actions[actionkey].environment)
-                if (env !== -1) {
-                  setSelectedActionEnvironment(environments[env])
-                }
-              }
-            }
-          }
-        }, 2500)
-        */
+		if (defaultEnvironmentName !== undefined && defaultEnvironmentName !== null && defaultEnvironmentName.length > 0 && responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
+			const env = responseJson.findIndex((data) => data.Name === defaultEnvironmentName)
+			if (env !== -1) {
+			  setSelectedActionEnvironment(responseJson[env])
+
+			  if (originalSelectedEnvironment === undefined || originalSelectedEnvironment === null || Object.keys(originalSelectedEnvironment).length === 0) {
+				  setOriginalSelectedEnvironment(responseJson[env])
+			  }
+			}
+		}
       })
       .catch((error) => {
         //toast(error.toString());
@@ -7823,8 +8069,6 @@ const AngularWorkflow = (defaultprops) => {
     })
 
     if (nodedata.finished === false) {
-      console.log("NODE UNFINISHED (hover in): ", JSON.parse(JSON.stringify(nodedata)))
-
       // Should just be 1, so this should be fast enough :3
       const incomingEdges = event.target.incomers("edge").jsons()
       if (incomingEdges !== undefined && incomingEdges !== null) {
@@ -8442,6 +8686,7 @@ const AngularWorkflow = (defaultprops) => {
       }
 
       if (inputworkflow?.id !== undefined && originalWorkflow?.id !== undefined && inputworkflow?.id !== originalWorkflow?.id && originalWorkflow.triggers !== undefined && originalWorkflow.triggers !== null && originalWorkflow.triggers.length > 0) {
+
         // Find the node in the original workflow
         var inParent = false
         for (var i = 0; i < originalWorkflow.triggers.length; i++) {
@@ -8451,6 +8696,13 @@ const AngularWorkflow = (defaultprops) => {
             break
           }
         }
+
+		if (inParent === false) {
+			if (trigger.parent_controlled === true) {
+				console.log("Setting trigger as parent controlled")
+				inParent = true
+			}
+		}
 
         if (inParent === true) {
           setTimeout(() => {
@@ -8635,10 +8887,10 @@ const AngularWorkflow = (defaultprops) => {
 
     // Reset view for cytoscape
     if (cy !== undefined && cy !== null) {
-      cy.add(insertedNodes);
-      cy.fit(null, 400);
+      cy.add(insertedNodes)
+      cy.fit(null, 250)
     } else {
-      setElements(insertedNodes);
+      setElements(insertedNodes)
     }
 
     const additionalNodes = inputworkflow.actions.map((action) => {
@@ -8833,7 +9085,7 @@ const AngularWorkflow = (defaultprops) => {
       })
   }
 
-  const getRevisionHistory = (workflow_id, revisionCount = 50, turn = 0, orgId = "") => {
+  const getRevisionHistory = (workflow_id, revisionCount=50, turn=0, orgId="") => {
     let headers = {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -8880,12 +9132,26 @@ const AngularWorkflow = (defaultprops) => {
       });
   }
 
-  const loadTriggers = () => {
+  const loadTriggers = (orgId) => {
     const url = `${globalUrl}/api/v1/triggers`
+
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id !== "") {
+		headers["Org-Id"] = workflow.org_id
+	}
+
+	if (orgId !== undefined && orgId !== null && orgId !== "") {
+		headers["Org-Id"] = orgId
+	}
+
     fetch(url,
       {
         method: "GET",
-        headers: { "content-type": "application/json" },
+        headers: headers,
         credentials: "include",
       }
     )
@@ -8898,8 +9164,10 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success !== false) {
-          setAllTriggers(responseJson)
-        }
+          	setAllTriggers(responseJson)
+        } else {
+			//toast.error("Failed to get triggers")
+		}
       })
       .catch((error) => {
         console.log("Get outlook folders error: ", error.toString());
@@ -9088,14 +9356,24 @@ const AngularWorkflow = (defaultprops) => {
   //})
 
   const stopSchedule = (trigger, triggerindex) => {
+	if (cy !== undefined && cy !== null) {
+		cy.$(":selected").unselect()
+	}
+
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id !== "") {
+		headers["Org-Id"] = workflow.org_id
+	}
+
     fetch(
       `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule/${trigger.id}`,
       {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: headers, 
         credentials: "include",
       }
     )
@@ -9121,6 +9399,8 @@ const AngularWorkflow = (defaultprops) => {
         setSelectedTrigger(trigger);
         setWorkflow(workflow);
         saveWorkflow(workflow)
+
+  		loadTriggers(workflow.org_id)
       })
       .catch((error) => {
         console.log("Stop schedule error: ", error.toString())
@@ -9237,14 +9517,20 @@ const AngularWorkflow = (defaultprops) => {
       setWorkflow(workflow)
     }
 
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id !== "") {
+		headers["Org-Id"] = workflow.org_id
+	}
+
     fetch(
       `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: headers,
         body: JSON.stringify(data),
         credentials: "include",
       }
@@ -9266,6 +9552,8 @@ const AngularWorkflow = (defaultprops) => {
           setSelectedTrigger(trigger);
           setWorkflow(workflow);
           saveWorkflow(workflow);
+
+  		  loadTriggers(workflow.org_id)
         }
       })
       .catch((error) => {
@@ -10097,7 +10385,11 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     // HTML -> Canvas overlap check
-    if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft + cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop + cycontainer.offsetHeight) {
+    if (
+		   e.pageX > cycontainer.offsetLeft 
+		&& e.pageX < cycontainer.offsetLeft + cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop 
+		&& e.pageY < cycontainer.offsetTop + cycontainer.offsetHeight
+	) {
       if (newNodeId.length > 0) {
         var currentnode = cy.getElementById(newNodeId);
         if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
@@ -11004,7 +11296,7 @@ const AngularWorkflow = (defaultprops) => {
                   return null
                 }
 
-                if (app.id === "integration" && userdata.support !== true) {
+                if ((app.id === "integration" || app.id === "shuffle_agent") && userdata.support !== true) {
                   return null
                 }
 
@@ -13385,7 +13677,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
 
-  if (Object.getOwnPropertyNames(selectedTrigger)?.length > 0) {
+  if (selectedTrigger !== undefined && selectedTrigger !== null && Object.getOwnPropertyNames(selectedTrigger)?.length > 0) {
     if (workflow.triggers[selectedTriggerIndex] === undefined) {
       return null;
     }
@@ -14456,30 +14748,6 @@ const AngularWorkflow = (defaultprops) => {
 
   const CommentSidebar = () => {
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
-      /*
-      if (workflow.triggers[selectedTriggerIndex] === undefined) {
-        return null
-      }
-
-      if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
-        workflow.triggers[selectedTriggerIndex].parameters = []
-        workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "url", "value": referenceUrl+"webhook_"+selectedTrigger.id}
-        workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "tmp", "value": "webhook_"+selectedTrigger.id}
-        workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "auth_headers", "value": ""}
-        setWorkflow(workflow)
-      } else {
-        if (selectedTrigger.environment !== "cloud") {
-          const newUrl = referenceUrl+"webhook_"+selectedTrigger.id
-          if (newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value) {
-            console.log("Url is wrong - should update. This functionality is temporarily disabled.")
-            //workflow.triggers[selectedTriggerIndex].parameters[0].value = newUrl
-            //setWorkflow(workflow)
-          }
-        }
-      }
-
-      const trigger_header_auth = workflow.triggers[selectedTriggerIndex].parameters.length > 2 ? workflow.triggers[selectedTriggerIndex].parameters[2].value : ""
-      */
 
       return (
         <div style={appApiViewStyle}>
@@ -14907,7 +15175,7 @@ const AngularWorkflow = (defaultprops) => {
         </div>
         : null}
 
-      {selectedTrigger.status === "running" ? null :
+      {selectedTrigger.status === "running" || triggerEnvironments?.length < 2 ? null :
         <div style={{ marginTop: 20 }}>
           <Typography>Environment</Typography>
           <Select
@@ -15026,6 +15294,7 @@ const AngularWorkflow = (defaultprops) => {
                   workflow.triggers[
                     selectedTriggerIndex
                   ].parameters[0].value.includes("127.0.0.1")) ? (
+
                 <span
                   style={{ color: "white", marginBottom: 5, marginleft: 5 }}
                 >
@@ -15044,7 +15313,6 @@ const AngularWorkflow = (defaultprops) => {
                     onClick={() => {
                       var copyText = document.getElementById("webhook_uri_field");
                       if (copyText !== undefined && copyText !== null) {
-                        console.log("NAVIGATOR: ", navigator);
                         const clipboard = navigator.clipboard;
                         if (clipboard === undefined) {
                           toast("Can only copy over HTTPS (port 3443)");
@@ -15370,13 +15638,20 @@ const AngularWorkflow = (defaultprops) => {
       custom_response: custom_response,
       version: version,
       version_timeout: 15,
-    };
+    }
 
-    console.log("Trigger data: ", data)
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+      	headers["Org-Id"] = workflow.org_id 
+	}
 
     fetch(globalUrl + "/api/v1/hooks/new", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: headers,
       body: JSON.stringify(data),
       credentials: "include",
     })
@@ -15390,6 +15665,8 @@ const AngularWorkflow = (defaultprops) => {
           workflow.triggers[selectedTriggerIndex].status = "running";
           setWorkflow(workflow);
           saveWorkflow(workflow);
+
+  		  loadTriggers(workflow.org_id)
         } else {
           toast("Failed starting webhook: " + responseJson.reason);
         }
@@ -15405,12 +15682,25 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-    fetch(globalUrl + "/api/v1/hooks/" + trigger.id + "/delete", {
+	// Unselect everything in cytoscape
+	if (cy !== undefined && cy !== null) {
+		cy.$(":selected").unselect()
+	}
+
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	  console.log("ORGID: ", workflow.org_id)
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+      	headers["Org-Id"] = workflow.org_id 
+	}
+
+	const url = `${globalUrl}/api/v1/hooks/${trigger.id}/delete`
+    fetch(url, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: headers,
       credentials: "include",
     })
       .then((response) => {
@@ -15423,18 +15713,23 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
         if (!responseJson.success) {
           if (responseJson.reason !== undefined) {
-            toast("Failed to stop webhook: " + responseJson.reason);
-          }
+              toast.error("Failed to stop webhook: " + responseJson.reason);
+          } else {
+			  //toast.error("Failed to stop webhook. Please try again, or contact support@shuffler.io to get it sorted.");
+		  }
         } else {
           toast("Successfully stopped webhook");
+
+  		  loadTriggers(workflow.org_id)
         }
         if (workflow.triggers[triggerindex] !== undefined) {
           workflow.triggers[triggerindex].status = "stopped";
         }
-        trigger.status = "stopped";
-        setSelectedTrigger(trigger);
-        setWorkflow(workflow);
-        saveWorkflow(workflow);
+
+        trigger.status = "stopped"
+        setSelectedTrigger(trigger)
+        setWorkflow(workflow)
+        saveWorkflow(workflow)
         setSelectedTrigger({})
 
       })
@@ -15449,11 +15744,18 @@ const AngularWorkflow = (defaultprops) => {
 
   // POST to /api/v1/workflows
   const createWorkflow = (workflow, trigger_index) => {
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+		headers["Org-Id"] = workflow.org_id
+	}
+
     fetch(globalUrl + "/api/v1/workflows", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: headers,
       body: JSON.stringify(workflow),
       credentials: "include",
     })
@@ -16314,7 +16616,9 @@ const AngularWorkflow = (defaultprops) => {
               selectedTrigger.parameters === undefined ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger.parameters[0]?.value
             }
             color="primary"
-            placeholder=""
+            placeholder={
+				selectedTrigger.parameters === undefined ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger.parameters[0]?.value
+			}
             onBlur={(e) => {
               setTriggerCronWrapper(e.target.value);
             }}
@@ -16575,331 +16879,432 @@ const AngularWorkflow = (defaultprops) => {
               </Typography>
             :
             <Typography variant="body2" color="textSecondary" style={{ marginLeft: 10, }}>
-              Warning: This workflow is controlled by your parent org and may not be editable.
+              <b>Warning:</b> This workflow is controlled by your parent org and may not be editable.
             </Typography>
           }
 
-          {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? null :
-            <FormControl fullWidth style={{ marginTop: 10, maxWidth: 250, pointerEvents: "auto", }}>
+          {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? 
+			originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 ?
+				<Button
+				  color="secondary"
+				  variant="outlined"
+				  style={{
+					  marginTop: 10, 
+					  marginBottom: 10, 
+					  textTransform: "none",
+					  marginLeft: 10, 
+				  }}
+			  	  onClick={() => {
+					navigate(`/workflows/${originalWorkflow.parentorg_workflow}`)
+					// Reload the page
+					window.location.reload()
+				  }}
+				>
+				  Go to parent org workflow
+				</Button>
+				: userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
+				<Button
+				  color="secondary"
+				  variant="outlined"
+				  style={{
+					  marginTop: 10, 
+					  marginBottom: 10, 
+					  textTransform: "none",
+					  marginLeft: 10, 
+				  }}
+			  	  onClick={() => {
+                    setEditWorkflowModalOpen(true)
+				  }}
+				>
+					Enable Suborg Distribution
+				</Button>
+			    : null
 
-              <InputLabel
-                id="suborg-changer"
-                style={{ color: "rgba(255,255,255,0.7)", }}
-              >
-                Select an Org
-              </InputLabel>
-              <Select
-                style={{
-                  pointerEvents: "auto",
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                  maxWidth: 250,
-                  minWidth: 250,
-                  borderRadius: theme.palette?.borderRadius,
-                  height: 40,
-                }}
-                InputProps={{
-                  style: {
-                    height: 40,
-                  }
-                }}
-                labelId="suborg-changer"
-                value={workflow.org_id}
-                disabled={savingState !== 0}
-                onChange={(e) => {
-                  if (workflow.org_id === e.target.value) {
-                    console.log("Same org selected. No change.")
-                    return
-                  } else {
-                    //if (savingState === 0) {
-                    //	saveWorkflow(workflow, undefined, undefined, undefined)
-                    //}
-                  }
+			:
 
-                  navigate(`?org_id=${e.target.value}`)
+			<Tooltip title={lastSaved === false && originalWorkflow.id === workflow.id ? 
+				<Typography variant="body1" style={{margin: 10, color: "white", }}>
+					Save the workflow first 
+				</Typography>
+				: null} arrow placement="right">
 
-                  // Unselect in cy
-                  if (cy !== undefined && cy !== null) {
-                    cy.nodes().unselect()
-                    cy.edges().unselect()
-                  }
+            	<FormControl fullWidth style={{ marginTop: 10, maxWidth: 250, pointerEvents: "auto", }}>
 
-                  ReactDOM.unstable_batchedUpdates(() => {
-                    getEnvironments(e.target.value)
-                    getAppAuthentication(undefined, undefined, undefined, e.target.value)
-                    getFiles(e.target.value)
-                    listOrgCache(e.target.value)
+            	  <InputLabel
+            	    id="suborg-changer"
+            	    style={{ color: "rgba(255,255,255,0.7)", }}
+            	  >
+            	    Select an Org
+            	  </InputLabel>
+            	  <Select
+            	    style={{
+            	      pointerEvents: "auto",
+            	      backgroundColor: theme.palette.inputColor,
+            	      color: "white",
+            	      maxWidth: 250,
+            	      minWidth: 250,
+            	      borderRadius: theme.palette?.borderRadius,
+            	      height: 40,
+            	    }}
+            	    InputProps={{
+            	      style: {
+            	        height: 40,
+            	      }
+            	    }}
+            	    labelId="suborg-changer"
+            	    value={workflow.org_id}
+            	    disabled={savingState !== 0}
+            	    onChange={(e) => {
+					  if (lastSaved === false && originalWorkflow.id === workflow.id) {
+						  saveWorkflow(workflow, undefined, undefined, e.target.value)
+						  toast.warn("Saving workflow first due to detected changes. Please try to change workflow again when it is finished.", {
+							  autoClose: 2000,
+						  })
+						  return
+					  }
 
-                    // FIXME: There is a timing problem here. 
-                    // For events to have the data they need, they 
-                    // need to be registered with setupGraph()
-                    // AFTER all the APIs are done
+            	      if (workflow.org_id === e.target.value) {
+            	        console.log("Same org selected. No change.")
+            	        return
+            	      } else {
+            	        //if (savingState === 0) {
+            	        //	saveWorkflow(workflow, undefined, undefined, undefined)
+						//	return
+            	        //}
+            	      }
 
-                    // Should look through childorg workflow
-                    setTimeout(() => {
-                      if (e.target.value === originalWorkflow.org_id) {
-                        console.log("Original org selected. No change.")
+            	      navigate(`?org_id=${e.target.value}`)
 
-                        updateCurrentWorkflow(originalWorkflow)
-                        return
-                      } else {
-                        // Load environments, auth, auth groups
-                        //toast("Loading correct info for suborg")
-                      }
+            	      // Unselect in cy
+            	      if (cy !== undefined && cy !== null) {
+            	        cy.nodes().unselect()
+            	        cy.edges().unselect()
+            	      }
 
-                      if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
-                        //console.log("Childorg doesn't exist (?). Suborgworkflows: ", suborgWorkflows)
+            	      ReactDOM.unstable_batchedUpdates(() => {
+            	        getEnvironments(e.target.value)
+            	        getAppAuthentication(undefined, undefined, undefined, e.target.value)
+            	        getFiles(e.target.value)
+            	        listOrgCache(e.target.value)
 
-                        if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
-                          var found = false
-                          for (var suborgkey in suborgWorkflows) {
-                            const suborgWorkflow = suborgWorkflows[suborgkey]
-                            if (suborgWorkflow.org_id === e.target.value) {
-                              found = true
-                              updateCurrentWorkflow(suborgWorkflow)
-                              break
-                            }
-                          }
+						// Reset the save button to ensure random saves don't occur during move
+          	      		setLastSaved(true)
 
-                          if (!found) {
-                            toast("(3) Creating new workflow for this org. Please wait a second while we duplicate.")
-                            //console.log("No workflow found out of suborg workflows.")
+            	        // FIXME: There is a timing problem here. 
+            	        // For events to have the data they need, they 
+            	        // need to be registered with setupGraph()
+            	        // AFTER all the APIs are done
 
-                            //saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
-                          }
-                        } else {
-                          console.log("Suborgworkflows: ", suborgWorkflows)
-                          toast("(1) Loading NEW  workflow for this org (?). Please wait a second.")
-                          saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
-                        }
-                      } else {
-                        console.log("In childorg EXIST!")
+            	        // Should look through childorg workflow
+            	        setTimeout(() => {
+            	          if (e.target.value === originalWorkflow.org_id) {
+            	            updateCurrentWorkflow(originalWorkflow)
+            	            return
+            	          } else {
+            	            // Load environments, auth, auth groups
+            	            //toast("Loading correct info for suborg")
+            	          }
 
-                        var workflowFound = false
-                        for (var childorgidkey in originalWorkflow.childorg_workflow_ids) {
-                          const childworkflowid = originalWorkflow.childorg_workflow_ids[childorgidkey]
-                          for (var suborgWorkflowKey in suborgWorkflows) {
-                            const suborgWorkflow = suborgWorkflows[suborgWorkflowKey]
-                            if (suborgWorkflow.org_id === e.target.value) {
-                              workflowFound = true
+            	          if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
+            	            //console.log("Childorg doesn't exist (?). Suborgworkflows: ", suborgWorkflows)
 
-                              updateCurrentWorkflow(suborgWorkflow)
-                              break
-                            }
-                          }
+            	            if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
+            	              var found = false
+            	              for (var suborgkey in suborgWorkflows) {
+            	                const suborgWorkflow = suborgWorkflows[suborgkey]
+            	                if (suborgWorkflow.org_id === e.target.value) {
+            	                  found = true
+            	                  updateCurrentWorkflow(suborgWorkflow)
+            	                  break
+            	                }
+            	              }
 
-                          if (workflowFound) {
-                            break
-                          }
-                        }
+            	              if (!found) {
+            	                toast("(3) Creating new workflow for this org. Please wait a second while we duplicate.")
+            	                //console.log("No workflow found out of suborg workflows.")
 
-                        if (!workflowFound) {
-                          console.log("No workflow found.")
-                          toast("(2) Creating new workflow for this org. Please wait a few seconds while we prepare it for you.")
-                          //saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
-                        }
-                      }
-                    }, 500)
-                  })
-                }}
-                label="Suborg Distribution"
-                fullWidth
-              >
-                <MenuItem key={originalWorkflow.org_id} value={originalWorkflow.org_id}>
-                  Parent: {userdata.active_org.large_image}{" "}
-                  <span style={{ marginLeft: 8 }}>
-                    {userdata.active_org.name}
-                  </span>
-                </MenuItem>
+            	                //saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+            	              }
+            	            } else {
+            	              console.log("Suborgworkflows: ", suborgWorkflows)
+            	              toast("(1) Loading NEW  workflow for this org (?). Please wait a second.")
+            	              saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+            	            }
+            	          } else {
+            	            console.log("In childorg EXIST!")
 
-                <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+            	            var workflowFound = false
+            	            for (var childorgidkey in originalWorkflow.childorg_workflow_ids) {
+            	              const childworkflowid = originalWorkflow.childorg_workflow_ids[childorgidkey]
+            	              for (var suborgWorkflowKey in suborgWorkflows) {
+            	                const suborgWorkflow = suborgWorkflows[suborgWorkflowKey]
+            	                if (suborgWorkflow.org_id === e.target.value) {
+            	                  workflowFound = true
 
-                {originalWorkflow.suborg_distribution.map((org_id, index) => {
-                  var data = {}
-                  for (var key in userdata.orgs) {
-                    if (userdata.orgs[key].id === org_id) {
-                      data = userdata.orgs[key]
-                      break
-                    }
-                  }
+            	                  updateCurrentWorkflow(suborgWorkflow)
+            	                  break
+            	                }
+            	              }
 
-                  if (data.id === undefined || data.id === null) {
-                    //toast("No org found for id: " + org_id)
-                    return null
-                  }
+            	              if (workflowFound) {
+            	                break
+            	              }
+            	            }
 
-                  var skipOrg = false;
+            	            if (!workflowFound) {
+            	              console.log("No workflow found.")
+            	              toast("(2) Creating new workflow for this org. Please wait a few seconds while we prepare it for you.")
+            	              //saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+            	            }
+            	          }
+            	        }, 500)
+            	      })
+            	    }}
+            	    label="Suborg Distribution"
+            	    fullWidth
+            	  >
+            	    <MenuItem key={originalWorkflow.org_id} value={originalWorkflow.org_id}>
+            	      
+						<Chip
+						  style={{ marginLeft: 0, padding: 0, marginRight: 0, }}
+						  label={"Parent"}
+						  variant="outlined"
+						  color="secondary"
+						  onClick={(e) => {
+							e.preventDefault()
+							e.stopPropagation()
+						  }}
+			  			/> {userdata.active_org.large_image}{" "}
+            	    	<span style={{ marginLeft: 8 }}>
+            	        	{userdata.active_org.name}
+            	      	</span>
+            	    </MenuItem>
 
-                  const imagesize = 22
-                  const imageStyle = {
-                    width: imagesize,
-                    height: imagesize,
-                    pointerEvents: "none",
-                    marginRight: 10,
-                    marginLeft:
-                      data.creator_org !== undefined &&
-                        data.creator_org !== null &&
-                        data.creator_org.length > 0
-                        ? data.id === userdata.active_org.id
-                          ? 0
-                          : 0
-                        : 0,
-                  }
+            	    <Divider style={{ marginTop: 10, marginBottom: 10, }} />
 
-                  const image =
-                    data.image === "" ? (
-                      <img
-                        alt={data.name}
-                        src={theme.palette.defaultImage}
-                        style={imageStyle}
-                      />
-                    ) : (
-                      <img
-                        alt={data.name}
-                        src={data.image}
-                        style={imageStyle}
-                      />
-                    )
+            	    {originalWorkflow.suborg_distribution.map((org_id, index) => {
+            	      var data = {}
+            	      for (var key in userdata.orgs) {
+            	        if (userdata.orgs[key].id === org_id) {
+            	          data = userdata.orgs[key]
+            	          break
+            	        }
+            	      }
+
+            	      if (data.id === undefined || data.id === null) {
+            	        //toast("No org found for id: " + org_id)
+            	        return null
+            	      }
+
+            	      var skipOrg = false;
+
+            	      const imagesize = 22
+            	      const imageStyle = {
+            	        width: imagesize,
+            	        height: imagesize,
+            	        pointerEvents: "none",
+            	        marginRight: 10,
+            	        marginLeft:
+            	          data.creator_org !== undefined &&
+            	            data.creator_org !== null &&
+            	            data.creator_org.length > 0
+            	            ? data.id === userdata.active_org.id
+            	              ? 0
+            	              : 0
+            	            : 0,
+            	      }
+
+            	      const image =
+            	        data.image === "" ? (
+            	          <img
+            	            alt={data.name}
+            	            src={theme.palette.defaultImage}
+            	            style={imageStyle}
+            	          />
+            	        ) : (
+            	          <img
+            	            alt={data.name}
+            	            src={data.image}
+            	            style={imageStyle}
+            	          />
+            	        )
 
 
-                  return (
-                    <MenuItem key={index} value={data.id}>
-                      {image}{" "}
-                      <span style={{ marginLeft: 8 }}>
-                        {data.name}
-                      </span>
-                    </MenuItem>
-                  )
-                })}
-              </Select>
-            </FormControl>
+            	      return (
+            	        <MenuItem key={index} value={data.id}>
+            	          {image}{" "}
+            	          <span style={{ marginLeft: 8 }}>
+            	            {data.name}
+            	          </span>
+            	        </MenuItem>
+            	      )
+            	    })}
+            	  </Select>
+            	</FormControl>
+			</Tooltip>
           }
         </div>
 
         {showEnvironment === true && environments.length > 0 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
-          <FormControl fullWidth style={{ marginTop: 15, pointerEvents: "auto", maxWidth: 250, }}>
+			<Tooltip 
+				arrow
+				title={
+				  workflow?.suborg_distribution?.length > 0 && Object.getOwnPropertyNames(selectedActionEnvironment).length !== 0 && selectedActionEnvironment?.Name !== "Cloud" && savingState === 0 ? (
+					<React.Fragment>
+						<div style={{padding: 10, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0)"}}>
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={selectedActionEnvironment.suborg_distribution !== undefined && selectedActionEnvironment.suborg_distribution !== null && selectedActionEnvironment.suborg_distribution.length > 0}
+										onChange={(event) => {
+											toast("Opening in new tab. Refresh this page after adding it.")
 
-            <InputLabel
-              id="execution_location"
-              style={{ color: "rgba(255,255,255,0.7)", marginLeft: 40, }}
-            >
-              Runtime Location
-            </InputLabel>
-            <Select
-              labelId="execution_location"
-              MenuProps={{
-              }}
-              value={
-                selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null ? isCloud ? "Cloud" : "Shuffle" : selectedActionEnvironment.Name
-              }
-              SelectDisplayProps={{
-                style: {
-                },
-              }}
-              InputProps={{
-                style: {
-                  height: 40,
-                }
-              }}
-              onClick={(e) => {
-                getEnvironments(workflow.org_id)
-              }}
-              onChange={(e) => {
-                setLastSaved(false)
-                const env = environments.find((a) => a.Name === e.target.value);
-                setSelectedActionEnvironment(env)
-                selectedAction.environment = env.Name
-                setSelectedAction(selectedAction)
+											setTimeout(() => {
+												window.open(`/admin?tab=locations`, "_blank", "noopener,noreferrer")
+											}, 1500)
+											//selectedActionEnvironment.suborg_distribution = event.target.checked ? userdata.orgs.map((org) => org.id) : []
+											//changeDistribution(selectedAction?.selectedAuthentication)
+										}}
+										name="distributeAuth"
+										color="primary"
+									/>
+								}
+								label={
+									<Typography style={{marginTop: 0, }}>
+										Distribute location <OpenInNewIcon style={{marginLeft: 10, color: theme.palette.main}}/>
+									</Typography>
+								}
+							/>
+						</div>
+					</React.Fragment>
+				) : null
+			} placement="right">
 
-                for (let actionkey in workflow.actions) {
-                  workflow.actions[actionkey].environment = env.Name
-                }
+          	<FormControl fullWidth style={{ marginTop: 15, pointerEvents: "auto", maxWidth: 250, }}>
 
-                setWorkflow(workflow)
-                //toast.success("Set execution location for ALL actions to " + env.Name)
-              }}
-              style={{
-                pointerEvents: "auto",
-                color: "white",
-                maxWidth: 250,
-                minWidth: 250,
-                borderRadius: theme.palette?.borderRadius,
-                marginLeft: 35,
+          	  <InputLabel
+          	    id="execution_location"
+          	    style={{ color: "rgba(255,255,255,0.7)", marginLeft: 40, }}
+          	  >
+          	    Runtime Location
+          	  </InputLabel>
+          	  <Select
+          	    labelId="execution_location"
+				disabled={savingState !== 0}
+          	    MenuProps={{
+          	    }}
+          	    value={
+          	      selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null ? isCloud ? "Cloud" : "Shuffle" : selectedActionEnvironment.Name
+          	    }
+          	    SelectDisplayProps={{
+          	      style: {
+          	      },
+          	    }}
+          	    InputProps={{
+          	      style: {
+          	        height: 40,
+          	      }
+          	    }}
+          	    onClick={(e) => {
+          	      getEnvironments(workflow.org_id)
+          	    }}
+          	    onChange={(e) => {
+          	      setLastSaved(false)
+          	      const env = environments.find((a) => a.Name === e.target.value);
+          	      setSelectedActionEnvironment(env)
+          	      selectedAction.environment = env.Name
+          	      setSelectedAction(selectedAction)
 
-                backgroundColor: theme.palette.inputColor,
-                height: 40,
-              }}
-            >
-              {environments.map((data, index) => {
-                if (data.archived === true) {
-                  return null
-                }
+          	      for (let actionkey in workflow.actions) {
+          	        workflow.actions[actionkey].environment = env.Name
+          	      }
 
-                const isRunning = data.running_ip !== ""
+          	      setWorkflow(workflow)
+          	      //toast.success("Set execution location for ALL actions to " + env.Name)
+          	    }}
+          	    style={{
+          	      pointerEvents: "auto",
+          	      color: "white",
+          	      maxWidth: 250,
+          	      minWidth: 250,
+          	      borderRadius: theme.palette?.borderRadius,
+          	      marginLeft: 35,
 
-                return (
-                  <MenuItem
-                    key={data.Name}
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      color: "white",
-                    }}
-                    value={data.Name}
-                  >
+          	      backgroundColor: theme.palette.inputColor,
+          	      height: 40,
+          	    }}
+          	  >
+          	    {environments.map((data, index) => {
+          	      if (data.archived === true) {
+          	        return null
+          	      }
 
-                    {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
+          	      const isRunning = data.running_ip !== ""
 
-                      <a href={`/admin?tab=locations&env=${data.Name}`} target="_blank" style={{ textDecoration: "none", }}>
-                        <Tooltip title={"Click to configure this runtime location"} placement="top">
-                          <Chip
-                            style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
-                            label={"Stopped"}
-                            variant="outlined"
-                            color="secondary"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
+          	      return (
+          	        <MenuItem
+          	          key={data.Name}
+          	          style={{
+          	            backgroundColor: theme.palette.inputColor,
+          	            color: "white",
+          	          }}
+          	          value={data.Name}
+          	        >
 
-                              window.open(`/admin?tab=locations&env=${data.Name}`, "_blank", "noopener,noreferrer")
-                            }}
+          	          {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
+
+          	            <a href={`/admin?tab=locations&env=${data.Name}`} target="_blank" style={{ textDecoration: "none", }}>
+          	              <Tooltip title={"Click to configure this runtime location"} placement="top">
+          	                <Chip
+          	                  style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
+          	                  label={"Stopped"}
+          	                  variant="outlined"
+          	                  color="secondary"
+          	                  onClick={(e) => {
+          	                    e.preventDefault()
+          	                    e.stopPropagation()
+
+          	                    window.open(`/admin?tab=locations&env=${data.Name}`, "_blank", "noopener,noreferrer")
+          	                  }}
 
 
-                          />
-                        </Tooltip>
-                      </a>
-                      :
-                      <Chip
-                        key={index}
-                        style={{
-                          color: green,
-                          borderColor: green,
-                          marginLeft: 0,
-                          padding: 0, marginRight: 10,
-                        }}
-                        label={"Running"}
-                        onClick={() => {
-                          //handleChipClick
-                        }}
-                        variant="outlined"
-                        color="primary"
-                      />
-                    }
+          	                />
+          	              </Tooltip>
+          	            </a>
+          	            :
+          	            <Chip
+          	              key={index}
+          	              style={{
+          	                color: green,
+          	                borderColor: green,
+          	                marginLeft: 0,
+          	                padding: 0, marginRight: 10,
+          	              }}
+          	              label={"Running"}
+          	              onClick={() => {
+          	                //handleChipClick
+          	              }}
+          	              variant="outlined"
+          	              color="primary"
+          	            />
+          	          }
 
-                    {data.default === true ?
-                      <Chip
-                        style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", }}
-                        label={"Default"}
-                        variant="outlined"
-                        color="secondary"
-                      />
-                      : null}
+          	          {data.default === true ?
+          	            <Chip
+          	              style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", }}
+          	              label={"Default"}
+          	              variant="outlined"
+          	              color="secondary"
+          	            />
+          	            : null}
 
-                    {data.Name}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
+          	          {data.Name}
+          	        </MenuItem>
+          	      );
+          	    })}
+          	  </Select>
+          	</FormControl>
+		  </Tooltip>
           : null}
 
 
@@ -17250,7 +17655,7 @@ const AngularWorkflow = (defaultprops) => {
         variant="body2"
         color="textSecondary"
       >
-        {workflow.errors.slice(0, 3).map((error) => {
+        {workflow.errors.slice(0, 3).map((error, index) => {
           // Loop through each word, and if it matches "Action <name> " then replace it with a link to the action
           var colornext = false
           const newerror = error === undefined || error == null ? "" : error.split(" ").map((word) => {
@@ -17258,6 +17663,7 @@ const AngularWorkflow = (defaultprops) => {
               colornext = false
               return (
                 <span
+				  key={index}
                   style={{ color: "#FF8544", cursor: "pointer" }}
                   onClick={() => {
                     // Find it in cytoscape
@@ -17446,7 +17852,7 @@ const AngularWorkflow = (defaultprops) => {
         onMouseLeave={() => setHovered(false)}
         onClick={() => {
           setExecutionModalOpen(true);
-          getWorkflowExecution(props.match.params.key, "");
+          getWorkflowExecution(workflow.id, "", executionFilter, workflow.org_id)
         }}
       >
         <ArrowLeftIcon style={{ marginTop: 10, marginLeft: 10, marginBottom: 10, }} />
@@ -17475,9 +17881,39 @@ const AngularWorkflow = (defaultprops) => {
     setSelectedApp({})
     setWorkflow(inputworkflow)
 
+	if (workflow.id === originalWorkflow.id) {
+		if (selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null) {
+			setOriginalSelectedEnvironment(selectedActionEnvironment)
+		}
+	} 
+
+	if (inputworkflow.id === originalWorkflow.id && originalSelectedEnvironment !== undefined && originalSelectedEnvironment !== null && originalSelectedEnvironment.Name !== undefined && originalSelectedEnvironment.Name !== null) {
+		setSelectedActionEnvironment(originalSelectedEnvironment)
+	} else {
+		if (inputworkflow.actions !== undefined && inputworkflow.actions !== null && inputworkflow.actions.length > 0) {
+
+			for (var actionkey in inputworkflow.actions) {
+				const action = inputworkflow.actions[actionkey]
+				if (action.environment === undefined || action.environment === null || action.environment === "") {
+					continue
+				}
+
+				//const env = environments.find((a) => a.Name === action.environment)
+				const newenv = {
+					Name: action.environment,
+					Type: action.environment === "cloud" ? "cloud" : "onprem",
+				}
+
+				setSelectedActionEnvironment(newenv)
+				break
+			}
+		}
+	}
+
     if (inputworkflow !== undefined && inputworkflow !== null && inputworkflow.id !== undefined && inputworkflow.id !== null) {
       getRevisionHistory(inputworkflow.id, 50, 0, inputworkflow.org_id)
-      getWorkflowExecution(inputworkflow.id, "", "")
+      getWorkflowExecution(inputworkflow.id, "", executionFilter, inputworkflow.org_id)
+	  loadTriggers(inputworkflow.org_id)
     }
 
     // Update props match key
@@ -17501,9 +17937,9 @@ const AngularWorkflow = (defaultprops) => {
       cy.removeListener("free");
       cy.removeListener("cxttap");
 
-      setElements([])
 
       // Remove all edges
+      setElements([])
       cy.edges().remove()
       cy.nodes().remove()
     }
@@ -17618,7 +18054,7 @@ const AngularWorkflow = (defaultprops) => {
                 style={{ width: 55, }}
                 onClick={() => {
                   setExecutionModalOpen(true);
-                  getWorkflowExecution(props.match.params.key, "");
+          		  getWorkflowExecution(workflow.id, "", executionFilter, workflow.org_id)
                 }}
               >
                 <DirectionsRunIcon />
@@ -18273,9 +18709,10 @@ const AngularWorkflow = (defaultprops) => {
 
               getAppAuthentication()
               getEnvironments(workflow.org_id)
-              getWorkflowExecution(props.match.params.key, "")
               getAvailableWorkflows(-1)
               getFiles()
+
+          	  getWorkflowExecution(workflow.id, "", executionFilter, workflow.org_id)
 
               // For loading datastore
 
@@ -19032,8 +19469,7 @@ const AngularWorkflow = (defaultprops) => {
               variant="outlined"
               fullWidth
               onClick={() => {
-
-                getWorkflowExecution(props.match.params.key, "", executionFilter);
+          	    getWorkflowExecution(workflow.id, "", executionFilter, workflow.org_id)
               }}
               color="secondary"
             >
@@ -19050,7 +19486,7 @@ const AngularWorkflow = (defaultprops) => {
               variant={executionFilter === "ALL" ? "contained" : "outlined"}
               onClick={() => {
                 setExecutionFilter("ALL")
-                getWorkflowExecution(props.match.params.key, "", "ALL")
+          	    getWorkflowExecution(workflow.id, "", "ALL", workflow.org_id)
               }}
             >
               All
@@ -19060,7 +19496,7 @@ const AngularWorkflow = (defaultprops) => {
               variant={executionFilter === "FINISHED" ? "contained" : "outlined"}
               onClick={() => {
                 setExecutionFilter("FINISHED")
-                getWorkflowExecution(props.match.params.key, "", "FINISHED")
+          	    getWorkflowExecution(workflow.id, "", "FINISHED", workflow.org_id)
               }}
             >
               Finished
@@ -19070,7 +19506,7 @@ const AngularWorkflow = (defaultprops) => {
               variant={executionFilter === "EXECUTING" ? "contained" : "outlined"}
               onClick={() => {
                 setExecutionFilter("EXECUTING")
-                getWorkflowExecution(props.match.params.key, "", "EXECUTING")
+          	    getWorkflowExecution(workflow.id, "", "EXECUTING", workflow.org_id)
               }}
             >
               Executing
@@ -19080,7 +19516,7 @@ const AngularWorkflow = (defaultprops) => {
               variant={executionFilter === "ABORTED" ? "contained" : "outlined"}
               onClick={() => {
                 setExecutionFilter("ABORTED")
-                getWorkflowExecution(props.match.params.key, "", "ABORTED")
+          	    getWorkflowExecution(workflow.id, "", "ABORTED", workflow.org_id)
               }}
             >
               Aborted
@@ -19141,7 +19577,9 @@ const AngularWorkflow = (defaultprops) => {
                 const foundnotifications = data.notifications_created === undefined || data.notifications_created === null ? 0 : data.notifications_created
 
                 return (
-                  <span>
+                  <span
+					key={index}
+				  >
                     {/*<Zoom key={index} in={true} style={{ transitionDelay: `${executionDelay}ms` }}>*/}
                     <div>
                       <Tooltip
@@ -22908,11 +23346,9 @@ const AngularWorkflow = (defaultprops) => {
         {workflowRevisions}
         {authenticationModal}
         {tenzirConfigModal}
-        {/*editWorkflowModal*/}
         {authgroupModal}
         {executionArgumentModal}
         {configureWorkflowModal}
-        {/*usecaseSlidein*/}
 
         <SuggestionBoxUi />
 
@@ -22958,6 +23394,8 @@ const AngularWorkflow = (defaultprops) => {
             isEditing={true}
             userdata={userdata}
             usecases={usecases}
+
+			scrollTo={"mssp_control"}
           />
           : null}
 

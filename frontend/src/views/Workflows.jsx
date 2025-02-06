@@ -136,7 +136,7 @@ export const GetIconInfo = (action) => {
     { key: "cache_add", values: ["set_cache"] },
     { key: "cache_get", values: ["get_cache"] },
     { key: "filter", values: ["filter"] },
-    { key: "merge", values: ["join", "merge", "route", "router"] },
+    { key: "merge", values: ["join", "merge", "route", "router", "routing"] },
     {
       key: "search",
       values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
@@ -200,7 +200,7 @@ export const GetIconInfo = (action) => {
     },
     {
       key: "compare",
-      values: ["compare", "convert", "to", "filter", "translate", "parse"],
+      values: ["compare", "convert", "to", "filter", "translate", "parse", "generate", ],
     },
     { key: "close", values: ["close", "stop", "cancel", "block"] },
     { key: "communication", values: ["communication", "comms", "email", "mail",] },

@@ -1743,15 +1743,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				Environments:  execInfo.Environments,
 			}
 
-			//executionRequestWrapper, err := getWorkflowQueue(ctx, environment)
-			//if err != nil {
-			//	executionRequestWrapper = ExecutionRequestWrapper{
-			//		Data: []ExecutionRequest{executionRequest},
-			//	}
-			//} else {
-			//	executionRequestWrapper.Data = append(executionRequestWrapper.Data, executionRequest)
-			//}
-
 			//log.Printf("Execution request: %#v", executionRequest)
 			executionRequest.Priority = workflowExecution.Priority
 			err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)

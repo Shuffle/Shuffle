@@ -58,7 +58,7 @@ const data = [
       "curve-style": "unbundled-bezier",
       label: "data(label)",
       "text-margin-y": "-15px",
-      width: "3px",
+      width: "2px",
       color: "white",
       "line-fill": "linear-gradient",
       "line-gradient-stop-positions": ["0.0", "100"],

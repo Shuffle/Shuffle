@@ -12,6 +12,14 @@ const Admin2 = (props) => {
     const [orgRequest, setOrgRequest] = React.useState(true);
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
+	if (document !== undefined) {
+		if (selectedOrganization?.name !== undefined) {
+			document.title = selectedOrganization?.name + " - Admin - Shuffle"
+		} else {
+  			document.title = "Admin - Shuffle"
+		}
+	}
+
     const handleGetOrg = (orgId) => {
 
         fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
@@ -103,7 +111,8 @@ const Admin2 = (props) => {
                         setSelectedStatus(leads);
                     }
 
-                    setSelectedOrganization(responseJson);
+
+                    setSelectedOrganization(responseJson)
                     var lists = {
                         active: {
                             triggers: [],

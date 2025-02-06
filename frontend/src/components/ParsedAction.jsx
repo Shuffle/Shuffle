@@ -177,8 +177,8 @@ const ParsedAction = (props) => {
 		setAiQueryModalOpen,
 	} = props;
 
-	let navigate = useNavigate();
-	const classes = useStyles();
+	let navigate = useNavigate()
+	const classes = useStyles()
 
 	const [hideBody, setHideBody] = React.useState(false)
 	const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
@@ -200,6 +200,7 @@ const ParsedAction = (props) => {
 	const [menuPosition, setMenuPosition] = useState(null);
 	const [uiBox, setUiBox] = useState(null);
 	const isIntegration = selectedAction.app_id === "integration"
+	const isAgent = selectedAction.app_id === "shuffle_agent"
 	const [distributeAuthToSuborgs, setDistributeAuthToSuborgs] = useState(selectedAction?.selectedAuthentication?.suborg_distributed || false)
 
 	useEffect(() => {
@@ -207,7 +208,6 @@ const ParsedAction = (props) => {
 			setLastSaved(false)
 		}
 	}, [expansionModalOpen])
-
 
 	useEffect(() => {
 		// Changes the order of params to show in order:
@@ -244,15 +244,37 @@ const ParsedAction = (props) => {
 			var param = selectedActionParameters[paramkey]
 			keyorder.push(param.name)
 
-			if (param.configuration) {
+			if (param?.configuration === true) {
 				auth.push(param)
 				continue
 			}
 
-			if (param?.value?.toLowerCase().includes("secret. replace")) {
-				param.value = ""
+			if (param?.value === undefined || param?.value === null) {
+				console.log("Invalid value: ", param)
+				continue
 			}
 
+			if (typeof param.value === "array") {
+				param.value = param.value.join(",")
+			}
+
+			if (typeof param.value === "object") {
+				try { 
+					// Check if it's an array or object
+					if (param.value.length !== undefined) {
+						param.value = param.value.join(",")
+					} else {
+						param.value = JSON.stringify(param.value)
+					}
+				} catch (e) {
+					console.log("Error parsing JSON for param value: ", param, e)
+					continue
+				}
+			}
+
+			if (param?.value?.toLowerCase()?.includes("secret. replace")) {
+				param.value = ""
+			}
 
 			if (selectedApp?.generated === true && param?.name === "body") {
 				param.required = true
@@ -260,11 +282,7 @@ const ParsedAction = (props) => {
 				continue
 			}
 
-			//if (param.name.startsWith("${") && param.name.endsWith("}")) {
-			//    console.log("PARAM: ", param)
-			//}
-
-			if (param.required === false && param.name.startsWith("${") && param.name.endsWith("}")) {
+			if (param?.required === false && param?.name?.startsWith("${") && param?.name?.endsWith("}")) {
 				// Check if it's a required param
 				param.autocompleted = true
 				if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
@@ -280,16 +298,16 @@ const ParsedAction = (props) => {
 				continue
 			}
 
-			if (param.name === "headers" || param.name === "queries") {
+			if (param?.name === "headers" || param?.name === "queries") {
 				special_optional.push(param)
 				continue
 			}
 
-			if (hideBody && param?.description.includes("Generated")) {
+			if (hideBody && param?.description?.includes("Generated")) {
 				continue
 			}
 
-			if (param.field_active === true) {
+			if (param?.field_active === true) {
 				param.autocompleted = true
 				generated_optional.push(param)
 				continue
@@ -349,6 +367,17 @@ const ParsedAction = (props) => {
 					}
 				}
 			}
+		}
+
+		// Fix apps with fewer actions
+		if (selectedApp !== undefined && selectedApp !== null && selectedApp.actions !== undefined && selectedApp.actions !== null && selectedApp.actions.length <= 1 && apps !== undefined && apps !== null && apps.length > 0) {
+			// 1. Check local storage (?)
+			// 2. Check the "apps" list
+			const foundApp = apps.find(app => app.id === selectedApp.id)
+			if (foundApp !== undefined && foundApp !== null && foundApp.actions !== undefined && foundApp.actions !== null && foundApp.actions.length > 1) {
+				setSelectedApp(foundApp)
+			}
+			
 		}
 	}, [])
 
@@ -2040,6 +2069,7 @@ const ParsedAction = (props) => {
 				<div style={{ marginTop: 15, position: "relative", }}>
 					<Typography style={{ color: "rgba(255,255,255,0.7)" }}>Authentication</Typography>
 					<Tooltip 
+						arrow
 						title={
 						workflow?.suborg_distribution?.length > 0 && Object.getOwnPropertyNames(selectedAction?.selectedAuthentication).length !== 0 ? (
 							<React.Fragment>
@@ -2049,7 +2079,7 @@ const ParsedAction = (props) => {
 											<Checkbox
 												checked={distributeAuthToSuborgs}
 												onChange={(event) => {
-													changeDistribution(selectedAction?.selectedAuthentication)
+													changeDistribution(selectedAction?.selectedAuthentication, "auth")
 												}}
 												name="distributeAuth"
 												color="primary"
@@ -2428,6 +2458,7 @@ const ParsedAction = (props) => {
 				{setNewSelectedAction !== undefined ? (
 					<Autocomplete
 						id="action_search"
+						disabled={isAgent || (selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0)}
 						autoHighlight
 						value={selectedAction}
 						classes={{ inputRoot: classes.inputRoot }}
@@ -2628,6 +2659,7 @@ const ParsedAction = (props) => {
 										label={isIntegration ? "Choose a category" : "Find Actions"}
 										variant="outlined"
 										name={`disable_autocomplete_${Math.random()}`}
+										disabled={isAgent || (selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0)}
 									/>
 								</Tooltip>
 							);
@@ -2645,7 +2677,7 @@ const ParsedAction = (props) => {
 				> {
 						selectedActionParameters !== undefined && selectedActionParameters !== null && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ?
 							<div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
-								{isIntegration ?
+								{isIntegration || isAgent ?
 									apps !== undefined && apps !== null && apps.length > 0 ?
 										<div style={{ display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden", }}>
 											<div onClick={() => {
@@ -2703,16 +2735,20 @@ const ParsedAction = (props) => {
 													</div>
 												</Tooltip>
 											</div>
+
 											{apps.map((app, appIndex) => {
 												if (app.categories === undefined || app.categories === null || app.categories.length === 0) {
 													return null
 												}
 
+												var newactionname = actionname.toLowerCase()
+												if (isAgent === true) {
+													newactionname = "ai"
+												}
+
 												var found = false
-
-
 												for (var key in app.categories) {
-													if (app.categories[key].toLowerCase() !== actionname) {
+													if (app.categories[key].toLowerCase() !== newactionname) {
 														continue
 													}
 
@@ -2943,9 +2979,16 @@ const ParsedAction = (props) => {
 										data.variant = "STATIC_VALUE";
 									}
 
-									if (isIntegration && data.name === "app_name") {
+									if ((isIntegration || isAgent) && data.name === "app_name") { 
 										return null
 									}
+
+									/*
+									// Somehow autogenerate from the app itself
+									if (isAgent && data.name == "model") {
+										//console.log("Options: ", data.options)
+									}
+									*/
 
 									if (data.value === "authgroup controlled") {
 										if (data?.name === "url" && authenticationType?.type === "oauth2-app") {
@@ -3891,11 +3934,17 @@ const ParsedAction = (props) => {
 
 														viewed_data = (viewed_data.charAt(0).toUpperCase() + viewed_data.slice(1)).replaceAll("_", " ")
 
+														// Check if it's selected or not and highlight
+														var selected = false
+														if (selectedActionParameters[count].value.includes(data)) {
+															selected = true
+														}
+
 														return (
 															<MenuItem
 																key={data}
 																style={{
-																	backgroundColor: theme.palette.inputColor,
+																	backgroundColor: selected ? theme.palette.backgroundColor : theme.palette.inputColor,
 																	color: "white",
 																}}
 																value={data}

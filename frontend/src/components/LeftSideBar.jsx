@@ -889,7 +889,7 @@ useEffect(() => {
           </Button>
         </Box>
       </Box>
-      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{!leftSideBarOpenByClick && setExpandLeftNav(true)}} onMouseLeave={()=>{!leftSideBarOpenByClick && setExpandLeftNav(false);setOpenAutocomplete(false)}}>
+      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(true)}} onMouseLeave={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(false);setOpenAutocomplete(false)}}>
       <Box
             sx={{
               display: "flex",
@@ -1194,7 +1194,7 @@ useEffect(() => {
             sx={{
               display: "flex",
               flexDirection: "row",
-              marginTop: 1
+              marginTop: 0
             }}
           >
 	  		<span style={{ display: "inline-block", width: "100%" }}> 
@@ -1229,7 +1229,7 @@ useEffect(() => {
                   width: 18,
                   height: 18,
                   marginRight: expandLeftNav ? 10 : 0,
-                  color: userdata?.support ? "inherit" : "#6F6F6F",
+                  color: "inherit", 
                 }}
               />
               <span
@@ -1527,7 +1527,7 @@ useEffect(() => {
 	  	  </Link>
 
 
-	  	  <Link to="/admin?admin_tab=billingstats" style={hrefStyle}>
+	  	  <Link to={isCloud ? "/admin?admin_tab=billingstats" : "/admin?admin_tab=locations"} style={hrefStyle}>
           <Button
             onClick={(event) => {
               setCurrentOpenTab("admin");

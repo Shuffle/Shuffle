@@ -15,6 +15,7 @@ import {
 	Tooltip,
 	Typography,
 	IconButton,
+	Switch,
 } from '@mui/material';
 
 import { toast } from "react-toastify" 
@@ -36,6 +37,9 @@ import {
 	Insights as InsightsIcon, 
 	Replay as ReplayIcon, 
 	EditNote as EditNoteIcon,
+	AccountTree as AccountTreeIcon,
+	Cached as CachedIcon,
+	FilterAltOff as FilterAltOffIcon 
 } from '@mui/icons-material';
 
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -73,6 +77,8 @@ const RuntimeDebugger = (props) => {
 	const [rowsPerPage, setRowsPerPage] = useState(10)
 	const [resultRows, setResultRows] = useState([])
 	const [selectedWorkflowExecutions, setSelectedWorkflowExecutions] = useState([])
+	const [suborgWorkflowRuns, setSuborgWorkflowRuns] = useState(false)
+	const [openWorkflowMenu, setOpenWorkflowMenu] = useState(false)
 	const [workflows, setWorkflows] = useState([
 		{"id": "", "name": "All Workflows",}
 	])
@@ -162,7 +168,7 @@ const RuntimeDebugger = (props) => {
 		}, maxworkflows*300)
 	}
 
-	const submitSearch = (workflowId, status, startTime, endTime, cursor, limit) => {
+	const submitSearch = (workflowId, status, startTime, endTime, cursor, limit, suborg_runs) => {
 		handleWorkflowUsageCount(workflows)
 		//setResultRows([])
 		setSearchLoading(true)
@@ -175,6 +181,7 @@ const RuntimeDebugger = (props) => {
 			start_time: startTime,
 			end_time: endTime,
 			ignore_org: ignoreOrg,
+			suborg_runs: suborg_runs,
 		}
 
 		fetch(`${globalUrl}/api/v1/workflows/search`, {
@@ -344,10 +351,28 @@ const RuntimeDebugger = (props) => {
 					source = "manual"
 				}
 
+				var imageSource = "";
+				if (params?.row?.org?.id?.length > 0) {
+					if (params?.row?.org?.image?.length > 0){
+						imageSource = params.row.org.image
+					}else {
+						imageSource = "/images/no_image.png"
+					}
+				}else {
+					if (userdata.active_org.image?.length > 0){
+						imageSource = userdata.active_org.image
+					}else {
+						imageSource = "/images/no_image.png"
+					}
+				}
+
 				return (
 					<span style={{}} onClick={() => {
 						//setStatus(params.row.status)
 					}}>
+						{userdata?.active_org?.creator_org?.length === 0 ? (
+							<img src={imageSource} alt={source} style={{borderRadius: theme.palette?.borderRadius, height: imageSize, width: imageSize, }} />
+						) : null}
 						<Tooltip title={source} placement="top">
 							{foundSource}
 						</Tooltip>
@@ -372,7 +397,7 @@ const RuntimeDebugger = (props) => {
 			headerName: 'Workflow Name',
 			width: 250,
 			renderCell: (params) => (
-				<span style={{cursor: "pointer", }} onClick={() => {
+				<div style={{ display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer", }} onClick={() => {
 					setWorkflowId(params.row.workflow.id)
 
 					for (let key in workflows) {
@@ -382,8 +407,18 @@ const RuntimeDebugger = (props) => {
 						}
 					}
 				}}>
-					{params.row.workflow.name}
-				</span>
+					<span>{params.row.workflow.name}</span>
+					{params?.row?.org?.id?.length > 0 && 
+						<Tooltip title={(
+							<div style={{display: "flex", }}>
+								<img src={params.row.org.image || "/images/no_image.png"} alt={params.row.org.name} style={{height: 24, width: 24, borderRadius: 12, }} />
+								<Typography variant="body2" style={{marginLeft: 5, }}>{params.row.org.name}</Typography>
+							</div>
+						)} placement="top" arrow>
+							<AccountTreeIcon style={{color: "#B0B0B0", height: "24px", width: "24px", marginLeft: 10}} />
+						</Tooltip>
+					}
+				</div>
 			),
 		  },
 
@@ -630,7 +665,7 @@ const RuntimeDebugger = (props) => {
 			return
 		}
 
-		submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage)
+		submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns)
 	}, [workflowId, status, startTime, endTime])
 
 	const textfieldStyle = {
@@ -679,8 +714,9 @@ const RuntimeDebugger = (props) => {
 
 		setWorkflow(e.target.value)
 		setWorkflowId(e.target.value.id)
+		setSuborgWorkflowRuns(false)
 
-		submitSearch(e.target.value.id, status, startTime, endTime, rowCursor, rowsPerPage)
+		submitSearch(e.target.value.id, status, startTime, endTime, rowCursor, rowsPerPage, false)
 	}
 
 	const executeWorkflow = (execution) => {
@@ -773,84 +809,17 @@ const RuntimeDebugger = (props) => {
 
 	return (
 		<div style={{minWidth: 1150, maxWidth: 1150, margin: "auto", }}>
-			<div style={{display: "flex", }}>
+			<div style={{display: "flex", paddingTop: 50, }}>
 				<div style={{display: 'flex', flexDirection: 'column'}}>
-				<h1 style={{flex: 3, }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</h1>
-					<div style={{position: 'relative', right: 10, marginBottom: 10}}>
-						<TextField
-						fullWidth
-						value={searchQuery}
-						style={{
-							backgroundColor: theme.palette.inputColor,
-							marginTop: 20,
-							marginLeft: 10,
-							marginRight: 12,
-							width: 693,
-							height: 55,
-							borderRadius: 8,
-							fontSize: 16,
-							marginBottom: 15,
-						}}
-						InputProps={{
-							style: {
-							color: "white",
-							fontSize: "1em",
-							height: 55,
-							width: 693,
-							borderRadius: 8,
-							},
-							startAdornment: (
-							<InputAdornment position="start">
-								<SearchIcon style={{ marginLeft: 5}} />
-							</InputAdornment>
-							),
-							endAdornment: (
-							<InputAdornment position="end">
-								{searchQuery.length > 0 && (
-								<ClearIcon
-									style={{
-									color: "white",
-									cursor: "pointer",
-									marginRight: 10
-									}}
-									onClick={() => setSearchQuery('')} 
-								/>
-								 )} 
-								<button
-								type="button"
-								style={{
-									backgroundImage:
-									"linear-gradient(to right, rgb(248, 106, 62), rgb(243, 64, 121))",
-									color: "white",
-									border: "none",
-									padding: "10px 20px",
-									width: 100,
-									height: 35,
-									borderRadius: 17.5,
-									cursor: "pointer",
-								}}
-								>
-								Search
-								</button>
-							</InputAdornment>
-							),
-							
-						}}
-						onChange={(e)=>{handleQueryChange(e)}}
-						color="primary"
-						placeholder="Filter by Workflow Name, Status, Execution Argument, Results.."
-						id="shuffle_search_field"
-        				/>
-					</div>
-
-				</div>
-				{selectedWorkflowExecutions.length > 0 ?
+					<div style={{display: "flex", width: "100%", }}>
+							<h1 style={{flex: 3, whiteSpace: "nowrap" }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</h1>
+					{selectedWorkflowExecutions.length > 0 ?
 					<ButtonGroup>
 						<Tooltip title="Reruns ALL selected workflows. This will make a new execution for them, and not continue the existing.">
 							<Button
 								variant="outlined"
 								color="secondary"
-								style={{maxHeight: 40, marginTop: 25, }}
+								style={{maxHeight: 40, marginTop: 25, marginLeft: 20, }}
 								onClick={() => {
 
 									for (var i = 0; i < selectedWorkflowExecutions.length; i++) {
@@ -888,7 +857,7 @@ const RuntimeDebugger = (props) => {
 									} else {
 										toast("Aborted "+aborted+" workflows.")
 										// Research
-										submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage)
+										submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns)
 
 										setSelectedWorkflowExecutions([])
 									}
@@ -906,7 +875,7 @@ const RuntimeDebugger = (props) => {
 					<Button
 						variant={ignoreOrg ? "contained" : "outlined"}
 						color="secondary"
-						style={{marginLeft: 100, maxHeight: 40, marginTop: 25, }}
+						style={{marginLeft: 20, maxHeight: 40, marginTop: 25, }}
 						onClick={() => {
 							setIgnoreOrg(!ignoreOrg)
 						}}
@@ -914,10 +883,98 @@ const RuntimeDebugger = (props) => {
 						{ignoreOrg ? "Ignoring Org" : "Ignore Org (Support Only)"}
 					</Button>
 				: null}
+				</div>
+					<div style={{display: "flex", justifyContent: "space-between", width: "100%"}}>
+					<div style={{position: 'relative', right: 10, marginBottom: 10}}>
+						<TextField
+						fullWidth
+						value={searchQuery}
+						style={{
+							backgroundColor: "#1a1a1a",
+							marginTop: 20,
+							marginLeft: 10,
+							marginRight: 12,
+							width: 693,
+							height: 51,
+							borderRadius: 4,
+							fontSize: 16,
+						}}
+						InputProps={{
+							style: {
+							backgroundColor: "#1a1a1a",
+							fontSize: "1em",
+							height: 51,
+							width: 693,
+							borderRadius: 4,
+							},
+							startAdornment: (
+							<InputAdornment position="start">
+								<SearchIcon style={{ marginLeft: 5}} />
+							</InputAdornment>
+							),
+							endAdornment: (
+							<InputAdornment position="end">
+								{searchQuery.length > 0 && (
+								<ClearIcon
+									style={{
+									color: "white",
+									cursor: "pointer",
+									marginRight: 10
+									}}
+									onClick={() => setSearchQuery('')} 
+								/>
+								 )} 
+								<button
+								type="button"
+								style={{
+									color: "#1A1A1A",
+									border: "none",
+									padding: "10px 20px",
+									width: 100,
+									height: 35,
+									borderRadius: 4,
+									backgroundColor: "#FF8544",
+									cursor: "pointer",
+								}}
+								>
+								Search
+								</button>
+							</InputAdornment>
+							),
+							
+						}}
+						onChange={(e)=>{handleQueryChange(e)}}
+						color="primary"
+						placeholder="Filter by Workflow Name, Status, Execution Argument, Results.."
+						id="shuffle_search_field"
+        				/>
+					</div>
+					{userdata?.active_org?.creator_org?.length === 0 ? (
+						<div style={{display: "flex", margin: 'auto',marginTop: 20,justifyContent: 'center', alignItems: 'center', }}>
+						<Switch 
+							checked={suborgWorkflowRuns}
+							onChange={() => {
+								setSuborgWorkflowRuns(!suborgWorkflowRuns);
+								//set selected workflow to all workflows when switching between suborg and all workflows
+								setWorkflowId("")
+								setWorkflow({"id": "", "name": "All Workflows"})
+								setStatus("")
+								setStartTime("")
+								setEndTime("")
+								setSearchQuery("")
+								submitSearch("", "", "", "", rowCursor, rowsPerPage, !suborgWorkflowRuns)}
+							}
+							color="secondary"
+						/>
+						<Typography variant="body2" style={{color: "white", }}>Show workflow runs from suborgs</Typography>
+					</div>
+					) : null}
+					</div>
+				</div>
 			</div>
 			<form onSubmit={(e) => {
-				submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage)
-			}} style={{display: "flex", }}>
+				submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns)
+			}} style={{display: "flex", justifyContent: "center", alignItems: "center", }}>
 				<FormControl fullWidth style={{marginTop: 5, }}>
 				  <InputLabel id="status-label">Status</InputLabel>
 				  <Select
@@ -951,10 +1008,13 @@ const RuntimeDebugger = (props) => {
 				<Autocomplete
 				  id="workflow_search"
 				  value={workflow}
+				  open={openWorkflowMenu}
+				  onOpen={()=>{setOpenWorkflowMenu(true)}}
+				  onClose={() => {setOpenWorkflowMenu(false)}}
 				  classes={{ inputRoot: classes.inputRoot }}
 				  ListboxProps={{
 					style: {
-					  backgroundColor: theme.palette.inputColor,
+					  backgroundColor: "#1a1a1a",
 					  color: "white",
 					},
 				  }}
@@ -973,11 +1033,11 @@ const RuntimeDebugger = (props) => {
 				  options={workflows}
 				  fullWidth
 				  style={{
-					backgroundColor: theme.palette.inputColor,
+					backgroundColor: "#1a1a1a",
 					height: 50,
-					borderRadius: theme.palette?.borderRadius,
-					marginTop: 5, 
+					borderRadius: 4,
 					marginLeft: 5,
+					marginBottom: 3,
 				  }}
 				  onChange={(event, newValue) => {
 					console.log("Found value: ", newValue)
@@ -1018,12 +1078,13 @@ const RuntimeDebugger = (props) => {
 					  }>
 						<MenuItem
 						  style={{
-							backgroundColor: theme.palette.inputColor,
+							backgroundColor: "#1a1a1a",
 							color: data.id === workflow.id ? "red" : "white",
 						  }}
 						  value={data}
 						  onClick={(e) => {
 							var parsedinput = { target: { value: data } }
+							setOpenWorkflowMenu(false)
 							handleWorkflowSelectionUpdate(parsedinput)
 						  }}
 						>
@@ -1036,8 +1097,8 @@ const RuntimeDebugger = (props) => {
 					return (
 					  <TextField
 						style={{
-						  backgroundColor: theme.palette.inputColor,
-						  borderRadius: theme.palette?.borderRadius,
+						  backgroundColor: "#1a1a1a",
+						  borderRadius: 4,
 						}}
 						{...params}
 						label="Workflow"
@@ -1050,8 +1111,9 @@ const RuntimeDebugger = (props) => {
 				<LocalizationProvider dateAdapter={AdapterDayjs}>
 		        	<DateTimePicker
 					  sx={{
-						marginTop: 1, 
 						marginLeft: 1,
+						minHeight: 50,
+						maxHeight: 50,
 						minWidth: 240,
 					    maxWidth: 240,
 					  }}
@@ -1064,10 +1126,11 @@ const RuntimeDebugger = (props) => {
 					/>
 					<DateTimePicker
 					  sx={{
-						marginTop: 1, 
 						marginLeft: 1,
 						minWidth: 240,
 					    maxWidth: 240,
+						minHeight: 50,
+						maxHeight: 50,
 					  }}
 					  ampm={false}
 					  label="Search until"
@@ -1078,14 +1141,34 @@ const RuntimeDebugger = (props) => {
 					/>
 				</LocalizationProvider>
 
+				<Tooltip title="Clear all filters and search parameters">
+					<Button
+						style={{ marginLeft: 10, minHeight: 60, marginTop: 10, backgroundColor: "#1a1a1a", border: "1px solid #424242", boxShadow: 'none', borderRadius: 4, width: 81, height: 51, marginRight: 15 }}
+						variant="contained"
+						color="primary"
+						onClick={() => {
+							setWorkflowId("")
+							setWorkflow({"id": "", "name": "All Workflows"})
+							setStatus("")
+							setStartTime("")
+							setEndTime("")
+							setSearchQuery("")
+							setSuborgWorkflowRuns(false)
+							submitSearch("", "", "", "", rowCursor, rowsPerPage, false)
+						}}
+					>
+						<FilterAltOffIcon />
+					</Button>
+				</Tooltip>
+
 				<Button
 					variant="outlined"
 					color="primary"
 					onClick={() => {
-						submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage) 
+						submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns) 
 					}}
 					disabled={searchLoading}
-					style={{height: 50, minWidth: 100, marginTop: 15, marginLeft: 10, }}
+					style={{height: 50, minWidth: 100, marginTop: 15, }}
 				>
 					{searchLoading ? <CircularProgress size={30} /> : "Search"}
 				</Button>
@@ -1100,7 +1183,7 @@ const RuntimeDebugger = (props) => {
 					disableSelectionOnClick
 					onPageSizeChange={(newPageSize) => {
 						setRowsPerPage(newPageSize)
-						submitSearch(workflowId, status, startTime, endTime, rowCursor, newPageSize) 
+						submitSearch(workflowId, status, startTime, endTime, rowCursor, newPageSize, suborgWorkflowRuns) 
 					}}
 					// event for when clicking next page
 					// Hide page changer
