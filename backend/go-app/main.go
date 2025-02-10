@@ -4954,6 +4954,10 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false, "reason": "The upload API is not yet implemented in self-hosted Shuffle. Please explore the app hotloading system: https://shuffler.io/docs/app_creation#uploading-an-app"}`))
+	return
+
 	//https://stackoverflow.com/questions/22964950/http-request-formfile-handle-zip-files
 	request.ParseMultipartForm(32 << 20)
 	f, _, err := request.FormFile("shuffle_file")
