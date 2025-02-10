@@ -1853,6 +1853,8 @@ func cleanup() {
 
 // Initial loop etc
 func main() {
+	// Get arch. amd64 or arm64
+
 	//sigCh := make(chan os.Signal, 1)
 	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	//defer cleanup()
