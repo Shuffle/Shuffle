@@ -2624,10 +2624,26 @@ const AppCreator = (defaultprops) => {
       credentials: "include",
     })
       .then((response) => {
-        //if (response.status !== 200) {
-        //	setErrorCode("An error occurred during validation")
-        //	throw new Error("NOT 200 :O")
-        //}
+        if (response.status === 403) {
+    		var urlParams = new URLSearchParams(window.location.search)
+			if (urlParams.has("id")) {
+				toast.error("Please log in to build this app. If this error persists, please contact support@shuffler.io")
+			} else {
+				toast.error("Failed to save the app as you are not the owner. Redirecting you to the forking page. When there, save again.")
+				if (props.match.params.appid !== undefined && props.match.params.appid !== null && props.match.params.appid.length > 0) {
+					setTimeout(() => {
+						window.open(`/apps/new?id=${props.match.params.appid}`, "_blank")
+					}, 2500)
+				}
+			}
+
+			return
+        }
+
+        if (response.status !== 200) {
+        	setErrorCode("An error occurred during validation")
+        	//throw new Error("NOT 200 :O")
+        }
 
         setAppBuilding(false);
         return response.json();

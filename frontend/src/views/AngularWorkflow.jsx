@@ -816,7 +816,7 @@ const AngularWorkflow = (defaultprops) => {
 
           // Base64 decode into json
           const foundapp = JSON.parse(atob(responseJson.app))
-          const selectedAppActions = selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions
+          var selectedAppActions = selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions
 		  if (apps !== undefined && apps !== null && apps.length > 0 && (selectedAppActions.length === 0 || selectedAppActions.length === 1)) {
 			  for (var appkey in apps) {
 				  const loopedApp = apps[appkey]
@@ -836,8 +836,7 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 		  }
 
-          if (foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > selectedAppActions.length) {
-
+          if (foundapp?.actions !== undefined && foundapp?.actions !== null && foundapp?.actions?.length > selectedAppActions?.length) {
             if (select) {
               setSelectedApp(foundapp)
             }
@@ -925,7 +924,7 @@ const AngularWorkflow = (defaultprops) => {
 
       })
       .catch((error) => {
-        //console.log(`Failed side-loading app ${appId}: ${error}`)
+        console.log(`Failed side-loading app ${appId}: ${error}`)
       })
   }
 
@@ -1226,8 +1225,38 @@ const AngularWorkflow = (defaultprops) => {
 
 
   useEffect(() => {
-    const found = workflows?.find(w => w.id === workflow?.triggers[selectedTriggerIndex]?.parameters[0]?.value);
-    setSubworkflow(found)
+	if (selectedTriggerIndex === undefined || selectedTriggerIndex === null || selectedTriggerIndex < 0) {
+		console.log("Failed in trigger selection: ", selectedTrigger)
+		return
+	}
+
+	var found = null
+	try {
+		for (var key in workflows) {
+			const curworkflow = workflows[key]
+			const curtrigger = curworkflow.triggers[selectedTriggerIndex]
+			if (curtrigger === undefined || curtrigger === null) {
+				continue
+			}
+
+			if (curtrigger.parameters === undefined || curtrigger.parameters === null || curtrigger.parameters.length === 0) {
+				continue
+			}
+
+			if (curtrigger.parameters[0] === undefined || curtrigger.parameters[0] === null || curtrigger.parameters[0].value === undefined || curtrigger.parameters[0].value === null) {
+				continue
+			}
+
+			if (curtrigger.parameters[0].value === selectedTrigger?.parameters[0]?.value) {
+				found = curworkflow
+				setSubworkflow(curworkflow)
+			}
+		}
+    	setSubworkflow(found)
+	} catch (e) {
+		console.log("Failed in trigger selection: ", e)
+		return
+	}
 
     if (found) {
       const startNode = found.actions?.find((action) => action.id === workflow?.triggers[selectedTriggerIndex]?.parameters[3]?.value)
@@ -1286,7 +1315,7 @@ const AngularWorkflow = (defaultprops) => {
 					}
 
 					if (changed) {
-						console.log("TRIGGER FIX: ", selectedTrigger)
+						//console.log("TRIGGER FIX: ", selectedTrigger)
 						setSelectedTrigger(selectedTrigger)
 					}
 
@@ -2204,7 +2233,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     if (curworkflow.actions === undefined || curworkflow.actions === null || curworkflow.actions.length === 0) {
-	  toast.error("The workflow is empty. Please add at least one action.")
+	  //toast.error("The workflow is empty. Please add at least one action.")
       return
     }
 
@@ -2492,7 +2521,11 @@ const AngularWorkflow = (defaultprops) => {
         } else {
           if (distributedFromParent === "" && suborgWorkflows === []) {
           } else {
+			// Slight delay to ensure we are not too fast compared to backend goroutines.
             getChildWorkflows(useworkflow.id)
+			setTimeout(() => {
+            	getChildWorkflows(useworkflow.id)
+			},250)
           }
         }
 
@@ -3108,12 +3141,13 @@ const AngularWorkflow = (defaultprops) => {
         }
 
 		// Find app with ID "794e51c3c1a8b24b89ccc573a3defc47" (gmail) to force-break it,
+		// Find app with ID "3e2bdf9d5069fe3f4746c29d68785a6a" (shuffle tools) to force-break it,
 		// as to ensure the autocorrect works. 
 		/*
-		const foundAppIndex = responseJson.findIndex((app) => app.id === "794e51c3c1a8b24b89ccc573a3defc47")
+		const foundAppIndex = responseJson.findIndex((app) => app.id === "3e2bdf9d5069fe3f4746c29d68785a6a")
 		if (foundAppIndex !== -1) {
-			responseJson[foundAppIndex].actions = responseJson[foundAppIndex].actions.slice(0, 1)
-			console.log("GMAIL APP: ", responseJson[foundAppIndex])
+			//responseJson[foundAppIndex].actions = responseJson[foundAppIndex].actions.slice(0, 1)
+			//console.log("Tools app: ", responseJson[foundAppIndex])
 		}
 		*/
 
@@ -4881,7 +4915,11 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         if (closestNode !== null && closestNode !== undefined) {
-          //console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
+		  if (closestNode.data.app_name === "Webhook" || closestNode.data.app_name === "Schedule") {
+			  return
+		  }
+          
+		  //console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
 
           /*
           if (decoratorIds.length > 0) {
@@ -6151,7 +6189,9 @@ const AngularWorkflow = (defaultprops) => {
             getAvailableWorkflows(trigger_index);
           }
         } else if (data.app_name === "Schedule") {
-			if (data.replacement_for_trigger !== undefined && data.replacement_for_trigger !== null && data.replacement_for_trigger.length > 0) {
+			if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0 && originalWorkflow.org_id !== undefined && originalWorkflow.org_id !== null && originalWorkflow.org_id.length > 0 && workflow.org_id === originalWorkflow.org_id) {
+				// Allows a parent workflow to control the schedule
+			} else if (data.replacement_for_trigger !== undefined && data.replacement_for_trigger !== null && data.replacement_for_trigger.length > 0) {
 				toast.warning("This schedule is controlled by the parent workflow. If you want additional schedule control, please add a custom schedule to this workflow.", {
 					autoClose: 30000,
 				})
@@ -8233,7 +8273,7 @@ const AngularWorkflow = (defaultprops) => {
     if (nodedata.app_name !== undefined && !workflow.public === true) {
       const allNodes = cy.nodes().jsons();
 
-      if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
+      if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule") {
         var found = false;
         for (let nodekey in allNodes) {
           const currentNode = allNodes[nodekey];
@@ -8275,7 +8315,7 @@ const AngularWorkflow = (defaultprops) => {
 
       var found = false;
       for (var _key in allNodes) {
-        const currentNode = allNodes[_key];
+        const currentNode = allNodes[_key]
         // console.log("CURRENT NODE: ", currentNode)
 
         if ((currentNode.data.buttonType === "ACTIONSUGGESTION" || currentNode.data.isButton || currentNode.data.isSuggestion) && currentNode.data.attachedTo !== nodedata.id) {
@@ -9435,6 +9475,8 @@ const AngularWorkflow = (defaultprops) => {
       console.log("END: ", cy)
       var cydata = cy.$(":selected").jsons();
       if (cydata !== undefined && cydata !== null && cydata.length > 0) {
+		// Unselect all nodes
+		cy.$(":selected").unselect()
         toast(`Selected ${cydata.length} element(s). CTRL+C to copy them.`);
       }
     });
@@ -11370,7 +11412,7 @@ const AngularWorkflow = (defaultprops) => {
           />
 
 
-          {shuffleToolsApp && !document?.getElementById("appsearch")?.value?.length && (
+          {shuffleToolsApp && !document?.getElementById("appsearch")?.value?.length && shuffleToolsApp?.actions?.length > 1 && (
             <QuickAccessSection
               title="Popular Actions"
               items={popularActions.flat()}
@@ -15187,6 +15229,10 @@ const AngularWorkflow = (defaultprops) => {
                 padding: '8px', // Adjust the text padding
               },
             }}
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              borderRadius: theme.palette?.borderRadius,
+            }}
             filterOptions={(options, { inputValue }) => {
               const lowercaseValue = inputValue.toLowerCase()
               options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
@@ -15211,10 +15257,6 @@ const AngularWorkflow = (defaultprops) => {
             }}
             options={sortByKey(apps, "name")}
             fullWidth
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette?.borderRadius,
-            }}
             onChange={(event, newValue) => {
               // Workaround with event lol
               if (newValue !== undefined && newValue !== null) {
@@ -15277,11 +15319,6 @@ const AngularWorkflow = (defaultprops) => {
             renderInput={(params) => {
               return (
                 <TextField
-                  InputProps={{
-                    style: theme.palette.innerTextfieldStyle,
-                  }}
-                  color="primary"
-                  variant="body1"
                   style={theme.palette.textFieldStyle}
                   {...params}
                   label="Associated App (optional)"
@@ -16080,13 +16117,19 @@ const AngularWorkflow = (defaultprops) => {
                       color: "white",
                     },
                   }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      height: 40, // Adjust the input height
-                    },
-                    '& .MuiAutocomplete-input': {
-                      padding: '8px', // Adjust the text padding
-                    },
+				  sx={{
+					'& .MuiOutlinedInput-root': {
+					  height: 40, // Adjust the input height
+					},
+					'& .MuiAutocomplete-input': {
+					  padding: '8px', // Adjust the text padding
+					},
+				  }}
+                  style={{
+					backgroundColor: theme.palette.inputColor,
+					borderRadius: theme.palette?.borderRadius,
+                    marginTop: 15,
+                    marginBottom: 15,
                   }}
                   getOptionSelected={(option, value) => option.id === value.id}
                   getOptionLabel={(option) => {
@@ -16104,13 +16147,6 @@ const AngularWorkflow = (defaultprops) => {
                     }].concat(workflows)
                   }
                   fullWidth
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    height: 50,
-                    borderRadius: theme.palette?.borderRadius,
-                    marginTop: 15,
-                    marginBottom: 15,
-                  }}
                   onChange={(event, newValue) => {
                     console.log("Changed autocomplete!")
                     handleWorkflowSelectionUpdate({ target: { value: newValue } }, true)
@@ -16156,10 +16192,7 @@ const AngularWorkflow = (defaultprops) => {
                   renderInput={(params) => {
                     return (
                       <TextField
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          borderRadius: theme.palette?.borderRadius,
-                        }}
+                    	style={theme.palette.textFieldStyle}
                         {...params}
                         label="Find the workflow you want to trigger"
                         variant="outlined"
@@ -16732,7 +16765,7 @@ const AngularWorkflow = (defaultprops) => {
               selectedTrigger.status === "running"
             }
             defaultValue={
-              selectedTrigger.parameters === undefined ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger.parameters[0]?.value
+              selectedTrigger?.parameters === undefined || selectedTrigger?.parameters === null || selectedTrigger?.parameters?.length === 0 ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger.parameters[0]?.value
             }
             color="primary"
             placeholder={
@@ -16927,7 +16960,7 @@ const AngularWorkflow = (defaultprops) => {
           {!distributedFromParent ?
             isCorrectOrg ? null :
               <Typography variant="body2" style={{ marginLeft: 10, }}>
-                <b>Warning</b>: Change <span
+                <b>Warning</b>: <span
                   style={{ color: "#FF8544", cursor: "pointer", pointerEvents: "auto", }}
                   onClick={() => {
                     toast("Changing to correct organisation. Please wait a few seconds.")
@@ -16994,7 +17027,7 @@ const AngularWorkflow = (defaultprops) => {
 
 
                   }}
-                >Active Organization</span> to edit this Workflow.
+                >Change Active Organization</span> to edit this Workflow.
               </Typography>
             :
             <Typography variant="body2" color="textSecondary" style={{ marginLeft: 10, }}>
@@ -17004,6 +17037,7 @@ const AngularWorkflow = (defaultprops) => {
 
           {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? 
 			originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 ?
+
 				<Button
 				  color="secondary"
 				  variant="outlined"
@@ -17101,6 +17135,7 @@ const AngularWorkflow = (defaultprops) => {
             	      }
 
             	      ReactDOM.unstable_batchedUpdates(() => {
+      					setSelectedTriggerIndex(-1)
             	        getEnvironments(e.target.value)
             	        getAppAuthentication(undefined, undefined, undefined, e.target.value)
             	        getFiles(e.target.value)
@@ -17291,7 +17326,7 @@ const AngularWorkflow = (defaultprops) => {
 								  	{orgDiff?.actions?.length > 0 &&
 										<span>- Actions ({orgDiff.actions.length}): <br/>
 											{orgDiff.actions.map((orgDiffAction, index) => {
-												console.log("DIFF: ", orgDiffAction)
+												//console.log("DIFF2: ", orgDiffAction)
 												var formattedError = ""
 
 												var paramchanges = ""

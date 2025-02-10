@@ -95,6 +95,9 @@ const data = [
   {
     selector: `node[type="COMMENT"]`,
     css: {
+      label: function(element) {
+		  return element.data("label")
+	  },
       shape: "roundrectangle",
       color: "data(color)",
       width: "data(width)",
@@ -423,7 +426,7 @@ const data = [
   {
     selector: "edge.success-highlight",
     css: {
-      width: "5px",
+      width: "3px",
       "target-arrow-color": "#41dcab",
       "line-color": "#41dcab",
       "transition-property": "line-color, width",
