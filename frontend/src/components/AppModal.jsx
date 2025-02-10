@@ -574,7 +574,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
                   {newAppname}
                 </Typography>
                 <Link
-                  to={isCloud ? "/apps/" + (app?.id || app?.objectID) : `https://shuffler.io/apps/${app?.objectID || app?.id}`}
+                  to={isCloud ? `/apps/${app?.id || app?.objectID}` : `/apps/${app?.id || app?.published_id || app?.objectID}`}
                   style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
                   target="_blank"
                   rel="noopener noreferrer"
