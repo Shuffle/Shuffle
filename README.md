@@ -25,7 +25,7 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
-* Cloud: Register at https://shuffler.io/register and get cooking (missing a lot of features)
+* Cloud: Register at https://shuffler.io/register and get cooking
 
 Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
 
