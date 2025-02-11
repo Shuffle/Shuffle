@@ -712,9 +712,9 @@ const Docs = (defaultprops) => {
                     const newdata = responseJson.reason.replace(imgRegex, '![]($1)').replace(tocRegex, "");
                     setData(newdata);
                     if (docId === undefined) {
-                        document.title = "Shuffle documentation introduction";
+                        document.title = "Shuffle automation documentation";
                     } else {
-                        document.title = "Shuffle " + docId + " documentation";
+                        document.title = "Shuffle " + docId.replace("_", " ") + " documentation";
                     }
 
                     if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {

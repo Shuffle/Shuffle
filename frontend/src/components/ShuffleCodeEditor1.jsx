@@ -53,7 +53,7 @@ import PaperComponent from "../components/PaperComponent.jsx";
 
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
-import { useNavigate, Link, useParams } from "react-router-dom";
+import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom";
 import { tags as t } from '@lezer/highlight';
 
 
@@ -100,6 +100,7 @@ const pythonFilters = [
 const extensions = []
 const CodeEditor = (props) => {
 	const {
+		workflow,
 		globalUrl,
 		fieldCount,
 		actionlist,
@@ -107,13 +108,14 @@ const CodeEditor = (props) => {
 		expansionModalOpen,
 		setExpansionModalOpen,
 		codedata,
+		handleActionParamChange,
 		setcodedata,
 		isFileEditor,
 		runUpdateText,
 		toolsAppId,
 		parameterName,
-		selectedAction,
-		selectedTrigger,
+		// selectedAction,
+		// selectedTrigger,
 		workflowExecutions,
 		getParents,
 		activeDialog,
@@ -145,7 +147,8 @@ const CodeEditor = (props) => {
 
 	const [currentCharacter, setCurrentCharacter] = React.useState(-1);
 	const [currentLine, setCurrentLine] = React.useState(-1);
-
+	const [selectedAction, setSelectedAction] = React.useState({});
+	const [selectedTrigger, setSelectedTrigger] = React.useState({});
 	const [variableOccurences, setVariableOccurences] = React.useState([]);
 	const [currentLocation, setCurrentLocation] = React.useState([]);
 	const [currentVariable, setCurrentVariable] = React.useState("");
@@ -187,6 +190,33 @@ const CodeEditor = (props) => {
 	}, [localcodedata])
 
 	let navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const actionId = searchParams.get('action_id');
+	const appName = searchParams.get('app_name');
+	const fieldName = searchParams.get('field');
+	const triggerId = searchParams.get('trigger_id');
+	const triggerField = searchParams.get('trigger_field');
+	const triggerName = searchParams.get('trigger_name');
+
+	useEffect(() => {
+		if (actionId === undefined || actionId === null) {
+			return;
+		}
+
+		const action = workflow?.actions?.find(action => action.id === actionId);
+		setlocalcodedata(editorData?.value);
+		setSelectedAction(action);
+	}, [actionId, fieldName])
+
+	useEffect(() => {
+		if (triggerId === undefined || triggerId === null) {
+			return;
+		}
+
+		const trigger = workflow?.triggers?.find(trigger => trigger.id === triggerId);
+		setlocalcodedata(editorData?.value);
+		setSelectedTrigger(trigger);
+	}, [triggerId])
 
 	useEffect(() => {
 		var allVariables = []
@@ -1364,7 +1394,7 @@ const CodeEditor = (props) => {
 				console.log("In closer")
 
 				if (changeActionParameterCodeMirror !== undefined) {
-					changeActionParameterCodeMirror({ target: { value: "" } }, fieldCount, localcodedata)
+					changeActionParameterCodeMirror({ target: { value: "" } }, fieldCount, localcodedata, selectedAction, setSelectedAction)
 				} else {
 					console.log("No action called changeActionParameterCodeMirror in code editor")
 				}
@@ -2120,7 +2150,7 @@ const CodeEditor = (props) => {
 								>
 									<div>
 										<span style={{ color: "white" }}>
-											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Output`}
+											{actionId === null ? `Output : ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)}` : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Output : ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)}(${fieldName})`}
 										</span>
 									</div>
 
@@ -2134,12 +2164,28 @@ const CodeEditor = (props) => {
 										disabled={executing}
 										color="primary"
 										style={{
-											border: `1px solid ${theme.palette.primary.main}`,
+											border: `1px solid rgba(255, 255, 255, 0.15)`,
 											position: "absolute",
-											top: 24,
+											top: 20,
 											right: 100,
 											maxHeight: 35,
 											minWidth: 70,
+											zIndex: 1200,
+											fontWeight: 500,
+											fontSize: 14,
+											backgroundColor: "rgba(33, 33, 33, 0.95)",
+											backdropFilter: "blur(8px)",
+											boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
+											transition: "all 0.2s ease",
+											borderRadius: "4px",
+											"&:hover": {
+												backgroundColor: "rgba(45, 45, 45, 0.95)",
+												transform: "translateY(-1px)",
+												boxShadow: "0 7px 14px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08)",
+											},
+											"&:active": {
+												transform: "translateY(1px)",
+											}
 										}}
 										onClick={() => {
 											executeSingleAction(expOutput)
@@ -2148,7 +2194,7 @@ const CodeEditor = (props) => {
 										{executing ?
 											<CircularProgress style={{ height: 18, width: 18, }} />
 											:
-											<span>{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} /> </span>
+											<span>{selectedAction === undefined ? "Try it" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} /> </span>
 										}
 									</Button>
 								</Tooltip>
@@ -2326,22 +2372,32 @@ const CodeEditor = (props) => {
 							setExpansionModalOpen(false)
 						} else if (changeActionParameterCodeMirror !== undefined) {
 							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
-							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist, parameterName)
+							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist, parameterName, selectedAction, setSelectedAction)
 							setExpansionModalOpen(false)
 							setcodedata(fixedcodedata)
 						}
 
-						// Check if fieldname is set, and try to find and inject the text
-						if (fieldname !== undefined && fieldname !== null && fieldname.length > 0) {
-							const foundfield = document.getElementById(fieldname)
-							if (foundfield !== undefined && foundfield !== null) {
-								foundfield.value = fixedcodedata
-								if(selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger.name === "Shuffle Workflow") {
-									handleSubflowParamChange(fixedcodedata)
-								}
-							}
-						} else {
-							//toast("No fieldname found: " + fieldname)
+						// console.log("fieldname", fieldname)
+						// // Check if fieldname is set, and try to find and inject the text
+						// if (fieldname !== undefined && fieldname !== null && fieldname.length > 0) {
+						// 	const foundfield = document.getElementById(fieldname)
+						// 	console.log("foundfield", foundfield)
+						// 	if (foundfield !== undefined && foundfield !== null) {
+						// 		foundfield.value = fixedcodedata
+						// 		if(selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger.name === "Shuffle Workflow") {
+						// 			handleSubflowParamChange(fixedcodedata)
+						// 		}
+						// 	}
+						// } else {
+						// 	//toast("No fieldname found: " + fieldname)
+						// }
+
+						if(actionId !== undefined && actionId !== null && actionId.length > 0) {
+							handleActionParamChange(actionId, fieldName, fixedcodedata)
+						}
+
+						if(triggerId !== undefined && triggerId !== null && triggerId.length > 0) {
+							handleSubflowParamChange(triggerId, triggerField, fixedcodedata)
 						}
 
 						setExpansionModalOpen(false)

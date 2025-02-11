@@ -1467,15 +1467,23 @@ const ParsedAction = (props) => {
 			actionname = "comms"
 		}
 
-		if (isIntegration) {
-
+		if (isAgent || isIntegration) {
 			// Check if actionname uppercase is in the parsedDatatypeImages() dictionary
-			if (parsedDatatypeImages()[actionname.toUpperCase()] !== undefined) {
-				var newimage = parsedDatatypeImages()[actionname.toUpperCase()]
-				//newimage = <img src={newimage} style={{width: 35, height: 35, marginRight: 5, borderRadius: 5, cursor: "pointer", border: noAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)"}} />
-				wrapperapp.large_image = newimage
+			if (isAgent) {
+				wrapperapp.large_image = theme.palette.singulBlackWhite
+				newimage = wrapperapp.large_image
+			} else if (isIntegration) {
+				wrapperapp.large_image = theme.palette.singulGreen
+				newimage = theme.palette.singulGreen
 			} else {
-				console.log("Couldn't find actionname: ", actionname)
+				const uppercaseimage = parsedDatatypeImages()[actionname.toUpperCase()]
+				if (uppercaseimage !== undefined) {
+					var newimage = uppercaseimage
+					//newimage = <img src={newimage} style={{width: 35, height: 35, marginRight: 5, borderRadius: 5, cursor: "pointer", border: noAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)"}} />
+					wrapperapp.large_image = newimage
+				} else {
+					console.log("Couldn't find actionname: ", actionname)
+				}
 			}
 		}
 
@@ -1745,6 +1753,37 @@ const ParsedAction = (props) => {
 										}
 									</Tooltip>
 								</IconButton>
+
+								{selectedAction?.generated === true && selectedAction?.app_version === "1.0.0" ? 
+									<Button
+										variant="contained"
+										color="secondary"
+										style={{marginLeft: 30, textTransform: "none", }}
+										onClick={() => {
+											if (apps === null || apps === undefined || apps?.length === 0) {
+												toast.error("No apps found. Please refresh the page.")
+												return
+											}
+
+											const app = apps.find((app) => app.id === selectedAction.app_id)
+											if (app !== undefined && app !== null) {
+												//setSelectedApp(app)
+												if (app.app_version !== undefined && app.app_version !== null && app.app_version !== "1.0.0") {
+													toast.info(`Upgraded to app version ${app.app_version}`)
+													selectedAction.app_version = app.app_version
+													setSelectedAction(selectedAction)
+													setUpdate(Math.random())
+												}
+											} else {
+												toast.error("No upgrade to be performed for this app. Expected version 1.1.0 available. App rebuild may be available.")
+											}
+										}}
+									>
+
+										Upgrade 
+									</Button>
+								: null}
+										
 							</div>
 						</div>
 						<div style={{ display: "flex", flexDirection: "column" }}>
@@ -2764,6 +2803,7 @@ const ParsedAction = (props) => {
 													}
 												}
 
+												/*
 												const iconInfo = GetIconInfo(selectedAction)
 												if (iconInfo !== undefined && iconInfo !== null) {
 													selectedAction.fillGradient = iconInfo.fillGradient
@@ -2771,6 +2811,7 @@ const ParsedAction = (props) => {
 													selectedAction.iconBackground = iconInfo.iconBackgroundColor
 													selectedAction.fillstyle = "linear-gradient"
 												}
+												*/
 
 												if (paramIndex === -1) {
 													console.log("Couldn't find app_name parameter")
@@ -2797,13 +2838,14 @@ const ParsedAction = (props) => {
 																minHeight: 30,
 																maxHeight: 30,
 
-																marginRight: 5,
+																marginRight: 25,
+																marginTop: isIntegration ? 3 : 0, 
 																borderRadius: 5,
 																cursor: "pointer",
 																border: noAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
 
-																paddingLeft: 5,
-																paddingTop: 5,
+																paddingLeft: isAgent || isIntegration ? 0 : 5,
+																paddingTop: isAgent || isIntegration ? 0 : 5,
 															}} />
 													</div>
 												</Tooltip>
@@ -4579,7 +4621,7 @@ const ParsedAction = (props) => {
 															}
 
 															//console.log("Required fields: ", selectedActionParameters[count])
-															navigate(`?action_id=${selectedAction.id}&field=${data.name}&action_name=${selectedAction.name}`)
+															navigate(`?action_id=${selectedAction.id}&field=${data.name}&action_name=${selectedAction.name}&app_name=${selectedAction?.label}`)
 															setEditorData({
 																"name": data.name,
 																"value": fixExample(parsedvalue),

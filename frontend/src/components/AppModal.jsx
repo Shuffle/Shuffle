@@ -249,6 +249,11 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
   }
 
   const getUsecase = (subcase, index, subindex) => {
+	//console.log("Skipping getUsecase")
+	// FIXME: Skipping for now as this screws over a lot of the prioritization system
+	// due to them having "looked at" the usecase.
+	return 
+
     subcase = parseUsecase(subcase)
     setPrevSubcase(subcase)
 
@@ -490,8 +495,10 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
   }
 
 
-  var canEditApp = userdata !== undefined && (userdata?.admin === "true" || userdata?.id === app?.owner || app?.owner === "" || (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org)) || !app?.generated
-
+  var canEditApp = userdata?.support || 
+                   userdata?.id === app?.owner || 
+                   (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org) || 
+                   app?.contributors?.includes(userdata?.id)
   return (
     <Dialog
       open={open}
@@ -533,15 +540,22 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
           fontFamily: theme?.typography?.fontFamily
         }}
       >
+	  	{/*
         <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "20px" }}>
           About {app?.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </Typography>
+		*/}
         <IconButton
           onClick={onClose}
           sx={{
             color: 'rgba(255, 255, 255, 0.7)',
             '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
           }}
+	  	  style={{
+			  position: "absolute",
+			  top: 10,
+			  right: 10, 
+		  }}
         >
           <CloseIcon />
         </IconButton>
@@ -570,9 +584,11 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
                 flexDirection: "row",
                 alignItems: "center",
               }}>
-                <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
-                  {newAppname}
-                </Typography>
+	  			<a href={isCloud ? "/apps/" + (app?.id || app?.objectID) : `https://shuffler.io/apps/${app?.objectID || app?.id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "rgba(255,255,255,0.9)", }}>
+					<Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
+					  {newAppname}
+					</Typography>
+	  			</a>
                 <Link
                   to={isCloud ? "/apps/" + (app?.id || app?.objectID) : `https://shuffler.io/apps/${app?.objectID || app?.id}`}
                   style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
@@ -663,6 +679,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
             </Tooltip>
             ): null}
             
+            {(canEditApp && app?.generated) && (
             <Button
               variant="contained"
               sx={{
@@ -676,10 +693,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
                 color: "#fff",
                 fontFamily: theme?.typography?.fontFamily
               }}
-              startIcon={canEditApp ? <EditIcon /> :
-                (app?.generated && app?.activated && userdata?.id !== app?.owner && isCloud ?
-                  <ForkRightIcon /> : null
-                )}
+              startIcon={canEditApp ? <EditIcon /> : <ForkRightIcon />}
               onClick={() => {
                 if (canEditApp) {
                   const editUrl = "/apps/edit/" + (app?.id || app?.objectID);
@@ -690,8 +704,9 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
                 }
               }}
             >
-              {canEditApp ? "Edit" : "Fork"}
-            </Button>
+                {canEditApp ? "Edit" : "Fork"}
+              </Button>
+            )}
           </div>
         </Box>
 
@@ -812,13 +827,13 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
               marginBottom: "16px",
               fontWeight: 600
             }}>
-              {
+              {/*
                 (foundAppUsecase?.srcapp !== undefined && foundAppUsecase?.dstapp !== undefined) ? (
                   "Connect " + foundAppUsecase?.srcapp?.replaceAll("_", " ") + " to " + foundAppUsecase?.dstapp?.replaceAll("_", " ")
                 ) : (
                   "Connect " + app?.name.replaceAll("_", " ") + " to any tool"
                 )
-              }
+              */}
             </div>
           )}
 
@@ -830,7 +845,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
             alignItems: 'center',
             mb: 3
           }}>
-            {usecaseLoading ? (
+            {/*usecaseLoading ? (
               <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
                 <Stack direction="row" spacing={-1}>
                   <Skeleton variant="circular" width={32} height={32} />
@@ -879,7 +894,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
                   {foundAppUsecase?.name || "Search for a Usecase"}
                 </Typography>
               </>
-            )}
+            )*/}
           </Box>
         </div>
 

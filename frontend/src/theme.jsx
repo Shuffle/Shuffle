@@ -76,6 +76,9 @@ const theme = createTheme(adaptV4Theme({
       fontSize: 11,
     },
     defaultImage: "/images/no_image.png",
+	singulOrange: "/images/singul_orange.png",
+	singulGreen: "/images/singul_green.png",
+	singulBlackWhite: "/images/singul_black_white.png",
   },
   typography: {
     fontFamily: `"Roboto", "Helvetica", "Arial", "inter", sans-serif`,

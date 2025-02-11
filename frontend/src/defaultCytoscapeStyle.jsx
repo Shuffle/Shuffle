@@ -131,10 +131,8 @@ const data = [
     selector: `node[example="noapp"]`,
     css: {
 	  // Make background image padding on the left side 20px
-      "background-width": "75%",
-      "background-height": "75%",
-	  "background-position-x": "17px",
-	  "background-position-y": "17px",
+      "background-width": "100%",
+      "background-height": "100%",
 
       "background-color": "data(iconBackground)",
       "background-fill": "data(fillstyle)",

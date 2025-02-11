@@ -154,8 +154,6 @@ import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import { act } from "react";
 import { Context } from "../context/ContextApi.jsx";
-// import AppStats from "../components/AppStats.jsx";
-const noImage = "/public/no_image.png";
 
 cytoscape.use(edgehandles);
 
@@ -446,6 +444,7 @@ const AngularWorkflow = (defaultprops) => {
   const [historyIndex, setHistoryIndex] = React.useState(history.length);
   const [variableInfo, setVariableInfo] = React.useState({})
   const [selectedVersion, setSelectedVersion] = React.useState(null)
+  const [selectedTriggerValue, setSelectedTriggerValue] = React.useState("")
   const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
   const [aiQueryModalOpen, setAiQueryModalOpen] = React.useState(false)
@@ -572,6 +571,13 @@ const AngularWorkflow = (defaultprops) => {
     }
   }, [editWorkflowModalOpen])
 
+  useEffect(() => {
+    if (selectedTrigger !== undefined && selectedTrigger.parameters !== undefined) {
+      // Right now just setting for the subflow
+      setSelectedTriggerValue(selectedTrigger?.parameters[1]?.value)
+    }
+  }, [selectedTrigger])
+
   const dragRef = React.useRef(false);
 
 
@@ -628,11 +634,13 @@ const AngularWorkflow = (defaultprops) => {
 					"multiselect": true,
 				},
 			]
-		}]
+		}],
+		large_image: theme.palette.singulBlackWhite,
 	},
 	{
     "id": "integration",
     "name": "Singul",
+	"large_image": theme.palette.singulGreen,
     "type": "ACTION",
     "app_version": "1.0.0",
     "loop_versions": ["1.0.0"],
@@ -9336,13 +9344,15 @@ const AngularWorkflow = (defaultprops) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   //useEffect(() => {
   if (firstrequest) {
-    setFirstrequest(false);
-    getWorkflow(props.match.params.key, {});
+    setFirstrequest(false)
+    getWorkflow(props.match.params.key, {})
     getChildWorkflows(props.match.params.key)
     getRevisionHistory(props.match.params.key)
     loadTriggers()
     getApps()
     fetchUsecases()
+
+    getWorkflowExecution(props.match.params.key, "", executionFilter)
 
     setLeftSideBarOpenByClick(false)
     localStorage.setItem("expandLeftNav", false)
@@ -14008,23 +14018,25 @@ const AngularWorkflow = (defaultprops) => {
     }
   ]
 
-  const handleSubflowParamChange = (value) => {
+  const handleSubflowParamChange = (triggerId, triggerField, newData) => {
 
-    if (!workflow?.triggers || !workflow.triggers[selectedTriggerIndex]?.parameters) {
-      console.log("Required workflow properties are undefined")
-      return
-    }
-
-    if (!workflow.triggers[selectedTriggerIndex].parameters[1]) {
-      workflow.triggers[selectedTriggerIndex].parameters[1] = {
-        name: "execution_argument",
-        value: ""
+    if (workflow !== undefined && workflow !== null) {  
+        // Find the trigger with matching id 
+      const triggerIndex = workflow?.triggers?.findIndex(trigger => trigger.id === triggerId);
+      if (triggerIndex >= 0) {
+        // Find the parameter with matching name
+        const paramIndex = workflow.triggers[triggerIndex].parameters?.findIndex(param => param.name === triggerField);
+        if (paramIndex >= 0) {
+          // Update the parameter value
+          workflow.triggers[triggerIndex].parameters[paramIndex].value = newData;
+          
+          // Update workflow state to trigger re-render
+          setWorkflow({...workflow});
+          setSelectedTriggerValue(newData)
+          setLastSaved(false);
+        }
       }
     }
-
-    workflow.triggers[selectedTriggerIndex].parameters[1].value = value
-    setWorkflow(workflow)
-    setLastSaved(false)
   }
 
   const SubflowSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null :
@@ -14482,6 +14494,8 @@ const AngularWorkflow = (defaultprops) => {
                     setActiveDialog("codeeditor")
                     var parsedvalue = workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
 
+                    // Right now Handling subflow only with this
+                    navigate(`?trigger_id=${selectedTrigger.id}&trigger_field=${"argument"}&trigger_name=${selectedTrigger.label}`)
                     setEditorData({
                       "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
                       "value": parsedvalue,
@@ -14531,13 +14545,16 @@ const AngularWorkflow = (defaultprops) => {
             fullWidth
             color="primary"
             placeholder="Some execution data"
-            defaultValue={
-              workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
+            value={
+              selectedTriggerValue
             }
-            onChange={(e) => {
-              workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
-              setWorkflow(workflow)
+            onChange={(e) => {  
               setLastSaved(false)
+              setSelectedTriggerValue(e.target.value)
+            }}
+            onBlur={() => {
+              workflow.triggers[selectedTriggerIndex].parameters[1].value = selectedTriggerValue
+              setWorkflow(workflow)
             }}
           />
           {!showDropdown ? null :
@@ -16933,7 +16950,11 @@ const AngularWorkflow = (defaultprops) => {
               setLastSaved(false)
             }}
           >
-            <EditIcon style={{ position: "absolute", top: 7, height: 20, width: 20, }} />
+			{workflow.name !== undefined && workflow.name !== null && workflow.name.length > 0 ?
+            	<EditIcon style={{ position: "absolute", top: 7, height: 20, width: 20, }} />
+				: 
+				null
+			}
             <span style={{ marginLeft: 30, }}>{workflow.name}</span>
           </Typography>
           {workflowAsCode && (
@@ -17055,22 +17076,22 @@ const AngularWorkflow = (defaultprops) => {
 				>
 				  Go to parent org workflow
 				</Button>
-				: userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
-				<Button
-				  color="secondary"
-				  variant="outlined"
-				  style={{
-					  marginTop: 10, 
-					  marginBottom: 10, 
-					  textTransform: "none",
-					  marginLeft: 10, 
-				  }}
-			  	  onClick={() => {
-                    setEditWorkflowModalOpen(true)
-				  }}
-				>
-					Enable Suborg Distribution
-				</Button>
+				: userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 ?
+					<Button
+					  color="secondary"
+					  variant="outlined"
+					  style={{
+						  marginTop: 10, 
+						  marginBottom: 10, 
+						  textTransform: "none",
+						  marginLeft: 10, 
+					  }}
+					  onClick={() => {
+						setEditWorkflowModalOpen(true)
+					  }}
+					>
+						Enable Suborg Distribution
+					</Button>
 			    : null
 
 			:
@@ -19353,14 +19374,14 @@ const AngularWorkflow = (defaultprops) => {
       base_node_name = "exec"
     }
 
-    console.log("COPY: ", base_node_name, copy);
+    //console.log("COPY: ", base_node_name, copy);
 
     //var newitem = JSON.parse(base);
     var newitem = validateJson(base).result
 
     // Check if base_node_name has changed
     if (cy !== undefined && cy !== null) {
-      console.log("Change name?")
+      //console.log("Change name?")
       //const allNodes = cy.nodes().jsons();
       //for (var key in allNodes) {
       //const currentNode = allNodes[key];
@@ -19401,7 +19422,7 @@ const AngularWorkflow = (defaultprops) => {
     const elementName = "copy_element_shuffle";
     var copyText = document.getElementById(elementName);
     if (copyText !== null && copyText !== undefined) {
-      console.log("NAVIGATOR: ", navigator);
+      //console.log("NAVIGATOR: ", navigator);
       const clipboard = navigator.clipboard;
       if (clipboard === undefined) {
         toast("Can only copy over HTTPS (port 3443)");
@@ -19414,7 +19435,7 @@ const AngularWorkflow = (defaultprops) => {
 
       /* Copy the text inside the text field */
       document.execCommand("copy");
-      console.log("COPYING!");
+      //console.log("COPYING!");
       toast("Copied JSON path to clipboard.")
     } else {
       console.log("Couldn't find element ", elementName);
@@ -21539,18 +21560,28 @@ const AngularWorkflow = (defaultprops) => {
               textAlign: "center",
             }}
           >
-            <CircularProgress
-              style={{
-                marginTop: "30vh",
-                height: 35,
-                width: 35,
-                marginLeft: "auto",
-                marginRight: "auto",
-              }}
-            />
-            <Typography variant="body1" color="textSecondary">
-              Loading Workflow
-            </Typography>
+			{isLoaded && workflowDone ? 
+				<div style={{marginTop: "30vh", }}>
+					<Typography variant="body1" color="textSecondary">
+						No workflow to load. Workflow runs may still exist. If you think this is wrong, please contact support@shuffler.io
+					</Typography>
+				</div>
+			:
+				<div>
+					<CircularProgress
+					  style={{
+						marginTop: "30vh",
+						height: 35,
+						width: 35,
+						marginLeft: "auto",
+						marginRight: "auto",
+					  }}
+					/>
+					<Typography variant="body1" color="textSecondary">
+					  Loading Workflow
+					</Typography>
+				</div>
+			}
           </div>
         ) : (
           <span>
@@ -23330,7 +23361,7 @@ const AngularWorkflow = (defaultprops) => {
       </div>
     </div>
 
-  const changeActionParameterCodeMirror = (event, count, data, actionlist, parametername) => {
+  const changeActionParameterCodeMirror = (event, count, data, actionlist, parametername, selectedAction, setSelectedAction) => {
 
     // FIXME: This exists ONLY to make sure focus + blur actually changes the field value
     // in fields from ParsedAction.jsx such as rightside_field_2
@@ -23510,6 +23541,25 @@ const AngularWorkflow = (defaultprops) => {
     //setUpdate(Math.random())
   }
 
+  const handleActionParamChange = (actionId, fieldName, newData) => {
+    if (workflow !== undefined) {
+      // Find the action with matching id
+      const actionIndex = workflow?.actions.findIndex(action => action.id === actionId);
+      if (actionIndex >= 0) {
+        // Find the parameter with matching name
+        console.log("fieldName", fieldName)
+        const paramIndex = workflow.actions[actionIndex].parameters.findIndex(param => param.name === fieldName);
+        if (paramIndex >= 0) {
+          // Update the parameter value
+          workflow.actions[actionIndex].parameters[paramIndex].value = newData;
+          
+          // Update workflow state to trigger re-render
+          setWorkflow({...workflow});
+          setLastSaved(false);
+        }
+      }
+    }
+  }
   /*
   var foundusecase = {}
   if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0 && userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
@@ -23587,19 +23637,21 @@ const AngularWorkflow = (defaultprops) => {
 
         {codeEditorModalOpen ?
           <ShuffleCodeEditor
+            workflow={workflow}
             expansionModalOpen={codeEditorModalOpen}
             setExpansionModalOpen={setCodeEditorModalOpen}
             isCloud={isCloud}
             globalUrl={globalUrl}
             workflowExecutions={workflowExecutions}
             getParents={getParents}
-            selectedAction={selectedAction}
-            selectedTrigger={selectedTrigger}
+            // selectedAction={selectedAction}
+            // selectedTrigger={selectedTrigger}
             aiSubmit={aiSubmit}
             toolsAppId={toolsApp.id}
             handleSubflowParamChange={handleSubflowParamChange}
             codedata={editorData.value}
             setcodedata={setcodedata}
+            handleActionParamChange={handleActionParamChange}
 
             // Not working out of the box
             parameterName={editorData.name}

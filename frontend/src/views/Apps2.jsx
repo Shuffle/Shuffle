@@ -28,6 +28,7 @@ import {
   Close as CloseIcon,
   Cached as CachedIcon,
   CloudDownload as CloudDownloadIcon,
+  ForkRight as ForkRightIcon,
 } from "@mui/icons-material";
 
 import InputAdornment from '@mui/material/InputAdornment';
@@ -52,8 +53,13 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
   const navigate = useNavigate();
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
-  var canEditApp = userdata.admin === "true" || userdata.id === data?.owner || data?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === data?.reference_org) || !data?.generated
 
+  var canEditApp = userdata?.support || 
+                  userdata?.id === data?.owner || 
+                  (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || 
+                  data?.contributors?.includes(userdata?.id)
+
+  console.log("appdata", data)
   const paperStyle = {
     backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
     color: "rgba(241, 241, 241, 1)",
@@ -183,7 +189,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   ))}
                 </div>
                 {/* Deactivate button */}
-                {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
+                {(currTab === 0 || currTab === 1) && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
                   <div style={{
                     display: "flex",
                     gap: 8,
@@ -191,7 +197,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                     paddingRight: 20
                   }}>
                     {
-                      canEditApp && (
+                      canEditApp ? (
                         <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
                           onClick={(event) => {
                             event.preventDefault();
@@ -203,6 +209,17 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                           }}
                         >
                           <EditIcon />
+                        </button>
+                      ) : (
+                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          const editUrl = "/apps/new?id=" + data?.id;
+                          navigate(editUrl)
+                        }}
+                        >
+                        <ForkRightIcon />
                         </button>
                       )
                     }
@@ -1843,6 +1860,8 @@ const Apps2 = (props) => {
     borderRadius: "2px",
     color: "#FF8544"
   }
+
+  console.log("User", userdata)
 
   return (
     <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
