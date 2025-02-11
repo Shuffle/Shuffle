@@ -476,8 +476,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			{/* <Route exact path="/apps/:appid" element={<AppExplorer userdata={userdata} isLoggedIn={isLoggedIn} isLoaded={isLoaded}  globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
-			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded}globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} /> */}
+			<Route exact path="/apps/:appid" element={<AppExplorer userdata={userdata} isLoggedIn={isLoggedIn} isLoaded={isLoaded}  globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
+			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded}globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
 			<Route
 				exact
 				path="/detections/sigma"

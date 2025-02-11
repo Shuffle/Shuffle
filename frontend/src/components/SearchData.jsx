@@ -495,7 +495,7 @@ const SearchData = props => {
                                 })
                             }
 
-                            var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://shuffler.io/apps/${hit.objectID}`
+                            var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `/apps/${hit.objectID}`
                             parsedUrl += `?queryID=${hit.__queryID}`
 
                             return (

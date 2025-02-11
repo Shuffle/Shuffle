@@ -417,8 +417,8 @@ const AppGrid = (props) => {
                   {hits.map((data, index) => {
                     const appUrl =
                               isCloud === true ?
-                              `/apps/${data.id}`
-                                : `https://shuffler.io/apps/${data.objectID}`;
+                              `/apps/${data.objectID}`
+                                : `apps/${data.objectID}`;
 
                               if (data.name === "" && data.id === "") {
                                 return null
