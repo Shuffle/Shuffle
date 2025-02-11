@@ -1,21 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import theme from "../theme.jsx";
 import { makeStyles } from "@mui/styles";
 import { toast } from 'react-toastify';
+import ImageUploadModal from "./ImageUploadModal";
 
 import {
-	Tooltip,
-	Grid,
-	Button,
-	TextField,
-	Typography,
-	IconButton,
+  Tooltip,
+  Button,
+  TextField,
 } from "@mui/material";
 
 import {
-	ExpandLess as ExpandLessIcon,
-	ExpandMore as ExpandMoreIcon,
-	Save as SaveIcon,
+  Save as SaveIcon,
 } from "@mui/icons-material";
 
 const useStyles = makeStyles({
@@ -32,13 +28,13 @@ const OrgHeader = (props) => {
     setSelectedOrganization,
     globalUrl,
     isCloud,
-		adminTab,
-  	handleEditOrg, 
+    adminTab,
+    handleEditOrg,
   } = props;
 
   const classes = useStyles();
 
-  var upload = "";
+  const upload = useRef(null);
   const defaultBranch = "master";
   const [orgName, setOrgName] = React.useState(selectedOrganization.name);
   const [orgDescription, setOrgDescription] = React.useState(
@@ -51,6 +47,66 @@ const OrgHeader = (props) => {
     selectedOrganization.image
   );
   const [expanded, setExpanded] = React.useState(false);
+  const [imageUploadError, setImageUploadError] = useState("");
+  const [openImageModal, setOpenImageModal] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [rotate, setRotatation] = useState(0);
+  const [disableImageUpload, setDisableImageUpload] = useState(true);
+
+  let editor;
+  const setEditorRef = (imgEditor) => {
+    editor = imgEditor;
+  };
+
+  const zoomIn = () => {
+    setScale(scale + 0.1);
+  };
+
+  const zoomOut = () => {
+    setScale(scale - 0.1);
+  };
+
+  const rotatation = () => {
+    setRotatation(rotate + 10);
+  };
+
+  const onPositionChange = () => {
+    setDisableImageUpload(false);
+  };
+
+  const onCancelSaveOrgIcon = () => {
+    setFile("");
+    setOpenImageModal(false);
+    setImageUploadError("");
+  };
+
+  const onSaveOrgIcon = (newImage) => {
+    setFile("");
+    setFileBase64(newImage);
+    setOpenImageModal(false);
+    selectedOrganization.image = newImage;
+    setSelectedOrganization(selectedOrganization);
+  };
+
+  const dividerStyle = { marginTop: 15, marginBottom: 15 };
+  const orgIconStyle = { margin: 5, width: 50, height: 50 };
+
+
+  const imageUploadModalView = openImageModal ? (
+    <ImageUploadModal
+      open={openImageModal}
+      onClose={onCancelSaveOrgIcon}
+      file={file}
+      fileBase64={fileBase64}
+      onSave={onSaveOrgIcon}
+      title="Upload Organization Icon"
+      upload={upload}
+    />
+  ) : null;
+
+  const imageClickHandler = () => {
+    setOpenImageModal(true);
+  };
 
   if (file !== "") {
     const img = document.getElementById("logo");
@@ -134,7 +190,7 @@ const OrgHeader = (props) => {
               SSORequired: selectedOrganization?.sso_config?.SSORequired,
               auto_provision: selectedOrganization?.sso_config?.auto_provision,
             },
-						[],
+            [],
           )
         }
       >
@@ -145,7 +201,7 @@ const OrgHeader = (props) => {
 
   var imageData = file.length > 0 ? file : fileBase64;
   imageData = imageData === undefined || imageData.length === 0 ? defaultImage : imageData
-      
+
 
   const imageInfo = (
     <img
@@ -158,13 +214,22 @@ const OrgHeader = (props) => {
         minWidth: 174,
         minHeight: 174,
         objectFit: "contain",
-	    borderRadius: theme.shape.borderRadius,
+        borderRadius: theme.shape.borderRadius,
       }}
     />
   );
 
   return (
     <div>
+      <ImageUploadModal
+        open={openImageModal}
+        onClose={onCancelSaveOrgIcon}
+        file={file}
+        fileBase64={fileBase64}
+        onSave={onSaveOrgIcon}
+        title="Upload Organization Icon"
+        upload={upload}
+      />
       <div
         style={{
           color: "white",
@@ -188,16 +253,14 @@ const OrgHeader = (props) => {
               cursor: "pointer",
               maxWidth: 174,
               maxHeight: 174,
-			  borderRadius: theme.shape.borderRadius,
+              borderRadius: theme.shape.borderRadius,
             }}
-            onClick={() => {
-              upload.click();
-            }}
+            onClick={imageClickHandler}
           >
             <input
               hidden
               type="file"
-              ref={(ref) => (upload = ref)}
+              ref={upload}
               onChange={editHeaderImage}
             />
             {imageInfo}

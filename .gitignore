@@ -30,3 +30,4 @@ shuffle-database/performance_analyzer_enabled.conf
 shuffle-database/rca_enabled.conf
 
 */package-lock.json
+shuffle-database/thread_contention_monitoring_enabled.conf
