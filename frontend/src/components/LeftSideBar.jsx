@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useContext, useCallback, useMemo, memo } from "react";
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
@@ -754,35 +754,6 @@ useEffect(() => {
     fontSize: 18
   };
 
-  const modalView = (
-		<Dialog
-			open={searchBarModalOpen}
-			onClose={() => {
-				setSearchBarModalOpen(false);
-			}}
-			PaperProps={{
-				style: {
-					color: "white",
-					minWidth: 750,
-					height: 785,
-					borderRadius: 16,
-					border: "1px solid var(--Container-Stroke, #494949)",
-					background: "var(--Container, #000000)",
-					boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
-					zIndex: 13000,
-          			paddingTop: 20,
-				},
-			}}
-		>
-			<DialogContent className='dialog-content' style={{}}>
-				<SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
-			</DialogContent>
-			<Divider style={{overflow: "hidden"}}/>
-			<span style={{display:"flex", width:"100%", height:30}}>
-			</span>
-		</Dialog>
-	);
-
   const getRegionFlag = (region_url) => {
     var region = "gb";
     const regionMapping = {
@@ -821,7 +792,7 @@ useEffect(() => {
         height: "calc((100vh - 32px)*1.2)",
       }}
     >
-      {modalView}
+      {searchBarModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} /> : null}
       <Box
         sx={{
           display: "flex",
@@ -1908,3 +1879,37 @@ useEffect(() => {
 };
 
 export default LeftSideBar;
+
+
+const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata}) => {
+  return (
+    (
+      <Dialog
+        open={searchBarModalOpen}
+        onClose={() => {
+          setSearchBarModalOpen(false);
+        }}
+        PaperProps={{
+          style: {
+            color: "white",
+            minWidth: 750,
+            height: 785,
+            borderRadius: 16,
+            border: "1px solid var(--Container-Stroke, #494949)",
+            background: "var(--Container, #000000)",
+            boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+            zIndex: 13000,
+                  paddingTop: 20,
+          },
+        }}
+      >
+        <DialogContent className='dialog-content' style={{}}>
+          <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
+        </DialogContent>
+        <Divider style={{overflow: "hidden"}}/>
+        <span style={{display:"flex", width:"100%", height:30}}>
+        </span>
+      </Dialog>
+    )
+  )
+});

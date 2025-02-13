@@ -4122,7 +4122,10 @@ const AngularWorkflow = (defaultprops) => {
                 setCookie("session_token", sessionToken, { path: "/" });
                 window.location.href = "https://shuffler.io/workflows/3abdfb21-b40f-4e50-b855-ac0d62f83cbe";
               }, 2000)
-            }
+            } else if (execFound !== null && response.status >= 300) {
+				toast.info("Failed to load the workflow, but you may still find a list of workflow runs if you have access.")
+          		setExecutionModalOpen(true)
+			}
           }
         }
 

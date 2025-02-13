@@ -310,11 +310,13 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 		if(region === "US") {
 			region = "us-west2"
 		} else if(region === "EU") {
-			region = "europe-west3"
+			region = "europe-west2"
 		} else if(region === "CA") {
 			region = "northamerica-northeast1"
 		} else if(region === "UK") {
 			region = "europe-west2"
+		} else if (region === "EU-2") {
+			region = "europe-west3"
 		}
 
 		var data = {

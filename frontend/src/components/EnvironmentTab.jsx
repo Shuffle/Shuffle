@@ -734,9 +734,9 @@ const EnvironmentTab = memo((props) => {
             <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin' }}>
               <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
               <div style={{ marginBottom: 20 }}>
-                <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Locations</h2>
+                <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Runtime Locations</h2>
                 <span style={{ color: textColor }}>
-                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously Environments. <br /> If you have scale problems, talk to our team: support@shuffler.io.&nbsp;
+                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously called Environments. <br /> If you have scale problems, <a href="https://shuffler.io/docs/configuration#high-availability" target="_blank" rel="noopener noreferrer" style={{ color: "#FF8444" }}>check the docs</a> or talk to our team: support@shuffler.io.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
@@ -1310,7 +1310,7 @@ const EnvironmentTab = memo((props) => {
                     <div style={{minWidth: 700, maxWidth: 700, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
-                            Your Self-Hosted Orborus instance
+                            Self-Hosted Orborus instance
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
                             Orborus is the Shuffle queue handler that runs your hybrid workflows and manages pipelines. It can be run in Docker/k8s container on your server or in your cluster. Follow the steps below, and configure as need be.
@@ -1399,9 +1399,23 @@ const EnvironmentTab = memo((props) => {
                               >
                                 {getOrborusCommand(environment)}
                               </code>
-                              <CopyToClipboard
-                                text={orborusCommandWrapper()}
-                              />
+
+        						<div
+        						    style={{
+										position: "absolute",
+        								right: 0,
+        								top: -10,
+									}}
+        						>
+        						    <IconButton
+        						        onClick={() => {
+        						            navigator.clipboard.writeText(orborusCommandWrapper())
+        						            toast("Copied to clipboard")
+        						        }}
+        						    >
+        						        <FileCopyIcon />
+        						    </IconButton>
+        						</div>
                             </div>
         
                             <Divider style={{marginTop: 25, marginBottom: 10, }}/>

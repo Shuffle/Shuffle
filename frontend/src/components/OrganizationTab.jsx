@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import Billing from "../components/Billing.jsx";
 import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
-// import AnalyticsTab from '../components/AnalyticsTab.jsx';
+import AnalyticsTab from '../components/AnalyticsTab.jsx';
 import EditOrgTab from '../components/EditOrgTab.jsx';
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
 import   SSOTab from "../components/ssoTab.jsx"
