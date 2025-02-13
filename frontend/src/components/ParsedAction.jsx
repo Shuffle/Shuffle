@@ -222,6 +222,10 @@ const ParsedAction = (props) => {
 			return
 		}
 
+		if (selectedApp !== undefined && selectedApp !== null && selectedApp.generated !== true) {
+			return
+		}
+
 		// Fixing required fields with a shitty structure :)
 		if (selectedApp !== undefined && selectedApp !== null && selectedApp.generated === true && selectedAction !== undefined && selectedAction !== null && selectedAction.name !== undefined && selectedAction.name !== null && selectedApp.actions !== undefined && selectedApp.actions !== null && selectedApp.actions.length > 0 && (selectedAction.required_body_fields === undefined || selectedAction.required_body_fields === null || selectedAction.required_body_fields.length === 0)) {
 			// Check for required fields
@@ -654,8 +658,8 @@ const ParsedAction = (props) => {
 					const valid = validateJson(execArg);
 					if (valid.valid) {
 						newActionList.push({
-							type: "Execution Argument",
-							name: "Execution Argument",
+							type: "Runtime Argument",
+							name: "Runtime Argument",
 							value: "$exec",
 							highlight: "exec",
 							autocomplete: "exec",
@@ -668,11 +672,11 @@ const ParsedAction = (props) => {
 			}
 		}
 
-		// Add default Execution Argument if none were added
+		// Add default Runtime Argument if none were added
 		if (newActionList.length === 0) {
 			newActionList.push({
-				type: "Execution Argument",
-				name: "Execution Argument",
+				type: "Runtime Argument",
+				name: "Runtime Argument",
 				value: "$exec",
 				highlight: "exec",
 				autocomplete: "exec",
@@ -749,7 +753,7 @@ const ParsedAction = (props) => {
 			if (parents.length > 1) {
 				const labels = [];
 				for (let parentNode of parents) {
-					if (parentNode.label !== "Execution Argument" && !labels.includes(parentNode.label)) {
+					if (parentNode.label !== "Runtime Argument" && !labels.includes(parentNode.label)) {
 						labels.push(parentNode.label);
 						let exampleData = parentNode.example ?? "";
 						if (!exampleData && workflowExecutions.length > 0) {
@@ -1625,15 +1629,17 @@ const ParsedAction = (props) => {
 									//window.open("/apps/${selectedAction.app_id}", "_blank")
 								}}
 							>
-								<Tooltip title={"App: " + selectedAction.app_name} placement="top">
-									<img src={selectedAppIcon} style={{
-										width: 30,
-										height: 30,
-										marginRight: 10,
-										borderRadius: 5,
-										marginTop: 13,
-										border: "2px solid rgba(255,255,255,0.3)",
-									}} />
+								<Tooltip title={"App: " + selectedAction.app_name + ". Click to open in new tab"} placement="top">
+									<a href={"/apps/" + selectedAction?.app_id} target="_blank" style={{ textDecoration: "none", color: "white", }}>
+										<img src={selectedAppIcon} style={{
+											width: 30,
+											height: 30,
+											marginRight: 10,
+											borderRadius: 5,
+											marginTop: 13,
+											border: "2px solid rgba(255,255,255,0.3)",
+										}} />
+									</a>
 								</Tooltip>
 
 								<h3 style={{}}>
@@ -1754,7 +1760,7 @@ const ParsedAction = (props) => {
 									</Tooltip>
 								</IconButton>
 
-								{selectedAction?.generated === true && selectedAction?.app_version === "1.0.0" ? 
+								{(selectedAction?.generated === true && selectedAction?.app_version === "1.0.0") || (selectedAction?.app_name === "Shuffle Tools" && selectedAction?.app_version !== "1.2.0")  ? 
 									<Button
 										variant="contained"
 										color="secondary"
@@ -1857,6 +1863,7 @@ const ParsedAction = (props) => {
 								}}
 								fullWidth
 								color="primary"
+								disabled={selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0}
 								placeholder={selectedAction.label}
 								value={appActionName}
 								onChange={(event) => {
@@ -2077,6 +2084,7 @@ const ParsedAction = (props) => {
 											style: theme.palette.innerTextfieldStyle,
 											disableUnderline: true,
 										}}
+										disabled={selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0}
 										placeholder={selectedAction.execution_delay}
 										value={delay}
 										onChange={(event) => {
@@ -2778,6 +2786,20 @@ const ParsedAction = (props) => {
 						}}
 					/>
 				) : null}
+
+				{selectedAction?.app_name === "Shuffle AI" && selectedAction?.name === "run_llm" ?
+					selectedAction?.environment === "Cloud" && isCloud ? (
+						<Typography color="textSecondary" variant="body2" style={{ paddingTop: 25, }}>
+							Info: Cloud Inference processing runs with Shuffle's GPUs in EU, Netherlands, and may be unstable. Your data is NOT stored there.
+						</Typography> 
+					)
+					:
+					<Typography color="textSecondary" variant="body2" style={{ paddingTop: 25, color: red, }}>
+						This action is slow without GPU's. Use Shuffle's Cloud Runtime location for faster processing.
+					</Typography> 
+					:
+					null
+				}
 
 				<div
 					style={{
@@ -4251,7 +4273,7 @@ const ParsedAction = (props) => {
 													};
 
 													const handleMouseover = () => {
-														if (innerdata.type === "Execution Argument") {
+														if (innerdata.type === "Runtime Argument") {
 															handleExecArgumentHover(true);
 														} else if (innerdata.type === "action") {
 															handleActionHover(true, innerdata.id);
@@ -4259,7 +4281,7 @@ const ParsedAction = (props) => {
 													};
 
 													const handleMouseOut = () => {
-														if (innerdata.type === "Execution Argument") {
+														if (innerdata.type === "Runtime Argument") {
 															handleExecArgumentHover(false);
 														} else if (innerdata.type === "action") {
 															handleActionHover(false, innerdata.id);

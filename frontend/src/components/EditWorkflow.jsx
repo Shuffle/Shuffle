@@ -71,8 +71,7 @@ const EditWorkflow = (props) => {
 	const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
 	const [submitLoading, setSubmitLoading] = React.useState(false);
-	//const [showMoreClicked, setShowMoreClicked] = React.useState(expanded === true ? true : false);
-	const [showMoreClicked, setShowMoreClicked] = React.useState(true);
+	const [showMoreClicked, setShowMoreClicked] = React.useState(isEditing !== false ? true : false);
 
 	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
 
@@ -569,12 +568,13 @@ const EditWorkflow = (props) => {
 								<Divider id="mssp_control" style={{ marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h4" style={{ marginTop: 50, }}>
-									MSSP controls
+									MSSP & Distribution controls
 								</Typography>
 
-								<Typography variant="body1" style={{ marginTop: 50, }}>
-									MSSP Suborg Distribution (<b>beta</b> - contact support@shuffler.io for more info)
+								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
+									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (<b>late beta</b> - contact support@shuffler.io if you want a demo. Please try it!)
 								</Typography>
+
 								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
@@ -677,15 +677,12 @@ const EditWorkflow = (props) => {
 									</Link>
 								}
 
-								{/*<Divider style={{marginTop: 20, marginBottom: 20, }} />*/}
 
-
-
-								<Typography variant="body1" style={{ marginTop: 100, }}>
+								<Typography variant="body1" style={{ marginTop: 75, }}>
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
-									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides your <a href="/admin?admin_tab=org_config" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=notifications" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">notifications</a> if it fails.
+									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' and be formatted, with removed images, to make diffing easy. Overrides your <a href="/admin?admin_tab=org_config" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=notifications" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">notifications</a> if it fails.
 								</Typography>
 								<Grid container style={{ marginTop: 10, }} spacing={2}>
 									<Grid item xs={6} style={{}}>
@@ -1078,122 +1075,106 @@ const EditWorkflow = (props) => {
 										</Select>
 									</FormControl>
 								</div>
-							</div>
-							: null}
 
-						{/*!isEditing ? <>
-							<div style={{ marginTop: 20, }}>
-								<FormControlLabel
-									control={<Checkbox />}
-									label="Create workflow as code"
-									style={{ marginTop: '12px' }}
-									onChange={(e) => {
-										setWorkflowAsCode(e.target.checked)
-										workflow.workflow_as_code = e.target.checked
-										setWorkflow(workflow)
-										setInnerWorkflow(workflow)
+
+							<Typography variant="h4" style={{ marginTop: 100, }}>
+								Publishing
+							</Typography>
+							<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+								Publishing is related to making the workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to everyone. The details below will help a user understand this better. When a workflow is published, you keep the original, and a copy enters the workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator account</a>, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow screen. After publishing, you can find it in the Shuffle search engine.
+							</Typography>
+
+							<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
+								<DatePicker
+									sx={{
+										marginTop: 3,
+										marginLeft: 3,
+									}}
+									value={dueDate}
+									label="Due Date"
+									format="YYYY-MM-DD"
+									onChange={(newValue) => {
+										setDueDate(newValue)
 									}}
 								/>
+							</LocalizationProvider>
 
-							</div>
-						</> : null*/}
+							<FormControl style={{ marginTop: 15, }}>
+								<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
+								<RadioGroup
+									row
+									aria-labelledby="demo-row-radio-buttons-group-label"
+									name="row-radio-buttons-group"
+									defaultValue={innerWorkflow.workflow_type}
+									onChange={(e) => {
+										console.log("Data: ", e.target.value)
 
-						<Typography variant="h4" style={{ marginTop: 100, }}>
-							Publishing
-						</Typography>
-						<Typography variant="body1" color="textSecondary" style={{ marginTop: 10, }}>
-							Publishing is related to making the workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to everyone. The details below will help a user understand this better. When a workflow is published, you keep the original, and a copy enters the workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator account</a>, if you have one. You can always unpublish the workflow after. To publish it, click the three dots next to the workflow.
-						</Typography>
+										innerWorkflow.workflow_type = e.target.value
+										setInnerWorkflow(innerWorkflow)
+									}}
+								>
+									<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+									<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+									<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
 
-						<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
-							<DatePicker
-								sx={{
-									marginTop: 3,
-									marginLeft: 3,
-								}}
-								value={dueDate}
-								label="Due Date"
-								format="YYYY-MM-DD"
-								onChange={(newValue) => {
-									setDueDate(newValue)
-								}}
-							/>
-						</LocalizationProvider>
+								</RadioGroup>
+							</FormControl>
 
-						<FormControl style={{ marginTop: 15, }}>
-							<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
-							<RadioGroup
-								row
-								aria-labelledby="demo-row-radio-buttons-group-label"
-								name="row-radio-buttons-group"
-								defaultValue={innerWorkflow.workflow_type}
-								onChange={(e) => {
-									console.log("Data: ", e.target.value)
 
-									innerWorkflow.workflow_type = e.target.value
+							<TextField
+								onBlur={(event) => {
+									innerWorkflow.blogpost = event.target.value
 									setInnerWorkflow(innerWorkflow)
 								}}
-							>
-								<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
-								<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
-								<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
-
-							</RadioGroup>
-						</FormControl>
-
-
-						<TextField
-							onBlur={(event) => {
-								innerWorkflow.blogpost = event.target.value
-								setInnerWorkflow(innerWorkflow)
-							}}
-							InputProps={{
-								style: {
-									color: "white",
-								},
-							}}
-							color="primary"
-							defaultValue={innerWorkflow.blogpost}
-							placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
-							rows="1"
-							label="blogpost"
-							margin="dense"
-							fullWidth
-						/>
-						<TextField
-							onBlur={(event) => {
-								innerWorkflow.video = event.target.value
-								setInnerWorkflow(innerWorkflow)
-							}}
-							InputProps={{
-								style: {
-									color: "white",
-								},
-							}}
-							color="primary"
-							defaultValue={innerWorkflow.video}
-							placeholder="A youtube or loom link to the video"
-							rows="1"
-							label="Video"
-							margin="dense"
-							fullWidth
-						/>
-
-						<Tooltip color="primary" title={"Add more details"} placement="top">
-							<Button
-								style={{ margin: "auto", marginTop: 50, marginBottom: 10, textAlign: "center", textTransform: "none", }}
-								variant="outlined"
-								disabled={newWorkflow === true}
-								color="secondary"
-								onClick={() => {
-									setShowMoreClicked(!showMoreClicked);
+								InputProps={{
+									style: {
+										color: "white",
+									},
 								}}
-							>
-								{showMoreClicked ? <ExpandLessIcon style={{ marginRight: 10, }} /> : <ExpandMoreIcon style={{ marginRight: 10, }} />}
-								{showMoreClicked ? "Less Options" : "More Options"}
+								color="primary"
+								defaultValue={innerWorkflow.blogpost}
+								placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
+								rows="1"
+								label="blogpost"
+								margin="dense"
+								fullWidth
+							/>
+							<TextField
+								onBlur={(event) => {
+									innerWorkflow.video = event.target.value
+									setInnerWorkflow(innerWorkflow)
+								}}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={innerWorkflow.video}
+								placeholder="A youtube or loom link to the video"
+								rows="1"
+								label="Video"
+								margin="dense"
+								fullWidth
+							/>
 
-							</Button>
-						</Tooltip>
+							<Tooltip color="primary" title={"Add more details"} placement="top">
+								<Button
+									style={{ margin: "auto", marginTop: 50, marginBottom: 10, textAlign: "center", textTransform: "none", }}
+									variant="outlined"
+									disabled={newWorkflow === true}
+									color="secondary"
+									onClick={() => {
+										setShowMoreClicked(!showMoreClicked);
+									}}
+								>
+									{showMoreClicked ? <ExpandLessIcon style={{ marginRight: 10, }} /> : <ExpandMoreIcon style={{ marginRight: 10, }} />}
+									{showMoreClicked ? "Less Options" : "More Options"}
+
+								</Button>
+							</Tooltip>
+						</div>
+					: null}
 
 					</div>
 

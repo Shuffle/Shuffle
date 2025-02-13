@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, memo } from "react";
 
 import { toast } from "react-toastify";
 import theme from "../theme.jsx";
+import { v4 as uuidv4, v5 as uuidv5, validate as isUUID, } from "uuid";
 import {
 	Paper,
 	Tooltip,
@@ -16,7 +17,13 @@ import {
 	Autocomplete,
 	TextField,
 	MenuItem,
+	IconButton,
 } from "@mui/material";
+
+import {
+	OpenInNew as OpenInNewIcon,
+} from "@mui/icons-material";
+
 import { makeStyles } from "@mui/styles";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -355,6 +362,7 @@ const Priorities = memo((props) => {
 			<Typography style={{ color: "rgba(158, 158, 158, 1)", fontSize: 16, fontWeight: 400, marginTop: 5,  }}>
 				The notification workflow triggers when an error occurs in one of your workflows. Each individual one will only start a workflow once every 2 minutes. <b>You can point child org notifications into the parent org notification by choosing it in the list.</b>
 			</Typography>
+	
 			<div style={{ display: "flex", flexDirection: "row", alignItems: "center", }}>
 
 			{workflows !== undefined && workflows !== null && workflows.length > 0 ?
@@ -537,6 +545,59 @@ const Priorities = memo((props) => {
 				{orgSaveButton}
 			</div> */}
 		</div>
+
+		{notificationWorkflow === undefined || notificationWorkflow === null || notificationWorkflow.length === 0 ? null :
+			<div>
+				<Button variant="outlined" color="secondary" style={{marginTop: 5, textTransform: "none", }} onClick={() => {
+					if (notificationWorkflow === "parent") {
+						toast.error("Can't send test notifications to the parent org's notification workflow.")
+						return
+					}
+
+					fetch(`${globalUrl}/api/v1/workflows/${notificationWorkflow}/execute`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"Accept": "application/json",
+						},
+						credentials: "include",
+      					body: JSON.stringify({
+							"title": "Test Notification",
+							"description": "This is a test notification to check if the notification workflow is working correctly.",
+							"org_id": selectedOrganization.id,
+							"id": uuidv4(),
+							"reference_url": "/admin?type=test&admin_tab=notifications",
+							"created_at": Math.floor(new Date().getTime() / 1000),
+							"updated_at": Math.floor(new Date().getTime() / 1000),
+						})
+					})
+					.then((response) => {
+						if (response.status === 200) {
+							toast.success("Test notification sent successfully.")
+						} else {
+							toast.error("Failed to send test notification. Please contact support if this persists")
+						}
+					}).catch((error) => {
+						toast.error("Failed to send test notification (2). Please contact support if this persists")
+					})
+				}}>
+					Send test notification
+				</Button>
+				<IconButton
+					style={{marginLeft: 10, }}
+					onClick={() => {
+						if (notificationWorkflow === "parent") {
+							toast.error("Can't open parent org's notification workflow from here.")
+							return
+						}
+
+						window.open(`/workflows/${notificationWorkflow}?view=executions`, "_blank")
+					}}
+				>
+					<OpenInNewIcon color="primary" />
+				</IconButton>
+			</div>
+		}
 
 		  <Typography style={{marginTop: 50, fontSize: 24, fontWeight: 'bold', display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications ({
 				notifications?.filter((notification) => showRead === true || notification.read === false).length

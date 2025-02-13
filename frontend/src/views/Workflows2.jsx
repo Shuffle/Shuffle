@@ -1187,32 +1187,32 @@ const Workflows2 = (props) => {
                     "",
                     data.status,
                 )
-                    .then((response) => {
-                        if (response !== undefined) {
-                            // SET THE FULL THING
-                            data.id = response.id;
+				.then((response) => {
+					if (response !== undefined) {
+						// SET THE FULL THING
+						data.id = response.id;
 
-                            // Actually create it
-                            setNewWorkflow(
-                                data.name,
-                                data.description,
-                                data.tags,
-                                data.default_return_value,
-                                data,
-                                false,
-                                [],
-                                "",
-                                data.status
-                            ).then((response) => {
-                                if (response !== undefined) {
-                                    toast(`Successfully imported ${data.name}`);
-                                }
-                            });
-                        }
-                    })
-                    .catch((error) => {
-                        toast("Import error: " + error.toString());
-                    });
+						// Actually create it
+						setNewWorkflow(
+							data.name,
+							data.description,
+							data.tags,
+							data.default_return_value,
+							data,
+							false,
+							[],
+							"",
+							data.status
+						).then((response) => {
+							if (response !== undefined) {
+								toast(`Successfully imported ${data.name}`);
+							}
+						});
+					}
+				})
+				.catch((error) => {
+					toast("Import error: " + error.toString());
+				});
             });
         } catch (e) {
             console.log("Error in dropzone: ", e);
@@ -2875,6 +2875,7 @@ const Workflows2 = (props) => {
         if (editingWorkflow.id !== undefined) {
             console.log("Building original workflow");
             method = "PUT";
+            //extraData = "/" + editingWorkflow.id + "?skip_save=true";
             extraData = "/" + editingWorkflow.id + "?skip_save=true";
             workflowdata = editingWorkflow;
 

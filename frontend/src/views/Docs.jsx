@@ -184,15 +184,15 @@ export const CodeHandler = (props) => {
     if (validate.valid === false) {
         // Check if https://shuffler.io in the url
         // if so, then we change it for the current url	
-        if (propvalue.includes("https://shuffler.io")) {
-            newprop = propvalue.replace("https://shuffler.io", window.location.origin)
-        }
+        if (propvalue.includes("https://shuffler.io/api")) {
+            newprop = propvalue.replace("https://shuffler.io/api", window.location.origin+"/api")
 
-        // Check if it contains Bearer APIKEY
-        // If so, replace apikey
-        //if (newprop.includes("Bearer APIKEY")) {
-        //	newprop = newprop.replace("Bearer APIKEY", "Bearer API
-        //}
+	
+			const foundurl = localStorage.getItem("globalUrl")
+			if (foundurl !== undefined && foundurl !== null && foundurl !== "") {
+				newprop = propvalue.replace("https://shuffler.io/api", foundurl+"/api")
+			}
+        }
     }
 
     // Need to check if it's singletick or multi

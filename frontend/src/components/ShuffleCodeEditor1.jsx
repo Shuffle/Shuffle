@@ -44,6 +44,7 @@ import {
 	Close as CloseIcon,
 	DragIndicator as DragIndicatorIcon,
 	RestartAlt as RestartAltIcon,
+	ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 
 
@@ -100,6 +101,7 @@ const pythonFilters = [
 const extensions = []
 const CodeEditor = (props) => {
 	const {
+		cy,
 		workflow,
 		globalUrl,
 		fieldCount,
@@ -116,6 +118,7 @@ const CodeEditor = (props) => {
 		parameterName,
 		// selectedAction,
 		// selectedTrigger,
+		selectedEdge,
 		workflowExecutions,
 		getParents,
 		activeDialog,
@@ -128,6 +131,8 @@ const CodeEditor = (props) => {
 		fullScreenMode,
 		environment,
 		fixExample,
+		userdata,
+		handleConditionFieldChange,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -149,6 +154,7 @@ const CodeEditor = (props) => {
 	const [currentLine, setCurrentLine] = React.useState(-1);
 	const [selectedAction, setSelectedAction] = React.useState({});
 	const [selectedTrigger, setSelectedTrigger] = React.useState({});
+	const [selectedCondition, setSelectedCondition] = React.useState({});
 	const [variableOccurences, setVariableOccurences] = React.useState([]);
 	const [currentLocation, setCurrentLocation] = React.useState([]);
 	const [currentVariable, setCurrentVariable] = React.useState("");
@@ -197,6 +203,8 @@ const CodeEditor = (props) => {
 	const triggerId = searchParams.get('trigger_id');
 	const triggerField = searchParams.get('trigger_field');
 	const triggerName = searchParams.get('trigger_name');
+	const conditionId = searchParams.get('condition_id');
+	const conditionField = searchParams.get('field');
 
 	useEffect(() => {
 		if (actionId === undefined || actionId === null) {
@@ -206,6 +214,9 @@ const CodeEditor = (props) => {
 		const action = workflow?.actions?.find(action => action.id === actionId);
 		setlocalcodedata(editorData?.value);
 		setSelectedAction(action);
+
+		// Update available variables when action changes
+		updateAvailableVariables(actionlist);
 	}, [actionId, fieldName])
 
 	useEffect(() => {
@@ -216,15 +227,32 @@ const CodeEditor = (props) => {
 		const trigger = workflow?.triggers?.find(trigger => trigger.id === triggerId);
 		setlocalcodedata(editorData?.value);
 		setSelectedTrigger(trigger);
+
+		// Update available variables when trigger changes
+		updateAvailableVariables(actionlist);
 	}, [triggerId])
 
-	useEffect(() => {
-		var allVariables = []
-		var tmpVariables = []
 
+	useEffect(() => {
+		if (conditionId === undefined || conditionId === null) {
+			return;
+		}
+
+		const condition = selectedEdge?.conditions?.find(condition => condition.id === conditionId);
+		setlocalcodedata(editorData?.value);
+		setSelectedCondition(condition);
+		// Update available variables when condition changes
+		updateAvailableVariables(actionlist);
+	}, [conditionId, fieldName])
+
+	// Extract variable updating logic into a separate function
+	const updateAvailableVariables = (actionlist) => {
 		if (actionlist === undefined || actionlist === null) {
 			return
 		}
+
+		var allVariables = []
+		var tmpVariables = []
 
 		for (var i = 0; i < actionlist.length; i++) {
 			allVariables.push('$' + actionlist[i].autocomplete.toLowerCase())
@@ -265,7 +293,11 @@ const CodeEditor = (props) => {
 
 		setAvailableVariables(allVariables)
 		setMainVariables(tmpVariables)
-		expectedOutput(localcodedata)
+	}
+
+	// Remove the original useEffect for actionlist since we'll update on action/trigger changes
+	useEffect(() => {
+		updateAvailableVariables(actionlist)
 	}, [])
 
 	useEffect(() => {
@@ -1378,6 +1410,18 @@ const CodeEditor = (props) => {
 		)
 	}
 
+	var sourceAction = ""
+	var targetAction = ""
+	var sourceImage = ""
+	var targetImage = ""
+
+	if (cy !== undefined && cy !== null) {
+		sourceAction = cy.getElementById(selectedEdge?.source)
+		targetAction = cy.getElementById(selectedEdge?.target)
+		sourceImage = sourceAction?.data()?.large_image
+		targetImage = targetAction?.data()?.large_image
+	}
+
 	return (
 		<Dialog
 			aria-labelledby="draggable-dialog-title"
@@ -1601,25 +1645,25 @@ const CodeEditor = (props) => {
 								{isFileEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
 										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
-											{/*
-											<Button
-												id="basic-button"
-												aria-haspopup="true"
-												aria-controls={!!menuPosition ? 'basic-menu' : undefined}
-												aria-expanded={!!menuPosition ? 'true' : undefined}
-												variant={!sourceDataOpen ? "contained" : "outlined"}
-												color="secondary"
-												style={{
-													textTransform: "none",
-													width: 175,
-												}}
-												onClick={(event) => {
-													setSourceDataOpen(!sourceDataOpen)
-												}}
-											>
-												<AddIcon /> Show Source Data 
-											</Button>
-											*/}
+											{userdata !== undefined && userdata !== null && userdata.support === true ? 
+												<Button
+													id="basic-button"
+													aria-haspopup="true"
+													aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+													aria-expanded={!!menuPosition ? 'true' : undefined}
+													variant={!sourceDataOpen ? "contained" : "outlined"}
+													color="secondary"
+													style={{
+														textTransform: "none",
+														width: 175,
+													}}
+													onClick={(event) => {
+														setSourceDataOpen(!sourceDataOpen)
+													}}
+												>
+													<AddIcon /> Show Source Data 
+												</Button>
+											: null}
 
 											<Button
 												id="basic-button"
@@ -2149,9 +2193,64 @@ const CodeEditor = (props) => {
 									}}
 								>
 									<div>
-										<span style={{ color: "white" }}>
-											{actionId === null ? `Output : ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)}` : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Output : ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)}(${fieldName})`}
-										</span>
+											{actionId === null && triggerId === null ? 
+												<div style={{display: "flex", alignItems: "center"}}>
+													{`Condition ${selectedEdge?.conditions?.findIndex(cond => cond.condition.id === conditionId) + 1 || "0"}`}
+													{/* Source node image */}
+													{selectedEdge?.source ? 
+														<img 
+															src={sourceImage || ""}
+															alt="Source"
+															style={{
+																width: 30,
+																height: 30,
+																marginRight: 10,
+																borderRadius: "50%",
+																marginLeft: 10,
+																border: conditionField === "source" ? `3px solid #FF8544` : null,
+															}}
+														/>
+														: null
+													}
+
+													  {/* Add arrow icon */}
+													{
+														selectedEdge && Object.keys(selectedEdge).length > 0 ?
+														<ArrowForwardIcon style={{ 
+															color: "rgba(255,255,255,0.7)",
+															fontSize: 18,
+															marginLeft: -5,
+															marginRight: -5,
+														}} />
+														: null
+													}
+
+													{/* Destination node image */}
+													{selectedEdge?.target ?
+														<img
+															src={targetImage || ""}
+															alt="Destination" 
+															style={{
+																width: 30,
+																height: 30,
+																marginLeft: 10,
+																borderRadius: "50%",
+																border: conditionField === "destination" ? `3px solid #FF8544` : null,
+															}}
+														/>
+														: null
+													}
+												</div>
+												: 
+												<span style={{ color: "white" }}>
+												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
+													"Code to run" : 
+													triggerId ? 
+														`Output : ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)}(${triggerField})` :
+														`Output : ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)}(${fieldName})`
+												}
+											</span>
+										}
 									</div>
 
 								</DialogTitle>
@@ -2369,34 +2468,22 @@ const CodeEditor = (props) => {
 						if (isFileEditor === true) {
 							runUpdateText(fixedcodedata);
 							setcodedata(fixedcodedata);
-							setExpansionModalOpen(false)
 						} else if (changeActionParameterCodeMirror !== undefined) {
 							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
 							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist, parameterName, selectedAction, setSelectedAction)
-							setExpansionModalOpen(false)
 							setcodedata(fixedcodedata)
 						}
 
-						// console.log("fieldname", fieldname)
-						// // Check if fieldname is set, and try to find and inject the text
-						// if (fieldname !== undefined && fieldname !== null && fieldname.length > 0) {
-						// 	const foundfield = document.getElementById(fieldname)
-						// 	console.log("foundfield", foundfield)
-						// 	if (foundfield !== undefined && foundfield !== null) {
-						// 		foundfield.value = fixedcodedata
-						// 		if(selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger.name === "Shuffle Workflow") {
-						// 			handleSubflowParamChange(fixedcodedata)
-						// 		}
-						// 	}
-						// } else {
-						// 	//toast("No fieldname found: " + fieldname)
-						// }
-
-						if(actionId !== undefined && actionId !== null && actionId.length > 0) {
+						// Handle condition fields
+						if (conditionField !== null && handleConditionFieldChange !== undefined) {
+							handleConditionFieldChange(conditionField, fieldName, fixedcodedata);
+						}
+						// Handle action fields
+						else if (actionId !== undefined && actionId !== null && actionId.length > 0) {
 							handleActionParamChange(actionId, fieldName, fixedcodedata)
 						}
-
-						if(triggerId !== undefined && triggerId !== null && triggerId.length > 0) {
+						// Handle trigger fields
+						else if (triggerId !== undefined && triggerId !== null && triggerId.length > 0) {
 							handleSubflowParamChange(triggerId, triggerField, fixedcodedata)
 						}
 

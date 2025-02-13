@@ -14,7 +14,7 @@ const theme = createTheme(adaptV4Theme({
 	  contrastText: "#000000",
     },
     text: {
-      secondary: "rgba(255,255,255,0.7)",
+      secondary: "rgba(255,255,255,0.8)",
     },
     type: "dark",
     //inputColor: "#383B40",

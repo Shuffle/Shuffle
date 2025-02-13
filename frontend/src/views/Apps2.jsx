@@ -59,7 +59,6 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || 
                   data?.contributors?.includes(userdata?.id)
 
-  console.log("appdata", data)
   const paperStyle = {
     backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
     color: "rgba(241, 241, 241, 1)",
