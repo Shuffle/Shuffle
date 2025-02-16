@@ -1087,11 +1087,11 @@ const RegionChangeModal = memo(({selectedOrganization, setSelectedRegion, userda
 		"US": "us",
 		"EU-2": "eu",
 		"CA": "ca",
-		"EU": "eu"
+		"UK": "gb"
 	};
 
 	//let regiontag = "UK";
-	let regiontag = "EU";
+	let regiontag = "UK";
 	let regionCode = "gb";
 
 	const regionsplit = selectedOrganization?.region_url?.split(".");

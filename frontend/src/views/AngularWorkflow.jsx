@@ -1072,7 +1072,7 @@ const AngularWorkflow = (defaultprops) => {
     // Special multi-workflow edgecase handler for events
     if (distributedFromParent === "" && suborgWorkflows === []) {
     } else {
-      if (cy !== undefined) {
+      if (cy !== undefined && cy !== null) {
         cy.removeListener("select");
         cy.removeListener("unselect");
         cy.removeListener("add");
@@ -1248,32 +1248,37 @@ const AngularWorkflow = (defaultprops) => {
 	}
 
 	var found = null
+	/*
 	try {
 		for (var key in workflows) {
 			const curworkflow = workflows[key]
-			const curtrigger = curworkflow.triggers[selectedTriggerIndex]
+			const curtrigger = curworkflow?.triggers[selectedTriggerIndex]
 			if (curtrigger === undefined || curtrigger === null) {
 				continue
 			}
 
-			if (curtrigger.parameters === undefined || curtrigger.parameters === null || curtrigger.parameters.length === 0) {
+			if (curtrigger?.parameters === undefined || curtrigger?.parameters === null || curtrigger?.parameters.length === 0) {
 				continue
 			}
 
-			if (curtrigger.parameters[0] === undefined || curtrigger.parameters[0] === null || curtrigger.parameters[0].value === undefined || curtrigger.parameters[0].value === null) {
+			if (curtrigger?.parameters[0] === undefined || curtrigger?.parameters[0] === null || curtrigger?.parameters[0].value === undefined || curtrigger?.parameters[0].value === null) {
 				continue
 			}
 
-			if (curtrigger.parameters[0].value === selectedTrigger?.parameters[0]?.value) {
+			if (curtrigger?.parameters[0].value === selectedTrigger?.parameters[0]?.value) {
 				found = curworkflow
 				setSubworkflow(curworkflow)
 			}
 		}
-    	setSubworkflow(found)
+
+		if (found !== null) {
+    		setSubworkflow(found)
+		}
 	} catch (e) {
 		console.log("Failed in trigger selection: ", e)
 		return
 	}
+	*/
 
     if (found) {
       const startNode = found.actions?.find((action) => action.id === workflow?.triggers[selectedTriggerIndex]?.parameters[3]?.value)
@@ -1292,7 +1297,7 @@ const AngularWorkflow = (defaultprops) => {
 	// Check if the running state is correct or not according to allTriggers
 	if (allTriggers !== undefined && allTriggers !== null) { 
 		// Find the active trigger
-		if (selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger.id !== undefined && selectedTrigger.id !== null) {
+		if (selectedTrigger !== undefined && selectedTrigger !== null && selectedTrigger?.id !== undefined && selectedTrigger?.id !== null) {
 
 			var useTriggers = allTriggers
 			if (allTriggers.pipelines === undefined || allTriggers.pipelines === null || allTriggers.pipelines.length === 0) { 
@@ -2491,7 +2496,7 @@ const AngularWorkflow = (defaultprops) => {
     }
     */
 
-    if (cy !== undefined) {
+    if (cy !== undefined && cy !== null) {
       // scale: 0.3,
       // bg: "#27292d",
       const cyImageData = cy.png({
@@ -2987,7 +2992,7 @@ const AngularWorkflow = (defaultprops) => {
 
           setAppAuthentication(newauth);
 
-          if (cy !== undefined) {
+          if (cy !== undefined && cy !== null) {
             // Remove the old listener for select, run with new one
             cy.removeListener("select");
 
@@ -4136,7 +4141,9 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
         // Load as JSON
         if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id.length > 0 && responseJson.id !== workflow_id) {
-          toast("Workflow ID mismatch. Redirecting to your workflow")
+          toast.warning("Workflow ID mismatch. Redirected to your actual workflow. This may happen due to being in the wrong org, where we load the child workflow for you automatically.", {
+			  autoClose: 10000,
+		  })
           navigate(`/workflows/${responseJson.id}`)
         }
 
@@ -7325,7 +7332,7 @@ const AngularWorkflow = (defaultprops) => {
           }
 
           console.log("CTRL+C");
-          if (cy !== undefined) {
+          if (cy !== undefined && cy !== null) {
             var cydata = cy.$(":selected").jsons();
             if (cydata !== undefined && cydata !== null && cydata.length > 0) {
               console.log(cydata);
@@ -7638,7 +7645,7 @@ const AngularWorkflow = (defaultprops) => {
 
 
     // Skipping node editing if it's the selected one
-    if (cy !== undefined) {
+    if (cy !== undefined && cy !== null) {
       const typeIds = cy.elements('node:selected').jsons();
       for (var idkey in typeIds) {
         const item = typeIds[idkey]
@@ -12660,7 +12667,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 const handleActionHover = (inside, actionId) => {
-                  if (cy !== undefined) {
+                  if (cy !== undefined && cy !== null) {
                     var node = cy.getElementById(actionId);
                     if (node.length > 0) {
                       if (inside) {
@@ -12905,7 +12912,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     setWorkflow(workflow)
-    console.log("WF: ", workflow)
     setUpdate(Math.random())
   }
 
@@ -15125,7 +15131,7 @@ const AngularWorkflow = (defaultprops) => {
                     for (let triggerkey in workflow.triggers) {
                       const item = workflow.triggers[triggerkey];
 
-                      if (cy !== undefined) {
+                      if (cy !== undefined && cy !== null) {
                         var node = cy.getElementById(item.id);
                         if (node.length > 0) {
                           if (inside) {
@@ -15140,7 +15146,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 const handleActionHover = (inside, actionId) => {
-                  if (cy !== undefined) {
+                  if (cy !== undefined && cy !== null) {
                     var node = cy.getElementById(actionId);
                     if (node.length > 0) {
                       if (inside) {
@@ -17585,9 +17591,9 @@ const AngularWorkflow = (defaultprops) => {
 			  null
           }
 
-          {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? 
-			originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 ?
+          {originalWorkflow?.suborg_distribution === undefined || originalWorkflow?.suborg_distribution === null || originalWorkflow?.suborg_distribution?.length === 0 || originalWorkflow?.suborg_distribution.includes("none") ? 
 
+			originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
 				<Button
 				  color="secondary"
 				  variant="outlined"
@@ -17598,7 +17604,7 @@ const AngularWorkflow = (defaultprops) => {
 					  marginLeft: 10, 
 				  }}
 			  	  onClick={() => {
-					navigate(`/workflows/${originalWorkflow.parentorg_workflow}`)
+					navigate(`/workflows/${workflow.parentorg_workflow}`)
 					// Reload the page
 					window.location.reload()
 				  }}
@@ -17914,7 +17920,7 @@ const AngularWorkflow = (defaultprops) => {
 												}
 
 												return (
-													<li>
+													<li key={index}> 
 														<Tooltip title={orgDiffAction.label} arrow placement="left">
 															<img alt={orgDiffAction.label} src={orgDiffAction.large_image} style={{width: 20, height: 20, borderRadius: theme.palette.borderRadius, marginRight: 10, }}/>
 														</Tooltip>
@@ -18279,7 +18285,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const handleActionHover = (inside, actionId) => {
-    if (cy !== undefined) {
+    if (cy !== undefined && cy !== null) {
       var node = cy.getElementById(actionId);
       if (node.length > 0) {
         if (inside) {
@@ -18719,7 +18725,7 @@ const AngularWorkflow = (defaultprops) => {
       setDistributedFromParent("")
     }
 
-    if (cy !== undefined) {
+    if (cy !== undefined && cy !== null) {
       cy.removeListener("select");
       cy.removeListener("unselect");
 
@@ -21287,7 +21293,7 @@ const AngularWorkflow = (defaultprops) => {
                             width: 30,
                           }}
                           onClick={() => {
-                            if (cy !== undefined) {
+                            if (cy !== undefined && cy !== null) {
                               const oldstartnode = cy.getElementById(data.action.id);
                               //console.log("FOUND NODe: ", oldstartnode)
                               if (oldstartnode !== undefined && oldstartnode !== null) {

@@ -54,15 +54,15 @@ const TenantsTab = memo((props) => {
     const [cloudSyncModalOpen, setCloudSyncModalOpen] = React.useState(false);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [parentOrg, setParentOrg] = React.useState(null);
-    const [parentOrgFlag, setParentOrgFlag] = React.useState("eu");
+    const [parentOrgFlag, setParentOrgFlag] = React.useState(null);
     const [loadOrgs, setLoadOrgs] = React.useState(true);
     const [, forceUpdate] = React.useState();
     const itemColor = "black";
 
     useEffect(() => {
-        if(parentOrgFlag === null) {
-            let regiontag = "EU";
-            let regionCode = "eu";
+        if(parentOrg !== null && parentOrgFlag === null) {
+            let regiontag = "UK";
+            let regionCode = "gb";
 
             if (parentOrg?.region_url?.length > 0) {
                 const regionsplit = parentOrg?.region_url.split(".");
@@ -71,17 +71,16 @@ const TenantsTab = memo((props) => {
                     regiontag = namesplit[namesplit.length - 1];
 
                     if (regiontag === "california") {
-                    regiontag = "US";
-                    regionCode = "us";
+						regiontag = "US";
+						regionCode = "us";
                     } else if (regiontag === "frankfurt") {
-                    regiontag = "EU-2";
-                    regionCode = "eu";
+						regiontag = "EU-2";
+						regionCode = "eu";
                     } else if (regiontag === "ca") {
-                    regiontag = "CA";
-                    regionCode = "ca";
+						regiontag = "CA";
+						regionCode = "ca";
                     }
                 }
-                console.log("did i reach here, region code is: ", regionCode);
                 setParentOrgFlag(regionCode);
         }
     }
@@ -145,8 +144,8 @@ const TenantsTab = memo((props) => {
                     setSubOrgs(subOrgs);
                     setParentOrg(parentOrg);
 
-                    let regiontag = "EU";
-                    let regionCode = "eu";
+                    let regiontag = "UK";
+                    let regionCode = "gb";
 
                     if (parentOrg?.region_url?.length > 0) {
                     const regionsplit = parentOrg?.region_url.split(".");
@@ -155,14 +154,14 @@ const TenantsTab = memo((props) => {
                         regiontag = namesplit[namesplit.length - 1];
 
                         if (regiontag === "california") {
-                        regiontag = "US";
-                        regionCode = "us";
+							regiontag = "US";
+							regionCode = "us";
                         } else if (regiontag === "frankfurt") {
-                        regiontag = "EU-2";
-                        regionCode = "eu";
+							regiontag = "EU-2";
+							regionCode = "eu";
                         } else if (regiontag === "ca") {
-                        regiontag = "CA";
-                        regionCode = "ca";
+							regiontag = "CA";
+							regionCode = "ca";
                         }
                     }
                     setParentOrgFlag(regionCode);
@@ -1220,7 +1219,29 @@ const TenantsTab = memo((props) => {
                                     }}
                                 />
                             </ListItem>
-                            {subOrgs.map((data, index) => (
+                            {subOrgs.map((data, index) => {
+								let regiontag = "UK";
+								let regionCode = "gb";
+
+								if (data.region_url?.length > 0) {
+									const regionsplit = data.region_url.split(".");
+									if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+										const namesplit = regionsplit[0].split("/");
+										regiontag = namesplit[namesplit.length - 1];
+										if (regiontag === "california") {
+											regiontag = "US";
+											regionCode = "us";
+										} else if (regiontag === "frankfurt") {
+											regiontag = "EU-2";
+											regionCode = "eu";
+										} else if (regiontag === "ca") {
+											regiontag = "CA";
+											regionCode = "ca";
+										}
+									}
+								}
+
+								return (
                                 <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? '#1A1A1A' : '#212121', width: "100%", borderBottomLeftRadius: 8, display:'table-row', borderBottomRightRadius: 8 }}>
                                     <ListItemText primary={<img alt={data?.name} src={data.image || theme.palette.defaultImage} style={imageStyle} />} style={{ width: 100,
                                 minWidth: 100,
@@ -1237,30 +1258,31 @@ const TenantsTab = memo((props) => {
                                 padding: 8,
                                 verticalAlign: "middle",
                                 textAlign: "center", }} />
+
                                 {isCloud && (
                                     <ListItemText
                                         primary={
                                         <div style={{ display: "flex", alignItems: "center" }}>
                                             <img
-                                            alt={parentOrgFlag}
-                                            src={`https://flagcdn.com/w20/${parentOrgFlag}.png`}
+                                            alt={regiontag}
+                                            src={`https://flagcdn.com/w20/${regionCode}.png`}
                                             style={{ width: "30px", height: "20px", marginRight: "5px" }}
                                             />
-                                            <ListItemText primary={parentOrgFlag?.toUpperCase()} />
+                                            <ListItemText primary={regiontag?.toUpperCase()} />
                                         </div>
                                         }
                                         style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}
                                     />
                                     )}
                                     <ListItemText primary={data.id} style={{ minWidth: 300,
-                                maxWidth: 300,
-                                display: "table-cell",
-                                padding: 8,
-                                verticalAlign: "middle", }} />
+										maxWidth: 300,
+										display: "table-cell",
+										padding: 8,
+										verticalAlign: "middle", }} />
 
                                     <ListItemText
-                            primary={
-                                <Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
+                            		primary={
+                                		<Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
                                         <Button
                                             color="primary"
                                             variant='outlined'
@@ -1284,7 +1306,7 @@ const TenantsTab = memo((props) => {
                             style={{ display: "table-cell", verticalAlign: "middle" }}
                             />
                                 </ListItem>
-                            ))}
+                            )})}
                         </List>
                         </div>
                     </div>
@@ -1452,26 +1474,26 @@ const TenantsTab = memo((props) => {
                     ) : (
                     userdata?.orgs?.length > 0 &&
                     userdata.orgs.map((data, index) => {
-                        let regiontag = "EU";
-                        let regionCode = "eu";
+                        let regiontag = "UK";
+                        let regionCode = "gb";
 
                         if (data.region_url?.length > 0) {
-                        const regionsplit = data.region_url.split(".");
-                        if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-                            const namesplit = regionsplit[0].split("/");
-                            regiontag = namesplit[namesplit.length - 1];
+							const regionsplit = data.region_url.split(".");
+							if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+								const namesplit = regionsplit[0].split("/");
+								regiontag = namesplit[namesplit.length - 1];
 
-                            if (regiontag === "california") {
-                            regiontag = "US";
-                            regionCode = "us";
-                            } else if (regiontag === "frankfurt") {
-                            regiontag = "EU-2";
-                            regionCode = "eu";
-                            } else if (regiontag === "ca") {
-                            regiontag = "CA";
-                            regionCode = "ca";
-                            }
-                        }
+								if (regiontag === "california") {
+								regiontag = "US";
+								regionCode = "us";
+								} else if (regiontag === "frankfurt") {
+								regiontag = "EU-2";
+								regionCode = "eu";
+								} else if (regiontag === "ca") {
+								regiontag = "CA";
+								regionCode = "ca";
+								}
+							}
                         }
 
                         return (

@@ -3042,9 +3042,11 @@ const AppExplorer = (props) => {
 
   const getDownloadUrl = () => {
 
-	  const appEnding = app?.public === true ? app?.app_verison : app?.id
+	  console.log("APP: ", app)
 
-	  return `curl -L \ \\\n    "${globalUrl}/api/v1/download_docker_image?image=frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${appEnding}" \\\n    -H \"Authorization: Bearer ${userdata?.apikey}" \\\n    -o image.zip; \\\n    docker load -i image.zip`
+	  const appEnding = app?.public === true ? app?.app_version : app?.id
+
+	  return `curl -L \ \\\n    "${globalUrl}/api/v1/download_docker_image?image=frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${appEnding}" \\\n    -H \"Authorization: Bearer APIKEY" \\\n    -o image.zip; \\\n    docker load -i image.zip`
   }
 
   const renderedActionOptions = deduplicateByName((
@@ -3231,7 +3233,7 @@ const AppExplorer = (props) => {
                 <div>
 
 				  <Typography variant="h4">
-				  	Use the App onprem
+				  	Use the App onprem (hybrid)
 				  </Typography> 
 				  <Typography variant="body2" color="textSecondary" style={{marginTop: 5, }}>
 				  	Due to using docker containers with privately uploaded containers, we had to use a custom registry. Use the command below to download the image to the server if it fails to run.
@@ -3582,22 +3584,6 @@ const AppExplorer = (props) => {
 									if (descSplit.length > 0) {
 										extraUrl = descSplit[descSplit.length-1]
 									} 
-
-									//for (let [line,lineval] in Object.entries(descSplit)) {
-									//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-									//		const urlsplit = descSplit[line].split("/")
-									//		try {
-									//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-									//		} catch (e) {
-									//			//console.log("Failed - running with -1")
-									//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-									//		}
-
-
-									//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-									//		//break
-									//	} 
-									//}
 
 									if (extraUrl.length > 0) {
 										if (extraUrl.includes(" ")) {

@@ -657,8 +657,8 @@ useEffect(() => {
 };
 
   const getRegionTag = (region_url) => {
-    //let regiontag = "UK";
-    let regiontag = "EU";
+    let regiontag = "UK";
+    //let regiontag = "EU";
     if (
       region_url !== undefined &&
       region_url !== null &&
@@ -755,7 +755,7 @@ useEffect(() => {
   };
 
   const getRegionFlag = (region_url) => {
-    var region = "gb";
+    var region = "UK";
     const regionMapping = {
 			"US": "us",
 			"EU": "eu",

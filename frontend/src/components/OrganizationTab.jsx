@@ -155,7 +155,6 @@ const OrganizationTab = (props) => {
                             <Button
                                 key={tabName}
                                 onClick={() => {
-                                    console.log("index", index);
                                     setCurIndex(index);
                                     handleTabClick(index === 0 ? "org_config" : tabName.toLowerCase().replace(/[\s&]+/g, ''));
                                 }}

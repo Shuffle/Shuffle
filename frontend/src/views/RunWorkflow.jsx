@@ -117,7 +117,7 @@ const RunWorkflow = (defaultprops) => {
     props.match = {}
     props.match.params = params
 
-	const defaultTitle = workflow.name !== undefined ? "Shuffle - Form for " + workflow.name : "Shuffle - Form to Run Workflows"
+	const defaultTitle = workflow.name !== undefined ? "Form for " + workflow.name : "Shuffle - Form to Run Workflows"
 	if (document != undefined && document.title != defaultTitle) {
 		document.title = defaultTitle
 	}
@@ -152,7 +152,7 @@ const RunWorkflow = (defaultprops) => {
 			}
 		}
 
-		console.log("EXEC: ", executionArgument)
+		//console.log("EXEC: ", executionArgument)
 		for (var key in executionArgument) {
 			if (executionArgument[key] === undefined || executionArgument[key] === null || executionArgument[key] === "") {
 				return false
@@ -705,6 +705,8 @@ const RunWorkflow = (defaultprops) => {
 					break
 				}
 			}
+		} else {
+			setInputQuestions(responseJson.input_questions)
 		}
 
 		if (responseJson.form_control.input_markdown !== undefined && responseJson.form_control.input_markdown !== null && responseJson.form_control.input_markdown.length > 0) {
@@ -894,7 +896,6 @@ const RunWorkflow = (defaultprops) => {
 
 	const fetchUpdates = (execution_id, authorization, getorg, replaceMarkdown) => {
 		if (execution_id === undefined || execution_id === null || execution_id === "") {
-			console.log("No execution id: ", execution_id)
 			stop()
 			return
 		}
@@ -1225,9 +1226,9 @@ const RunWorkflow = (defaultprops) => {
 							</div>
 						}
 							
-						{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
+						{workflow?.input_questions !== undefined && workflow?.input_questions !== null && workflow?.input_questions?.length > 0 ?
 							<div style={{marginBottom: 5, }}>
-								{inputQuestions.map((question, index) => {
+								{inputQuestions?.map((question, index) => {
 
 									// Multiple choice checks for semicolon-splits
 									var multiChoiceOptions = question.value !== undefined && question.value !== null && question.value.length > 0 && question.value.includes(";") ? question.value.split(";") : []
@@ -1241,9 +1242,12 @@ const RunWorkflow = (defaultprops) => {
 									return (
 										<div style={{marginBottom: 10}} key={index}>
 
+											<Typography variant="body2" color="textSecondary">
+												{question.name}
+											</Typography>
+
 											{multiChoiceOptions.length > 1 ?
 												<div>
-													{question.name}
 													<Select
 														disabled={disabledButtons}
 														fullWidth
@@ -1280,7 +1284,7 @@ const RunWorkflow = (defaultprops) => {
 														backgroundColor: theme.palette.inputColor, 
 														marginTop: 5, 
 													}}
-													label={question.value.charAt(0).toUpperCase() + question.value.slice(1)}
+													label={question?.value?.charAt(0)?.toUpperCase() + question?.value?.slice(1)}
 													required
 
 													disabled={disabledButtons}
