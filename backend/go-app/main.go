@@ -5107,6 +5107,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}/deactivate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}/distribute", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.GetFrameworkConfiguration).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.SetFrameworkConfiguration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.UpdateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
@@ -5261,7 +5263,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
-	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 

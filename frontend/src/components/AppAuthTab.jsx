@@ -67,7 +67,7 @@ import { Context } from '../context/ContextApi.jsx';
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
   "db08e40265e2941b9a7d8f644b6e5240"
-);
+)
 
 const AppAuthTab = memo((props) => {
     const { globalUrl, userdata, isCloud, selectedOrganization } = props;

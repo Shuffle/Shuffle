@@ -243,7 +243,7 @@ const ApiExplorerWrapper = (props) => {
       .then((responseJson) => {
         if (responseJson.success === true) {
 		  if (responseJson.openapi === undefined || responseJson.openapi === null) {
-			  toast.warning("Loaded App, but no API found. Redirecting to app search..")
+			  toast.warning("Loaded App, but no API found. Redirecting back to app..")
 			  navigate(`/apps/${appid}`)
 		  } else {
           	handleDecodeOfOpenApiData(responseJson);
@@ -378,7 +378,7 @@ const ApiExplorerWrapper = (props) => {
     const parsedHeaders = {};
     
     if (typeof headers === 'string' && headers) {
-        const splitHeaders = headers.split("\n");
+        const splitHeaders = headers.split(`\n`)
         
         splitHeaders.forEach(header => {
             let splitItem;
@@ -529,7 +529,7 @@ const ApiExplorerWrapper = (props) => {
       return array
         .map(item => (item.key.trim().length > 0 && item.value.trim().length > 0 ? `${item.key}=${item.value}` : ""))
         .filter(str => str.length > 0)
-        .join("\n");
+        .join(``);
     }; 
 
     var appid = "";

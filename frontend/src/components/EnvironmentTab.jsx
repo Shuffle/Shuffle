@@ -39,6 +39,7 @@ import {
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
 import { green, red } from '../views/AngularWorkflow.jsx'
+import AppSearch from "../components/AppSearch1.jsx";
 
 const EnvironmentTab = memo((props) => {
     const { globalUrl, isCloud, userdata, selectedOrganization } = props;
@@ -59,6 +60,9 @@ const EnvironmentTab = memo((props) => {
     const [showDistributionPopup, setShowDistributionPopup] = React.useState(false);
     const [selectedEnvironment, setSelectedEnvironment] = React.useState(null);
     const [selectedSubOrg, setSelectedSubOrg] = React.useState([]);
+	const [showLocationActionModal, setShowLocationActionModal] = React.useState(undefined)
+
+
     useEffect(() => {
         getEnvironments();
         setModalUser({});
@@ -420,7 +424,9 @@ const EnvironmentTab = memo((props) => {
         -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:nightly" \\
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e SHUFFLE_LOGS_DISABLED=true \\
-        -e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
+        -e BASE_URL="${newUrl}" \\${addProxy ? `
+		-e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+		-e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest
             `)
         } else if (installationTab === 2) {
@@ -435,7 +441,9 @@ const EnvironmentTab = memo((props) => {
         -e AUTH="${auth}" \\
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${props.userdata.active_org.id}" \\
-        -e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
+        -e BASE_URL="${newUrl}" \\${addProxy ? `
+		-e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+		-e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest`
     
         return commandData
@@ -591,6 +599,70 @@ const EnvironmentTab = memo((props) => {
         if (queue > 1000) return ">1000";
         return queue;
     };
+
+	const LocationActionModal = (props) => {
+		const { showLocationActionModal } = props
+
+    	const [searchQuery, setSearchQuery] = React.useState("");
+
+		if (showLocationActionModal === undefined || showLocationActionModal === null) {
+			return null
+		}
+
+		if (showLocationActionModal?.open !== true) {
+			return null
+		}
+
+
+
+		return (
+			<Dialog
+			  open={true}
+			  onClose={() => {
+				  setShowLocationActionModal(undefined)
+			  }}
+			  PaperProps={{
+				sx: {
+				  borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+				  border: theme?.palette?.DialogStyle?.border,
+				  fontFamily: theme?.typography?.fontFamily,
+				  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  zIndex: 1000,
+				  minWidth: 600,
+				  minHeight: 500,
+				  overflow: "auto",
+				  '& .MuiDialogContent-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  },
+				  '& .MuiDialogTitle-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  },
+				  '& .MuiDialogActions-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  },
+				},
+			  }}
+		  >
+			  <DialogTitle>
+				<div style={{ color: "rgba(255,255,255,0.9)" }}>
+					Select a job to send
+				</div>
+			  </DialogTitle>
+			  <DialogContent style={{ backgroundColor: theme.palette.backgroundColor }}>
+				  <Checkbox
+					checked={true}
+					disabled={true}
+				  />
+				  <span style={{ marginLeft: 8 }}>
+					Find app to re-download
+				  </span>
+
+				  <AppSearch 
+				  />
+			  </DialogContent>
+			</Dialog>
+		)
+	}
 
     const editEnvironmentConfig = (id, selectedSubOrg, cacheKey) => {
                     const data = {
@@ -804,20 +876,23 @@ const EnvironmentTab = memo((props) => {
                     borderBottom: "1px solid #494949",    
                   }}
               >
-                    {["Type", "Status", "Scale", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => (
-                        <ListItemText
-                            key={index}
-                            primary={header}
-                            style={{
-                              padding: "0px 8px 8px 8px",
-                              whiteSpace: "nowrap",
-                              textOverflow: "ellipsis",
-                              overflow: "hidden",
-                              fontWeight: "bold",
-                              textAlign: "center",                
-                             }}
-                        />
-                    ))}
+                    {["Type", "Status", "Scale", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => {
+
+						return (
+							<ListItemText
+								key={index}
+								primary={header}
+								style={{
+								  padding: "0px 8px 8px 8px",
+								  whiteSpace: "nowrap",
+								  textOverflow: "ellipsis",
+								  overflow: "hidden",
+								  fontWeight: "bold",
+								  textAlign: header === "Actions" ? "left" : header === "Distribution" ? "right" : "center",                
+								}}
+							/>
+                    	)
+					})}
                 </ListItem>
                 {showLoader
     ? [...Array(6)].map((_, rowIndex) => (
@@ -919,9 +994,10 @@ const EnvironmentTab = memo((props) => {
   
         return ( 
          <>
+
            <ListItem
             key={index}
-            style={{ cursor: "pointer", backgroundColor: bgColor, marginLeft: 0, borderBottomLeftRadius: environments?.length - 1 === index ? 8 : 0, borderBottomRightRadius: environments?.length - 1 === index ? 8 : 0, display: 'grid', gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 350px 150px", }}
+            style={{ cursor: "pointer", backgroundColor: bgColor, marginLeft: 0, borderBottomLeftRadius: environments?.length - 1 === index ? 8 : 0, borderBottomRightRadius: environments?.length - 1 === index ? 8 : 0, display: 'grid', gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 405px 125px", }}
             onClick={() => {
             if (environment.Type === "cloud") {
               toast("Cloud environments are not configurable. To see what is possible, create a new environment.")
@@ -1156,7 +1232,7 @@ const EnvironmentTab = memo((props) => {
                           primary={environment.Type}
                           primaryTypographyProps={{
                             style:{
-                              minWidth:  100,
+                              minWidth:  70,
                               overflow: "hidden",
                               whiteSpace: 'nowrap',
                               textOverflow: 'ellipsis',
@@ -1228,6 +1304,7 @@ const EnvironmentTab = memo((props) => {
                                 >
                                   {environment.archived ? "Activate" : "Disable"}
                                 </Button>
+
                                 <Button
                                   variant={"outlined"}
                                   disabled={selectedOrganization.id !== environment.org_id}
@@ -1254,7 +1331,34 @@ const EnvironmentTab = memo((props) => {
                                     ? "Rerun"
                                     : "Clear"}
                                 </Button>
+
+								{environment.Type === "cloud" ? null : 
+									<Button
+									  variant={"outlined"}
+									  style={{
+										fontSize: 16,
+										textTransform: 'none',
+										whiteSpace: "nowrap", // Prevent text wrapping
+									  }}
+									  onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+
+										toast.info("Please choose an app you want to re-distribute to this environment")
+										setShowLocationActionModal({
+											environment: environment,
+											open: true,
+										})
+                                		setUpdate(Math.random())
+									  }}
+									  color="primary"
+									>
+										Send Job	
+									</Button>
+								}
+
                               </ButtonGroup>
+
                               <IconButton disabled={environment.Type === "cloud"} onClick={()=> {setIsExpanded(prev => !prev)}}>
                                 {listItemExpanded === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                               </IconButton>
@@ -1429,7 +1533,7 @@ const EnvironmentTab = memo((props) => {
                                 }
         
                                 setCommandController(commandController)
-                                        setUpdate(Math.random())
+                                setUpdate(Math.random())
                               }}
                             />
                             <div />
@@ -1544,10 +1648,19 @@ const EnvironmentTab = memo((props) => {
     ) }
             </List>
             </div>
-            {/* <EnvironmentStats /> */}
-              </div>
-            </div>
+          </div>
         </div>
+
+		{showLocationActionModal !== undefined && showLocationActionModal !== null && showLocationActionModal?.open === true ? 
+			<div>
+				<LocationActionModal 
+					showLocationActionModal={showLocationActionModal}
+				/>
+			</div>
+
+		: null }
+    </div>
+
 
     )
 });

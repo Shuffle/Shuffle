@@ -226,7 +226,7 @@ const AppExplorer = (props) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [creatorProfile, setCreatorProfile] = React.useState({});
   const [selectedTab, setSelectedTab] = React.useState(0);
-  const defaultDocs = "\n\n## No Shuffle-specific app documentation is available yet.\n\n## Need more information about the app? [Contact us](/contact) and [Join the Community](https://discord.gg/B2CBzUm) and find others using this app."
+  const defaultDocs = `\n\n## No Shuffle-specific app documentation is available yet.\n\n## Need more information about the app? [Contact us](/contact) and [Join the Community](https://discord.gg/B2CBzUm) and find others using this app.`
   const [sharingConfiguration, setSharingConfiguration] = React.useState("you");
   const [appdata, setAppData] = React.useState({});
   const [appDocumentation, setAppDocumentation] = useState(defaultDocs)
@@ -739,13 +739,16 @@ const AppExplorer = (props) => {
     }
   };
 
-  const activateApp = () => {
+  const activateApp = (action) => {
     if (serverside === true) {
-      return;
+      return
     }
 
 	const appExists = userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId)
-	const url = appExists ? `${globalUrl}/api/v1/apps/${appId}/deactivate` : `${globalUrl}/api/v1/apps/${appId}/activate`
+	var url = appExists ? `${globalUrl}/api/v1/apps/${appId}/deactivate` : `${globalUrl}/api/v1/apps/${appId}/activate`
+	if (action !== undefined && action !== null) {
+		url = `${globalUrl}/api/v1/apps/${appId}/${action}`
+	}
 	fetch(url, {
       method: "GET",
       headers: {
@@ -763,21 +766,32 @@ const AppExplorer = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false) {
-        	if (responseJson.reason !== undefined) {
-            toast("Failed to activate the app: "+responseJson.reason);
-          } else {
-            toast("Failed to activate the app");
-          }
+			if (action === undefined || action === null) {
+				if (responseJson.reason !== undefined) {
+					toast("Failed to activate the app: "+responseJson.reason);
+				} else {
+					toast("Failed to activate the app");
+				}
+			} else {
+				if (responseJson.reason !== undefined) {
+					toast("Failed to perform action: "+responseJson.reason);
+				} else {
+					toast("Failed to perform action. Please try again or contact support@shuffler.io");
+				}
+			}
       } else {
           if (checkLogin !== undefined && checkLogin !== null) {
             checkLogin()
           }
 
-          if (appExists) {
-            toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
-          } else {
-                  toast("App activated for your organization!")
-          }
+		  if (action === undefined || action === null) {
+			  if (appExists) {
+				toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
+			  } else {
+				toast("App activated for your organization!")
+			  }
+		  } else {
+		  }
         }
       })
       .catch((error) => {
@@ -4027,6 +4041,29 @@ const AppExplorer = (props) => {
 				</Tooltip>
 			</IconButton>
 		  : null}
+
+	  	  {isMobile || userdata?.active_apps === undefined || userdata?.active_apps === null || !userdata?.active_apps?.includes(appId) ? null :
+            <Button
+			  variant={userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ? "outlined": "contained"}
+              component="label"
+              color="primary"
+              onClick={() => {
+				if (!isLoggedIn) {
+					//navigate("/login?message=You must be logged in to activate this app&view=/apps/" + params.appid);
+					toast("You must be logged in to activate apps! Go to /login first.") 
+					return;
+				}
+
+				toast.info("Sending download job to relevant runtime locations")
+                
+				activateApp("distribute")
+
+              }}
+              style={{ height: 40, marginTop: 5 }}
+            >
+				Push Image
+            </Button>
+          }
 
           {isMobile ? null : (
             <Button
