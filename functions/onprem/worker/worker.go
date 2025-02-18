@@ -487,9 +487,22 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	//fix naming convention
 	// podUuid := uuid.NewV4().String()
-	// podName := fmt.Sprintf("%s-%s", value, podUuid)
+	// name := fmt.Sprintf("%s-%s", value, podUuid)
 	// replace identifier "_" with "-"
-	podName := strings.ReplaceAll(identifier, "_", "-")
+	name := strings.ReplaceAll(identifier, "_", "-")
+
+	labels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-app",
+		"app.kubernetes.io/instance": name,
+		// "app.kubernetes.io/version":    "",
+		"app.kuvernetes.io/part-of":    "shuffle",
+		"app.kubernetes.io/managed-by": "shuffle-worker",
+	}
+
+	matchLabels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-app",
+		"app.kubernetes.io/instance": name,
+	}
 
 	// pod := &corev1.Pod{
 	// 	ObjectMeta: metav1.ObjectMeta{
@@ -569,20 +582,17 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: podName,
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(replicaNumberInt32),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": podName,
-				},
+				MatchLabels: matchLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": podName,
-					},
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -606,12 +616,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// kubectl expose deployment {podName} --type=NodePort --port=80 --target-port=80
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: podName,
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"app": podName,
-			},
+			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
 					Protocol:   "TCP",

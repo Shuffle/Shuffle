@@ -1078,8 +1078,17 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		}
 	}
 
-	containerLabels := map[string]string{
-		"container": "shuffle-worker",
+	labels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-worker",
+		"app.kubernetes.io/instance": identifier,
+		// "app.kubernetes.io/version":    "",
+		"app.kuvernetes.io/part-of":    "shuffle",
+		"app.kubernetes.io/managed-by": "shuffle-orborus",
+	}
+
+	matchLabels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-worker",
+		"app.kubernetes.io/instance": identifier,
 	}
 
 	containerAttachment := corev1.Container{
@@ -1184,16 +1193,17 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: identifier,
+			Name:   identifier,
+			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(replicaNumberInt32),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: containerLabels,
+				MatchLabels: matchLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: containerLabels,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -1214,10 +1224,11 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	// kubectl expose deployment shuffle-workers --type=NodePort --port=33333 --target-port=33333
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: identifier,
+			Name:   identifier,
+			Labels: labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: containerLabels,
+			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
 					Protocol:   "TCP",
