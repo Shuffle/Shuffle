@@ -23,8 +23,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	dockerclient "github.com/docker/docker/client"
 
 	// This is for automatic removal of certain code :)
@@ -105,11 +105,11 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
-	"http:1.4.0":               "frikky/shuffle:http_1.4.0",
-	"http:1.3.0":               "frikky/shuffle:http_1.3.0",
-	"shuffle-tools:1.2.0":      "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.0.0":    "frikky/shuffle:shuffle-subflow_1.0.0",
-	"shuffle-subflow:1.1.0":    "frikky/shuffle:shuffle-subflow_1.1.0",
+	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
+	"http:1.3.0":            "frikky/shuffle:http_1.3.0",
+	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
+	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
+	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -495,7 +495,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		"app.kubernetes.io/name":     "shuffle-app",
 		"app.kubernetes.io/instance": name,
 		// "app.kubernetes.io/version":    "",
-		"app.kuvernetes.io/part-of":    "shuffle",
+		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-worker",
 	}
 

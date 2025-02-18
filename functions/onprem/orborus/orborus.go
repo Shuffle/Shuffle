@@ -1082,7 +1082,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		"app.kubernetes.io/name":     "shuffle-worker",
 		"app.kubernetes.io/instance": identifier,
 		// "app.kubernetes.io/version":    "",
-		"app.kuvernetes.io/part-of":    "shuffle",
+		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-orborus",
 	}
 
@@ -2237,7 +2237,7 @@ func main() {
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
 
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false 
+					tenzirDisabled = false
 
 					// Running NEW or editing pipelines
 					err := handlePipeline(incRequest)
@@ -2262,7 +2262,7 @@ func main() {
 
 				} else if incRequest.Type == "CATEGORY_UPDATE" {
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false 
+					tenzirDisabled = false
 
 					err = handleFileCategoryChange()
 					if err != nil {
@@ -2307,7 +2307,7 @@ func main() {
 
 					// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false 
+					tenzirDisabled = false
 
 					// Removed either way
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
@@ -2317,7 +2317,7 @@ func main() {
 						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
 							// Disabling until UI is updated
 							os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
-							tenzirDisabled = true 
+							tenzirDisabled = true
 
 							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
 							err = shuffle.CreateOrgNotification(
@@ -2636,7 +2636,7 @@ func deployTenzirNode() error {
 		// return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 		//log.Printf("[INFO] Pipelines are enabled by user")
 	} else {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES") 
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 	}
 
 	if isKubernetes == "true" {
@@ -2836,12 +2836,12 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		},
 	}
 
-	// FIXME: Is this necessary? Seems to screw up networking: 
+	// FIXME: Is this necessary? Seems to screw up networking:
 	// conflicting options: hostname and the network mode
 	/*
-	if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	}
+		if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+			hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		}
 	*/
 
 	resp, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
@@ -3049,7 +3049,6 @@ func createPipeline(command, identifier string) (string, error) {
 		return "", err
 	}
 
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading response body: %s", err)
@@ -3067,8 +3066,8 @@ func createPipeline(command, identifier string) (string, error) {
 	}
 
 	type PipelineResponse struct {
-		ID string `json:"id"`
-		Message string `json:"message"`
+		ID       string `json:"id"`
+		Message  string `json:"message"`
 		Severity string `json:"severity"`
 	}
 
@@ -3291,14 +3290,13 @@ func handleFileCategoryChange() error {
 		tenzirStorageFolder = "/tmp/"
 	}
 
-	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/") 
+	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
 	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
 	err = extractZIP("files.zip", sigmaPath)
 	if err != nil {
 		log.Printf("[ERROR] Failed to extract ZIP file: %s", err)
 		return err
 	}
-
 
 	log.Printf("[DEBUG] Detection files copied to '%s' successfully.", sigmaPath)
 
@@ -3383,7 +3381,7 @@ func removeFileCategory() error {
 		tenzirStorageFolder = "/tmp/"
 	}
 
-	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/") 
+	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
 
 	//sigmaPath := "/var/lib/tenzir/sigma_rules/*"
 	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
