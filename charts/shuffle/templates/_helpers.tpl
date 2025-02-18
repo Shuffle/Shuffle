@@ -111,7 +111,7 @@ Return the match labels for worker components
 NOTE: This does not match the labels from shuffle.worker.labels, but the labels set by the orborus GoLang app.
 */}}
 {{- define "shuffle.worker.matchLabels" -}}
-container: shuffle-worker
+app.kubernetes.io/name: shuffle-worker
 {{- end -}}
 
 {{/*
@@ -119,7 +119,7 @@ Return the match labels for app components
 NOTE: This does not match the labels from shuffle.worker.labels, but the labels set by the orborus GoLang app.
 */}}
 {{- define "shuffle.app.matchLabels" -}}
-app: shuffle-app
+app.kubernetes.io/name: shuffle-app
 {{- end -}}
 
 {{/*
