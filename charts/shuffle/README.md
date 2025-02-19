@@ -21,6 +21,21 @@ SPDX-License-Identifier: APACHE-2.0
 helm install shuffle oci://ghcr.io/shuffle/shuffle/charts/shuffle --namespace shuffle --create-namespace
 ```
 
+Make sure that no other application is deployed to the shuffle namespace, as shuffle deletes kubernetes resources in this namespace.
+
+Only a single deployment of shuffle is supported per namespace.
+
+## Uninstallation
+
+```sh
+# Uninstall shuffle via helm
+helm uninstall shuffle --namespace shuffle
+
+# Remove additional resources created by shuffle (such as workers and apps)
+kubectl delete svc --namespace shuffle -l "app.kubernetes.io/managed-by in (shuffle-orborus,shuffle-worker)"
+kubectl delete deploy --namespace shuffle -l "app.kubernetes.io/managed-by in (shuffle-orborus,shuffle-worker)"
+```
+
 ## Secret Parameters
 
 The helm chart was designed to not contain any secret data and does not allow configuring secret data using helm values.
