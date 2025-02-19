@@ -119,6 +119,21 @@ const data = [
     },
   },
   {
+    selector: `node[type="RESIZE-HANDLE"]`,
+    css: {
+      shape: "ellipse",
+      width: "8px",
+      height: "8px",
+      "background-color": "red",
+      "border-width": 1,
+      "border-color": "white",
+      "z-index": 5000, // Ensure it's above the main node
+      "opacity": 1, // Ensure visibility
+      "overlay-opacity": 0, // Prevents selection highlighting
+      "cursor": "nwse-resize"
+    },
+  }, 
+  {
     selector: `node[app_name="Integration Framework"]`,
     css: {
       width: "60px",
