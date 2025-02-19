@@ -594,7 +594,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
-					ServiceAccountName: appServiceAccountName},
+					ServiceAccountName: appServiceAccountName,
 				},
 			},
 		},
