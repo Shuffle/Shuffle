@@ -1263,7 +1263,7 @@ const Files = memo((props) => {
 								}
 								const isDistributed = file?.suborg_distribution?.length > 0 ? true : false;
 								const filenamesplit = file.filename.split(".")
-								const iseditable = file.filesize < 2000000 && file.status === "active" && allowedFileTypes.includes(filenamesplit[filenamesplit.length-1])
+								const iseditable = file.filesize < 2000000 && file.status === "active" && (allowedFileTypes.includes(filenamesplit[filenamesplit.length-1]) || !file?.filename.includes("."))
 								return (
 									<ListItem
 										key={index}

@@ -1215,7 +1215,7 @@ const DocsWrapper = memo(({isLoggedIn, isLoaded, children })=>{
             minWidth: isMobile ? null : (isLoggedIn && isLoaded) ? leftSideBarOpenByClick ? 800 : 900 : null, margin: "auto", 
             position: (isLoggedIn && isLoaded) && leftSideBarOpenByClick ? "relative" : "static", 
             left: (isLoggedIn && isLoaded) && leftSideBarOpenByClick ? 120 : (isLoggedIn && isLoaded) && !leftSideBarOpenByClick ? 80 : 0, 
-            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick && (isLoggedIn && isLoaded) ? 160 : (isLoggedIn && isLoaded) && !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
+            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick && (isLoggedIn && isLoaded) ? 90 : (isLoggedIn && isLoaded) && !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
             transition: "left 0.3s ease-in-out, min-width 0.3s ease-in-out, max-width 0.3s ease-in-out, position 0.3s ease-in-out, margin 0.3s ease-in-out, margin-left 0.3s ease"
             }}>
             {children}

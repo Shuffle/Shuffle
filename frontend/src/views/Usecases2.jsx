@@ -23,6 +23,7 @@ import {
 	Chip,
 	Checkbox,
 	Fade, 
+	Skeleton,
 } from "@mui/material";
 
 import {
@@ -140,11 +141,165 @@ const UsecaseListComponent = (props) => {
 	const [firstLoad, setFirstLoad] = useState(true)
 	const [apps, setApps] = useState([])
 
+	const [autoOpenUsecase, setAutoOpenUsecase] = useState(null);
 
     const classes = useStyles();
 	let navigate = useNavigate();
 
 	const [mitreTags, setMitreTags] = useState([]);
+
+	// Add loading state
+	const [isLoading, setIsLoading] = useState(true);
+
+		// Add this useEffect to handle URL parameters on load
+		useEffect(() => {
+			const urlSearchParams = new URLSearchParams(window.location.search);
+			const params = Object.fromEntries(urlSearchParams.entries());
+			
+			const selectedUsecase = params["selected_object"];
+			if (selectedUsecase && keys.length > 0) {
+				const usecaseName = selectedUsecase.toLowerCase().replaceAll("_", " ");
+				
+				// Find the matching usecase in the keys
+				for (const category of keys) {
+					const foundUsecase = category.list.find(
+						usecase => usecase.name.toLowerCase().replaceAll("_", " ") === usecaseName
+					);
+					
+					if (foundUsecase) {
+						setAutoOpenUsecase(foundUsecase);
+						
+						// Wait for render then scroll
+						setTimeout(() => {
+							const element = document.getElementById(usecaseName);
+							if (element) {
+								element.scrollIntoView({
+									behavior: "smooth",
+									block: "center",
+									inline: "center"
+								});
+							}
+						}, 1000);
+						
+						break;
+					}
+				}
+			}
+		}, [keys]);
+	
+		// Add useEffect to handle auto-opening
+		useEffect(() => {
+			if (autoOpenUsecase) {
+				getUsecase(autoOpenUsecase, 0, 0);
+				setAutoOpenUsecase(null);
+			}
+		}, [autoOpenUsecase]);
+	
+			// Loading skeleton component
+	const LoadingSkeleton = () => (
+		<div style={{paddingTop: 75, minHeight: 1000, textAlign: "left"}}>
+			{/* Header skeleton */}
+			<Skeleton variant="text" width={200} height={40} sx={{ bgcolor: 'grey.800' }} />
+			<Skeleton variant="text" width="60%" height={24} sx={{ marginTop: 3, bgcolor: 'grey.800' }} />
+
+			{/* Apps selection skeleton */}
+			<Skeleton variant="text" width={150} height={24} sx={{ marginTop: 5, marginBottom: 10 }} />
+			<Paper style={{
+				height: 60, 
+				width: "97.5%", 
+				backgroundColor: theme.palette.platformColor, 
+				borderRadius: theme.palette?.borderRadius || 5,
+				display: "flex", 
+				padding: "0 25px",
+			}}>
+				{/* App icons skeleton */}
+				<div style={{flex: 10, display: "flex", gap: 25, alignItems: "center"}}>
+					{[1, 2, 3, 4, 5].map((app) => (
+						<Skeleton
+							key={app}
+							variant="circular"
+							width={40}
+							height={40}
+							sx={{ bgcolor: 'grey.800' }}
+						/>
+					))}
+				</div>
+				{/* Add more apps button skeleton */}
+				<Skeleton 
+					variant="rectangular" 
+					width={150} 
+					height={40} 
+					sx={{ 
+						marginTop: "10px",
+						borderRadius: 20,
+						bgcolor: 'grey.800'
+					}} 
+				/>
+			</Paper>
+
+			{/* Usecase categories skeleton - 3 sections: Collect, Enrich, Detect */}
+			{[1, 2, 3,4,5].map((category) => (
+				<div key={category} style={{marginTop: category === 1 ? 20: 45}}>
+					{/* Category title with color indicator */}
+					<Typography variant="body1" style={{marginBottom: 15}}>
+						<Skeleton 
+							variant="text" 
+							width={200} 
+							height={24} 
+							sx={{ 
+								bgcolor: category === 1 ? '#f85a3e33' : 
+										category === 2 ? '#ffb00d33' : 
+										category === 3 ? '#2196f333' : 
+										category === 4 ? '#4caf5033' : 
+										category === 5 ? '#9c27b033' : '#00000033'
+							}} 
+						/>
+					</Typography>
+					<Grid container spacing={1}>
+						{[1, 2, 3].map((item) => (
+							<Grid item xs={isMobile ? 12 : 4} key={item}>
+								<Paper 
+									style={{
+										backgroundColor: theme.palette.platformColor,
+										borderRadius: theme.palette?.borderRadius || 5,
+										padding: "10px 20px",
+										height: 80,
+										display: "flex",
+										alignItems: "center",
+										gap: 15
+									}}
+								>
+									{/* App icons container */}
+									<div style={{display: "flex", gap: 5}}>
+										<Skeleton 
+											variant="circular" 
+											width={30} 
+											height={30} 
+											sx={{ bgcolor: 'grey.800' }} 
+										/>
+										<Skeleton 
+											variant="circular" 
+											width={30} 
+											height={30} 
+											sx={{ bgcolor: 'grey.800' }} 
+										/>
+									</div>
+									{/* Usecase title */}
+									<Skeleton 
+										variant="text" 
+										width="70%" 
+										height={24} 
+										sx={{ bgcolor: 'grey.800' }} 
+									/>
+								</Paper>
+							</Grid>
+						))}
+					</Grid>
+				</div>
+			))}
+		</div>
+	);
+
 
 
 	const parseUsecase = (subcase, inputFramework) => {
@@ -187,6 +342,7 @@ const UsecaseListComponent = (props) => {
 	}, [frameworkData])
 
 	const loadApps = () => {
+		setIsLoading(true);
 		fetch(`${globalUrl}/api/v1/apps`, {
 		  method: "GET",
 		  headers: {
@@ -220,9 +376,11 @@ const UsecaseListComponent = (props) => {
 			}
         
 			setApps(responseJson);
+			setIsLoading(false);
 		})
 		.catch((error) => {
         	console.log("App loading error: " + error.toString());
+			setIsLoading(false);
 		})
 	}
 
@@ -231,15 +389,23 @@ const UsecaseListComponent = (props) => {
 	  }, [])
 
 	if (keys === undefined || keys === null || keys.length === 0) {
-		return null
+		return <LoadingSkeleton />;
 	}	
 
   
 
   // Timeout 50ms to delay it slightly 
   const getUsecase = (subcase, index, subindex) => {
-	subcase = parseUsecase(subcase)
-	setPrevSubcase(subcase)
+    // Update URL with selected usecase
+    const usecaseName = subcase.name.toLowerCase().replaceAll(" ", "_")
+    const newUrl = `?selected_object=${usecaseName}`
+
+    // Force URL update even if it's the same usecase
+    navigate(newUrl, { replace: true })
+
+    // Parse and fetch usecase data
+    subcase = parseUsecase(subcase)
+    setPrevSubcase(subcase)
 
     fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(subcase.name.replaceAll(" ", "_"))}`, {
       method: "GET",
@@ -413,6 +579,19 @@ const UsecaseListComponent = (props) => {
 
 			}
 		}
+	}
+
+	// Then, add a cleanup function for URL params when drawer closes
+	const handleUsecaseClose = () => {
+	  // Remove the selected_object parameter from URL
+	  navigate("/usecases", { replace: true })
+	  	  
+	  // Reset relevant state
+	  setInputUsecase({})
+	  setExpandedIndex(-1)
+	  setExpandedItem(-1)
+	  setFirstLoad(false)
+	  setSelectedWorkflows([])
 	}
 
 	return (
@@ -645,10 +824,10 @@ const UsecaseListComponent = (props) => {
 
 								return (
       								<Grid id={fixedName} item xs={isMobile ? 12 :  4} key={subindex} style={{}} onClick={() => {
-										if (fixedName === "reporting") {
-											getUsecase(subcase, index, subindex) 
-											return
-										}
+										// if (fixedName === "reporting") {
+										// 	getUsecase(subcase, index, subindex) 
+										// 	return
+										// }
 
 										//setSelectedWorkflows([])
 										if (selectedItem) {
@@ -678,6 +857,8 @@ const UsecaseListComponent = (props) => {
 											workflowBuilt={workflowBuilt} 
 											inputWorkflowId={workflowBuilt}
 											usecaseDetails={usecaseDetails}
+											isModalOpenDefault={autoOpenUsecase?.name === subcase.name}
+											onClose={handleUsecaseClose}
 										/>
 
       								</Grid>
@@ -717,6 +898,7 @@ const Usecases2 = (props) => {
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
 
+  const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
 		if (selectedUsecaseCategory.length === 0) {
@@ -729,71 +911,8 @@ const Usecases2 = (props) => {
 		}
 	}, [selectedUsecaseCategory])
 
-	const checkSelectedParams = () => {
-		const urlSearchParams = new URLSearchParams(window.location.search)
-		const params = Object.fromEntries(urlSearchParams.entries())
-
-		const curpath = typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname;
-		const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-
-		const foundQuery = params["selected"]
-		if (foundQuery !== null && foundQuery !== undefined) {
-			setSelectedUsecaseCategory(foundQuery)
-
-      	const newitem = removeParam("selected", cursearch);
-			navigate(curpath + newitem)
-		}
-
-		const baseItem = document.getElementById("reporting")
-		if (baseItem !== undefined && baseItem !== null) {
-			baseItem.click()
-
-			// Find close window button -> go to top
-			const foundButton = document.getElementById("close_selection")
-			if (foundButton !== undefined && foundButton !== null) {
-				foundButton.click()
-			}
-
-			// Scroll back to top
-			window.scrollTo(0, 0)
-		}
-
-		const foundQuery2 = params["selected_object"]
-		if (foundQuery2 !== null && foundQuery2 !== undefined) {
-			// Take a random object, quickly click it, then go to this one
-			// Something is weird with loading apps without it
-
-			const queryName = foundQuery2.toLowerCase().replaceAll("_", " ")
-			// Waiting a bit for it to render
-			setTimeout(() => {
-				const foundItem = document.getElementById(queryName)
-				if (foundItem !== undefined && foundItem !== null) { 
-					foundItem.click()
-					// Scroll to it
-
-					setTimeout(() => {
-						foundItem.scrollIntoView({
-							behavior: "smooth", 
-							block: "center", 
-							inline: "center"
-						})
-					}, 100)
-				} else { 
-					//console.log("Couldn't find item with name ", queryName)
-				}
-			}, 1000)
-		}
-
-	}
-
-	useEffect(() => {
-		if (usecases.length > 0) {
-			//console.log(usecases)
-			checkSelectedParams()
-		}
-	}, [usecases])
-
   const getFramework = () => {
+    setIsLoading(true);
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
       method: "GET",
       headers: {
@@ -831,6 +950,7 @@ const Usecases2 = (props) => {
 	  })
       .catch((error) => {
         toast(error.toString());
+        setIsLoading(false);
       })
 	}
 

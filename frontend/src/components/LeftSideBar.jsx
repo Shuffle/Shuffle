@@ -29,6 +29,7 @@ import {
   Fade,
   Portal,
   Collapse,
+  Tooltip,
 } from "@mui/material";
 import theme from "../theme.jsx";
 import RecentWorkflow from "../components/RecentWorkflow.jsx";
@@ -524,7 +525,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0-rc6
+          Version: 2.0.0-rc7
         </Typography>
       </Menu>
     </span>
@@ -812,14 +813,36 @@ useEffect(() => {
             setExpandLeftNav(false)
           }
         }}
-      >
-        <a href="/" style={{ textDecoration: "none" }}>
-          <img
-            src={ShuffleLogo}
-            alt="Shuffle Logo"
-            style={{ width: 24, height: 24 }}
-          />
-        </a>
+      >  
+        <Tooltip 
+          title="Go to Home" 
+          placement="top"
+          arrow  
+          componentsProps={{
+            tooltip: {
+              sx: {
+                backgroundColor: "rgba(33, 33, 33, 1)",
+                color: "rgba(241, 241, 241, 1)",
+                fontSize: 12,
+                border: "1px solid rgba(73, 73, 73, 1)",
+                fontFamily: theme?.typography?.fontFamily,
+              }
+            },
+            popper: {
+              sx: {
+                zIndex: 1000019,
+              }
+            }
+          }}
+        >
+          <Link to="/">
+            <img
+              src={ShuffleLogo}
+              alt="Shuffle Logo"
+              style={{ width: 24, height: 24 }}
+            />
+          </Link>
+        </Tooltip>
         <Box
           sx={{
             display: "flex",
@@ -1454,7 +1477,7 @@ useEffect(() => {
                               : "#C8C8C8"
                         }}
                       >
-	  					Shuffle Agent
+	  					Hybrid Locations
                       </span>
                     </Button>
                   </Link>

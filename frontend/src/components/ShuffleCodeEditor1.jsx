@@ -276,6 +276,8 @@ const CodeEditor = (props) => {
 					parsedPaths = GetParsedPaths(actionlist[i].value, "");
 				}
 			} else {
+				//console.log("EXAMPLE: ", actionlist[i])
+
 				// Handle regular action results
 				if (typeof actionlist[i].example === "object") {
 					parsedPaths = GetParsedPaths(actionlist[i].example, "");
@@ -1228,7 +1230,7 @@ const CodeEditor = (props) => {
 	}
 
 	const editorLoad = (editor) => {
-		console.log("EDITOR: ", editor)
+		//console.log("EDITOR: ", editor)
 		editor.completers = [customCompleter]
 	}
 
@@ -1526,7 +1528,7 @@ const CodeEditor = (props) => {
 							Source Data
 						</Typography>
 						<Typography variant="body2" color="textSecondary">
-							Drag the data you want into the text editor
+							Drag the data you want into the text editor! <b>PS: Only support users can see this test-section!</b>
 						</Typography>
 
 						{actionlist?.map((innerdata) => {
@@ -2246,8 +2248,8 @@ const CodeEditor = (props) => {
 												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
 													"Code to run" : 
 													triggerId ? 
-														`Output : ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)}(${triggerField})` :
-														`Output : ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)}(${fieldName})`
+														`Output: ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)} (${triggerField})` :
+														`Output: ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)} (${fieldName})`
 												}
 											</span>
 										}
@@ -2429,7 +2431,10 @@ const CodeEditor = (props) => {
 					variant="outlined"
 					color="secondary"
 					onClick={() => {
-						navigate("")
+						if (isFileEditor !== true) {
+							navigate("")
+						}
+
 						setExpansionModalOpen(false);
 					}}
 				>
@@ -2453,7 +2458,9 @@ const CodeEditor = (props) => {
 						}
 						*/
 
-						navigate("")
+						if (isFileEditor !== true) {
+							navigate("")
+						}
 						// Take localcodedata through the Shuffle JSON parser just in case
 						// This is to make it so we don't need to handle these fixes on the
 						// backend by itself

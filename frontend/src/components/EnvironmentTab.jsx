@@ -1064,17 +1064,26 @@ const EnvironmentTab = memo((props) => {
 				  }}
 				  style={{minWidth:120, display: "table-cell",}}
 				  primary={
-					<Tooltip title={environment.Type !== "cloud"
-					  ? environment.running_ip === undefined ||
-						environment.running_ip === null ||
-						environment.running_ip.length === 0
-						? 
-						"Not running. Click to get the start command that can be ran on your server."
-						: 
-						<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
-					  : 
-						"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
-					  } placement="top">
+					<Tooltip title={
+						<Typography variant="body1" style={{margin: 10, }}>
+						{environment.Type !== "cloud"
+						  ? environment.running_ip === undefined ||
+							environment.running_ip === null ||
+							environment.running_ip.length === 0
+							? 
+							"Not running. Click to get the start command that can be ran on your server."
+							: 
+							<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
+						  : 
+							"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
+						}
+
+						<br />
+						<br />
+
+						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"}
+						</Typography>
+					} placement="top">
 					  <Typography
 					  style={{
 						minWidth: 100,

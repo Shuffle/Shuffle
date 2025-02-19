@@ -688,7 +688,7 @@ const ParsedAction = (props) => {
 		if (newActionList.find((item) => item.type === "Shuffle DB") === undefined) {
 			let cacheKey = {
 				type: "Shuffle DB",
-				name: "Shuffle DB",
+				name: "Shuffle Datastore",
 				value: "$shuffle_cache",
 				highlight: "shuffle_cache",
 				autocomplete: "shuffle_cache",
@@ -753,44 +753,78 @@ const ParsedAction = (props) => {
 			if (parents.length > 1) {
 				const labels = [];
 				for (let parentNode of parents) {
-					if (parentNode.label !== "Runtime Argument" && !labels.includes(parentNode.label)) {
-						labels.push(parentNode.label);
-						let exampleData = parentNode.example ?? "";
-						if (!exampleData && workflowExecutions.length > 0) {
-							for (let exec of workflowExecutions) {
-								const foundResult = exec.results?.find(result => result.action.id === parentNode.id);
-								if (foundResult) {
-									const valid = validateJson(foundResult.result);
-									if (valid.valid && valid.result.success !== false) {
-										exampleData = valid.result;
-										break;
-									}
+					if (parentNode.label === "Runtime Argument" || labels.includes(parentNode.label)) {
+						continue
+					}
+
+					labels.push(parentNode.label);
+					let exampleData = parentNode.example ?? "";
+					if (parentNode?.app_name === "http") {
+						exampleData = ""
+					}
+
+					if (workflowExecutions.length > 0) {
+						for (let exec of workflowExecutions) {
+							const foundResult = exec.results?.find(result => result?.action?.id === parentNode?.id);
+							if (foundResult) {
+								const valid = validateJson(foundResult.result);
+								if (valid.valid && valid.result.success !== false) {
+									exampleData = valid.result
+									break
 								}
 							}
 						}
-
-						if (parentNode.label === undefined) {
-							parentNode.label = ""
-						}
-
-						newActionList.push({
-							type: "action",
-							id: parentNode.id,
-							name: parentNode.label,
-							autocomplete: parentNode.label.split(" ").join("_"),
-							example: exampleData,
-						});
-
-						parentActionList.push({
-							type: "action",
-							id: parentNode.id,
-							name: parentNode.label,
-							autocomplete: parentNode.label.split(" ").join("_"),
-							example: exampleData,
-						});
-
-
 					}
+
+					if (exampleData === "" && apps !== undefined && apps !== null && apps?.length > 0) {
+						// Check apps if it exists, then if it
+						const foundApp = apps?.find(app => app?.id === parentNode?.app_id)
+						if (foundApp !== undefined && foundApp !== null) {
+							if (foundApp?.generated === true || foundApp?.name === "http") {
+								const validationData = validateJson(`{
+									"status": 200,
+									"body": {
+									  "example": "json",
+									  "values": "json"
+									},
+									"url": "https://example.com",
+									"headers": {
+									  "Content-Type": "application/json",
+									  "Example-Header": "two"
+									},
+									"cookies": {
+										"example": "session",
+										"__session": "sessionid"
+									},
+									"success": true
+								}`)
+
+								if (validationData.valid) {
+									exampleData = validationData.result
+								}
+							}
+						}
+					}
+
+					if (parentNode.label === undefined) {
+						parentNode.label = ""
+					}
+
+					newActionList.push({
+						type: "action",
+						id: parentNode.id,
+						name: parentNode.label,
+						autocomplete: parentNode.label.split(" ").join("_"),
+						example: exampleData,
+					});
+
+					parentActionList.push({
+						type: "action",
+						id: parentNode.id,
+						name: parentNode.label,
+						autocomplete: parentNode.label.split(" ").join("_"),
+						example: exampleData,
+					});
 				}
 			}
 		}
@@ -840,8 +874,8 @@ const ParsedAction = (props) => {
 			return { ...param, value: paramvalue, error: message }
 		});
 
-		setSelectedActionParameters(newParameters);
-		setActionlist(newActionList);
+		setSelectedActionParameters(newParameters)
+		setActionlist(newActionList)
 	}, [workflow.execution_variables, paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents, setNewSelectedAction]);
 
 	useEffect(() => {
@@ -2575,7 +2609,8 @@ const ParsedAction = (props) => {
 					</div>
 				*/}
 
-				{setNewSelectedAction !== undefined ? (
+				{isAgent ? null : 
+					setNewSelectedAction !== undefined ? (
 					<Autocomplete
 						id="action_search"
 						disabled={isAgent || (selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0)}

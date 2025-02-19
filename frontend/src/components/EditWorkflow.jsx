@@ -88,6 +88,8 @@ const EditWorkflow = (props) => {
 	const [inputMarkdown, setInputMarkdown] = React.useState(workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null ? workflow?.form_control?.input_markdown : "")
 	const [scrollDone, setScrollDone] = React.useState(false)
 	const [selectedYieldActions, setSelectedYieldActions] = React.useState(workflow?.form_control?.output_yields !== undefined && workflow?.form_control?.output_yields !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.output_yields)) : [])
+	const [selectedCleanupActions, setSelectedCleanupActions] = React.useState(workflow?.form_control?.cleanup_actions !== undefined && workflow?.form_control?.cleanup_actions !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.cleanup_actions)) : [])
+
 	const [formWidth, setFormWidth] = React.useState(boxWidth === undefined || boxWidth === null ? 500 : boxWidth)
 
 	const classes = useStyles();
@@ -323,6 +325,7 @@ const EditWorkflow = (props) => {
 							innerWorkflow.form_control.input_markdown = inputMarkdown
 							innerWorkflow.form_control.output_yields = selectedYieldActions
 							innerWorkflow.form_control.form_width = formWidth
+							innerWorkflow.form_control.cleanup_actions = selectedCleanupActions
 
 							innerWorkflow.name = name
 							innerWorkflow.description = description
@@ -568,7 +571,7 @@ const EditWorkflow = (props) => {
 								<Divider id="mssp_control" style={{ marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h4" style={{ marginTop: 50, }}>
-									MSSP & Distribution controls
+									Multi-Tenancy, Backups & Security
 								</Typography>
 
 								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
@@ -678,7 +681,7 @@ const EditWorkflow = (props) => {
 								}
 
 
-								<Typography variant="body1" style={{ marginTop: 75, }}>
+								<Typography variant="h6" style={{ marginTop: 75, }}>
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
@@ -823,6 +826,60 @@ const EditWorkflow = (props) => {
 										</span>
 									</Grid>
 								</Grid>
+
+								<div id="cleanup">
+									<Typography variant="h6" style={{ marginTop: 50, }}>
+										Result cleanup ({selectedCleanupActions.length === 0 ? "No cleanup yet" : selectedCleanupActions.length === 1 ? "Cleaning up 1 node" : `Cleaning up ${selectedCleanupActions.length} nodes`})
+									</Typography>
+
+									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
+										<b>Beta Feature</b>: When a workflow run is done, the data from the selected actions will be removed by replacing it with a default value. This is useful for cleaning up sensitive data, or data that is no longer needed. This is done after a workflow run is finished or aborted, and is not reversible. Data will remain in the workflow run result (last node value) even if the action result itself is cleaned up.
+									</Typography>
+
+									<FormControl style={{ marginTop: 15, }}>
+										<Select
+											defaultValue=""
+											id="result-cleanup-control"
+											label="Cleaned Up nodes"
+											multiple
+											fullWidth
+											style={{ width: 500, }}
+											value={selectedCleanupActions === [] ? ["none"] : selectedCleanupActions}
+											renderValue={(selected) => selected.join(', ')}
+											onChange={(event) => {
+												if (event.target.value.length > 0) {
+													if (event.target.value.includes("none")) {
+														setSelectedCleanupActions([])
+														return
+													}
+												}
+
+												const newvalue = event?.target?.value
+												if (newvalue === undefined || newvalue === null) {
+												} else {
+													setSelectedCleanupActions(newvalue)
+												}
+											}}
+										>
+											<MenuItem value="none">
+												<em>None</em>
+											</MenuItem>
+											{workflow?.actions?.map((action, actionIndex) => {
+												return (
+													<MenuItem
+														key={actionIndex}
+														value={action.id}
+													>
+														<Tooltip title={action.app_name} key={actionIndex}>
+															<img src={action.large_image !== undefined && action.large_image !== null && action.large_image.length > 0 ? action.large_image : theme.palette.defaultImage} style={{ width: 20, height: 20, marginRight: 10, }} />
+														</Tooltip>
+														{action.label}
+													</MenuItem>
+												)
+											})}
+										</Select>
+									</FormControl>
+								</div>
 
 								<Divider style={{ marginTop: 20, marginBottom: 20, }} />
 
@@ -1023,11 +1080,11 @@ const EditWorkflow = (props) => {
 
 								<div id="output_control">
 									<Typography variant="h6" style={{ marginTop: 50, }}>
-										Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
+										Form Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
 									</Typography>
 
 									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
-										When running this workflow, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
+										When running this workflow as a form, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
 									</Typography>
 
 									<FormControl style={{ marginTop: 15, }}>
