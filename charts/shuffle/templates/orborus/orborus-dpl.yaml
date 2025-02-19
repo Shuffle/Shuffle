@@ -86,6 +86,10 @@ spec:
               value: kubernetes
             - name: IS_KUBERNETES
               value: "true"
+            - name: SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME
+              value: {{ include "shuffle.worker.serviceAccountName" . }}
+            - name: SHUFFLE_APP_SERVICE_ACCOUNT_NAME
+              value: {{ include "shuffle.app.serviceAccountName" . }}
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
