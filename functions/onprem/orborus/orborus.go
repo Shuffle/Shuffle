@@ -216,8 +216,7 @@ func skipCheckInCleanup(name string) bool {
 func cleanupExistingNodes(ctx context.Context) error {
 
 	if isKubernetes == "true" {
-		// of course, this doesn't clean up "nodes" but
-		// rather pods, services, roles etc.
+		// Cleanup all workers created by orborus and all apps created by workers.
 
 		if kubernetesNamespace == "" {
 			kubernetesNamespace = "default"
@@ -229,62 +228,38 @@ func cleanupExistingNodes(ctx context.Context) error {
 			return err
 		}
 
-		// Delete all pods
-		pods, err := clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Printf("[ERROR] Failed listing pods: %s", err)
-			return err
-		}
-
-		for _, pod := range pods.Items {
-			// check if pod.Name starts with:
-			// "backend-", "frontend-", "orborus-", "opensearch-" or "memcached-"
-			if skipCheckInCleanup(pod.Name) {
-				continue
-			}
-
-			err := clientset.CoreV1().Pods(kubernetesNamespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
-			if err != nil {
-				log.Printf("[ERROR] Failed deleting pod %s: %s", pod.Name, err)
-			}
-		}
-
 		// Delete all services
-		services, err := clientset.CoreV1().Services(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		services, err := clientset.CoreV1().Services(kubernetesNamespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/name in (shuffle-worker, shuffle-app),app.kubernetes.io/managed-by in (shuffle-orborus, shuffle-worker)",
+		})
 		if err != nil {
 			log.Printf("[ERROR] Failed listing services: %s", err)
 			return err
 		}
 
 		for _, service := range services.Items {
-			if skipCheckInCleanup(service.Name) {
-				continue
-			}
-
 			err := clientset.CoreV1().Services(kubernetesNamespace).Delete(context.Background(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting service %s: %s", service.Name, err)
 			}
 		}
 
-		deployments, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		deployments, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/name in (shuffle-worker, shuffle-app),app.kubernetes.io/managed-by in (shuffle-orborus, shuffle-worker)",
+		})
 		if err != nil {
 			log.Printf("[ERROR] Failed listing deployments: %s", err)
 			return err
 		}
 
 		for _, deployment := range deployments.Items {
-			if skipCheckInCleanup(deployment.Name) {
-				continue
-			}
-
 			err := clientset.AppsV1().Deployments(kubernetesNamespace).Delete(context.Background(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting deployment %s: %s", deployment.Name, err)
 			}
 		}
 
-		log.Printf("[INFO] Cleaned up all pods and services in namespace %s. Waiting 10 seconds for cleanup to reflect", kubernetesNamespace)
+		log.Printf("[INFO] Cleaned up all services and deployments in namespace %s. Waiting 10 seconds for cleanup to reflect", kubernetesNamespace)
 
 		time.Sleep(10 * time.Second)
 
@@ -3546,9 +3521,8 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 			return 0
 		}
 
-		labelSelector := "app=shuffle-worker"
 		pods, podErr := clientset.CoreV1().Pods(kubernetesNamespace).List(ctx, metav1.ListOptions{
-			LabelSelector: labelSelector,
+			LabelSelector: "app.kubernetes.io/name=shuffle-worker",
 		})
 		if podErr != nil {
 			log.Printf("[ERROR] Failed getting running workers: %s", podErr)

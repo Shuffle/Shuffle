@@ -966,7 +966,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 func cleanupKubernetesExecution(clientset *kubernetes.Clientset, workflowExecution shuffle.WorkflowExecution, namespace string) error {
 	// workerName := fmt.Sprintf("worker-%s", workflowExecution.ExecutionId)
-	labelSelector := fmt.Sprintf("app=shuffle-app,executionId=%s", workflowExecution.ExecutionId)
+	// FIXME: The executionId label is currently not set
+	labelSelector := fmt.Sprintf("app.kubernetes.io/name=shuffle-app,executionId=%s", workflowExecution.ExecutionId)
 
 	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelSelector,
