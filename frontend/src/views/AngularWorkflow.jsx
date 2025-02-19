@@ -15488,6 +15488,77 @@ const AngularWorkflow = (defaultprops) => {
             }}
           />
           <div style={{ display: "flex", marginTop: 10 }}>
+            <div style={{
+              width: "50%"
+              }}>
+              <div>Justify</div>
+              <Select
+              style={{backgroundColor: theme.palette.inputColor}}
+                fullWidth
+                value={selectedComment.textHalign !== "center" ? selectedComment.textHalign === "left" ? "right":"left" : "center"}
+                onChange={(event) => {
+                  const alignment = event.target.value;
+                  const width = selectedComment.width || 250; // Default width if undefined
+
+                  // Compute new values
+                  let textHalign = alignment !== "center" ? alignment === "left" ? "right" : "left" : "center";
+                  let textMarginX = "0px"; // Default for center alignment
+
+                  if (alignment === "left") {
+                    textMarginX = `-${width}px`;
+                  } else if (alignment === "right") {
+                    textMarginX = `${width}px`;
+                  }
+                  selectedComment.textHalign = textHalign;
+                  selectedComment.textMarginX = textMarginX;
+                  // Update state properly
+                  setSelectedComment((prev) => ({
+                    ...prev,
+                    textHalign,
+                    textMarginX,
+                  }));
+
+                  // Use useEffect or separate logging to confirm state changes
+                }}
+              >
+              <MenuItem value="left">Left</MenuItem>
+              <MenuItem value="center">Center</MenuItem>
+              <MenuItem value="right">Right</MenuItem>
+              </Select>
+            </div>
+            <div style={{ marginLeft: 5,width: "50%" }}>
+              <div>Align</div>
+              <Select
+                fullWidth
+                style={{backgroundColor: theme.palette.inputColor}}
+                value={selectedComment.textValign !== "center" ? selectedComment.textValign === "top" ? "bottom" : "top" : "center" || "center"}
+                onChange={(event) => {
+                  const height = selectedComment.height || 150; // Default width if undefined
+
+                  let textValign = event.target.value === "center" ? "center" : event.target.value === "top" ? "bottom" : "top";
+                  let textMarginY = "0px"; // Default for center alignment
+
+                  if (textValign === "top") {
+                    textMarginY = `${height}px`;
+                  } else if (textValign === "bottom") {
+                    textMarginY = `-${height}px`;
+                  }
+                  selectedComment.textValign = textValign;
+                  selectedComment.textMarginY = textMarginY;
+                  setSelectedComment((prev) => ({
+                    ...prev,
+                    textValign,
+                    textMarginY
+                  }));
+                }}
+              >
+                <MenuItem value="top">Top</MenuItem>
+                <MenuItem value="center">Center</MenuItem>
+                <MenuItem value="bottom">Bottom</MenuItem>
+              </Select>
+            </div>
+          </div>
+          <div style={{ display: "flex", marginTop: 10 }}>
             <div>
               <div>Height</div>
               <TextField
@@ -19137,6 +19208,10 @@ const AngularWorkflow = (defaultprops) => {
         position: position,
         backgroundcolor: "#1f2023",
         color: "#ffffff",
+        textHalign: "center",
+        textValign: "center",
+        textMarginX: "0px",
+        textMarginY: "0px"
       },
       position: position,
     });

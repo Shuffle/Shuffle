@@ -2,40 +2,40 @@ const data = [
   {
     selector: "node",
     css: {
-      label: function(element) {
-		  var elementname = element.data("label")
-		  if (elementname === null || elementname === undefined) {
-			  return ""
-		  } 
+      label: function (element) {
+        var elementname = element.data("label")
+        if (elementname === null || elementname === undefined) {
+          return ""
+        }
 
-		  elementname = elementname.replaceAll("_", " ", -1)
-		  elementname = elementname.charAt(0).toUpperCase() + elementname.slice(1)
-		  return elementname
-	  },
+        elementname = elementname.replaceAll("_", " ", -1)
+        elementname = elementname.charAt(0).toUpperCase() + elementname.slice(1)
+        return elementname
+      },
       "text-valign": "center",
-	  "text-margin-x": function(element) {
-		  // Attempt at bottom-positioning
-		  // Required text-valign: bottom
-		  // FIXME: Disabled for now.
-		  return "15px"
+      "text-margin-x": function (element) {
+        // Attempt at bottom-positioning
+        // Required text-valign: bottom
+        // FIXME: Disabled for now.
+        return "15px"
 
 
 
-		  const name = element.data("label")
-		  console.log("Name: ", name)
-		  if (name === null || name === undefined || name == "" || document=== undefined || document === null) {
-			  return "0px"
-		  }
+        const name = element.data("label")
+        console.log("Name: ", name)
+        if (name === null || name === undefined || name == "" || document === undefined || document === null) {
+          return "0px"
+        }
 
-		  const canvas = document.createElement('canvas');
-    	  const context = canvas.getContext('2d')
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d')
 
-		  context.font = '18px Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif'
+        context.font = '18px Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif'
 
-		  const textWidth = context.measureText(name).width
-		  return textWidth + "px"
-		  //return -1*(textWidth) + "px"
-	  },
+        const textWidth = context.measureText(name).width
+        return textWidth + "px"
+        //return -1*(textWidth) + "px"
+      },
 
       "font-family": "Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif",
       "font-weight": "lighter",
@@ -71,13 +71,13 @@ const data = [
     css: {
       label: "data(label)",
       shape: "roundrectangle",
-	  "height": "18px",
-	  "width": "145px",
+      "height": "18px",
+      "width": "145px",
       "background-color": "#212121",
       "border-color": "#81c784",
       "z-index": 10000,
-	  "border-radius": "10px",
-	  "text-margin-x": "0px",
+      "border-radius": "10px",
+      "text-margin-x": "0px",
     },
   },
   {
@@ -95,23 +95,27 @@ const data = [
   {
     selector: `node[type="COMMENT"]`,
     css: {
-      label: function(element) {
-		  return element.data("label")
-	  },
+      label: function (element) {
+        return element.data("label")
+      },
       shape: "roundrectangle",
       color: "data(color)",
       width: "data(width)",
       height: "data(height)",
-      padding: "0px",
+      padding: "5px",
       margin: "0px",
       "background-color": "data(backgroundcolor)",
       "background-image": "data(backgroundimage)",
       "border-color": "#ffffff",
-      "text-margin-x": "0px",
+      "text-margin-x": "data(textMarginX)",
+      "text-margin-y": "data(textMarginY)",
       "z-index": 4999,
       "border-radius": "5px",
       "background-opacity": "0.5",
-	  "text-wrap": "wrap",
+      "text-wrap": "wrap",
+      "text-max-width": "data(width)",
+      "text-halign": "data(textHalign)",
+      "text-valign": "data(textValign)"
     },
   },
   {
@@ -121,16 +125,16 @@ const data = [
       height: "60px",
       "z-index": 5000,
 
-	  //'border-width': 3,
-  	  //'border-color': 'transparent',
-	  //'border-style': 'solid',
-	  //'border-gradient': 'linear-gradient(to right, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #8A2BE2)' 
+      //'border-width': 3,
+      //'border-color': 'transparent',
+      //'border-style': 'solid',
+      //'border-gradient': 'linear-gradient(to right, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #8A2BE2)' 
     },
   },
   {
     selector: `node[example="noapp"]`,
     css: {
-	  // Make background image padding on the left side 20px
+      // Make background image padding on the left side 20px
       "background-width": "100%",
       "background-height": "100%",
 
@@ -138,8 +142,8 @@ const data = [
       "background-fill": "data(fillstyle)",
       "background-gradient-direction": "to-bottom-right",
       "background-gradient-stop-colors": "data(fillGradient)",
-	  // Change transparency of background
-	  "background-opacity": "0.3",
+      // Change transparency of background
+      "background-opacity": "0.3",
     },
   },
   {
@@ -243,10 +247,10 @@ const data = [
       width: "30px",
       height: "30px",
       "z-index": "5002",
-	  filter: "grayscale(100%)",
+      filter: "grayscale(100%)",
       border: "1px solid rgba(255,255,255,0.9)",
       "background-image": "data(large_image)",
-	  "background-fit": "cover",
+      "background-fit": "cover",
       "font-size": "20px",
       label: "data(label_replaced)",
     },
@@ -276,15 +280,15 @@ const data = [
       "text-margin-x": "0px",
       "background-color": "data(imageColor)",
       "background-image": "data(image)",
-		label: "data(label)",
+      label: "data(label)",
     },
   },
   {
     selector: "node[?isStartNode]",
     css: {
-      shape: function(element) {
-		  return "ellipse" 
-	  },
+      shape: function (element) {
+        return "ellipse"
+      },
       "border-color": "#80deea",
       width: "80px",
       height: "80px",
@@ -489,59 +493,59 @@ const data = [
     },
   },
   {
-  	selector: "node:selected",
-  	css: {
-  		"border-color": "#f86a3e",
-  		"border-width": "7px",
-  	},
+    selector: "node:selected",
+    css: {
+      "border-color": "#f86a3e",
+      "border-width": "7px",
+    },
   },
   {
     selector: `node[buttonType="condition-drag"]`,
     css: {
-		"width": "5px",
-		"height": "5px",
-		"background-color": "#f85a3e",
+      "width": "5px",
+      "height": "5px",
+      "background-color": "#f85a3e",
     },
   },
   {
     selector: `node[name="switch"]`,
     css: {
-      label: function(element) {
-		  // Load from the actual element
-		  var nodeheight = 400 
-		  var conditions = [{
-			  "name": "Condition 1",
-			  "check": "X equals Y",
-		  },
-		  {
-			  "name": "Condition 2",
-			  "check": "X2 equals Y2",
-		  },
-		  {
-			  "name": "Condition 3",
-			  "check": "X3 equals Y3",
-		  }]
+      label: function (element) {
+        // Load from the actual element
+        var nodeheight = 400
+        var conditions = [{
+          "name": "Condition 1",
+          "check": "X equals Y",
+        },
+        {
+          "name": "Condition 2",
+          "check": "X2 equals Y2",
+        },
+        {
+          "name": "Condition 3",
+          "check": "X3 equals Y3",
+        }]
 
-		  conditions.push({
-			  "name": "Else",
-			  "check": "If all else fails",
-		  })
+        conditions.push({
+          "name": "Else",
+          "check": "If all else fails",
+        })
 
-		  const newlines = nodeheight / conditions.length
-		  console.log("Newlines: ", newlines)
+        const newlines = nodeheight / conditions.length
+        console.log("Newlines: ", newlines)
 
-		  const label = conditions.map((condition) => {
-			  return `${condition.name}\n\n\n`
-		  }).join("\n")
+        const label = conditions.map((condition) => {
+          return `${condition.name}\n\n\n`
+        }).join("\n")
 
-		  return label
-	  },
+        return label
+      },
       color: "white",
       "border-color": "#f85a3e",
-	  "background-color": "#1f1f1f",
+      "background-color": "#1f1f1f",
       "font-size": "19px",
       "text-margin-x": "-110px",
-	  "text-wrap": "wrap",
+      "text-wrap": "wrap",
       shape: "roundrectangle",
       width: "100",
       height: "300",
