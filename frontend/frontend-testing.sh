@@ -67,7 +67,7 @@ Routes+=(
 
 ALL_ROUTES=("${Routes[@]}")
 
-# Stop frontend container to so it test unpushed changes to shuffle-frontend container
+# Stop frontend container to so it test unpushed changes
 docker stop shuffle-frontend
 
 # Install dependencies
