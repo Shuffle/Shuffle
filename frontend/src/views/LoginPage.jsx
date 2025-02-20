@@ -477,6 +477,7 @@ const LoginDialog = (props) => {
                 variant="contained"
                 type="submit"
                 style={{ flex: "1" }}
+                id="loginButton"
                 disabled={!handleValidateForm() || loginLoading}
               >
                 {loginLoading ? (

@@ -88,6 +88,7 @@
     "remark-rehype": "^11.0.0",
     "rsuite": "^5.23.0",
     "search-insights": "^2.2.1",
+    "selenium-webdriver": "^4.28.1",
     "shellwords": "^1.0.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.1",
@@ -98,7 +99,7 @@
     "zone.js": "~0.8.26"
   },
   "scripts": {
-    "start": "HTTPS=false&&PORT=3000 GENERATE_SOURCEMAP=false react-scripts --openssl-legacy-provider start",
+    "start": "set HTTPS=false&& set PORT=3000&& set GENERATE_SOURCEMAP=true&& react-scripts --openssl-legacy-provider start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

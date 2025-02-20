@@ -5,6 +5,7 @@ on:
     workflows: ["dockerbuild"]
     types:
       - completed
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,9 +18,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-    
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v1
+
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose
+
     - name: Set up opensearch directory
-      run: mkdir shuffle-database && chmod -R 777 shuffle-database
+      run: mkdir -p shuffle-database && chmod -R 777 shuffle-database
 
     - name: Build the stack
       run: docker-compose up -d
@@ -94,6 +103,12 @@ jobs:
 
         echo "User registration failed after $MAX_RETRIES attempts."
         exit 1
+
+    - name: Run Selenium testing for frontend
+      run: |
+        cd $GITHUB_WORKSPACE/frontend
+        chmod +x frontend-testing.sh
+        ./frontend-testing.sh
 
     - name: Get the API key and run a health check
       run: |

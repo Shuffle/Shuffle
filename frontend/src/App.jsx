@@ -186,6 +186,7 @@ const App = (message, props) => {
           color: "rgba(255, 255, 255, 0.65)",
           minHeight: "100vh",
         }}
+		className='parent-component'
       >
         <ScrollToTop
           getUserNotifications={getUserNotifications}
