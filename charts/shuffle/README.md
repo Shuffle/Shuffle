@@ -539,8 +539,11 @@ SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 | `istio.gateway.http.httpsRedirect`      | If set to true, a 301 redirect is send for all HTTP connections                 | `false`                  |
 | `istio.gateway.https.enabled`           | Enable HTTPS server on port 443                                                 | `false`                  |
 | `istio.gateway.https.tlsCredentialName` | The name of the secret that holds the TLS certs including the CA certificates.  | `""`                     |
+| `istio.gateway.https.tlsCipherSuites`   | If specified, only support the specified cipher list.                           | `[]`                     |
 | `istio.gateway.extraServers`            | Additional servers for the Gateway resource                                     | `[]`                     |
 | `istio.virtualService.annotations`      | Additional annotations for the VirtualService resource.                         | `{}`                     |
+| `istio.virtualService.backendHeaders`   | Header manipulation rules for backend traffic                                   | `{}`                     |
+| `istio.virtualService.frontendHeaders`  | Header manipulation rules for frontend traffic                                  | `{}`                     |
 
 ### Persistence Parameters
 
@@ -596,3 +599,5 @@ SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
+
+

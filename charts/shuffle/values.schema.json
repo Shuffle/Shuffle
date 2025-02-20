@@ -2366,6 +2366,12 @@
                                     "type": "string",
                                     "description": "The name of the secret that holds the TLS certs including the CA certificates.",
                                     "default": ""
+                                },
+                                "tlsCipherSuites": {
+                                    "type": "array",
+                                    "description": "If specified, only support the specified cipher list.",
+                                    "default": [],
+                                    "items": {}
                                 }
                             }
                         },
@@ -2383,6 +2389,16 @@
                         "annotations": {
                             "type": "object",
                             "description": "Additional annotations for the VirtualService resource.",
+                            "default": {}
+                        },
+                        "backendHeaders": {
+                            "type": "object",
+                            "description": "Header manipulation rules for backend traffic",
+                            "default": {}
+                        },
+                        "frontendHeaders": {
+                            "type": "object",
+                            "description": "Header manipulation rules for frontend traffic",
                             "default": {}
                         }
                     }

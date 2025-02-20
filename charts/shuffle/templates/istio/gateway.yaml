@@ -32,6 +32,9 @@ spec:
       tls:
         credentialName: {{ .Values.istio.gateway.https.tlsCredentialName }}
         mode: SIMPLE
+        {{- with .Values.istio.gateway.https.tlsCipherSuites }}
+        cipherSuites: {{- include "common.tplvalues.render" ( dict "value" . "context" $ ) | nindent 10 }}
+        {{- end }}
 	{{- end }}
     {{- if .Values.istio.gateway.extraServers }}
     {{- include "common.tplvalues.render" (dict "value" .Values.istio.gateway.extraServers "context" $) | nindent 4 }}

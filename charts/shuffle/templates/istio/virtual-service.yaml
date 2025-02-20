@@ -14,7 +14,8 @@ spec:
   gateways:
     - {{ include "common.names.fullname" . }}
   http:
-    - match:
+    - name: backend
+      match:
         - uri:
             prefix: /api
       route:
@@ -22,9 +23,16 @@ spec:
             host: {{ include "shuffle.backend.name" . }}
             port:
               number: {{ .Values.backend.containerPorts.http }}
-    - route:
+      {{- with .Values.istio.virtualService.backendHeaders }}
+      headers: {{- include "common.tplvalues.render" ( dict "value" . "context" $ ) | nindent 8 }}
+      {{- end }}
+    - name: frontend
+      route:
         - destination:
             host: {{ include "shuffle.frontend.name" . }}
             port:
               number: {{ .Values.frontend.containerPorts.http }}
+      {{- with .Values.istio.virtualService.frontendHeaders }}
+      headers: {{- include "common.tplvalues.render" ( dict "value" . "context" $ ) | nindent 8 }}
+      {{- end }}
     {{- end }}
