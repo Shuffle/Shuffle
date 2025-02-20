@@ -67,10 +67,10 @@ Routes+=(
 
 ALL_ROUTES=("${Routes[@]}")
 
-# Stop frontend container to so it test unpushed changes
+# Stop frontend container so it test unpushed changes
 docker stop shuffle-frontend
 
-# Install dependencies
+# Install all frontend dependencies
 yarn install
 echo "Starting frontend..."
 
@@ -97,7 +97,7 @@ fi
 kill $SERVER_PID
 echo "Testing complete. See above logs for errors if any."
 
-# Starting frontend container
+# Starting shuffle-frontend container
 echo "Starting shuffle-frontend container..."
 docker start shuffle-frontend
 echo "shuffle-frontend started successfully."

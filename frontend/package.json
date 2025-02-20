@@ -99,7 +99,7 @@
     "zone.js": "~0.8.26"
   },
   "scripts": {
-    "start": "set HTTPS=false&& set PORT=3000&& set GENERATE_SOURCEMAP=true&& react-scripts --openssl-legacy-provider start",
+    "start": "HTTPS=false&&PORT=3000 GENERATE_SOURCEMAP=false react-scripts --openssl-legacy-provider start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
