@@ -25,8 +25,8 @@ spec:
       {{- end }}
       labels: {{- include "shuffle.orborus.labels" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
     spec:
-      {{- include "shuffle.imagePullSecrets" . | nindent 6 }}
-      serviceAccountName: {{ template "shuffle.orborus.serviceAccountName" . }}
+      {{- include "shuffle.orborus.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ template "shuffle.orborus.serviceAccount.name" . }}
       automountServiceAccountToken: {{ .Values.orborus.automountServiceAccountToken }}
       {{- if .Values.orborus.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.hostAliases "context" $) | nindent 8 }}
@@ -87,9 +87,9 @@ spec:
             - name: IS_KUBERNETES
               value: "true"
             - name: SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME
-              value: {{ include "shuffle.worker.serviceAccountName" . }}
+              value: {{ include "shuffle.worker.serviceAccount.name" . }}
             - name: SHUFFLE_APP_SERVICE_ACCOUNT_NAME
-              value: {{ include "shuffle.app.serviceAccountName" . }}
+              value: {{ include "shuffle.app.serviceAccount.name" . }}
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}

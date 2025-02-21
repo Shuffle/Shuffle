@@ -13,7 +13,7 @@ data:
   TZ: "{{ .Values.shuffle.timezone }}"
   BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:5001"
   KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
-  KUBERNETES_SERVICE_ACCOUNT: {{ include "shuffle.orborus.serviceAccountName" . }}
+  KUBERNETES_SERVICE_ACCOUNT: {{ include "shuffle.orborus.serviceAccount.name" . }}
   SHUFFLE_WORKER_IMAGE: "{{ include "shuffle.worker.image" . }}"
   REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
   SHUFFLE_SWARM_CONFIG: run

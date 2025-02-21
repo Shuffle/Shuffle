@@ -10,7 +10,7 @@ metadata:
   {{- end }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "shuffle.app.serviceAccountName" . }}
+    name: {{ include "shuffle.app.serviceAccount.name" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

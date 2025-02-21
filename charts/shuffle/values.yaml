@@ -456,6 +456,9 @@ backend:
     ## @param backend.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
     ##
     automountServiceAccountToken: true
+    ## @param backend.serviceAccount.imagePullSecrets Add image pull secrets to the backend service account
+    ##
+    imagePullSecrets: []
 
   ## RBAC configuration
   ##
@@ -921,6 +924,9 @@ frontend:
     ## @param frontend.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
     ##
     automountServiceAccountToken: true
+    ## @param frontend.serviceAccount.imagePullSecrets Add image pull secrets to the frontend service account
+    ##
+    imagePullSecrets: []
 
   ## Network Policies
   ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
@@ -1322,6 +1328,9 @@ orborus:
     ## @param orborus.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
     ##
     automountServiceAccountToken: true
+    ## @param orborus.serviceAccount.imagePullSecrets Add image pull secrets to the orborus service account
+    ##
+    imagePullSecrets: []
 
   ## RBAC configuration
   ##
@@ -1393,6 +1402,9 @@ worker:
     ## @param worker.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
     ##
     automountServiceAccountToken: true
+    ## @param worker.serviceAccount.imagePullSecrets Add image pull secrets to the worker service account
+    ##
+    imagePullSecrets: []
 
   ## RBAC configuration
   ##
@@ -1461,6 +1473,9 @@ app:
     ##           istio: pilot
     ##
     automountServiceAccountToken: true
+    ## @param app.serviceAccount.imagePullSecrets Add image pull secrets to the app service account
+    ##
+    imagePullSecrets: []
 
   ## RBAC configuration
   ##

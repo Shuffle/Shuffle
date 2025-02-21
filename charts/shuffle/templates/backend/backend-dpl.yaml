@@ -25,8 +25,8 @@ spec:
       {{- end }}
       labels: {{- include "shuffle.backend.labels" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
     spec:
-      {{- include "shuffle.imagePullSecrets" . | nindent 6 }}
-      serviceAccountName: {{ template "shuffle.backend.serviceAccountName" . }}
+      {{- include "shuffle.backend.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ template "shuffle.backend.serviceAccount.name" . }}
       automountServiceAccountToken: {{ .Values.backend.automountServiceAccountToken }}
       {{- if .Values.backend.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.backend.hostAliases "context" $) | nindent 8 }}

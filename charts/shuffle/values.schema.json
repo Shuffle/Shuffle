@@ -715,6 +715,12 @@
                             "type": "boolean",
                             "description": "Automount service account token for the server service account",
                             "default": true
+                        },
+                        "imagePullSecrets": {
+                            "type": "array",
+                            "description": "Add image pull secrets to the backend service account",
+                            "default": [],
+                            "items": {}
                         }
                     }
                 },
@@ -1398,6 +1404,12 @@
                             "type": "boolean",
                             "description": "Automount service account token for the server service account",
                             "default": true
+                        },
+                        "imagePullSecrets": {
+                            "type": "array",
+                            "description": "Add image pull secrets to the frontend service account",
+                            "default": [],
+                            "items": {}
                         }
                     }
                 },
@@ -2011,6 +2023,12 @@
                             "type": "boolean",
                             "description": "Automount service account token for the server service account",
                             "default": true
+                        },
+                        "imagePullSecrets": {
+                            "type": "array",
+                            "description": "Add image pull secrets to the orborus service account",
+                            "default": [],
+                            "items": {}
                         }
                     }
                 },
@@ -2103,6 +2121,12 @@
                             "type": "boolean",
                             "description": "Automount service account token for the server service account",
                             "default": true
+                        },
+                        "imagePullSecrets": {
+                            "type": "array",
+                            "description": "Add image pull secrets to the worker service account",
+                            "default": [],
+                            "items": {}
                         }
                     }
                 },
@@ -2175,6 +2199,12 @@
                             "type": "boolean",
                             "description": "Automount service account token for the server service account",
                             "default": true
+                        },
+                        "imagePullSecrets": {
+                            "type": "array",
+                            "description": "Add image pull secrets to the app service account",
+                            "default": [],
+                            "items": {}
                         }
                     }
                 },

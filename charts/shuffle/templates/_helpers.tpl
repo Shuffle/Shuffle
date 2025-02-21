@@ -1,11 +1,4 @@
 {{/*
-Return the proper Docker Image Registry Secret Names
-*/}}
-{{- define "shuffle.imagePullSecrets" -}}
-{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.backend.image .Values.frontend.image .Values.orborus.image .Values.worker.image .Values.volumePermissions.image) "context" $) -}}
-{{- end -}}
-
-{{/*
 Return the common name for backend componentes
 */}}
 {{- define "shuffle.backend.name" -}}
@@ -137,6 +130,13 @@ Return the proper Shuffle backend image name
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the backend pod
+*/}}
+{{- define "shuffle.backend.imagePullSecrets" -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.backend.image) "context" $) -}}
+{{- end -}}
+
+{{/*
 Return the proper Shuffle frontend image name
 */}}
 {{- define "shuffle.frontend.image" -}}
@@ -144,10 +144,24 @@ Return the proper Shuffle frontend image name
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the frontend pod
+*/}}
+{{- define "shuffle.frontend.imagePullSecrets" -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.frontend.image) "context" $) -}}
+{{- end -}}
+
+{{/*
 Return the proper Shuffle orborus image name
 */}}
 {{- define "shuffle.orborus.image" -}}
 {{- include "common.images.image" ( dict "imageRoot" .Values.orborus.image "global" .Values.global ) -}}
+{{- end -}}
+
+{{/*
+Return the proper Docker Image Registry Secret Names for the orborus pod
+*/}}
+{{- define "shuffle.orborus.imagePullSecrets" -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.orborus.image) "context" $) -}}
 {{- end -}}
 
 {{/*
@@ -160,7 +174,7 @@ Return the proper Shuffle worker image name
 {{/*
 Create the name of the service account to use for the Shuffle backend
 */}}
-{{- define "shuffle.backend.serviceAccountName" -}}
+{{- define "shuffle.backend.serviceAccount.name" -}}
 {{- if .Values.backend.serviceAccount.create -}}
     {{ default (include "shuffle.backend.name" .) .Values.backend.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
@@ -169,9 +183,39 @@ Create the name of the service account to use for the Shuffle backend
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the backend service account
+*/}}
+{{- define "shuffle.backend.serviceAccount.imagePullSecrets" -}}
+{{- $pullSecrets := list }}
+
+{{- range .Values.global.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- range .Values.backend.serviceAccount.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- if (not (empty $pullSecrets)) -}}
+imagePullSecrets:
+{{- range $pullSecrets | uniq }}
+  - name: {{ . }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use for the Shuffle frontend
 */}}
-{{- define "shuffle.frontend.serviceAccountName" -}}
+{{- define "shuffle.frontend.serviceAccount.name" -}}
 {{- if .Values.frontend.serviceAccount.create -}}
     {{ default (include "shuffle.frontend.name" .) .Values.frontend.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
@@ -180,9 +224,39 @@ Create the name of the service account to use for the Shuffle frontend
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the frontend service account
+*/}}
+{{- define "shuffle.frontend.serviceAccount.imagePullSecrets" -}}
+{{- $pullSecrets := list }}
+
+{{- range .Values.global.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- range .Values.frontend.serviceAccount.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- if (not (empty $pullSecrets)) -}}
+imagePullSecrets:
+{{- range $pullSecrets | uniq }}
+  - name: {{ . }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use for Shuffle orborus
 */}}
-{{- define "shuffle.orborus.serviceAccountName" -}}
+{{- define "shuffle.orborus.serviceAccount.name" -}}
 {{- if .Values.orborus.serviceAccount.create -}}
     {{ default (include "shuffle.orborus.name" .) .Values.orborus.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
@@ -191,9 +265,39 @@ Create the name of the service account to use for Shuffle orborus
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the orborus service account
+*/}}
+{{- define "shuffle.orborus.serviceAccount.imagePullSecrets" -}}
+{{- $pullSecrets := list }}
+
+{{- range .Values.global.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- range .Values.orborus.serviceAccount.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- if (not (empty $pullSecrets)) -}}
+imagePullSecrets:
+{{- range $pullSecrets | uniq }}
+  - name: {{ . }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use for Shuffle workers
 */}}
-{{- define "shuffle.worker.serviceAccountName" -}}
+{{- define "shuffle.worker.serviceAccount.name" -}}
 {{- if .Values.worker.serviceAccount.create -}}
     {{ default (include "shuffle.worker.name" .) .Values.worker.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
@@ -202,9 +306,39 @@ Create the name of the service account to use for Shuffle workers
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the worker service account
+*/}}
+{{- define "shuffle.worker.serviceAccount.imagePullSecrets" -}}
+{{- $pullSecrets := list }}
+
+{{- range .Values.global.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- range .Values.worker.serviceAccount.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- if (not (empty $pullSecrets)) -}}
+imagePullSecrets:
+{{- range $pullSecrets | uniq }}
+  - name: {{ . }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use for Shuffle apps
 */}}
-{{- define "shuffle.app.serviceAccountName" -}}
+{{- define "shuffle.app.serviceAccount.name" -}}
 {{- if .Values.app.serviceAccount.create -}}
     {{ default (include "shuffle.app.name" .) .Values.app.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
@@ -212,4 +346,32 @@ Create the name of the service account to use for Shuffle apps
 {{- end -}}
 {{- end -}}
 
+{{/*
+Return the proper Docker Image Registry Secret Names for the app service account
+*/}}
+{{- define "shuffle.app.serviceAccount.imagePullSecrets" -}}
+{{- $pullSecrets := list }}
 
+{{- range .Values.global.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- range .Values.app.serviceAccount.imagePullSecrets -}}
+    {{- if kindIs "map" . -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" .name "context" .)) -}}
+    {{- else -}}
+        {{- $pullSecrets = append $pullSecrets (include "common.tplvalues.render" (dict "value" . "context" .)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- if (not (empty $pullSecrets)) -}}
+imagePullSecrets:
+{{- range $pullSecrets | uniq }}
+  - name: {{ . }}
+{{- end }}
+{{- end }}
+{{- end -}}
