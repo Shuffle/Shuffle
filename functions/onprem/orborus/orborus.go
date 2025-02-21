@@ -142,6 +142,7 @@ func init() {
 			os.Setenv("SHUFFLE_PIPELINE_AUTH", pipelineApikey)
 		}
 	}
+
 }
 
 // form id of current running container
@@ -1305,6 +1306,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	if isKubernetes != "true" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+
 		if strings.ToLower(cleanupEnv) != "false" {
 			hostConfig.AutoRemove = true
 		}
@@ -1915,6 +1917,10 @@ func main() {
 	// Handle Cleanup - made it cleanup by default
 	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" {
 		cleanupEnv = "true"
+	}
+
+	if len(cleanupEnv) > 0 {
+		log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
 	}
 
 	workerTimeout := 600
