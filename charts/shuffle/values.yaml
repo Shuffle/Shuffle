@@ -453,7 +453,7 @@ backend:
     ## @param backend.serviceAccount.annotations Additional Service Account annotations (evaluated as a template)
     ##
     annotations: {}
-    ## @param backend.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
+    ## @param backend.serviceAccount.automountServiceAccountToken Automount service account token for the backend service account
     ##
     automountServiceAccountToken: true
     ## @param backend.serviceAccount.imagePullSecrets Add image pull secrets to the backend service account
@@ -921,7 +921,7 @@ frontend:
     ## @param frontend.serviceAccount.annotations Additional Service Account annotations (evaluated as a template)
     ##
     annotations: {}
-    ## @param frontend.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
+    ## @param frontend.serviceAccount.automountServiceAccountToken Automount service account token for the frontend service account
     ##
     automountServiceAccountToken: true
     ## @param frontend.serviceAccount.imagePullSecrets Add image pull secrets to the frontend service account
@@ -1325,7 +1325,7 @@ orborus:
     ## @param orborus.serviceAccount.annotations Additional Service Account annotations (evaluated as a template)
     ##
     annotations: {}
-    ## @param orborus.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
+    ## @param orborus.serviceAccount.automountServiceAccountToken Automount service account token for the orborus service account
     ##
     automountServiceAccountToken: true
     ## @param orborus.serviceAccount.imagePullSecrets Add image pull secrets to the orborus service account
@@ -1399,7 +1399,7 @@ worker:
     ## @param worker.serviceAccount.annotations Additional Service Account annotations (evaluated as a template)
     ##
     annotations: {}
-    ## @param worker.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
+    ## @param worker.serviceAccount.automountServiceAccountToken Automount service account token for the worker service account
     ##
     automountServiceAccountToken: true
     ## @param worker.serviceAccount.imagePullSecrets Add image pull secrets to the worker service account
@@ -1461,7 +1461,7 @@ app:
     ## @param app.serviceAccount.annotations Additional Service Account annotations (evaluated as a template)
     ##
     annotations: {}
-    ## @param app.serviceAccount.automountServiceAccountToken Automount service account token for the server service account
+    ## @param app.serviceAccount.automountServiceAccountToken Automount service account token for the app service account
     ## NOTE: You likely want to allow access to cluster-proxies, e.g:
     ## extraEgress:
     ## - to:

@@ -713,7 +713,7 @@
                         },
                         "automountServiceAccountToken": {
                             "type": "boolean",
-                            "description": "Automount service account token for the server service account",
+                            "description": "Automount service account token for the backend service account",
                             "default": true
                         },
                         "imagePullSecrets": {
@@ -1402,7 +1402,7 @@
                         },
                         "automountServiceAccountToken": {
                             "type": "boolean",
-                            "description": "Automount service account token for the server service account",
+                            "description": "Automount service account token for the frontend service account",
                             "default": true
                         },
                         "imagePullSecrets": {
@@ -2021,7 +2021,7 @@
                         },
                         "automountServiceAccountToken": {
                             "type": "boolean",
-                            "description": "Automount service account token for the server service account",
+                            "description": "Automount service account token for the orborus service account",
                             "default": true
                         },
                         "imagePullSecrets": {
@@ -2119,7 +2119,7 @@
                         },
                         "automountServiceAccountToken": {
                             "type": "boolean",
-                            "description": "Automount service account token for the server service account",
+                            "description": "Automount service account token for the worker service account",
                             "default": true
                         },
                         "imagePullSecrets": {
@@ -2197,7 +2197,7 @@
                         },
                         "automountServiceAccountToken": {
                             "type": "boolean",
-                            "description": "Automount service account token for the server service account",
+                            "description": "Automount service account token for the app service account",
                             "default": true
                         },
                         "imagePullSecrets": {
