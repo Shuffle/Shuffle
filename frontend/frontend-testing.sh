@@ -29,6 +29,8 @@ Routes+=(
 'workflows?tab=org_workflows'
 'workflows?tab=my_workflows'
 'workflows?tab=all_workflows'
+'workflows/debug'
+'debug'
 'usecases'
 'usecases2'
 'getting-started'
