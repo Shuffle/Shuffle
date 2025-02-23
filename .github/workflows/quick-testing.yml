@@ -1,10 +1,6 @@
 name: Docker Compose Up and Ping
 
 on:
-  # workflow_run:
-  #   workflows: ["dockerbuild"]
-  #   types:
-  #     - completed
   workflow_dispatch:
 
 jobs:
@@ -19,20 +15,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose-plugin
+        docker compose version
+    
     - name: Set up opensearch directory
       run: chmod -R 777 shuffle-database
 
     - name: Build the stack
-      run: docker-compose up -d
+      run: docker compose up -d
 
     - name: Wait for 30 seconds
       run: sleep 30
 
     - name: Check for restarting containers in a loop and fixing perms again 
       run: |
-        # echo "Changing permissions on shuffle-database directory again"
-        # chmod -R 777 shuffle-database
-
         ATTEMPTS=30  # Total time = ATTEMPTS * 5 seconds = 30 seconds
         for i in $(seq 1 $ATTEMPTS); do
           RESTARTING_CONTAINERS=$(docker ps --filter "status=restarting" --format "{{.Names}}")
