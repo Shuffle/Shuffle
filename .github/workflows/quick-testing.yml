@@ -50,6 +50,8 @@ jobs:
         RESPONSE=$(curl -s http://localhost:3001)
         if echo "$RESPONSE" | grep -q "Shuffle"; then
           echo "The word 'Shuffle' was found in the response."
+          # adding for test 
+          exit 1
         else
           echo "The word 'Shuffle' was not found in the response."
           exit 1
@@ -139,19 +141,21 @@ jobs:
           exit 1
         fi
 
-    - name: Send Twilio Alert on Health Check Failure
-      if: failure() && steps.health_check.conclusion == 'failure'
-      run: |
-        WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-        MESSAGE="🚨 Shuffle Health Check Failed!
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Workflow URL: $WORKFLOW_URL
-        Health Response: ${{ env.health_response }}"
-        
-        curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
-            --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
-            --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
-            --data-urlencode "Body=$MESSAGE" \
-            -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
+  notify:
+    needs: build
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Twilio Alert
+        run: |
+          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="🚨 Shuffle Workflow Failed!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Workflow URL: $WORKFLOW_URL"
+          
+          curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
+              --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
+              --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
+              --data-urlencode "Body=$MESSAGE" \
+              -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
