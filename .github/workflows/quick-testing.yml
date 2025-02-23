@@ -143,17 +143,15 @@ jobs:
       if: failure() && steps.health_check.conclusion == 'failure'
       run: |
         WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        
-        # Construct the message
+
         MESSAGE="🚨 Shuffle Health Check Failed!
         Repository: ${{ github.repository }}
         Branch: ${{ github.ref_name }}
         Workflow URL: $WORKFLOW_URL
         Health Response: ${{ env.health_response }}"
         
-        # Send SMS via Twilio
-        curl -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
-          --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
-          --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
-          --data-urlencode "Body=$MESSAGE" \
-          -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}"
+        curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
+            --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
+            --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
+            --data-urlencode "Body=$MESSAGE" \
+            -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
