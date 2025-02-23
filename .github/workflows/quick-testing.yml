@@ -20,7 +20,7 @@ jobs:
       uses: actions/checkout@v2
     
     - name: Set up opensearch directory
-      run: mkdir shuffle-database && chmod -R 777 shuffle-database
+      run: chmod -R 777 shuffle-database
 
     - name: Build the stack
       run: docker-compose up -d
