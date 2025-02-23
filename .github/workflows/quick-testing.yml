@@ -18,14 +18,14 @@ jobs:
     - name: Install Docker Compose
       run: |
         sudo apt-get update
-        sudo apt-get install -y docker-compose-plugin
-        docker compose version
+        sudo apt-get install -y docker-compose
+        docker-compose --version
     
     - name: Set up opensearch directory
       run: chmod -R 777 shuffle-database
 
     - name: Build the stack
-      run: docker compose up -d
+      run: docker-compose up -d
 
     - name: Wait for 30 seconds
       run: sleep 30
