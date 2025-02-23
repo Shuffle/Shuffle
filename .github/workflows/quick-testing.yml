@@ -2,6 +2,10 @@ name: Docker Compose Up and Ping
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["dockerbuild"]
+    types:
+      - completed
 
 jobs:
   build:
@@ -51,7 +55,7 @@ jobs:
         if echo "$RESPONSE" | grep -q "Shuffle"; then
           echo "The word 'Shuffle' was found in the response."
           # adding for test 
-          exit 1
+          # exit 1
         else
           echo "The word 'Shuffle' was not found in the response."
           exit 1
