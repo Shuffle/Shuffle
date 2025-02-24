@@ -34,8 +34,9 @@ console.log('Starting Selenium script for testing pages...');
         if (isCloud) {
             // Login Credentials
             const LOGIN_URL = `${frontendURL}/login`;
-            const USERNAME = 'shuffle-testing@gmail.com';
-            const PASSWORD = 'testing@123';
+            // put your login credentials here
+            const USERNAME = '';
+            const PASSWORD = '';
 
             console.log('Logging in...');
             await driver.get(LOGIN_URL);

@@ -297,6 +297,7 @@ const App = (message, props) => {
         	  element={
         	    <Admin
         	      isLoggedIn={isLoggedIn}
+				  userdata={userdata}
         	      setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}

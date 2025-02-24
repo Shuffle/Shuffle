@@ -1,51 +1,21 @@
 
 SERVER_URL="http://localhost:3000"
 
-declare -a Routes=()
+declare -a Routes=($(grep -oP '(?<=path=")[^"]*' src/App.jsx | grep -E '^[a-zA-Z0-9/_:-]+$' | grep -vE '^/$'))
 
-# Add all cloud routes here
-if [[ "$SERVER_URL" == "http://localhost:3001" || "$SERVER_URL" == "http://localhost:3002" || "$SERVER_URL" == "https://sandbox.shuffler.io" || "$SERVER_URL" == "https://shuffler.io" ]]; then
-Routes+=(
-'homepage'
-'home'
-'contact'
-'workflows/fa9314a7-bb9b-4b41-8885-1d02b199f04d'
-'services'
-'debug'
-'creator'
-'articles'
-'partners'
-'pricing'
-'pricing2'
-'training'
-'professional-services'
-'detections'
-)
-fi
+for i in "${!Routes[@]}"; do
+  Routes[$i]="${Routes[$i]#/}"
+done
 
-# Add all common routes here
+# # Add all tab routes and unique routes here
 Routes+=(
-'workflows'
 'workflows?tab=org_workflows'
 'workflows?tab=my_workflows'
 'workflows?tab=all_workflows'
-'workflows/debug'
-'debug'
-'usecases'
-'usecases2'
-'getting-started'
-'welcome'
-'health'
-'docs'
-'settings'
-'apps/new'
 'apps/gmail'
 'apis/gmail'
-'forms'
-'apps'
 'apps?tab=my_apps'
 'apps?tab=all_apps'
-'search'
 'search?tab=org_apps'
 'search?tab=my_apps'
 'search?tab=workflows'
@@ -67,13 +37,11 @@ Routes+=(
 "admin?admin_tab=branding(beta)"
 )
 
-ALL_ROUTES=("${Routes[@]}")
-
 # Stop frontend container so it test unpushed changes
 docker stop shuffle-frontend
 
-# Install all frontend dependencies
-yarn install
+# # Install all frontend dependencies
+yarn add selenium-webdriver --dev && yarn install
 echo "Starting frontend..."
 
 BROWSER=none yarn start &  
@@ -86,7 +54,7 @@ sleep 60
 echo "Server is up! Starting Selenium tests..."
 
 echo "Starting frontend tests..."
-node selenium-test.js "$SERVER_URL" "${ALL_ROUTES[@]}"
+node selenium-test.js "$SERVER_URL" "${Routes[@]}"
 
 TEST_EXIT_CODE=$?
 
