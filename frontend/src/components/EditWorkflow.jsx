@@ -191,6 +191,10 @@ const EditWorkflow = (props) => {
 	var upload = "";
 	var total_count = 0
 
+    const isCloud =
+        window.location.host === "localhost:3002" ||
+        window.location.host === "shuffler.io";
+
 	return (
 		<Drawer
 			anchor={"right"}
@@ -622,12 +626,15 @@ const EditWorkflow = (props) => {
 												All
 											</MenuItem>
 											{userdata.orgs.map((data, index) => {
+
 												var skipOrg = false;
 												if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org === userdata.active_org.id) {
 													// Finds the parent org
 												} else {
 													return null
 												}
+
+												const correctRegion = data?.region_url === userdata?.region_url 
 
 												const imagesize = 22
 												const imageStyle = {
@@ -662,7 +669,11 @@ const EditWorkflow = (props) => {
 
 
 												return (
-													<MenuItem key={index} value={data.id}>
+													<MenuItem 
+														key={index} 
+													 	value={data.id}
+														disabled={isCloud && !correctRegion}
+													>
 														<Checkbox checked={innerWorkflow.suborg_distribution !== undefined && innerWorkflow.suborg_distribution !== null && innerWorkflow.suborg_distribution.includes(data.id)} />
 														{image}{" "}
 														<span style={{ marginLeft: 8 }}>
@@ -1170,9 +1181,21 @@ const EditWorkflow = (props) => {
 										setInnerWorkflow(innerWorkflow)
 									}}
 								>
-									<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
-									<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
-									<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									<Tooltip title="Agentic workflows takes an input based on input questions (forms) and performs actions based on it by itself, using Large Action Models & Singul">
+										<FormControlLabel value="agentic" control={<Radio />} label="Agentic" />
+									</Tooltip>
+
+									<Tooltip title="Trigger workflows are typically running a schedule to get some data, doing some deduplication before sending it to a subflow or standalone workflow.">
+										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+									</Tooltip>
+
+									<Tooltip title="Subflow workflows are typically used to subprocess some data, and in some cases return the result to the parent workflow.">
+										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+									</Tooltip>
+
+									<Tooltip title="Standalone is default. This has no impact on Shuffle as a system.">
+										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									</Tooltip>
 
 								</RadioGroup>
 							</FormControl>

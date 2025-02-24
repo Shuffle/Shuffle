@@ -1935,6 +1935,10 @@ const Workflows2 = (props) => {
 
             var parsedworkflows = [];
             for (var key in newSubflows) {
+				if (key === data.id) {
+					continue
+				}
+
                 const foundWorkflow = workflows.find(
                     (workflow) => workflow.id === newSubflows[key]
                 );
@@ -2362,7 +2366,6 @@ const Workflows2 = (props) => {
 
                 <MenuItem
                     style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-                    disabled={isDistributed}
                     onClick={() => {
                         setDeleteModalOpen(true);
                         setSelectedWorkflowId(data.id);

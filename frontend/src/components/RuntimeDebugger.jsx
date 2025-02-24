@@ -354,13 +354,13 @@ const RuntimeDebugger = (props) => {
 				var imageSource = "";
 				if (params?.row?.org?.id?.length > 0) {
 					if (params?.row?.org?.image?.length > 0){
-						imageSource = params.row.org.image
+						imageSource = params?.row.org?.image
 					}else {
 						imageSource = "/images/no_image.png"
 					}
 				}else {
 					if (userdata.active_org.image?.length > 0){
-						imageSource = userdata.active_org.image
+						imageSource = userdata?.active_org?.image
 					}else {
 						imageSource = "/images/no_image.png"
 					}
@@ -370,7 +370,7 @@ const RuntimeDebugger = (props) => {
 					<span style={{}} onClick={() => {
 						//setStatus(params.row.status)
 					}}>
-						{userdata?.active_org?.creator_org?.length === 0 ? (
+						{userdata?.active_org?.creator_org?.length === 0 && suborgWorkflowRuns ? (
 							<img src={imageSource} alt={source} style={{borderRadius: theme.palette?.borderRadius, height: imageSize, width: imageSize, }} />
 						) : null}
 						<Tooltip title={source} placement="top">
@@ -924,28 +924,13 @@ const RuntimeDebugger = (props) => {
 									onClick={() => setSearchQuery('')} 
 								/>
 								 )} 
-								<button
-								type="button"
-								style={{
-									color: "#1A1A1A",
-									border: "none",
-									padding: "10px 20px",
-									width: 100,
-									height: 35,
-									borderRadius: 4,
-									backgroundColor: "#FF8544",
-									cursor: "pointer",
-								}}
-								>
-								Search
-								</button>
 							</InputAdornment>
 							),
 							
 						}}
 						onChange={(e)=>{handleQueryChange(e)}}
 						color="primary"
-						placeholder="Filter by Workflow Name, Status, Execution Argument, Results.."
+						placeholder="Filter by Workflow Name, Status, Execution Argument, Results"
 						id="shuffle_search_field"
         				/>
 					</div>

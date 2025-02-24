@@ -553,6 +553,10 @@ export const validateJson = (showResult) => {
     // Check fields if they can be parsed too 
     try {
       for (const [key, value] of Object.entries(result)) {
+        if (typeof value === "string") {
+			value = value.replaceAll(" ", "_")
+		}
+
         if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
           //console.log("CHECKING STRING: ", value)
 
@@ -573,6 +577,10 @@ export const validateJson = (showResult) => {
           // Usually only reaches here if raw array > dict > value
           if (typeof showResult !== "array") {
             for (const [subkey, subvalue] of Object.entries(value)) {
+			  if (typeof subvalue === "string") {
+				subvalue = subvalue.replaceAll(" ", "_")
+			  }
+
               if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
                 const inside_result = validateJson(subvalue)
                 if (inside_result.valid) {
@@ -1841,9 +1849,13 @@ const Workflows = (props) => {
 
       var parsedworkflows = [];
       for (var key in newSubflows) {
+		if (key === data.id) {
+			continue
+		}
+
         const foundWorkflow = workflows.find(
           (workflow) => workflow.id === newSubflows[key]
-        );
+        )
         if (foundWorkflow !== undefined && foundWorkflow !== null) {
           parsedworkflows.push(foundWorkflow);
         }
@@ -1854,7 +1866,7 @@ const Workflows = (props) => {
           "Appending subflows during export: ",
           parsedworkflows.length
         );
-        data.subflows = parsedworkflows;
+        data.subflows = parsedworkflows
       }
     }
 

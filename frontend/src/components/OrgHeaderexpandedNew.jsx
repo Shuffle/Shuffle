@@ -74,7 +74,7 @@ const OrgHeaderexpandedNew = (props) => {
 		getContentAnchorEl: () => null,
 	};
 
-const [orgName, setOrgName] = useState(selectedOrganization?.name);
+	const [orgName, setOrgName] = useState(selectedOrganization?.name);
 	const [orgDescription, setOrgDescription] = React.useState(
 		selectedOrganization.description
 	);
@@ -180,41 +180,41 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 	const [uploadUsername, setUploadUsername] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_username === undefined || selectedOrganization.defaults.workflow_upload_username.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_username)
 	const [uploadToken, setUploadToken] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_token === undefined || selectedOrganization.defaults.workflow_upload_token.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_token)
 	const [regionStatus, setRegionStatus] = useState();
-	
+
 	useEffect(() => {
 
 		if (documentationReference !== selectedOrganization?.defaults?.documentation_reference) {
 			setDocumentationReference(selectedOrganization?.defaults?.documentation_reference)
 		}
-		
-		if (uploadRepo !== selectedOrganization?.defaults?.workflow_upload_repo){
+
+		if (uploadRepo !== selectedOrganization?.defaults?.workflow_upload_repo) {
 			setUploadRepo(selectedOrganization?.defaults?.workflow_upload_repo)
 		}
 
-		if (uploadBranch !== selectedOrganization?.defaults?.workflow_upload_branch){
+		if (uploadBranch !== selectedOrganization?.defaults?.workflow_upload_branch) {
 			setUploadBranch(selectedOrganization?.defaults?.workflow_upload_branch)
 		}
 
-		if (uploadUsername !== selectedOrganization?.defaults?.workflow_upload_username){
+		if (uploadUsername !== selectedOrganization?.defaults?.workflow_upload_username) {
 			setUploadUsername(selectedOrganization?.defaults?.workflow_upload_username)
 		}
 
-		if (uploadToken !== selectedOrganization?.defaults?.workflow_upload_token){
+		if (uploadToken !== selectedOrganization?.defaults?.workflow_upload_token) {
 			setUploadToken(selectedOrganization?.defaults?.workflow_upload_token)
 		}
 	}, [selectedOrganization])
 
 	useEffect(() => {
 		if (selectedOrganization !== undefined && selectedOrganization !== null) {
-			if((orgName === undefined || orgName === null || orgName.length === 0) && selectedOrganization?.name !== orgName) {
+			if ((orgName === undefined || orgName === null || orgName.length === 0) && selectedOrganization?.name !== orgName) {
 				setOrgName(selectedOrganization?.name)
 			}
-			if((orgDescription === undefined || orgDescription === null || orgDescription.length === 0) && selectedOrganization?.description !== orgDescription) {
+			if ((orgDescription === undefined || orgDescription === null || orgDescription.length === 0) && selectedOrganization?.description !== orgDescription) {
 				setOrgDescription(selectedOrganization?.description)
 			}
 		}
 	}, [selectedOrganization])
-	
+
 	const handleEditOrg = (
 		name,
 		description,
@@ -262,21 +262,21 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 			});
 	}
 
-	const handleSendChangeRegionMail = (region)=> {
-		if(selectedOrganization === undefined || selectedOrganization === null){
+	const handleSendChangeRegionMail = (region) => {
+		if (selectedOrganization === undefined || selectedOrganization === null) {
 			toast.error("Failed to send request for changing region. Please contact support@shuffler.io.")
 			return
 		}
-		let destinationRegion = region;
-		if (region === "US") {
-			destinationRegion = "us-west2";
-		} else if (region === "EU") {
-			destinationRegion = "europe-west3";
-		} else if (region === "CA") {
-			destinationRegion = "northamerica-northeast1";
-		} else if (region === "UK") {
-			destinationRegion = "europe-west2";
-		}
+
+		const regionToCloudRegion = {
+			'US': 'us-west2',
+			'EU': 'europe-west3',
+			'CA': 'northamerica-northeast1',
+			'UK': 'europe-west2',
+			'EU-2': 'europe-west3'
+		};
+
+		const destinationRegion = regionToCloudRegion[region] || region;
 
 		var data = {
 			dst_region: destinationRegion
@@ -284,7 +284,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 
 		toast.info("Sending request for changing region to " + region)
 
-		fetch(`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change/region/request`,{
+		fetch(`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change/region/request`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -292,13 +292,13 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 			},
 			credentials: "include",
 			body: JSON.stringify(data),
-		}).then((response)=>{
-			if(response.status !== 200){
+		}).then((response) => {
+			if (response.status !== 200) {
 				toast.error("Failed to send request for changing region. Please contact support@shuffler.io.")
-			}else{
-				toast.success("successfully send request for changing region. We will contact you shortly.")
+			} else {
+				toast.success("Successfully sent request for region change. We will process the move and contact you shortly.")
 			}
-		}).catch((err)=>{
+		}).catch((err) => {
 			console.log(err)
 			toast.error("Failed to send request for changing region. Please contact support@shuffler.io.")
 		})
@@ -307,13 +307,13 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 	const setSelectedRegion = (region) => {
 
 		// send a POST request to /api/v1/orgs/{org_id}/region with the region as the body
-		if(region === "US") {
+		if (region === "US") {
 			region = "us-west2"
-		} else if(region === "EU") {
+		} else if (region === "EU") {
 			region = "europe-west2"
-		} else if(region === "CA") {
+		} else if (region === "CA") {
 			region = "northamerica-northeast1"
-		} else if(region === "UK") {
+		} else if (region === "UK") {
 			region = "europe-west2"
 		} else if (region === "EU-2") {
 			region = "europe-west3"
@@ -355,7 +355,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 	const orgSaveButton = (
 		<Tooltip title="Save any unsaved data" placement="bottom">
 			<Button
-				style={{ width: 244, height: 51, display: 'flex', justifyContent:'center', textTransform: 'capitalize', padding: "16px, 24px, 16px, 24px", borderRadius: 4, backgroundColor: "#ff8544", color: "#1a1a1a", fontSize: 16, }}
+				style={{ width: 244, height: 51, display: 'flex', justifyContent: 'center', textTransform: 'capitalize', padding: "16px, 24px, 16px, 24px", borderRadius: 4, backgroundColor: "#ff8544", color: "#1a1a1a", fontSize: 16, }}
 				variant="contained"
 				color="primary"
 				disabled={
@@ -444,29 +444,29 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 							<div style={{ flex: "3", color: "white" }}>
 								<div style={{ marginTop: 8, display: "flex" }} />
 								<div style={{ display: "flex" }}>
-									<div style={{width: "100%", maxWidth: 434, marginRight: 10}}>
+									<div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
 										Name
-											<TextField
-												required
-												style={{
-													flex: "1",
-													display: "flex",
-													height: 35,
-													width: "100%",
-													maxWidth: 434,
-													marginTop: "5px",
-													marginRight: "15px",
-													backgroundColor: isEditOrgTab ? "#212121" : theme.palette.inputColor,
-												}}
-												fullWidth={true}
-												placeholder="Name"
-												type="name"
-												id="standard-required"
-												margin="normal"
-												variant="outlined"
-												value={orgName}
-												onBlur={() => {
-												if((orgName !== selectedOrganization?.name) && (orgName !== "")) {
+										<TextField
+											required
+											style={{
+												flex: "1",
+												display: "flex",
+												height: 35,
+												width: "100%",
+												maxWidth: 434,
+												marginTop: "5px",
+												marginRight: "15px",
+												backgroundColor: isEditOrgTab ? "#212121" : theme.palette.inputColor,
+											}}
+											fullWidth={true}
+											placeholder="Name"
+											type="name"
+											id="standard-required"
+											margin="normal"
+											variant="outlined"
+											value={orgName}
+											onBlur={() => {
+												if ((orgName !== selectedOrganization?.name) && (orgName !== "")) {
 													handleEditOrg(
 														orgName,
 														orgDescription,
@@ -497,61 +497,62 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 															auto_provision: selectedOrganization?.sso_config?.auto_provision,
 														}
 													)
-												}}}
-												onChange={(e) => {
-													if (e.target.value.length > 100) {
-														toast("Choose a shorter name.");
-														return;
-													}
+												}
+											}}
+											onChange={(e) => {
+												if (e.target.value.length > 100) {
+													toast("Choose a shorter name.");
+													return;
+												}
 
-													setOrgName(e.target.value);
-												}}
-												color="primary"
-												InputProps={{
-													style: {
-														color: "white",
-														height: "35px",
-														fontSize: "1em",
-														borderRadius: 4,
-													},
-													classes: {
-														notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
-													},
-												}}
-											/>
+												setOrgName(e.target.value);
+											}}
+											color="primary"
+											InputProps={{
+												style: {
+													color: "white",
+													height: "35px",
+													fontSize: "1em",
+													borderRadius: 4,
+												},
+												classes: {
+													notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+												},
+											}}
+										/>
 									</div>
 									{userdata?.support ? (
 										<div style={{ alignItems: 'center' }}>
-										<div style={{ marginRight: '12px', color: 'white' }}>Status</div>
-										<FormControl style={{ width: 220, height: 35 }}>
-											<Select
-												style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4 }}
-												id="multiselect-status"
-												multiple
-												value={selectedStatus}
-												onChange={(event) => {handleStatusChange(event);setSelectedStatus(event.target.value)}}
-												input={<OutlinedInput />}
-												renderValue={(selected) => selected.join(', ')}
-												MenuProps={MenuProps}
-											>
-												{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead"].map((name) => (
-													<MenuItem key={name} value={name}>
-														<Checkbox checked={selectedStatus.indexOf(name) > -1} />
-														<ListItemText primary={name} />
-													</MenuItem>
-												))}
-											</Select>
-										</FormControl>
-									</div>
-									): null}
+											<div style={{ marginRight: '12px', color: 'white' }}>Status</div>
+											<FormControl style={{ width: 220, height: 35 }}>
+												<Select
+													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4 }}
+													id="multiselect-status"
+													multiple
+													value={selectedStatus}
+													onChange={(event) => { handleStatusChange(event); setSelectedStatus(event.target.value) }}
+													input={<OutlinedInput />}
+													renderValue={(selected) => selected.join(', ')}
+													MenuProps={MenuProps}
+												>
+													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead"].map((name) => (
+														<MenuItem key={name} value={name}>
+															<Checkbox checked={selectedStatus.indexOf(name) > -1} />
+															<ListItemText primary={name} />
+														</MenuItem>
+													))}
+												</Select>
+											</FormControl>
+										</div>
+									) : null}
 
 
 									{isCloud ? (
 										<div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }} >
-										Region
-										<RegionChangeModal selectedOrganization={selectedOrganization}  setSelectedRegion={setSelectedRegion} userdata={userdata} handleSendChangeRegionMail={handleSendChangeRegionMail}/>
-									</div>
-									): null}
+											Region
+											<RegionChangeModal selectedOrganization={selectedOrganization} setSelectedRegion={setSelectedRegion} userdata={userdata} handleSendChangeRegionMail={handleSendChangeRegionMail} />
+										</div>
+									) : null}
 								</div>
 								<div style={{ marginTop: "10px" }} />
 								About
@@ -575,38 +576,40 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 										variant="outlined"
 										placeholder="A description for the organization"
 										value={orgDescription}
-										onBlur={() => {if((orgDescription !== selectedOrganization?.description) && (orgDescription !== "")) {
-											handleEditOrg(
-												orgName,
-												orgDescription,
-												selectedOrganization.id,
-												selectedOrganization.image,
-												{
-													app_download_repo: selectedOrganization?.defaults?.app_download_repo,
-													app_download_branch: selectedOrganization?.defaults?.app_download_branch,
-													workflow_download_repo: selectedOrganization?.defaults?.workflow_download_repo,
-													workflow_download_branch: selectedOrganization?.defaults?.workflow_download_branch,
-													notification_workflow: selectedOrganization?.defaults?.notification_workflow,
-													documentation_reference: selectedOrganization?.defaults?.documentation_reference,
-													workflow_upload_repo: selectedOrganization?.defaults?.workflow_upload_repo,
-													workflow_upload_branch: selectedOrganization?.defaults?.workflow_upload_branch,
-													workflow_upload_username: selectedOrganization?.defaults?.workflow_upload_username,
-													workflow_upload_token: selectedOrganization?.defaults?.workflow_upload_token,
-													newsletter: !newsletter,
-													weekly_recommendations: !weeklyRecommendations,
-												},
-												{
-													sso_entrypoint: selectedOrganization?.sso_config?.sso_entrypoint,
-													sso_certificate: selectedOrganization?.sso_config?.sso_certificate,
-													client_id: selectedOrganization?.sso_config?.client_id,
-													client_secret: selectedOrganization?.sso_config?.client_secret,
-													openid_authorization: selectedOrganization?.sso_config?.openid_authorization,
-													openid_token: selectedOrganization?.sso_config?.openid_token,
-													SSORequired: selectedOrganization?.sso_config?.SSORequired,
-													auto_provision: selectedOrganization?.sso_config?.auto_provision,
-												}
-											)
-										}}}
+										onBlur={() => {
+											if ((orgDescription !== selectedOrganization?.description) && (orgDescription !== "")) {
+												handleEditOrg(
+													orgName,
+													orgDescription,
+													selectedOrganization.id,
+													selectedOrganization.image,
+													{
+														app_download_repo: selectedOrganization?.defaults?.app_download_repo,
+														app_download_branch: selectedOrganization?.defaults?.app_download_branch,
+														workflow_download_repo: selectedOrganization?.defaults?.workflow_download_repo,
+														workflow_download_branch: selectedOrganization?.defaults?.workflow_download_branch,
+														notification_workflow: selectedOrganization?.defaults?.notification_workflow,
+														documentation_reference: selectedOrganization?.defaults?.documentation_reference,
+														workflow_upload_repo: selectedOrganization?.defaults?.workflow_upload_repo,
+														workflow_upload_branch: selectedOrganization?.defaults?.workflow_upload_branch,
+														workflow_upload_username: selectedOrganization?.defaults?.workflow_upload_username,
+														workflow_upload_token: selectedOrganization?.defaults?.workflow_upload_token,
+														newsletter: !newsletter,
+														weekly_recommendations: !weeklyRecommendations,
+													},
+													{
+														sso_entrypoint: selectedOrganization?.sso_config?.sso_entrypoint,
+														sso_certificate: selectedOrganization?.sso_config?.sso_certificate,
+														client_id: selectedOrganization?.sso_config?.client_id,
+														client_secret: selectedOrganization?.sso_config?.client_secret,
+														openid_authorization: selectedOrganization?.sso_config?.openid_authorization,
+														openid_token: selectedOrganization?.sso_config?.openid_token,
+														SSORequired: selectedOrganization?.sso_config?.SSORequired,
+														auto_provision: selectedOrganization?.sso_config?.auto_provision,
+													}
+												)
+											}
+										}}
 										onChange={(e) => {
 											setOrgDescription(e.target.value);
 										}}
@@ -626,7 +629,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 
 								</div>
 							</div>
-							<Typography variant="h5" style={{ color: "rgba(241, 241, 241, 1)",  fontSize: 24, fontWeight: 600, marginTop: 40, textAlign: "left" }}>
+							<Typography variant="h5" style={{ color: "rgba(241, 241, 241, 1)", fontSize: 24, fontWeight: 600, marginTop: 40, textAlign: "left" }}>
 								Preferences
 							</Typography>
 
@@ -647,9 +650,9 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 				</Grid>
 				<Grid item xs={12}>
 					<span>
-						<Typography style={{  fontWeight: 400, fontSize: 16 }}>Org Documentation reference</Typography>
+						<Typography style={{ fontWeight: 400, fontSize: 16 }}>Org Documentation reference</Typography>
 
-						<Typography variant="body2" color="textSecondary" style={{  fontWeight: 400, fontSize: 16, marginTop: 8 }}>
+						<Typography variant="body2" color="textSecondary" style={{ fontWeight: 400, fontSize: 16, marginTop: 8 }}>
 							Add a URL that is added as a link, pointing to any external documentation page you want.
 						</Typography>
 
@@ -672,7 +675,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 							placeholder="Paste a URL to an external reference for this implementation"
 							value={documentationReference}
 							onBlur={() => {
-								if(documentationReference !== selectedOrganization?.defaults?.documentation_reference) {
+								if (documentationReference !== selectedOrganization?.defaults?.documentation_reference) {
 									handleEditOrg(
 										orgName,
 										orgDescription,
@@ -714,7 +717,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 								},
 								style: {
 									color: "white",
-									
+
 									fontWeight: 400,
 									fontSize: 16,
 									borderRadius: 4,
@@ -728,16 +731,16 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 					globalUrl={globalUrl}
 					userdata={userdata}
 					serverside={false}
-            />
+				/>
 				<Grid item xs={12} style={{ marginTop: 20, }}>
-					<Typography variant="h4" style={{ textAlign: "left", color: "rgba(241, 241, 241, 1)",  fontSize: 24, fontWeight: 600, }}>Workflow Backup Repository</Typography>
-					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: "#9E9E9E",  fontSize: 16, fontWeight: 400 }}>
-						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflow-status/workflowId.json format. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">Credentials are encrypted.</a>
+					<Typography variant="h4" style={{ textAlign: "left", color: "rgba(241, 241, 241, 1)", fontSize: 24, fontWeight: 600, }}>Workflow Backup Repository</Typography>
+					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: "#9E9E9E", fontSize: 16, fontWeight: 400 }}>
+						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflow-status/workflowId.json format. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a>
 					</Typography>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{  fontWeight: 400, fontSize: 16 }}>Repository for workflow backup</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Repository for workflow backup</Typography>
 								<TextField
 									required
 									style={{
@@ -765,7 +768,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 										},
 										style: {
 											color: "white",
-											
+
 											fontWeight: 400,
 											fontSize: 16,
 											borderRadius: 4,
@@ -777,7 +780,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 						</Grid>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{  fontWeight: 400, fontSize: 16 }}>Branch</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Branch</Typography>
 								<TextField
 									required
 									style={{
@@ -805,7 +808,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 										},
 										style: {
 											color: "white",
-											
+
 											fontWeight: 400,
 											fontSize: 16,
 											borderRadius: 4,
@@ -819,7 +822,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{  fontWeight: 400, fontSize: 16 }}>Username for backup of workflows</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Username for backup of workflows</Typography>
 								<TextField
 									required
 									style={{
@@ -847,7 +850,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 										},
 										style: {
 											color: "white",
-											
+
 											fontWeight: 400,
 											fontSize: 16,
 											borderRadius: 4,
@@ -859,7 +862,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 						</Grid>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{  fontWeight: 400, fontSize: 16 }}>Git token/password</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Git token/password</Typography>
 								<TextField
 									required
 									style={{
@@ -886,7 +889,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 										},
 										style: {
 											color: "white",
-											
+
 											fontWeight: 400,
 											fontSize: 16,
 											borderRadius: 4,
@@ -930,7 +933,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 									},
 									style: {
 										color: "white",
-										
+
 										fontWeight: 400,
 										fontSize: 16,
 										borderRadius: 4,
@@ -970,7 +973,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 									},
 									style: {
 										color: "white",
-										
+
 										fontWeight: 400,
 										fontSize: 16,
 										borderRadius: 4,
@@ -1010,7 +1013,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 									},
 									style: {
 										color: "white",
-										
+
 										fontWeight: 400,
 										fontSize: 16,
 										borderRadius: 4,
@@ -1050,7 +1053,7 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 									},
 									style: {
 										color: "white",
-										
+
 										fontWeight: 400,
 										fontSize: 16,
 										borderRadius: 4,
@@ -1080,14 +1083,14 @@ const [orgName, setOrgName] = useState(selectedOrganization?.name);
 
 export default OrgHeaderexpandedNew;
 
-const RegionChangeModal = memo(({selectedOrganization, setSelectedRegion, userdata, handleSendChangeRegionMail}) => {
+const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userdata, handleSendChangeRegionMail }) => {
 	// Show from options: "us-west2", "europe-west2", "europe-west3", "northamerica-northeast1"
 	// var regions = ["us-west2", "europe-west2", "europe-west3", "northamerica-northeast1"]
 	const regionMapping = {
 		"US": "us",
 		"EU-2": "eu",
 		"CA": "ca",
-		"UK": "gb"
+		"UK": "gb",
 	};
 
 	//let regiontag = "UK";
@@ -1095,6 +1098,7 @@ const RegionChangeModal = memo(({selectedOrganization, setSelectedRegion, userda
 	let regionCode = "gb";
 
 	const regionsplit = selectedOrganization?.region_url?.split(".");
+
 	if (regionsplit?.length > 2 && !regionsplit[0]?.includes("shuffler")) {
 		const namesplit = regionsplit[0]?.split("/");
 		regiontag = namesplit[namesplit.length - 1];
@@ -1103,58 +1107,59 @@ const RegionChangeModal = memo(({selectedOrganization, setSelectedRegion, userda
 			regiontag = "US";
 			regionCode = "us";
 		} else if (regiontag === "frankfurt") {
-			regiontag = "EU";
+			regiontag = "EU-2";
 			regionCode = "eu";
 		} else if (regiontag === "ca") {
 			regiontag = "CA";
 			regionCode = "ca";
 		}
 	}
-return (
-	<FormControl style={{ display: "flex", flexDirection: "column", marginTop: 5, alignItems: "center" }} >
-		{/* <InputLabel id="demo-simple-select-label">Region</InputLabel> */}
-		<Select
-			labelId="demo-simple-select-label"
-			id="demo-simple-select"
-			value={regiontag}
-			style={{minWidth: 120, height: 35, borderRadius: 4 }}
-			onChange={(e) => {
-				if(userdata?.support){
-					setSelectedRegion(e.target.value)
-				}else{
-					handleSendChangeRegionMail(e.target.value)
-				}
-			}}
-		>
-			{Object.keys(regionMapping).map((region, index) => {
-				const regionImageCode = regionMapping[region];
-				// Set the default region if selectedOrganization.region is not set
-				if (selectedOrganization.region === undefined) {
-					selectedOrganization.region = "europe-west2";
-				}
 
-				// Check if the current region matches the selected region
-				if (region === selectedOrganization.region) {
-					// If the region matches, set the MenuItem as selected
-					return (
-						<MenuItem value={region} key={index} disabled>
-							{/* show region image through cdn */}
-							<img src={`https://flagcdn.com/48x36/${regionImageCode}.png`} alt={region} style={{ marginRight: 10 }} />
+	return (
+		<FormControl style={{ display: "flex", flexDirection: "column", marginTop: 5, alignItems: "center" }} >
+			{/* <InputLabel id="demo-simple-select-label">Region</InputLabel> */}
+			<Select
+				labelId="demo-simple-select-label"
+				id="demo-simple-select"
+				value={regiontag}
+				style={{ minWidth: 120, height: 35, borderRadius: 4 }}
+				onChange={(e) => {
+					if (userdata?.support) {
+						setSelectedRegion(e.target.value)
+					} else {
+						handleSendChangeRegionMail(e.target.value)
+					}
+				}}
+			>
+				{Object.keys(regionMapping).map((region, index) => {
+					const regionImageCode = regionMapping[region];
+					// Set the default region if selectedOrganization.region is not set
+					if (selectedOrganization.region === undefined) {
+						selectedOrganization.region = "europe-west2";
+					}
+
+					// Check if the current region matches the selected region
+					if (region === selectedOrganization.region) {
+						// If the region matches, set the MenuItem as selected
+						return (
+							<MenuItem value={region} key={index} disabled>
+								{/* show region image through cdn */}
+								<img src={`https://flagcdn.com/48x36/${regionImageCode}.png`} alt={region} style={{ marginRight: 10 }} />
+								{region}
+							</MenuItem>
+						);
+					} else {
+						return <MenuItem sx={{ display: 'flex' }} key={index} value={region}>
+							<img
+								src={`https://flagcdn.com/48x36/${regionImageCode}.png`}
+								alt={region}
+								style={{ marginRight: 10, width: 20, height: 18, }}
+							/>
 							{region}
-						</MenuItem>
-					);
-				} else {
-					return <MenuItem sx={{display: 'flex'}} key={index} value={region}>
-						<img
-							src={`https://flagcdn.com/48x36/${regionImageCode}.png`}
-							alt={region}
-							style={{ marginRight: 10, width: 20, height: 18,}}
-						/>
-						{region}
 						</MenuItem>;
-				}
-			})}
-		</Select>
-	</FormControl>
-);
+					}
+				})}
+			</Select>
+		</FormControl>
+	);
 })

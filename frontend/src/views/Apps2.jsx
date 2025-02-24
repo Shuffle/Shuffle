@@ -49,7 +49,7 @@ const searchClient = algoliasearch(
 );
 
 // AppCard Component
-const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps }) => {
+const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps, appsToShow, setAppsToShow, setUserApps, }) => {
   const navigate = useNavigate();
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
@@ -223,6 +223,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                       )
                     }
                     <Button
+					  disabled={data?.reference_org === userdata?.active_org?.id}
                       className="deactivate-button"
                       sx={{
                         width: 110,
@@ -244,7 +245,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         event.preventDefault();
                         event.stopPropagation();
                         const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
-                        toast("Deactivating app. Please wait...");
+                        //toast("Deactivating app. Please wait...");
                         fetch(url, {
                           method: 'GET',
                           headers: {
@@ -256,11 +257,26 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                           .then((response) => response.json())
                           .then((responseJson) => {
                             if (responseJson.success === false) {
-                              toast.error(responseJson.reason);
+							  if (responseJson?.reason !== undefined && responseJson?.reason !== null && responseJson?.reason !== "") {
+                              	  toast.error(responseJson.reason);
+							  } else {
+								  toast.error("Failed to deactivate app. Please try again later.")
+							  }
                             } else {
-                              toast.success("App Deactivated Successfully.");
-                              fetchApps();
-                            }
+                              toast.success("App deactivated successfully. Will take effect on refresh..")
+
+							  /*
+							  // This somehow didn't work
+							  if (appsToShow !== undefined && appsToShow !== null && appsToShow.length > 0) {
+								  const newApps = appsToShow?.filter((app) => app.id !== data.id)
+								  if (newApps !== undefined && newApps !== null && newApps.length > 0) {
+									  setAppsToShow(newApps)
+									  setUserApps(newApps)
+								  }
+								}
+							  }
+							  */
+							}
                           })
                           .catch(error => {
                             console.log("app error: ", error.toString());
@@ -1860,8 +1876,6 @@ const Apps2 = (props) => {
     color: "#FF8544"
   }
 
-  console.log("User", userdata)
-
   return (
     <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
@@ -2247,6 +2261,10 @@ const Apps2 = (props) => {
                                 leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 userdata={userdata}
                                 fetchApps={fetchApps}
+
+								setUserApps={setUserApps}
+								appsToShow={appsToShow}
+								setAppsToShow={setAppsToShow}
                               />
                             ))}
                           </div>
@@ -2296,6 +2314,9 @@ const Apps2 = (props) => {
                               <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
                                 handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 fetchApps={fetchApps}
+								setUserApps={setUserApps}
+								appsToShow={appsToShow}
+								setAppsToShow={setAppsToShow}
                               />
                             ))}
                           </div>
