@@ -1144,13 +1144,25 @@ const EditWorkflow = (props) => {
 									</FormControl>
 								</div>
 
+							<Divider style={{marginTop: 75, marginBottom: 75, }}/>
 
-							<Typography variant="h4" style={{ marginTop: 100, }}>
+
+							<Typography variant="h4" style={{ }}>
 								Publishing
+
+								<Chip
+									style={{ marginLeft: 20, marginTop: 10, }}
+									color={workflow?.public === true ? "primary" : "secondary"}
+									variant={workflow?.public === true ? "default" : "outlined"}
+									label={workflow?.public === true ? "Public" : "NOT Public"}
+								/>
 							</Typography>
 							<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
-								Publishing is related to making the workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to everyone. The details below will help a user understand this better. When a workflow is published, you keep the original, and a copy enters the workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator account</a>, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow screen. After publishing, you can find it in the Shuffle search engine.
+								Publishing is related to making this workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to anyone. The fields below will help a user and Shuffle's system understand your workflow better. When a workflow is published, you keep the original, and a copy enters the Shuffle workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator</a> or partner account, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow page. 
+
+								You can always unpublish a workflow after.
 							</Typography>
+
 
 							<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
 								<DatePicker

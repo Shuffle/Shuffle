@@ -574,7 +574,7 @@ const AngularWorkflow = (defaultprops) => {
   }, [editWorkflowModalOpen])
 
   useEffect(() => {
-    if (selectedTrigger !== undefined && selectedTrigger.parameters !== undefined && selectedTrigger.parameters !== undefined && selectedTrigger.parameters.length > 1) {
+    if (selectedTrigger !== undefined && selectedTrigger?.parameters !== undefined && selectedTrigger?.parameters !== null && selectedTrigger?.parameters?.length > 1) {
       // Right now just setting for the subflow
       setSelectedTriggerValue(selectedTrigger?.parameters[1]?.value)
     }
@@ -4916,7 +4916,7 @@ const AngularWorkflow = (defaultprops) => {
 	if (!branchFound) {
 	  var relevantNodes = [] 
 
-	  const minDistance = 225
+	  const minDistance = 185 
 	  const draggedNode = event.target
 	  const allnodes = cy.nodes().jsons()
 	  for (var nodekey in allnodes) {
@@ -5481,6 +5481,7 @@ const AngularWorkflow = (defaultprops) => {
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
   // onNodeClick
   const onNodeSelect = (event, newAppAuth) => {
+
     // Forces all states to update at the same time,
     // Otherwise everything is SUPER slow
 
@@ -5654,7 +5655,14 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     ReactDOM.unstable_batchedUpdates(() => {
+	  const selectedNodes = cy.$(':selected')
       if (data.isButton) {
+		if (selectedNodes?.length > 1) {
+			event.target.unselect()
+			//console.log(": ", selectedNodes.length)
+			return
+		}
+
         if (data.buttonType === "suggestion") {
           if (cy === undefined) {
             console.log("Cy not defined yet")
@@ -5894,6 +5902,14 @@ const AngularWorkflow = (defaultprops) => {
       }
 
       if (data.type === "ACTION") {
+		if (selectedNodes?.length > 1) {
+			console.log("Unselecting ACTION due to multiple nodes selected")
+			setSelectedAction({})
+			setSelectedApp({})
+			setSelectedComment({})
+			return
+		}
+
         setSelectedComment({})
 
         // FIXME: is this what is mapping it an actual action in the workflow? wtf?
@@ -6241,6 +6257,14 @@ const AngularWorkflow = (defaultprops) => {
           setSelectedActionEnvironment(env);
         }
       } else if (data.type === "TRIGGER") {
+		if (selectedNodes?.length > 1) {
+			console.log("Unselecting ACTION due to multiple nodes selected")
+			setSelectedAction({})
+			setSelectedApp({})
+			setSelectedComment({})
+			return
+		}
+
         setSelectedComment({})
         if (workflow.triggers === null) {
           workflow.triggers = []
@@ -6442,6 +6466,14 @@ const AngularWorkflow = (defaultprops) => {
           //setSelectedActionEnvironment(data.env)
         }, 25)
       } else if (data.type === "COMMENT") {
+		if (selectedNodes?.length > 1) {
+			console.log("Unselecting ACTION due to multiple nodes selected")
+			setSelectedAction({})
+			setSelectedApp({})
+			setSelectedComment({})
+			return
+		}
+
         setSelectedComment(data);
       } else {
         toast("Can't handle node type " + data.type);
@@ -7450,26 +7482,21 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const handlePaste = (event) => {
-    //console.log("EV: ", event)
     if (
       event.path !== undefined &&
       event.path !== null &&
       event.path.length > 0
     ) {
-      //console.log("PATH: ", event.path[0])
       if (event.path[0].localName !== "body") {
-        //console.log("Skipping because body is not targeted")
         return;
       }
     }
 
-    //console.log("PATH2: ", event.target)
     if (
       event.target !== undefined &&
       event.target !== null
     ) {
       if (event.target.localName !== "body") {
-        //console.log("Skipping because body is not targeted")
         return;
       }
     }
@@ -7479,12 +7506,10 @@ const AngularWorkflow = (defaultprops) => {
     const clipboard = (event.originalEvent || event).clipboardData.getData(
       "text/plain"
     );
-    //console.log("Text: ", clipboard)
-    //window.document.execCommand('insertText', false, text);
-    //
+
     try {
+	  const allnodes = cy.nodes().jsons()
       var parsedjson = JSON.parse(clipboard);
-      // Check if array
       if (!Array.isArray(parsedjson)) {
         console.log("Not array! Adding to array.")
         parsedjson = [parsedjson]
@@ -7492,7 +7517,6 @@ const AngularWorkflow = (defaultprops) => {
 
       for (let jsonkey in parsedjson) {
         var item = parsedjson[jsonkey];
-        console.log("Adding: ", item);
 
         if (item.data === undefined || item.data === null) {
           console.log("Appending from here")
@@ -7512,13 +7536,31 @@ const AngularWorkflow = (defaultprops) => {
           item.data.isStartNode = false
         }
 
+		// Find a cy.data() label with the same name
+		const foundnodes = allnodes.filter((data) => {
+			//console.log("COMP: ", data.data.label, item.data.label)
+			if (data.data.label === undefined || data.data.label === null) {
+				return false
+			}
+
+			return data.data.label === item.data.label
+		})
+
+		if (foundnodes !== undefined && foundnodes !== null && foundnodes.length > 0) {
+			// Weird naming copy lol
+			item.data.label = item.data.label + "_copy_" + allnodes.length
+		}
+
         item.data.id = uuidv4()
 
         cy.add({
           group: item.group,
           data: item.data,
-          position: item.position,
-        });
+          position: {
+			  x: item.position.x+20,
+			  y: item.position.y+20,
+		  },
+        })
       }
     } catch (e) {
       console.log("Error pasting: ", e);
@@ -9591,7 +9633,12 @@ const AngularWorkflow = (defaultprops) => {
 		console.log("Error fitting cytoscape (4): ", error)
 	}
 
+	
     cy.on("boxselect", "node", (e) => {
+	  e.preventDefault()
+	  e.stopPropagation()
+
+	  console.log("BOXSELECT: ", e.boxSelectElements)
       if (e.target.data("isButton") || e.target.data("isDescriptor") || e.target.data("isSuggestion")) {
         e.target.unselect();
       }
@@ -9601,10 +9648,15 @@ const AngularWorkflow = (defaultprops) => {
 
     cy.on("boxstart", (e) => {
       console.log("START");
+	  e.preventDefault()
+	  e.stopPropagation()
     });
 
     cy.on("boxend", (e) => {
-      console.log("END: ", cy)
+	  e.preventDefault()
+	  e.stopPropagation()
+
+      console.log("END: ", e.target, cy)
       var cydata = cy.$(":selected").jsons();
       if (cydata !== undefined && cydata !== null && cydata.length > 0) {
 		// Unselect all nodes
@@ -17404,11 +17456,11 @@ const AngularWorkflow = (defaultprops) => {
               selectedTrigger.status === "running"
             }
             defaultValue={
-              selectedTrigger?.parameters === undefined || selectedTrigger?.parameters === null || selectedTrigger?.parameters?.length === 0 ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger.parameters[0]?.value
+              selectedTrigger?.parameters === undefined || selectedTrigger?.parameters === null || selectedTrigger?.parameters?.length === 0 ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger?.parameters[0]?.value
             }
             color="primary"
             placeholder={
-				selectedTrigger.parameters === undefined ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger.parameters[0]?.value
+				selectedTrigger.parameters === undefined || selectedTrigger?.parameters === null || selectedTrigger?.parameters?.length === 0 ? isCloud || selectedTrigger?.environment === "cloud" ? "*/25 * * * *" : "60" : selectedTrigger?.parameters[0]?.value
 			}
             onBlur={(e) => {
               setTriggerCronWrapper(e.target.value);
@@ -21602,10 +21654,8 @@ const AngularWorkflow = (defaultprops) => {
     const checked = validateJson(data.value.trim())
 
     if (data.name === "shuffle_action_logs" && data.value !== undefined && data.value !== null && data.value.length > 0 && data.value.includes("add env SHUFFLE_LOGS_DISABLED")) {
-		data.value = `Logs for this action are not available without <a style={{ color: "#FF8544", }} href="/admin?tab=locations" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{ color: "#FF8544", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.`
-		/*
 		  return (
-			<div style={{ maxWidth: 600, marginTop: 15, overflowX: "hidden", }}>
+			<div style={{ maxWidth: 600, marginTop: 75, overflowX: "hidden", }}>
 			  <Typography
 				variant="body1"
 				style={{}}
@@ -21613,10 +21663,10 @@ const AngularWorkflow = (defaultprops) => {
 				<b>Action Logs</b>
 			  </Typography>
 			  <Typography variant="body2" style={{ whiteSpace: 'pre-line', }}>
+				More log details for this action are not available without <a style={{ color: "#FF8544", }} href="/admin?tab=locations" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{ color: "#FF8544", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
 			  </Typography>
 			</div>
 		  )
-		  */
     }
 
     var showlink = false
