@@ -1,0 +1,224 @@
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ template "shuffle.backend.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.backend.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.backend.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.backend.deploymentAnnotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.backend.autoscaling.hpa.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  {{- if .Values.backend.updateStrategy }}
+  strategy: {{- toYaml .Values.backend.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.backend.podLabels .Values.commonLabels) "context" .) }}
+  selector:
+    matchLabels: {{- include "shuffle.backend.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  template:
+    metadata:
+      {{- if .Values.backend.podAnnotations }}
+      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.backend.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "shuffle.backend.labels" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+    spec:
+      {{- include "shuffle.backend.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ template "shuffle.backend.serviceAccount.name" . }}
+      automountServiceAccountToken: {{ .Values.backend.automountServiceAccountToken }}
+      {{- if .Values.backend.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.backend.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.backend.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.backend.podAffinityPreset "component" "backend" "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.backend.podAntiAffinityPreset "component" "backend" "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.backend.nodeAffinityPreset.type "key" .Values.backend.nodeAffinityPreset.key "values" .Values.backend.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.backend.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.backend.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.backend.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.priorityClassName }}
+      priorityClassName: {{ .Values.backend.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.backend.schedulerName }}
+      schedulerName: {{ .Values.backend.schedulerName | quote }}
+      {{- end }}
+      {{- if .Values.backend.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.backend.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.backend.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.backend.terminationGracePeriodSeconds }}
+      {{- end }}
+      initContainers:
+        {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
+        - name: volume-permissions
+          image: {{ include "shuffle.volumePermissions.image" . }}
+          imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              chown -vR {{ .Values.backend.containerSecurityContext.runAsUser }}:{{ .Values.backend.podSecurityContext.fsGroup }} /app/generated && \
+              chown -vR {{ .Values.backend.containerSecurityContext.runAsUser }}:{{ .Values.backend.podSecurityContext.fsGroup }} /shuffle-apps && \
+              chown -vR {{ .Values.backend.containerSecurityContext.runAsUser }}:{{ .Values.backend.podSecurityContext.fsGroup }} /shuffle-files
+          {{- if .Values.volumePermissions.containerSecurityContext.enabled }}
+          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.volumePermissions.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.volumePermissions.resources }}
+          resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
+          {{- else if ne .Values.volumePermissions.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" .Values.volumePermissions.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: shuffle-app-builder
+              mountPath: /app/generated
+            - name: shuffle-apps
+              mountPath: /shuffle-apps
+              {{- if .Values.persistence.apps.subPath }}
+              subPath: {{ .Values.persistence.apps.subPath }}
+              {{- end }}
+            - name: shuffle-files
+              mountPath: /shuffle-files
+              {{- if .Values.persistence.files.subPath }}
+              subPath: {{ .Values.persistence.apps.subPath }}
+              {{- end }}
+        {{- end }}
+        {{- if .Values.backend.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.backend.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: backend
+          image: {{ template "shuffle.backend.image" . }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          {{- if .Values.backend.containerSecurityContext.enabled }}
+          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.backend.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.backend.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.backend.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.backend.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.backend.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: RUNNING_MODE
+              value: kubernetes
+            - name: IS_KUBERNETES
+              value: "true"
+            - name: SHUFFLE_APP_HOTLOAD_FOLDER
+              value: /shuffle-apps
+            - name: SHUFFLE_FILE_LOCATION
+              value: /shuffle-files
+            {{- if .Values.backend.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "shuffle.backend.name" . }}-env
+            {{- if .Values.backend.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if .Values.backend.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- if .Values.backend.resources }}
+          resources: {{- toYaml .Values.backend.resources | nindent 12 }}
+          {{- else if ne .Values.backend.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" .Values.backend.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.containerPorts.http }}
+            {{- if .Values.backend.extraContainerPorts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraContainerPorts "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if not .Values.diagnosticMode.enabled }}
+          {{- if .Values.backend.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.backend.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.backend.livenessProbe.enabled }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.backend.livenessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.backend.containerPorts.http }}
+          {{- end }}
+          {{- if .Values.backend.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.backend.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.backend.readinessProbe.enabled }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.backend.readinessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.backend.containerPorts.http }}
+          {{- end }}
+          {{- if .Values.backend.customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.backend.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.backend.startupProbe.enabled }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.backend.startupProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.backend.containerPorts.http }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.backend.lifecycleHooks }}
+          lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.backend.lifecycleHooks "context" $) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: shuffle-app-builder
+              mountPath: /app/generated
+            - name: shuffle-apps
+              mountPath: /shuffle-apps
+              {{- if .Values.persistence.apps.subPath }}
+              subPath: {{ .Values.persistence.apps.subPath }}
+              {{- end }}
+            - name: shuffle-files
+              mountPath: /shuffle-files
+              {{- if .Values.persistence.files.subPath }}
+              subPath: {{ .Values.persistence.apps.subPath }}
+              {{- end }}
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+          {{- if .Values.backend.extraVolumeMounts }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
+        {{- if .Values.backend.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.backend.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: shuffle-app-builder
+          persistentVolumeClaim:
+            claimName: backend-apps-claim
+        - name: shuffle-apps
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-apps" (include "shuffle.backend.name" .)) .Values.persistence.apps.existingClaim }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        - name: shuffle-files
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-files" (include "shuffle.backend.name" .)) .Values.persistence.apps.existingClaim }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.backend.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}

@@ -1,0 +1,21 @@
+{{- if .Values.backend.pdb.create }}
+apiVersion: {{ include "common.capabilities.policy.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "shuffle.backend.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.backend.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.backend.pdb.minAvailable }}
+  minAvailable: {{ .Values.backend.pdb.minAvailable }}
+  {{- end  }}
+  {{- if or .Values.backend.pdb.maxUnavailable ( not .Values.backend.pdb.minAvailable ) }}
+  maxUnavailable: {{ .Values.backend.pdb.maxUnavailable | default 1 }}
+  {{- end  }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.backend.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "shuffle.backend.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+{{- end }}
