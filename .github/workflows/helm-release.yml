@@ -10,7 +10,7 @@ on:
     branches:
       - nightly
     paths:
-      - "charts/**"
+      - "functions/kubernetes/charts/**"
 
 permissions:
   contents: read
@@ -32,16 +32,16 @@ jobs:
           sudo apt-get install helm -y --no-install-recommends
 
       - name: Set versions
-        id: set_versions
         run: |
           if [[ ${{ github.event_name }} == 'release' ]]; then
-            CHART_VERSION="${{ github.event.release.tag_name }}"
             APP_VERSION="${{ github.event.release.tag_name }}"
+            CHART_VERSION="${{ github.event.release.tag_name }}"
           else
-            CHART_VERSION="0.0.0-nightly-untagged-latest"
             APP_VERSION="nightly"
+            CHART_VERSION="0.0.0-nightly-untagged-latest"
           fi
 
+          echo "APP_VERSION set to ${APP_VERSION}"
           echo "CHART_VERSION set to ${CHART_VERSION}. Validating..."
 
           # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
@@ -54,17 +54,17 @@ jobs:
             exit 1;
           fi
 
-          echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_OUTPUT
-          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_OUTPUT
+          echo "CHART_VERSION=${CHART_VERSION}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
 
       - name: Update helm dependencies
-        run: helm dependency update ./charts/shuffle
+        run: helm dependency update ./functions/kubernetes/charts/shuffle
 
       - name: Package Helm chart
-        run: helm package ./charts/shuffle --version "${CHART_VERSION}" --app-version="${APP_VERSION}" --destination ./charts
+        run: helm package ./functions/kubernetes/charts/shuffle --version "${CHART_VERSION}" --app-version="${APP_VERSION}" --destination ./functions/kubernetes/charts
 
       - name: Login to OCI registry (ghcr.io)
         run: helm registry login ghcr.io --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push helm chart
-        run: helm push ./charts/shuffle-*.tgz oci://ghcr.io/shuffle/shuffle/charts
+        run: helm push ./functions/kubernetes/charts/shuffle-*.tgz oci://ghcr.io/shuffle/charts
