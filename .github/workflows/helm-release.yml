@@ -58,17 +58,14 @@ jobs:
           echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_OUTPUT
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Change directory
-        run: cd functions/kubernetes
-
       - name: Update helm dependencies
-        run: helm dependency update ./charts/shuffle
+        run: helm dependency update ./functions/kubernetes/charts/shuffle
 
       - name: Package Helm chart
-        run: helm package ./charts/shuffle --version "${CHART_VERSION}" --app-version="${APP_VERSION}" --destination ./charts
+        run: helm package ./functions/kubernetes/charts/shuffle --version "${CHART_VERSION}" --app-version="${APP_VERSION}" --destination ./functions/kubernetes/charts
 
       - name: Login to OCI registry (ghcr.io)
         run: helm registry login ghcr.io --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push helm chart
-        run: helm push ./charts/shuffle-*.tgz oci://ghcr.io/shuffle/shuffle/charts
+        run: helm push ./functions/kubernetes/charts/shuffle-*.tgz oci://ghcr.io/shuffle/shuffle/charts
