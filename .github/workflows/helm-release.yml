@@ -10,7 +10,7 @@ on:
     branches:
       - nightly
     paths:
-      - "charts/**"
+      - "functions/kubernetes/charts/**"
 
 permissions:
   contents: read
@@ -56,6 +56,9 @@ jobs:
 
           echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_OUTPUT
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Change directory
+        run: cd functions/kubernetes
 
       - name: Update helm dependencies
         run: helm dependency update ./charts/shuffle
