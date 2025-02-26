@@ -9,6 +9,8 @@ on:
   push:
     branches:
       - nightly
+    paths:
+      - "charts/**"
 
 permissions:
   contents: read
