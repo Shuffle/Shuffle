@@ -1,0 +1,70 @@
+name: Helm Release
+
+on:
+  release:
+    types: [published]
+    branches:
+      - main
+      - nightly
+  push:
+    branches:
+      - nightly
+    paths:
+      - "charts/**"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install apt dependencies
+        run: |
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          sudo apt-get install apt-transport-https -y --no-install-recommends
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install helm -y --no-install-recommends
+
+      - name: Set versions
+        id: set_versions
+        run: |
+          if [[ ${{ github.event_name }} == 'release' ]]; then
+            CHART_VERSION="${{ github.event.release.tag_name }}"
+            APP_VERSION="${{ github.event.release.tag_name }}"
+          else
+            CHART_VERSION="0.0.0-nightly-untagged-latest"
+            APP_VERSION="nightly"
+          fi
+
+          echo "CHART_VERSION set to ${CHART_VERSION}. Validating..."
+
+          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+          SEMVER_REGEX="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+
+          if echo "${CHART_VERSION}" | grep -Pq "${SEMVER_REGEX}"; then
+            echo "${CHART_VERSION} is a valid SemVer string";
+          else
+            echo "${CHART_VERSION} is an invalid SemVer string";
+            exit 1;
+          fi
+
+          echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update helm dependencies
+        run: helm dependency update ./charts/shuffle
+
+      - name: Package Helm chart
+        run: helm package ./charts/shuffle --version "${CHART_VERSION}" --app-version="${APP_VERSION}" --destination ./charts
+
+      - name: Login to OCI registry (ghcr.io)
+        run: helm registry login ghcr.io --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push helm chart
+        run: helm push ./charts/shuffle-*.tgz oci://ghcr.io/shuffle/shuffle/charts

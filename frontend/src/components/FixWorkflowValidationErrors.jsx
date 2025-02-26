@@ -644,6 +644,7 @@ const FixWorkflowValidationErrors = (props) => {
 	console.log("Workflow validation: ", workflow.validation)
 	return (
 		<div>
+			{/*
 			{workflow.errors !== undefined && workflow.errors !== null ?
 				<div>
 					General errors: {workflow.errors.length}
@@ -656,11 +657,8 @@ const FixWorkflowValidationErrors = (props) => {
 					})}
 				</div>
 			: null}
-
 			<Divider style={{marginTop: 15, marginBottom: 15, }}/>
-
-
-			{workflow.validation.errors !== undefined && workflow.validation.errors !== null ?
+			workflow.validation.errors !== undefined && workflow.validation.errors !== null ?
 				<div>
 					Validation errors: {workflow.validation.errors.length}
 					{workflow.validation.errors.map((error, index) => {
@@ -675,10 +673,12 @@ const FixWorkflowValidationErrors = (props) => {
 						)
 					})}
 				</div>
-			: null}
+			: null*/}
 
+			{/*
 			<Divider style={{marginTop: 15, marginBottom: 15, }} />
 			Apps loaded: {apps.length}
+			*/}
 
 		</div>
 	)

@@ -1,0 +1,18 @@
+{{ if .Values.orborus.rbac.create }}
+kind: RoleBinding
+apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
+metadata:
+  name: {{ include "shuffle.orborus.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.orborus.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "shuffle.orborus.serviceAccount.name" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "shuffle.orborus.name" . }}
+{{- end }}

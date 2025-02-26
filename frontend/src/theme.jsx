@@ -14,7 +14,7 @@ const theme = createTheme(adaptV4Theme({
 	  contrastText: "#000000",
     },
     text: {
-      secondary: "rgba(255,255,255,0.7)",
+      secondary: "rgba(255,255,255,0.8)",
     },
     type: "dark",
     //inputColor: "#383B40",
@@ -24,6 +24,7 @@ const theme = createTheme(adaptV4Theme({
     //platformColor: "#1c1c1d",
     platformColor: "#212121",
     backgroundColor: "#1a1a1a",
+	distributionColor: "#40E0D0",
 
     green: "#5cc879",
     borderRadius: 10,
@@ -75,10 +76,18 @@ const theme = createTheme(adaptV4Theme({
       fontSize: 11,
     },
     defaultImage: "/images/no_image.png",
+	singulOrange: "/images/singul_orange.png",
+	singulGreen: "/images/singul_green.png",
+	singulBlackWhite: "/images/singul_black_white.png",
   },
   typography: {
     fontFamily: `"Roboto", "Helvetica", "Arial", "inter", sans-serif`,
     useNextVariants: true,
+    fontWeightLight: 300,
+    fontWeightRegular: 400,
+    fontWeightMedium: 500,
+    fontWeightSemiBold: 600,
+    fontWeightBold: 700,
     h1: {
       fontSize: 40,
     },
@@ -100,18 +109,45 @@ const theme = createTheme(adaptV4Theme({
       },
     },
     MuiCssBaseline: {
-		MuiCssBaseline: {
-		  styleOverrides: `
-			@font-face {
-			  font-family: 'roboto';
-			  font-style: normal;
-			  font-display: swap;
-			  font-weight: 300;
-			  src: local('roboto'), local('roboto'), format('truetype');
-			  unicodeRange: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF;
-			}
-		  `,
-		},
+      MuiCssBaseline: {
+        styleOverrides: `
+          @font-face {
+            font-family: 'Roboto';
+            font-style: normal;
+            font-display: swap;
+            font-weight: 300;
+            src: local('Roboto Light'), local('Roboto-Light');
+          }
+          @font-face {
+            font-family: 'Roboto';
+            font-style: normal;
+            font-display: swap;
+            font-weight: 400;
+            src: local('Roboto'), local('Roboto-Regular');
+          }
+          @font-face {
+            font-family: 'Roboto';
+            font-style: normal;
+            font-display: swap;
+            font-weight: 500;
+            src: local('Roboto Medium'), local('Roboto-Medium');
+          }
+          @font-face {
+            font-family: 'Roboto';
+            font-style: normal;
+            font-display: swap;
+            font-weight: 600;
+            src: local('Roboto SemiBold'), local('Roboto-SemiBold');
+          }
+          @font-face {
+            font-family: 'Roboto';
+            font-style: normal;
+            font-display: swap;
+            font-weight: 700;
+            src: local('Roboto Bold'), local('Roboto-Bold');
+          }
+        `,
+      },
 	},
   },
 }));

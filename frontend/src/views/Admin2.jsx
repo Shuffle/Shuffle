@@ -11,29 +11,16 @@ const Admin2 = (props) => {
     const [organizationFeatures, setOrganizationFeatures] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+
+	if (document !== undefined) {
+		if (selectedOrganization?.name !== undefined) {
+			document.title = selectedOrganization?.name + " - Admin - Shuffle"
+		} else {
+  			document.title = "Admin - Shuffle"
+		}
+	}
+
     const handleGetOrg = (orgId) => {
-        // if (
-        //     serverside !== true &&
-        //     window.location.search !== undefined &&
-        //     window.location.search !== null
-        // ) {
-        //     const urlSearchParams = new URLSearchParams(window.location.search);
-        //     const params = Object.fromEntries(urlSearchParams.entries());
-        //     const foundorgid = params["org_id"];
-        //     if (foundorgid !== undefined && foundorgid !== null) {
-        //         orgId = foundorgid;
-        //     }
-        // }
-        console.log("getting organization details for: ", orgId);
-
-        // if (orgId === undefined) {
-        //     toast(
-        //         "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.",
-        //     );
-        //     return;
-        // }
-
-        // Just use this one?
 
         fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
             method: "GET",
@@ -124,7 +111,8 @@ const Admin2 = (props) => {
                         setSelectedStatus(leads);
                     }
 
-                    setSelectedOrganization(responseJson);
+
+                    setSelectedOrganization(responseJson)
                     var lists = {
                         active: {
                             triggers: [],
@@ -330,7 +318,7 @@ const Admin2 = (props) => {
 
     return (
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 0.9}}>
-            <AdminNavBar userdata={userdata} isLoaded={isLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud} serverside={serverside} />
+            <AdminNavBar userdata={userdata} isLoaded={isLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud}/>
         </div>
     );
 };

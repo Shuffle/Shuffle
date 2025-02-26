@@ -1,0 +1,61 @@
+{{- if .Values.app.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+metadata:
+  name: {{ template "shuffle.app.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.app.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.app.podLabels .Values.commonLabels ) "context" . ) }}
+  podSelector:
+    matchLabels: {{- include "shuffle.app.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    {{- if .Values.app.networkPolicy.allowExternalEgress }}
+    - {}
+    {{- else }}
+    # Allow DNS resolution with an in-cluster DNS server
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    # Allow access to workers
+    - ports:
+        - port: 33333
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+    {{- if .Values.app.networkPolicy.extraEgress }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.app.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- end }}
+  ingress:
+    {{- if .Values.app.networkPolicy.allowExternal }}
+    - {}
+    {{- else }}
+    # Allow access from workers. Apps will typicaly use port 80/TCP, but this is not enforced.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+    {{- end }}
+    {{- if .Values.app.networkPolicy.extraIngress }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.app.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- end }}

@@ -799,12 +799,16 @@ const ConfigureWorkflow = (props) => {
 		>
 			<div 
 				style={{
-					border: filled ? `1px solid ${theme.palette.green}` : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, width: "100%", padding: 12, cursor: "pointer", 
+					border: filled ? `1px solid ${theme.palette.green}` : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, width: "100%", padding: 12, cursor: filled ? "default" : "pointer", 
 				}}
 				id="app-config"
 			>
 				<div style={{display: "flex", }}
 					onClick={() => {
+						if (filled) {
+							return
+						}
+
 						setOpened(!opened);
 
 						// Scroll to it
@@ -865,6 +869,7 @@ const ConfigureWorkflow = (props) => {
 									isLoggedIn={true}
 									getAppAuthentication={undefined}
 
+									workflow={workflow}
 									setFinalized={setFinalized}
 								/>
 							</div>
@@ -1377,7 +1382,7 @@ const ConfigureWorkflow = (props) => {
 
   return (
     <div>
-		<div style={{margin: setConfigureWorkflowModalOpen !== undefined ? "0px 50px 0px 50px" : "35px 0px 0px 0px", maxHeight: 475, }}>
+		<div style={{margin: setConfigureWorkflowModalOpen !== undefined ? "0px 50px 0px 50px" : "25px 0px 0px 0px", maxHeight: 475, }}>
 			
 
 	  	{setConfigureWorkflowModalOpen !== undefined ? 
@@ -1387,7 +1392,7 @@ const ConfigureWorkflow = (props) => {
 			: null
 		}
 
-	    <div style={{marginTop: 10, }} />
+	    <div style={{marginTop: setConfigureWorkflowModalOpen !== undefined ? 10 : 0, }} />
 
 	  	{/*
 	    <WorkflowValidationTimeline 
@@ -1404,7 +1409,7 @@ const ConfigureWorkflow = (props) => {
       	{requiredActions.length > 0 ? (
       	  <span>
 			<Typography variant="body2" color="textSecondary">
-			  Please configure the following steps to help us complete your workflow. This can also be done later.
+			  To complete the workflow setup, please configure the following steps. 
 			</Typography>
 
 			{setConfigureWorkflowModalOpen !== undefined ?
@@ -1434,6 +1439,13 @@ const ConfigureWorkflow = (props) => {
 				)
       	      })}
       	    </List>
+
+			{/*
+			<Typography variant="body2" color="textSecondary">
+				Once done, you may continue to the workflow.
+			</Typography>
+			*/}
+
       	  </span>
       	) : null}
 

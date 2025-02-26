@@ -28,6 +28,7 @@ import {
   Close as CloseIcon,
   Cached as CachedIcon,
   CloudDownload as CloudDownloadIcon,
+  ForkRight as ForkRightIcon,
 } from "@mui/icons-material";
 
 import InputAdornment from '@mui/material/InputAdornment';
@@ -48,11 +49,15 @@ const searchClient = algoliasearch(
 );
 
 // AppCard Component
-const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps }) => {
+const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps, appsToShow, setAppsToShow, setUserApps, }) => {
   const navigate = useNavigate();
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
-  var canEditApp = userdata.admin === "true" || userdata.id === data?.owner || data?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === data?.reference_org) || !data?.generated
+
+  var canEditApp = userdata?.support || 
+                  userdata?.id === data?.owner || 
+                  (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || 
+                  data?.contributors?.includes(userdata?.id)
 
   const paperStyle = {
     backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
@@ -183,7 +188,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   ))}
                 </div>
                 {/* Deactivate button */}
-                {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
+                {(currTab === 0 || currTab === 1) && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
                   <div style={{
                     display: "flex",
                     gap: 8,
@@ -191,7 +196,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                     paddingRight: 20
                   }}>
                     {
-                      canEditApp && (
+                      canEditApp ? (
                         <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
                           onClick={(event) => {
                             event.preventDefault();
@@ -204,9 +209,21 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         >
                           <EditIcon />
                         </button>
+                      ) : (
+                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          const editUrl = "/apps/new?id=" + data?.id;
+                          navigate(editUrl)
+                        }}
+                        >
+                        <ForkRightIcon />
+                        </button>
                       )
                     }
                     <Button
+					  disabled={data?.reference_org === userdata?.active_org?.id}
                       className="deactivate-button"
                       sx={{
                         width: 110,
@@ -228,7 +245,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         event.preventDefault();
                         event.stopPropagation();
                         const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
-                        toast("Deactivating app. Please wait...");
+                        //toast("Deactivating app. Please wait...");
                         fetch(url, {
                           method: 'GET',
                           headers: {
@@ -240,11 +257,26 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                           .then((response) => response.json())
                           .then((responseJson) => {
                             if (responseJson.success === false) {
-                              toast.error(responseJson.reason);
+							  if (responseJson?.reason !== undefined && responseJson?.reason !== null && responseJson?.reason !== "") {
+                              	  toast.error(responseJson.reason);
+							  } else {
+								  toast.error("Failed to deactivate app. Please try again later.")
+							  }
                             } else {
-                              toast.success("App Deactivated Successfully.");
-                              fetchApps();
-                            }
+                              toast.success("App deactivated successfully. Will take effect on refresh..")
+
+							  /*
+							  // This somehow didn't work
+							  if (appsToShow !== undefined && appsToShow !== null && appsToShow.length > 0) {
+								  const newApps = appsToShow?.filter((app) => app.id !== data.id)
+								  if (newApps !== undefined && newApps !== null && newApps.length > 0) {
+									  setAppsToShow(newApps)
+									  setUserApps(newApps)
+								  }
+								}
+							  }
+							  */
+							}
                           })
                           .catch(error => {
                             console.log("app error: ", error.toString());
@@ -1853,6 +1885,7 @@ const Apps2 = (props) => {
           app={selectedApp}
           userdata={userdata}
           globalUrl={globalUrl}
+          getApps={getApps}
         />
         <AppCreationModal
           open={createAppModalOpen}
@@ -2228,6 +2261,10 @@ const Apps2 = (props) => {
                                 leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 userdata={userdata}
                                 fetchApps={fetchApps}
+
+								setUserApps={setUserApps}
+								appsToShow={appsToShow}
+								setAppsToShow={setAppsToShow}
                               />
                             ))}
                           </div>
@@ -2277,6 +2314,9 @@ const Apps2 = (props) => {
                               <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
                                 handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 fetchApps={fetchApps}
+								setUserApps={setUserApps}
+								appsToShow={appsToShow}
+								setAppsToShow={setAppsToShow}
                               />
                             ))}
                           </div>

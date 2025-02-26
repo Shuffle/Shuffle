@@ -137,6 +137,8 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 
 					  setResponseValue(e.target.value)
 
+					  toast.error("The automatic response system is NOT available for you yet. Please contact support@shuffler.io if you want to try this feature.")
+
 					  // FIXME: Handle:
 					  // 1. Get the current cache for the detection 
 					  // 2. Create a new mapping for Detection -> Response
@@ -187,7 +189,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 			  <Switch
 				  checked={isEnabled && !folderDisabled}
 				  onChange={handleSwitchChange}
-				  disabled={false}
+				  disabled={true}
 	  		  />
 	  	    </Tooltip>
           </div>

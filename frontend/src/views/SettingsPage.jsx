@@ -719,6 +719,7 @@ const Settings = (props) => {
             //onChange={e => setUsername(e.target.value)}
           />
         </div>
+	    {/*
         <div style={{ flex: "1", display: "flex", flexDirection: "row" }}>
           <TextField
             style={{
@@ -771,6 +772,7 @@ const Settings = (props) => {
             onChange={(e) => setLastname(e.target.value)}
           />
         </div>
+		*/}
         <h2>APIKEY</h2>
         <a
           target="_blank"

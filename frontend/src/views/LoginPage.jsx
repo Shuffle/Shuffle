@@ -170,6 +170,9 @@ const LoginDialog = (props) => {
                 );
                 setMFAField(true);
                 return;
+              }  else if (responseJson["reason"] === "MFA_SETUP") {
+                window.location.href = `/login/${responseJson.url}/mfa-setup`;
+                return;
               }
 
               setLoginInfo("Successful login, rerouting");

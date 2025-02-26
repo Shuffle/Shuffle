@@ -136,7 +136,7 @@ export const GetIconInfo = (action) => {
     { key: "cache_add", values: ["set_cache"] },
     { key: "cache_get", values: ["get_cache"] },
     { key: "filter", values: ["filter"] },
-    { key: "merge", values: ["join", "merge", "route", "router"] },
+    { key: "merge", values: ["join", "merge", "route", "router", "routing"] },
     {
       key: "search",
       values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
@@ -200,7 +200,7 @@ export const GetIconInfo = (action) => {
     },
     {
       key: "compare",
-      values: ["compare", "convert", "to", "filter", "translate", "parse"],
+      values: ["compare", "convert", "to", "filter", "translate", "parse", "generate", ],
     },
     { key: "close", values: ["close", "stop", "cancel", "block"] },
     { key: "communication", values: ["communication", "comms", "email", "mail",] },
@@ -427,9 +427,13 @@ const chipStyle = {
   color: "white",
 };
 
-export const collapseField = (field) => {
+export const collapseField = (field, inputdata) => {
   if (field === undefined || field === null) {
     return true
+  }
+
+  if (field.namespace !== undefined && field.namespace !== null && field.namespace.length === 1) {
+	  return false 
   }
 
   if (field.name === "headers" || field.name === "cookies") {
@@ -553,6 +557,10 @@ export const validateJson = (showResult) => {
     // Check fields if they can be parsed too 
     try {
       for (const [key, value] of Object.entries(result)) {
+        if (typeof value === "string") {
+			value = value.replaceAll(" ", "_")
+		}
+
         if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
           //console.log("CHECKING STRING: ", value)
 
@@ -573,6 +581,10 @@ export const validateJson = (showResult) => {
           // Usually only reaches here if raw array > dict > value
           if (typeof showResult !== "array") {
             for (const [subkey, subvalue] of Object.entries(value)) {
+			  if (typeof subvalue === "string") {
+				subvalue = subvalue.replaceAll(" ", "_")
+			  }
+
               if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
                 const inside_result = validateJson(subvalue)
                 if (inside_result.valid) {
@@ -1841,9 +1853,13 @@ const Workflows = (props) => {
 
       var parsedworkflows = [];
       for (var key in newSubflows) {
+		if (key === data.id) {
+			continue
+		}
+
         const foundWorkflow = workflows.find(
           (workflow) => workflow.id === newSubflows[key]
-        );
+        )
         if (foundWorkflow !== undefined && foundWorkflow !== null) {
           parsedworkflows.push(foundWorkflow);
         }
@@ -1854,7 +1870,7 @@ const Workflows = (props) => {
           "Appending subflows during export: ",
           parsedworkflows.length
         );
-        data.subflows = parsedworkflows;
+        data.subflows = parsedworkflows
       }
     }
 

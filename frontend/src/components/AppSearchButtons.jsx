@@ -179,7 +179,7 @@ const AppSearchButtons = (props) => {
       
 
     return (
-        <Grid item xs={xsValue} style={{ alignItems: "center", marginTop: 5, }}
+        <Grid item xs={xsValue} style={{ alignItems: "center", marginTop: 5, maxWidth: "50%", minWidth: "50%" }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >

@@ -58,7 +58,7 @@ const data = [
       "curve-style": "unbundled-bezier",
       label: "data(label)",
       "text-margin-y": "-15px",
-      width: "3px",
+      width: "2px",
       color: "white",
       "line-fill": "linear-gradient",
       "line-gradient-stop-positions": ["0.0", "100"],
@@ -95,6 +95,9 @@ const data = [
   {
     selector: `node[type="COMMENT"]`,
     css: {
+      label: function(element) {
+		  return element.data("label")
+	  },
       shape: "roundrectangle",
       color: "data(color)",
       width: "data(width)",
@@ -128,10 +131,8 @@ const data = [
     selector: `node[example="noapp"]`,
     css: {
 	  // Make background image padding on the left side 20px
-      "background-width": "75%",
-      "background-height": "75%",
-	  "background-position-x": "17px",
-	  "background-position-y": "17px",
+      "background-width": "100%",
+      "background-height": "100%",
 
       "background-color": "data(iconBackground)",
       "background-fill": "data(fillstyle)",
@@ -154,6 +155,38 @@ const data = [
       "background-fill": "data(fillstyle)",
       "background-gradient-direction": "to-right",
       "background-gradient-stop-colors": "data(fillGradient)",
+    },
+  },
+  {
+    selector: `node[app_id="shuffle_agent"]`,
+    css: {
+		"height": "74px",
+      	"width": "222px",
+	  	"background-image": "data(large_image)",
+      	"label": function(element) {
+		  var elementname = element.data("label")
+		  if (elementname === null || elementname === undefined) {
+			  return ""
+		  } 
+
+		  if (elementname.length > 15) {
+			  elementname = elementname.substring(0, 15) + ".."
+		  }
+
+		  return elementname
+		},
+		"background-width": "65px",
+		"background-height": "65px",
+		"background-position-x": "20px", 
+		//"background-position-x": "center",  // Crashes
+		"background-repeat": "no-repeat",
+
+		"font-size": "14px",
+		"text-halign": "center",
+		"text-valign": "center",
+      	"text-margin-x": "-140px",
+      	"text-margin-y": "0px",
+		
     },
   },
   {
@@ -423,7 +456,7 @@ const data = [
   {
     selector: "edge.success-highlight",
     css: {
-      width: "5px",
+      width: "3px",
       "target-arrow-color": "#41dcab",
       "line-color": "#41dcab",
       "transition-property": "line-color, width",

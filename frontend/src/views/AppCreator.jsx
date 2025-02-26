@@ -276,7 +276,14 @@ export const appCategories = [
 		"color": "#FFC107",
 		"icon": "network",
 		"action_labels": ["Get Rules", "Allow IP", "Block IP",],
-	}, {
+	}, 
+	{
+		"name": "AI",
+		"color": "#FFC107",
+		"icon": "AI",
+		"action_labels": ["Answer Question", "Run Action", "Run LLM",],
+	},
+	{
 		"name": "Other",
 		"color": "#FFC107",
 		"icon": "other",
@@ -418,6 +425,7 @@ const AppCreator = (defaultprops) => {
   const [appBuilding, setAppBuilding] = useState(false);
   const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
+  const [newAppGroup, setNewAppGroup] = useState("")
 
   const [oauth2Scopes, setOauth2Scopes] = useState([]);
   const [oauth2Type, setOauth2Type] = useState("delegated");
@@ -2616,10 +2624,26 @@ const AppCreator = (defaultprops) => {
       credentials: "include",
     })
       .then((response) => {
-        //if (response.status !== 200) {
-        //	setErrorCode("An error occurred during validation")
-        //	throw new Error("NOT 200 :O")
-        //}
+        if (response.status === 403) {
+    		var urlParams = new URLSearchParams(window.location.search)
+			if (urlParams.has("id")) {
+				toast.error("Please log in to build this app. If this error persists, please contact support@shuffler.io")
+			} else {
+				toast.error("Failed to save the app as you are not the owner. Redirecting you to the forking page. When there, save again.")
+				if (props.match.params.appid !== undefined && props.match.params.appid !== null && props.match.params.appid.length > 0) {
+					setTimeout(() => {
+						window.open(`/apps/new?id=${props.match.params.appid}`, "_blank")
+					}, 2500)
+				}
+			}
+
+			return
+        }
+
+        if (response.status !== 200) {
+        	setErrorCode("An error occurred during validation")
+        	//throw new Error("NOT 200 :O")
+        }
 
         setAppBuilding(false);
         return response.json();
@@ -3165,6 +3189,12 @@ const AppCreator = (defaultprops) => {
 		  value={oauth2Scopes}
 		  onChange={(chips) => {
 			  setOauth2Scopes(chips)
+			  setUpdate(Math.random())
+		  }}
+		  onBlur={(e) => {
+			  var newchips = oauth2Scopes
+			  newchips.push(e.target.value)
+			  setOauth2Scopes(newchips)
 			  setUpdate(Math.random())
 		  }}
 		/>
@@ -4616,23 +4646,25 @@ const AppCreator = (defaultprops) => {
 				}}
 			/>
 			*/}
-      <h4>Choose a Category</h4>
-      <Select
-        fullWidth
-        SelectDisplayProps={{
-          style: {
-            marginLeft: 10,
-          },
-        }}
-        onChange={(e) => {
-          setNewWorkflowCategories([e.target.value]);
-          setUpdate("added " + e.target.value);
-        }}
-        value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
-        
-        style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
-      >
-        {categories.map((data, index) => {
+	  <div style={{display: "flex", }}>
+	  	  <div style={{flex: 2, }}>
+			  <h4>Choose a Category</h4>
+			  <Select
+				fullWidth
+				SelectDisplayProps={{
+				  style: {
+					marginLeft: 10,
+				  },
+				}}
+				onChange={(e) => {
+				  setNewWorkflowCategories([e.target.value]);
+				  setUpdate("added " + e.target.value);
+				}}
+				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+				
+				style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
+			  >
+				{categories.map((data, index) => {
 					if (data === undefined || data === null || data === "" || data === undefined || data === null || data === "") {
 						return null
 					}
@@ -4645,9 +4677,38 @@ const AppCreator = (defaultprops) => {
 						>
 							{data.name}
 						</MenuItem>
-        	)
+					)
 				})}
-      </Select>
+			  </Select>
+	  	</div>
+	    {/*
+	  	<div style={{flex: 1, marginLeft: 25, }}>
+	  		<Tooltip title="Helps when searching for apps. E.g. Google or Microsoft are their own groups." placement="top">
+	  			<h4 style={{marginBottom: 0, }}>Group</h4>
+	  		</Tooltip>
+	  		<TextField
+	  			style={{ 
+				}}
+	  			fullWidth
+	  			placeholder="Group"
+	  			type="text"
+	  			id="standard-required"
+	  			margin="normal"
+	  			variant="outlined"
+	  			defaultValue={newAppGroup}
+	  			onChange={(e) => {
+	  				setNewAppGroup(e.target.value)
+	  				setUpdate("group added "+e.target.value)
+	  			}}
+	  			InputProps={{
+	  				style: {
+	  					color: "white",
+	  				},
+	  			}}
+	  		/>
+	  	</div>
+		*/}
+	  </div>
       <h4>Tags</h4>
       <MuiChipsInput
         style={{ marginTop: 10 }}
@@ -5435,6 +5496,7 @@ const AppCreator = (defaultprops) => {
         minWidth: 174,
         minHeight: 174,
         objectFit: "contain",
+		borderRadius: theme.palette?.borderRadius,
       }}
     />
   );
@@ -5450,6 +5512,7 @@ const AppCreator = (defaultprops) => {
         margin: "auto",
         marginTop: 30,
         marginLeft: 40,
+		borderRadius: theme.palette?.borderRadius,
       }}
       onClick={() => {
         upload.click();
@@ -5832,6 +5895,7 @@ const AppCreator = (defaultprops) => {
 							//setOpenApiModal(true)
 							toast.info("Action merging & fork management coming soon")
 						}}
+	  					disabled={true}
 	  					style={{marginLeft: 10, }}
 					>
 						<CallMergeIcon 
@@ -5846,7 +5910,7 @@ const AppCreator = (defaultprops) => {
           href="https://shuffler.io/docs/app_creation#app-creator-instructions"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
-          Click here to learn more about app creation
+          Click to learn more about app creation
         </a>
         <div
           style={{
@@ -5940,7 +6004,6 @@ const AppCreator = (defaultprops) => {
             <TextField
               required
               style={{
-				paddingTop: 5,
 				marginTop: 5, 
                 marginRight: 15,
                 backgroundColor: inputColor,
@@ -6196,7 +6259,7 @@ const AppCreator = (defaultprops) => {
 						{testView}
 					*/}
 
-	  	<div style={{height: 50, padding: 15, display: "flex", marginTop: 35, position: "fixed", bottom: 0, left: 0, width: "100%", backgroundColor: theme.palette?.backgroundColor, borderTop: "1px solid rgba(255,255,255,0.3)",}}>
+	  	<div style={{height: isCloud ? 50 : 80, padding: 15, display: "flex", marginTop: 35, position: "fixed", bottom: 0, left: 0, width: "100%", backgroundColor: theme.palette?.backgroundColor, borderTop: "1px solid rgba(255,255,255,0.3)",}}>
 	  		<div style={{width: 450, margin: "auto", display: "flex", textAlign: "center", }}>
 				{appDownloadData.length > 0 ?
 					<Tooltip title="Download the OpenAPI specification for the App" placement="bottom">

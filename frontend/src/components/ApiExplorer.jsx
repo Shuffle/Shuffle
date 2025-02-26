@@ -25,7 +25,8 @@ import {
   TableRow,
   InputAdornment,
   Divider,
-  LinearProgress
+  LinearProgress,
+  Tooltip,
 } from "@mui/material";
 import throttle from "lodash/throttle";
 import theme from "../theme.jsx";
@@ -99,6 +100,8 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
   const [selectedActionIndex, setSelectedActionIndex] = useState(0);
   const [ExampleBody, setExampleBody] = useState({});
   const [filteredActions, setFilteredActions] = useState([]);
+
+  const [firstSendDone, setFirstSendDone] = useState(false)
 
   const getJsonObject = (properties) => {
 
@@ -1181,6 +1184,7 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
         }
       }
     }
+
     var prefixCheck = "/v1";
     if (parentUrl.includes("/")) {
       const urlsplit = parentUrl.split("/");
@@ -1240,7 +1244,7 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
       }
     }
 
-    newActions = newActions2;
+    newActions = newActions2
 
     // Rearrange them by which has action_label
     const firstActions = newActions.filter(
@@ -1255,9 +1259,9 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
         data.action_label === null ||
         data.action_label === "No Label"
     );
-    newActions = firstActions.concat(secondActions);
-    setActions(newActions);
-    setExampleBody(newActions[0]?.body);
+    newActions = firstActions.concat(secondActions)
+    setActions(newActions)
+    setExampleBody(newActions[0]?.body)
   }, [openapi]);
 
   return (
@@ -1425,36 +1429,47 @@ const ActionsList = memo(({
 };
 
   const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
+    const query = e?.target?.value?.toLowerCase().replaceAll("_", " ");
+
+    setSearchQuery(query)
     if (query.length === 0) {
-      setVisibleActions(actions);
+      setVisibleActions(actions)
     } else {
       setVisibleActions(
-        actions.filter((action) =>
-          action.name.toLowerCase().includes(searchQuery.toLowerCase())
+        actions?.filter((action) =>
+          action?.name?.toLowerCase()?.replaceAll("_", " ")?.includes(searchQuery)
         )
-      );
+      )
     }
-  };
+  }
+
   return (
     <div style={{ maxWidth: '350px', width: "25%", overflow: 'hidden', marginLeft: !(isLoggedIn || isLoaded) ? 5 : 0}}>
     <div style={{ borderBottom: '1px solid #494949', paddingTop: 10, paddingBottom: 10}}>
             <div>
                 {info?.title ? (
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                        <img
-                            src={openapi?.info["x-logo"]}
-                            width={48}
-                            height={48}
-                            alt="app logo"
-                            style={{ marginLeft: 20, borderRadius: 8 }}
-                        />
-                        <Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
-                        }}> 
-                            {info.title}
-                        </Typography>
-                    </div>
+					<a 
+						href={`/apps/${openapi?.id}`}
+						style={{ textDecoration: 'none', }} 
+						target="_blank" 
+						rel="noreferrer"
+					>
+						<Tooltip title="Go to app" placement="right">
+							<div style={{ display: "flex", alignItems: "center" }}>
+								<img
+									src={openapi?.info["x-logo"]}
+									width={48}
+									height={48}
+									alt="app logo"
+									style={{ marginLeft: 20, borderRadius: 8 }}
+								/>
+								<Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
+								}}> 
+									{info.title}
+								</Typography>
+                    		</div>
+						</Tooltip>
+					</a>
                 ) : (
                   <Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
                   }}> 
@@ -1463,9 +1478,10 @@ const ActionsList = memo(({
                 )}
             </div>
      </div>
+
       <TextField
         value={searchQuery}
-        placeholder="Search here"
+        placeholder="Search endpoints"
         onChange={handleSearch}
         InputProps={{
           startAdornment: (
@@ -1483,6 +1499,7 @@ const ActionsList = memo(({
           },
         }}
       />
+
       <div
         style={{
           marginLeft: 20,
@@ -1542,7 +1559,7 @@ const ActionsList = memo(({
                   overflow: "hidden",
                 }}
               >
-                {action.name.replaceAll("_", " ")}
+                {action?.name?.replaceAll("_", " ")}
               </span>
             </Button>
           ))
@@ -1794,7 +1811,7 @@ const Action = memo((
                   response.result = JSON.parse(response.result);
                 } catch (parseError) {
                   console.error("Error parsing result:", parseError);
-                  toast.error("Error parsing response result.");
+                  //toast.error("Error parsing response result.");
                 }
               }
             
@@ -2035,6 +2052,7 @@ const Action = memo((
           }, [editorRef.current]);
           
           
+		const actionname = action?.name.charAt(0).toUpperCase() + action?.name.slice(1).replaceAll("_", " ")
         return (
           <div
             ref={actionRef}
@@ -2042,6 +2060,7 @@ const Action = memo((
             data-index={index}
             key={action.name.replace(/ /g, "-").replace(/_/g, "-")}
             style={{ 
+			  marginTop: 50, 
               display: "flex", 
               flexDirection: "row", 
               minHeight: 400,
@@ -2066,7 +2085,7 @@ const Action = memo((
                       color: "rgba(241, 241, 241, 1)",
                     }}
                   >
-                    {action.name}
+                    {actionname}
               </Typography>
               <div
                 style={{
@@ -2222,11 +2241,12 @@ const Action = memo((
                   }}
 
                   onChange={(e) => {
-                    const newUrl = e.target.value;
+                    const newUrl = e.target.value
                     setActionUrl(newUrl);
                     const params = extractParamsFromText(newUrl);
                     setRequestParams(params);
-                  
+
+
                     if (newUrl.startsWith("http://") || newUrl.startsWith("https://")) {
                       try {
                         const url = new URL(newUrl);
@@ -2235,9 +2255,12 @@ const Action = memo((
                   
                         setPath(newPath);
                       } catch (error) {
-                        console.error("Invalid URL:", error);
+                        console.error("Invalid URL:", newUrl, error);
+						toast("The URL is not a valid one. Please check and try again.")
                       }
-                    }                  
+                    } else {
+						//toast("The URL needs to start with http:// or https://")
+					}
                   }}
                 />
                 
@@ -2259,6 +2282,13 @@ const Action = memo((
                   }}
                   disabled={disableExecuteButton}
                   onClick={() => {
+					/*
+					if (!firstSendDone) {
+						setFirstSendDone(true)
+        				setCurTab(2)
+					}
+					*/
+
                     if (actionUrl.length === 0) {
                       toast.error("URL cannot be empty");
                       return;
