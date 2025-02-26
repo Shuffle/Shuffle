@@ -19,16 +19,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v1
-
     - name: Install Docker Compose
       run: |
         sudo apt-get update
         sudo apt-get install -y docker-compose
+        docker-compose --version
 
     - name: Set up opensearch directory
-      run: mkdir -p shuffle-database && chmod -R 777 shuffle-database
+      run: chmod -R 777 shuffle-database
 
     - name: Build the stack
       run: docker-compose up -d
@@ -111,6 +109,7 @@ jobs:
         ./frontend-testing.sh
 
     - name: Get the API key and run a health check
+      id: health_check
       run: |
         RESPONSE=$(curl -s -k -u admin:StrongShufflePassword321! 'https://localhost:9200/users/_search')
         API_KEY=$(echo "$RESPONSE" | jq -r '.hits.hits[0]._source.apikey')
@@ -136,6 +135,10 @@ jobs:
           -H 'sec-ch-ua-mobile: ?0' \
           -H 'sec-ch-ua-platform: "macOS"')
 
+        echo "health_response<<EOF" >> $GITHUB_ENV
+        echo "$HEALTH_RESPONSE" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
         WORKFLOWS_CREATE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.create')
         WORKFLOWS_RUN=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run')
         WORKFLOWS_RUN_FINISHED=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_finished')
@@ -148,3 +151,21 @@ jobs:
           echo "Health endpoint check failed. Response did not meet expected criteria."
           exit 1
         fi
+  # notify:
+  #   needs: build
+  #   if: failure()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Send Twilio Alert
+  #       run: |
+  #         WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+  #         MESSAGE="🚨 Shuffle Workflow Failed!
+  #         Repository: ${{ github.repository }}
+  #         Branch: ${{ github.ref_name }}
+  #         Workflow URL: $WORKFLOW_URL"
+          
+  #         curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
+  #             --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
+  #             --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
+  #             --data-urlencode "Body=$MESSAGE" \
+  #             -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
