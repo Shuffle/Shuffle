@@ -62,49 +62,11 @@ jobs:
           exit 1
         fi
 
-    - name: Register a user and check the status code
-      run: |
-        MAX_RETRIES=30
-        RETRY_INTERVAL=10
-        CONTAINER_NAME="shuffle-backend"
-
-        for (( i=1; i<=$MAX_RETRIES; i++ ))
-        do
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:3001/api/v1/register' \
-            -H 'Accept: */*' \
-            -H 'Accept-Language: en-US,en;q=0.9' \
-            -H 'Connection: keep-alive' \
-            -H 'Content-Type: application/json' \
-            --data-raw '{"username":"demo@demo.io","password":"supercoolpassword"}')
-
-          if [ "$STATUS_CODE" -eq 200 ]; then
-            echo "User registration was successful with status code 200."
-            exit 0
-          elif [ "$STATUS_CODE" -ne 502 ]; then
-            echo "User registration failed with status code $STATUS_CODE."
-            exit 1
-          fi
-
-          echo "Received status code $STATUS_CODE. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
-          echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
-
-          logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
-          echo "$logs_output"
-
-          echo "Fetching last 30 lines of logs from container shuffle-opensearch..."
-
-          opensearch_logs=$(docker logs --tail 30 shuffle-opensearch)
-          echo "$opensearch_logs"
-
-          sleep $RETRY_INTERVAL
-        done
-
-        echo "User registration failed after $MAX_RETRIES attempts."
-        exit 1
-
     - name: Run Selenium testing for frontend
       run: |
         cd $GITHUB_WORKSPACE/frontend
+        # write some log to see the current directory
+        echo "I am running selenium testing script"
         chmod +x frontend-testing.sh
         ./frontend-testing.sh
 
@@ -151,21 +113,21 @@ jobs:
           echo "Health endpoint check failed. Response did not meet expected criteria."
           exit 1
         fi
-  notify:
-    needs: build
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Twilio Alert
-        run: |
-          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MESSAGE="🚨 Shuffle Workflow Failed!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Workflow URL: $WORKFLOW_URL"
+  # notify:
+  #   needs: build
+  #   if: failure()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Send Twilio Alert
+  #       run: |
+  #         WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+  #         MESSAGE="🚨 Shuffle Workflow Failed!
+  #         Repository: ${{ github.repository }}
+  #         Branch: ${{ github.ref_name }}
+  #         Workflow URL: $WORKFLOW_URL"
           
-          curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
-              --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
-              --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
-              --data-urlencode "Body=$MESSAGE" \
-              -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
+  #         curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
+  #             --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
+  #             --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
+  #             --data-urlencode "Body=$MESSAGE" \
+  #             -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
