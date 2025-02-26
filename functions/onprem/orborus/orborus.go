@@ -1059,6 +1059,8 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		// "app.kubernetes.io/version":    "",
 		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-orborus",
+		// Keep legacy labels for backward compatibility
+		"container": "shuffle-worker",
 	}
 
 	matchLabels := map[string]string{
