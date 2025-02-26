@@ -427,9 +427,13 @@ const chipStyle = {
   color: "white",
 };
 
-export const collapseField = (field) => {
+export const collapseField = (field, inputdata) => {
   if (field === undefined || field === null) {
     return true
+  }
+
+  if (field.namespace !== undefined && field.namespace !== null && field.namespace.length === 1) {
+	  return false 
   }
 
   if (field.name === "headers" || field.name === "cookies") {
