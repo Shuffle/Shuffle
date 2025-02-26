@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - nightly
+      - main
     paths:
       - "**"
       - "!.github/**"
@@ -20,19 +20,19 @@ jobs:
         include:
           - app: frontend
             path: frontend
-            version: nightly
+            version: 2.0.0
             experimental: true
           - app: backend
             path: backend
-            version: nightly
+            version: 2.0.0
             experimental: true
           - app: orborus
             path: functions/onprem/orborus
-            version: nightly
+            version: 2.0.0
             experimental: true
           - app: worker
             path: functions/onprem/worker
-            version: nightly
+            version: 2.0.0
             experimental: true
     steps:
       - name: Checkout
