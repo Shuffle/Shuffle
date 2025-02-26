@@ -89,7 +89,6 @@ const Files = memo((props) => {
       console.log('escape pressed')
       setRenderTextBox(false);  
     }
-
   }
 
 	const changeDistribution = (id, selectedSubOrg) => {	
@@ -1051,6 +1050,7 @@ const Files = memo((props) => {
 						</Dialog>
 					</FormControl>
 				) : null}
+
 				<div style={{display: "inline-flex", position:"relative", top: 8}}>
 				{renderTextBox ? 
 					<Tooltip title={"Close"} style={{}} aria-label={""}>

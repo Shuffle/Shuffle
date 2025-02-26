@@ -191,6 +191,10 @@ const EditWorkflow = (props) => {
 	var upload = "";
 	var total_count = 0
 
+    const isCloud =
+        window.location.host === "localhost:3002" ||
+        window.location.host === "shuffler.io";
+
 	return (
 		<Drawer
 			anchor={"right"}
@@ -624,12 +628,15 @@ const EditWorkflow = (props) => {
 												All
 											</MenuItem>
 											{userdata.orgs.map((data, index) => {
+
 												var skipOrg = false;
 												if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org === userdata.active_org.id) {
 													// Finds the parent org
 												} else {
 													return null
 												}
+
+												const correctRegion = data?.region_url === userdata?.region_url 
 
 												const imagesize = 22
 												const imageStyle = {
@@ -664,7 +671,11 @@ const EditWorkflow = (props) => {
 
 
 												return (
-													<MenuItem key={index} value={data.id}>
+													<MenuItem 
+														key={index} 
+													 	value={data.id}
+														disabled={isCloud && !correctRegion}
+													>
 														<Checkbox checked={innerWorkflow.suborg_distribution !== undefined && innerWorkflow.suborg_distribution !== null && innerWorkflow.suborg_distribution.includes(data.id)} />
 														{image}{" "}
 														<span style={{ marginLeft: 8 }}>
@@ -1135,13 +1146,25 @@ const EditWorkflow = (props) => {
 									</FormControl>
 								</div>
 
+							<Divider style={{marginTop: 75, marginBottom: 75, }}/>
 
-							<Typography variant="h4" style={{ marginTop: 100, }}>
+
+							<Typography variant="h4" style={{ }}>
 								Publishing
+
+								<Chip
+									style={{ marginLeft: 20, marginTop: 10, }}
+									color={workflow?.public === true ? "primary" : "secondary"}
+									variant={workflow?.public === true ? "default" : "outlined"}
+									label={workflow?.public === true ? "Public" : "NOT Public"}
+								/>
 							</Typography>
 							<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
-								Publishing is related to making the workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to everyone. The details below will help a user understand this better. When a workflow is published, you keep the original, and a copy enters the workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator account</a>, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow screen. After publishing, you can find it in the Shuffle search engine.
+								Publishing is related to making this workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to anyone. The fields below will help a user and Shuffle's system understand your workflow better. When a workflow is published, you keep the original, and a copy enters the Shuffle workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator</a> or partner account, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow page. 
+
+								You can always unpublish a workflow after.
 							</Typography>
+
 
 							<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
 								<DatePicker
@@ -1172,9 +1195,21 @@ const EditWorkflow = (props) => {
 										setInnerWorkflow(innerWorkflow)
 									}}
 								>
-									<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
-									<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
-									<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									<Tooltip title="Agentic workflows takes an input based on input questions (forms) and performs actions based on it by itself, using Large Action Models & Singul">
+										<FormControlLabel value="agentic" control={<Radio />} label="Agentic" />
+									</Tooltip>
+
+									<Tooltip title="Trigger workflows are typically running a schedule to get some data, doing some deduplication before sending it to a subflow or standalone workflow.">
+										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+									</Tooltip>
+
+									<Tooltip title="Subflow workflows are typically used to subprocess some data, and in some cases return the result to the parent workflow.">
+										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+									</Tooltip>
+
+									<Tooltip title="Standalone is default. This has no impact on Shuffle as a system.">
+										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									</Tooltip>
 
 								</RadioGroup>
 							</FormControl>

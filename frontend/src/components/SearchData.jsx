@@ -109,6 +109,12 @@ const SearchData = props => {
             }
         }, [searchOpen]);
 
+        useEffect(() => {
+            if (currentRefinement !== inputValue) {
+                refine(inputValue);
+            }
+        }, [currentRefinement]);
+
         return (
 
             <form id="search_form" noValidate type="searchbox" action="" role="search" onClick={() => {

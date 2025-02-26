@@ -142,6 +142,7 @@ func init() {
 			os.Setenv("SHUFFLE_PIPELINE_AUTH", pipelineApikey)
 		}
 	}
+
 }
 
 // form id of current running container
@@ -1239,18 +1240,20 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 }
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
+
+
 	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
 
-	// if isKubernetes == "true" {
-	// 	err := deployK8sWorker(image, identifier, env, executionRequest)
-	// 	if err != nil {
-	// 		log.Printf("[ERROR] Failed deploying Kubernetes worker: %s", err)
-	// 	}
+	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
+		// FIXME: Should we handle replies properly?
+		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
+		// a 401 from the worker, which returns an error here
+		go sendWorkerRequest(executionRequest, image, env)
 
-	// 	return err
-	// }
+		return nil
+	}
 
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -1298,6 +1301,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
+
+	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
+	parsedUuid := uuid.NewV4()
+
 	config := &container.Config{
 		Image: image,
 		Env:   env,
@@ -1305,20 +1312,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	if isKubernetes != "true" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+
 		if strings.ToLower(cleanupEnv) != "false" {
 			hostConfig.AutoRemove = true
 		}
-	}
-
-	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
-	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
-		// FIXME: Should we handle replies properly?
-		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
-		// a 401 from the worker, which returns an error here
-		go sendWorkerRequest(executionRequest, image, env)
-
-		return nil
 	}
 
 	//log.Printf("[INFO] Identifier: %s", identifier)
@@ -1354,6 +1351,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
+	log.Printf("WORKER STARTING WITH ENV: %#v", env)
+
 	containerStartOptions := container.StartOptions{}
 	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
@@ -1388,27 +1387,30 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[INFO][%s] Worker Container created (2). Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
-		//stats, err := cli.ContainerInspect(context.Background(), containerName)
-		//if err != nil {
-		//	log.Printf("Failed checking worker %s", containerName)
-		//	return
-		//}
+		stats, err := dockercli.ContainerInspect(context.Background(), containerName)
+		if err != nil {
+			log.Printf("[WARNING] Failed checking worker %s", containerName)
+			return nil 
+		}
 
-		//containerStatus := stats.ContainerJSONBase.State.Status
-		//if containerStatus != "running" {
-		//	log.Printf("Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
-		//	err = stopWorker(containerName)
-		//	if err != nil {
-		//		log.Printf("Failed stopping worker %s", execution.ExecutionId)
-		//		return
-		//	}
+		containerStatus := stats.ContainerJSONBase.State.Status
+		if containerStatus != "running" {
+			log.Printf("[ERROR] Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
+		}
+			/*
+			err = stopWorker(containerName)
+			if err != nil {
+				log.Printf("Failed stopping worker %s", execution.ExecutionId)
+				return nil
+			}
 
-		//	err = deployWorke(cli, workerImage, containerName, env)
-		//	if err != nil {
-		//		log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
-		//		return
-		//	}
-		//}
+			err = deployWorker(dockercli, workerImage, containerName, env)
+			if err != nil {
+				log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
+				return nil
+			}
+		}
+		*/
 	} else {
 		log.Printf("[INFO][%s] New Worker created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 	}
@@ -1915,6 +1917,10 @@ func main() {
 	// Handle Cleanup - made it cleanup by default
 	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" {
 		cleanupEnv = "true"
+	}
+
+	if len(cleanupEnv) > 0 {
+		log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
 	}
 
 	workerTimeout := 600

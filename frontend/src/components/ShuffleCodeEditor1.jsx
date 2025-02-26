@@ -27,6 +27,7 @@ import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
 import Draggable from "react-draggable";
 
 import {
+	Storage as StorageIcon, 
 	FullscreenExit as FullscreenExitIcon,
 	Extension as ExtensionIcon,
 	Apps as AppsIcon,
@@ -90,7 +91,7 @@ const pythonFilters = [
 	{ "name": "Using Shuffle variables", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"{\"sample\": \"string\", \"int\": 1}\"\"\"\n  \njsondata = json.loads(nodevalue)\nprint(jsondata)`, "example": `` },
 	{ "name": "Print Execution ID", "value": `print(self.current_execution_id)`, "example": `` },
 	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
-	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"name\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
+	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
 
 	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
 	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
@@ -1805,9 +1806,11 @@ const CodeEditor = (props) => {
 														) : innerdata.type === "workflow_variable" ||
 															innerdata.type === "execution_variable" ? (
 															<FavoriteBorderIcon style={{ marginRight: 10 }} />
-														) : (
+														) : 
+															innerdata.type === "Shuffle DB" ? 
+															<StorageIcon style={{ marginRight: 10,  }} />
+														:
 															<ScheduleIcon style={{ marginRight: 10 }} />
-														);
 
 													const handleExecArgumentHover = (inside) => {
 														var exec_text_field = document.getElementById(
@@ -1876,8 +1879,6 @@ const CodeEditor = (props) => {
 													} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
 														menuPosition1.left = 0
 													}
-
-													//console.log("POS1: ", menuPosition1)
 
 													return parsedPaths.length > 0 ? (
 														<NestedMenuItem

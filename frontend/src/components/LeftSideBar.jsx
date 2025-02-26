@@ -721,11 +721,7 @@ useEffect(() => {
           margin_left:
             org.creator_org !== undefined &&
             org.creator_org !== null &&
-            org.creator_org.length > 0
-              ? org.id === userdata.active_org.id
-                ? 0
-                : 20
-              : 0,
+            org.creator_org.length > 0 ? 20 : 0,
         };
       }) || []
     );

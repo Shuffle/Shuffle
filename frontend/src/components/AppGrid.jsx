@@ -116,7 +116,7 @@ const AppGrid = (props) => {
     })
       .then((response) => response.json())
       .then((response) => {
-        if (response.success === true) {
+        if (response?.success === true) {
           setFormMessage(response.reason);
           //toast("Thanks for submitting!")
         } else {
@@ -307,7 +307,7 @@ const AppGrid = (props) => {
       })
         .then(response => response.json())
         .then(responseJson => {
-          if (responseJson.success) {
+          if (responseJson?.success) {
             setUserdata(responseJson);
             setAllActivatedAppIds(responseJson.active_apps)
             setIsLoggedIn(true);
@@ -350,7 +350,7 @@ const AppGrid = (props) => {
       })
         .then((response) => response.json())
         .then((responseJson) => {
-          if (responseJson.success === false) {
+          if (responseJson?.success === false) {
             toast.error(responseJson.reason);
           } else {
             //toast.success(`App ${type}d Successfully!`);
@@ -414,7 +414,7 @@ const AppGrid = (props) => {
                     scrollbarColor: "#494949 #2f2f2f",
                   }}
                 >
-                  {hits.map((data, index) => {
+                  {hits?.map((data, index) => {
                     const appUrl =
                               isCloud === true ?
                               `/apps/${data.objectID}`
@@ -556,7 +556,7 @@ const AppGrid = (props) => {
                                               }}
                                             >
                                               <span>
-                                                {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                                {data?.tags?.slice(0, 1)?.map((tag, tagIndex) => (
                                                   <span key={tagIndex}>
                                                     {normalizedString(tag)}
                                                     {tagIndex < 1 ? ", " : ""}
@@ -569,7 +569,7 @@ const AppGrid = (props) => {
                                       ) : (
                                         <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
                                           {data.tags &&
-                                            data.tags.map((tag, tagIndex) => (
+                                            data?.tags?.map((tag, tagIndex) => (
                                               <span key={tagIndex}>
                                                 {normalizedString(tag)}
                                                 {tagIndex < data.tags.length - 1 ? ", " : ""}
@@ -760,7 +760,7 @@ const AppGrid = (props) => {
     };
 
     const transformRefinementListItems = items =>
-      items.map(item => ({
+      items?.map(item => ({
         ...item,
         label: item.label === 'true' ? 'App Editor' : 'Python',
       }));
@@ -1103,7 +1103,7 @@ const AppGrid = (props) => {
           }
         });
 
-        const categoryArray = Object.keys(categoryCountMap).map((category) => ({
+        const categoryArray = Object.keys(categoryCountMap)?.map((category) => ({
           category,
           count: categoryCountMap[category],
         }));
@@ -1169,7 +1169,7 @@ const AppGrid = (props) => {
           {!isLoading && (
             <Collapse in={isCategoreListExpanded}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-                {topCategories.map((data, index) => (
+                {topCategories?.map((data, index) => (
                   <Button
                     key={data.category}
                     style={{
@@ -1247,7 +1247,7 @@ const AppGrid = (props) => {
         });
       }
 
-      const tagArray = Object.keys(tagCountMap).map((tag) => ({
+      const tagArray = Object.keys(tagCountMap)?.map((tag) => ({
         tag,
         count: tagCountMap[tag],
       }));
@@ -1308,7 +1308,7 @@ const AppGrid = (props) => {
         </Button>
         <Collapse in={isActionLabelExpanded}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', }}>
-            {topTags && topTags.length > 0 && topTags.map((data, index) => (
+            {topTags && topTags.length > 0 && topTags?.map((data, index) => (
               <Button
                 key={index}
                 onClick={() => handleCheckboxChange(index)}
@@ -1419,7 +1419,7 @@ const AppGrid = (props) => {
 
         <Collapse in={isCreatedWithExpanded}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-            {AppCreatedWithOptions.map((data, index) => (
+            {AppCreatedWithOptions?.map((data, index) => (
               <Button
                 style={{
                   display: "inline-flex",
@@ -1689,7 +1689,7 @@ const AppGrid = (props) => {
                             maxHeight: 570,
                           }}
                         >
-                          {filteredUserAppdata.map((data, index) => {
+                          {filteredUserAppdata?.map((data, index) => {
                             const isMouseOverOnCloudIcon = false;
                             const xs = 12;
                             const rowHandler = 12;
@@ -1847,8 +1847,8 @@ const AppGrid = (props) => {
 											<div style={{minWidth: 120, overflow: "hidden", }}>
 												{data.generated !== true ?
 													<div>
-													{data.tags &&
-													  data.tags.slice(0,2).map((tag, tagIndex) => (
+													{data?.tags &&
+													  data?.tags?.slice(0,2)?.map((tag, tagIndex) => (
 														<span key={tagIndex}>
 														  {normalizedString(tag)}
 														  {tagIndex < data.tags.length - 1 ? ", " : ""}
@@ -1888,7 +1888,7 @@ const AppGrid = (props) => {
       												})
       												  .then((response) => response.json())
       												  .then((responseJson) => {
-      												    if (responseJson.success === false) {
+      												    if (responseJson?.success === false) {
       												      toast.error(responseJson.reason);
       												    } else {
 															toast.success("App Deactivated Successfully. Reload UI to see updated changes.")

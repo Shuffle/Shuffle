@@ -214,6 +214,20 @@ const ParsedAction = (props) => {
 		}
 	}, [expansionModalOpen])
 
+	/*
+	useEffect(() => {
+		// This will have the OLD selectedAction, not the new one huh?
+		// How do we map the fields correctly? 
+		if (selectedAction === undefined || selectedAction === null) {
+			console.log("Selected action is undefined")
+			return
+		}
+
+		console.log("Selected action: ", selectedAction?.name, selectedAction)
+
+	}, [selectedAction])
+	*/
+
 	useEffect(() => {
 		// Changes the order of params to show in order:
 		// auth, required, optional
@@ -347,7 +361,7 @@ const ParsedAction = (props) => {
 		}
 
 		if (keyorder.join(",") !== newkeyorder.join(",")) {
-			//toast("KEYORDER CHANGED!")
+			console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
 
 			setSelectedActionParameters(newparams)
 			selectedAction.parameters = newparams
@@ -872,7 +886,7 @@ const ParsedAction = (props) => {
 				}
 			}
 			return { ...param, value: paramvalue, error: message }
-		});
+		})
 
 		setSelectedActionParameters(newParameters)
 		setActionlist(newActionList)
@@ -3645,6 +3659,14 @@ const ParsedAction = (props) => {
 									);
 
 
+									if ((multiline === undefined || multiline === false) && ((data?.autocompleted === true || data?.field_active === true) || data.name.startsWith("${") && data.name.endsWith("}"))) {
+										multiline = true
+									}
+
+									if (data?.autocompleted === true || data?.field_active === true) { 
+										rows = "1"
+									}
+
 									var datafield = (
 										<Tooltip
 											title={tooltipDescription}
@@ -3725,7 +3747,8 @@ const ParsedAction = (props) => {
 														setScrollConfig(scrollConfig)
 													}
 												}}
-												rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
+												minRows={rows}
+												maxRows={6}
 												color="primary"
 												// defaultValue={data.value}
 												value={
@@ -4034,7 +4057,8 @@ const ParsedAction = (props) => {
 												helperText={returnHelperText(data.name, data.value)}
 												fullWidth
 												multiline={multiline}
-												rows={"3"}
+												minRows={3}
+												maxRows={6}
 												color="primary"
 												defaultValue={data.value}
 												type={"text"}
@@ -4580,7 +4604,7 @@ const ParsedAction = (props) => {
 													data.field_active === true ?
 														<Tooltip
 															color="primary"
-															title={"This is an Simplified field to make the body easier to use. NOT required according to the API documentation. If this is filled, it will be overridden in the Advanced Body"}
+															title={"This is a Simplified Field to make the body easier to use. NOT required according to the API documentation. If this is filled, it will be overridden in the Advanced Body"}
 															placement="top"
 														>
 															<PriorityHighIcon

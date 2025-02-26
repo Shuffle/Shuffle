@@ -77,6 +77,24 @@ const RunWorkflow = (defaultprops) => {
   const [boxWidth, setBoxWidth] = React.useState(500)
   const [inputQuestions, setInputQuestions] = React.useState([])
 
+
+  useEffect(() => {
+	  if (workflow === undefined || workflow === null || Object.keys(workflow).length === 0) {
+		  return
+	  }
+
+	  if (workflow.input_questions === undefined || workflow.input_questions === null) {
+		  return
+	  }
+
+	  // Checks if it's a user input-node based or not 
+	  if ((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) { 
+	  } else {
+		  setInputQuestions(workflow.input_questions)
+		  setUpdate(Math.random())
+	  }
+  }, [workflow])
+
 	const IframeWrapper = (props) => {
 		var propsCopy = JSON.parse(JSON.stringify(props))
 		propsCopy.width = 400 
