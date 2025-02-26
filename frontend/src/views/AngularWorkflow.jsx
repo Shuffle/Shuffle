@@ -1687,7 +1687,7 @@ const AngularWorkflow = (defaultprops) => {
     if (filter === undefined || filter === null || filter.toUpperCase() === "ALL") {
 
       // Check for 
-      if (executionFilter !== undefined && executionFilter !== null && executionFilter.length > 0) {
+      if (executionFilter !== undefined && executionFilter !== null && executionFilter.length > 0 && filter !== "ALL") {
         filter = executionFilter
       } else {
         filter = "ALL"

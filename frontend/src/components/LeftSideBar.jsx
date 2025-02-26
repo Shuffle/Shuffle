@@ -525,7 +525,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0-rc7
+          Version: 2.0.0
         </Typography>
       </Menu>
     </span>
