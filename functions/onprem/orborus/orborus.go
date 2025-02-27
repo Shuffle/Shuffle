@@ -1352,7 +1352,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
-	log.Printf("WORKER STARTING WITH ENV: %#v", env)
+	// FIXME: Verbosity for testing
+	//log.Printf("WORKER STARTING WITH ENV: %#v", env)
 
 	ctx := context.Background()
 	containerStartOptions := container.StartOptions{}
