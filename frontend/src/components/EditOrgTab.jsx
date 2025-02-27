@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useContext } from 'react';
-import OrgHeaderexpanded from "./OrgHeaderexpandedNew.jsx";
-import OrgHeader from './OrgHeaderNew.jsx';
+import OrgHeaderexpanded from "../components/OrgHeaderexpandedNew.jsx";
+import OrgHeader from '../components/OrgHeaderNew.jsx';
 import { toast } from "react-toastify";
-import CloudSyncTab from './CloudSyncTab.jsx';
+import CloudSyncTab from '../components/CloudSyncTab.jsx';
 import {
     FileCopy as FileCopyIcon,
 } from "@mui/icons-material";

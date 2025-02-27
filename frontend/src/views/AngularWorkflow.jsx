@@ -13457,7 +13457,7 @@ const AngularWorkflow = (defaultprops) => {
         Shuffle AI
       </Typography>
       <Typography variant="body2" color="textSecondary">
-        What you write here will be fed to the Shuffle AI to generate a change for the selected action or field. Best used for when you are stuck with formatting. Uses your AI credits (resets monthly). Alpha feature. Please give feedback to support@shuffler.io {"<"}3
+        What you write here will be fed to the Shuffle AI to generate a change for the selected action or field. Best used for when you are stuck with formatting. Uses your AI credits (resets monthly). <b>Beta feature.</b> Please give feedback to support@shuffler.io {"<"}3
 
       </Typography>
       <TextField
