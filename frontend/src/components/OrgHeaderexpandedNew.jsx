@@ -549,7 +549,7 @@ const OrgHeaderexpandedNew = (props) => {
 
 									{isCloud ? (
 										<div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }} >
-											Region
+											Change Region
 											<RegionChangeModal selectedOrganization={selectedOrganization} setSelectedRegion={setSelectedRegion} userdata={userdata} handleSendChangeRegionMail={handleSendChangeRegionMail} />
 										</div>
 									) : null}
