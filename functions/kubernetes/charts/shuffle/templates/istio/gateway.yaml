@@ -1,0 +1,42 @@
+{{- if .Values.istio.enabled }}
+apiVersion: "{{ .Values.istio.apiVersion }}"
+kind: Gateway
+metadata:
+  name: {{ template "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.istio.gateway.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.istio.gateway.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  selector: {{- include "common.tplvalues.render" ( dict "value" .Values.istio.gateway.selector "context" $ ) | nindent 4 }}
+  servers:
+	{{- if .Values.istio.gateway.http.enabled }}
+    - name: "{{ include "common.names.fullname" . }}-http"
+      port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts: {{ .Values.istio.hosts }}
+      tls:
+        httpsRedirect: {{ .Values.istio.gateway.http.httpsRedirect }}
+	{{- end }}
+	{{- if .Values.istio.gateway.https.enabled }}
+    - name: "{{ include "common.names.fullname" . }}-https"
+      port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts: {{ .Values.istio.hosts }}
+      tls:
+        credentialName: {{ .Values.istio.gateway.https.tlsCredentialName }}
+        mode: SIMPLE
+        {{- with .Values.istio.gateway.https.tlsCipherSuites }}
+        cipherSuites: {{- include "common.tplvalues.render" ( dict "value" . "context" $ ) | nindent 10 }}
+        {{- end }}
+	{{- end }}
+    {{- if .Values.istio.gateway.extraServers }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.istio.gateway.extraServers "context" $) | nindent 4 }}
+    {{- end }}
+{{- end }}

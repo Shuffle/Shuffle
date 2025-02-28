@@ -170,6 +170,9 @@ const LoginDialog = (props) => {
                 );
                 setMFAField(true);
                 return;
+              }  else if (responseJson["reason"] === "MFA_SETUP") {
+                window.location.href = `/login/${responseJson.url}/mfa-setup`;
+                return;
               }
 
               setLoginInfo("Successful login, rerouting");
@@ -183,9 +186,9 @@ const LoginDialog = (props) => {
 
 			  if (responseJson.tutorials === undefined || responseJson.tutorials === null || !responseJson.tutorials.includes("welcome")) {
 			  	console.log("RUN Welcome!!")
-          setTimeout(() => {
-            navigate("/welcome?tab=2")
-          },200)
+			    setTimeout(() => {
+			      navigate("/welcome?tab=2")
+			    },200)
 			  	// window.location.pathname = "" 
 			  	return
 			  }

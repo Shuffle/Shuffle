@@ -1,0 +1,47 @@
+{{- if .Values.frontend.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+metadata:
+  name: {{ template "shuffle.frontend.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.frontend.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.frontend.podLabels .Values.commonLabels ) "context" . ) }}
+  podSelector:
+    matchLabels: {{- include "shuffle.frontend.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    {{- if .Values.frontend.networkPolicy.allowExternalEgress }}
+    - {}
+    {{- else }}
+    # Allow DNS resolution with an in-cluster DNS server
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    {{- if .Values.frontend.networkPolicy.extraEgress }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.frontend.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- end }}
+  ingress:
+    {{ if .Values.frontend.networkPolicy.allowExternal }}
+    - ports:
+        - port: {{ .Values.frontend.containerPorts.http }}
+        {{- if .Values.frontend.containerPorts.https }}
+        - port: {{ .Values.frontend.containerPorts.https }}
+        {{- end }}
+    {{- end }}
+    {{- if .Values.frontend.networkPolicy.extraIngress }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.frontend.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- end }}

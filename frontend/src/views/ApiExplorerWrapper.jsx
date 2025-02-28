@@ -95,14 +95,18 @@ const ApiExplorerWrapper = (props) => {
   };
 
   useEffect(() => {
+	  if (openapi?.id === "HTTP") {
+		  selectedAppData.name = "HTTP"
+	  }
+
 	  if (selectedAppData !== undefined && selectedAppData !== null && Object.getOwnPropertyNames(selectedAppData).length > 0) {
 		HandleAppAuthentication(selectedAppData?.name)
 	  }
   }, [selectedAppData, openapi])
 
   useEffect(() => {
+    getAppData(appid)
     if (appid !== undefined && appid !== null && appid.length !== 0) {
-      getAppData(appid)
   	  HandleGetLocations() 
     }
 
@@ -136,7 +140,10 @@ const ApiExplorerWrapper = (props) => {
   const runAlgoliaAppSearch = (appname) => {
     const index = searchClient.initIndex("appsearch");
 
-    console.log("Running appsearch for: ", appname);
+	if (appname === "HTTP" || appname === "http") {
+		navigate("/apis")
+		return
+	}
 
     index
       .search(appname)
@@ -151,19 +158,25 @@ const ApiExplorerWrapper = (props) => {
 
 				if (newname?.includes(appsearchname)) {
 					found = true
+
 					getAppData(hit.objectID)
 					break
 				}
 			}
 
 			if (!found) {
-				toast.error("Failed to get app data or App doesn't exist (1). Redirecting..");
+				toast.error(`Failed to get API data for '${appname}' (1). Contact support@shuffler.io if this persists.`, {
+					"autoClose": 10000,
+				})
+
 				setTimeout(()=>{
 					navigate("/search?tab=apps");
 				},3000)
 			}
 		} else {
-			toast.error("Failed to get app data or App doesn't exist (2). Redirecting..");
+			toast.error(`Failed to get API data for '${appname}' (2). Contact support@shuffler.io if this persists.`, {
+				"autoClose": 10000,
+			})
 			setTimeout(()=>{
 				navigate("/search?tab=apps");
 			},3000)
@@ -177,6 +190,29 @@ const ApiExplorerWrapper = (props) => {
   // Fetch data when appid is available
   const getAppData = useCallback((appid) => {
     if (appid === undefined || appid === null || appid.length === 0) {
+	  toast.warning("No app ID loaded. Showing default API testing window. ") 
+  	  setOpenapi({
+		  "id": "HTTP",
+		  "servers": [
+			  {"url": "https://shuffler.io"},
+		  ],
+		  "info": {
+			  "title": "HTTP",
+			  "x-logo": theme.palette?.defaultImage,
+		  },
+		  "paths": {
+			  "/api/v1/workflows/usecases": {
+			  	"get": {
+					"summary": "Custom Action",
+				}
+			  }
+		  }
+	  })
+	  setAppLoaded(true)
+        
+	  //setTimeout(() => {
+	  //	navigate("/search?tab=apps")
+	  //}, 3000)
       return
     }
 	
@@ -197,16 +233,21 @@ const ApiExplorerWrapper = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           toast.error("Failed to get app data or App doesn't exist (3). Redirecting..");
-          setTimeout(()=>{
-            navigate("/search?tab=apps");
-          },3000)
+          setTimeout(() => {
+            navigate("/search?tab=apps")
+          }, 3000)
           return;
         }
         return response.json();
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          handleDecodeOfOpenApiData(responseJson);
+		  if (responseJson.openapi === undefined || responseJson.openapi === null) {
+			  toast.warning("Loaded App, but no API found. Redirecting back to app..")
+			  navigate(`/apps/${appid}`)
+		  } else {
+          	handleDecodeOfOpenApiData(responseJson);
+		  }
         } else {
           toast.error("Failed to get app data or App doesn't exist (4)");
         }
@@ -337,7 +378,7 @@ const ApiExplorerWrapper = (props) => {
     const parsedHeaders = {};
     
     if (typeof headers === 'string' && headers) {
-        const splitHeaders = headers.split("\n");
+        const splitHeaders = headers.split(`\n`)
         
         splitHeaders.forEach(header => {
             let splitItem;
@@ -397,6 +438,13 @@ const ApiExplorerWrapper = (props) => {
 
 	if (appname !== undefined && appname !== null && appname.length > 0) {
 		selectedAppData.name = appname
+	}
+
+	console.log("APPNAME: ", appname, openapi.id)
+	if (openapi?.id === "HTTP" || appname === "HTTP" || appname === "http") {
+		setAppAuthentication(data)
+		setSelectedAuthentication({})
+		return
 	}
 
     const filteredData = data.filter((appAuth) => appAuth?.app?.id === appid || appAuth?.app?.name?.replaceAll(" ", "_").toLowerCase() === selectedAppData?.name?.replaceAll(" ", "_").toLowerCase());
@@ -481,7 +529,7 @@ const ApiExplorerWrapper = (props) => {
       return array
         .map(item => (item.key.trim().length > 0 && item.value.trim().length > 0 ? `${item.key}=${item.value}` : ""))
         .filter(str => str.length > 0)
-        .join("\n");
+        .join(``);
     }; 
 
     var appid = "";
@@ -491,7 +539,7 @@ const ApiExplorerWrapper = (props) => {
     }else if (openapi?.id?.length > 0) {
       appid = openapi?.id;
     }else{
-      toast.error("App id is missing. Please try again.");
+      toast.error("App id is missing and we can't run the API. Please contact support@shuffler.io if this persists.");
       return;
     }
 
@@ -615,7 +663,7 @@ const ApiExplorerWrapper = (props) => {
 							}
 						}
 					} else if (validate.result.status === 404) {
-						toast.error("Page not found. Please try a different URL.")
+						//toast.error("Page not found. Please try a different URL.")
 					} else if (validate.result.error !== undefined && validate.result.error !== null && validate.result.error.length > 0) {
 						if (validate.result.error.toLowerCase().includes("max retries")) {
 							toast.error("Are you sure the URL is correct? It seems like the server is not responding.")
@@ -678,6 +726,7 @@ const ApiExplorerWrapper = (props) => {
               '& .MuiList-root': {
                 backgroundColor: "#1f1f1f",
               },
+			  maxWidth: 500, 
             },
           }
         }}
@@ -709,6 +758,7 @@ const ApiExplorerWrapper = (props) => {
 			No Selection
 		  </MenuItem>
 		<Divider />
+
         {appAuthentication?.length > 0 ? appAuthentication.map((appAuth) => (
           <div
             key={appAuth?.id}
@@ -718,13 +768,13 @@ const ApiExplorerWrapper = (props) => {
               backgroundColor: '#1f1f1f',
               color: 'white',
               padding: '5px',
+			  textAlign: "left", 
             }}
           >
               <MenuItem
                 value={appAuth?.id}
                 sx={{
                   display: 'flex',
-                  justifyContent: 'space-between',
                   color: 'white',
                 }}
                 onClick={(e) => {
@@ -732,6 +782,11 @@ const ApiExplorerWrapper = (props) => {
                   setAuthenticationName(appAuth.app?.name) 
                 }}
               >
+				  {appAuth?.app?.large_image !== undefined && appAuth?.app?.large_image !== null && appAuth?.app?.large_image.length > 0 ?
+					  <Tooltip title={appAuth?.app?.name} placement="top">
+					  	<img src={appAuth?.app?.large_image} alt={appAuth?.app?.name} style={{ maxWidth: 20, maxHeight: 20, marginRight: 10, borderRadius: 5 }} />
+					  </Tooltip>
+				  : null}
 				  {appAuth?.validation?.valid === true ? 
 					<Tooltip title="Validated" placement="top">
   						<CheckCircleIcon style={{ color: green, marginRight: 10,  }} />
@@ -1631,7 +1686,9 @@ const ApiExplorerWrapper = (props) => {
       >
 		<div style={{display: "flex", }}>
 			<div style={{width: 600, margin: "auto", display: "flex", }}>
-				{isLoggedIn === true ? 
+				{openapi?.id === "HTTP" ? 
+					null
+					: isLoggedIn === true ? 
 					<Button
 					  variant={authHighlighted ? "contained" : "outlined"}
 					  style={{
@@ -1667,17 +1724,20 @@ const ApiExplorerWrapper = (props) => {
 				}
 
 				{appAuthentication?.length > 0 ? 
-					<div style={{display: "flex", flex: 2, }}>
-						<Typography style={{textAlign: "center", flex: 1, color: "white", marginTop: 15, }} variant="body1">
-							or use	
-						</Typography>
+					<div style={{display: "flex", flex: 2, textAlign: "center", }}>
+						{openapi?.id === "HTTP" ? null : 
+							<Typography style={{textAlign: "center", flex: 1, color: "white", marginTop: 15, }} variant="body1">
+								or use	
+							</Typography>
+						}
 
 						<div style={{
 						  flex: 1, 
 						  display: 'flex',
 						  flexDirection: 'column',
 						  justifyContent: 'center',
-						  marginLeft: 'auto',
+						  margin: 'auto',
+						  maxWidth: 200, 
 						}}>
 						  <AuthenticationList /> 
 						</div>

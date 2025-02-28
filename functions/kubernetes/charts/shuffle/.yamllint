@@ -1,0 +1,11 @@
+---
+extends: default
+
+rules:
+  line-length: disable
+  braces: disable
+  comments:
+    require-starting-space: true
+    ignore-shebangs: true
+    min-spaces-from-content: 1
+
