@@ -397,7 +397,7 @@ const Dashboard = (props) => {
 		if (foundQuery !== null && foundQuery !== undefined) {
 			setSelectedUsecaseCategory(foundQuery)
 
-      const newitem = removeParam("selected", cursearch);
+      		const newitem = removeParam("selected", cursearch);
 			navigate(curpath + newitem)
 		}
 

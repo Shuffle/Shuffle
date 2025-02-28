@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import {
@@ -23,14 +23,14 @@ import ForkRightIcon from '@mui/icons-material/ForkRight';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import LaunchIcon from '@mui/icons-material/Launch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { CloudDownloadOutlined } from '@mui/icons-material';
+import { CloudDownloadOutlined, Delete } from '@mui/icons-material';
 import { findSpecificApp } from '../components/AppFramework.jsx';
 import theme from "../theme.jsx";
 import YAML from 'yaml';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 
-const AppModal = ({ open, onClose, app, globalUrl }) => {
+const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
 
   const [frameworkData, setFrameworkData] = useState({})
   const [userdata, setUserdata] = useState({})
@@ -41,6 +41,8 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
   const [latestUsecase, setLatestUsecase] = useState([])
   const [foundAppUsecase, setFoundAppUsecase] = useState({})
   const [usecaseLoading, setUsecaseLoading] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [sharingConfiguration, setSharingConfiguration] = React.useState("you");
   const navigate = useNavigate();
   const parseUsecase = (subcase) => {
     const srcdata = findSpecificApp(frameworkData, subcase.type)
@@ -247,6 +249,11 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
   }
 
   const getUsecase = (subcase, index, subindex) => {
+	//console.log("Skipping getUsecase")
+	// FIXME: Skipping for now as this screws over a lot of the prioritization system
+	// due to them having "looked at" the usecase.
+	return 
+
     subcase = parseUsecase(subcase)
     setPrevSubcase(subcase)
 
@@ -294,7 +301,100 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
     setUsecaseLoading(true)
     getAvailableWorkflows()
     getFramework()
+    handleUpdateSharingConfiguration()
   }, [app])
+
+  const handleUpdateSharingConfiguration = useCallback(() => {
+    if (app?.sharing === true) {
+      setSharingConfiguration("public")
+    }else {
+      setSharingConfiguration("you")
+    }
+
+  }, [app?.id])
+
+  const deleteApp = (appId) => {
+      toast("Attempting to delete app");
+      fetch(globalUrl + "/api/v1/apps/" + appId, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+        },
+        credentials: "include",
+      })
+        .then((response) => {
+          if (response.status === 200) {
+            toast("Successfully deleted app");
+            setTimeout(() => {
+              //delete apps from local storage
+              localStorage.removeItem("apps");
+              getApps();
+            }, 1000);
+          } else {
+            toast("Failed deleting app. Does it still exist?");
+          }
+        })
+        .catch((error) => {
+          toast(error.toString());
+        });
+    };
+
+  const deleteModal = deleteModalOpen ? (
+      <Dialog
+        open={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+            border: theme?.palette?.DialogStyle?.border,
+            fontFamily: theme?.typography?.fontFamily,
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+            zIndex: 1000,
+            minWidth: "500px",
+            overflow: "hidden",
+            '& .MuiDialogContent-root': {
+              backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+            },
+            '& .MuiDialogTitle-root': {
+              backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+            },
+          }
+        }}
+      >
+        <DialogTitle>
+          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
+            Are you sure? <div />
+            Some workflows may stop working.
+          </div>
+        </DialogTitle>
+        <DialogContent
+          style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+        >
+          <Button
+            style={{}}
+            onClick={() => {
+              deleteApp(app.id);
+              setDeleteModalOpen(false);
+            }}
+            color="primary"
+          >
+            Yes
+          </Button>
+          <Button
+            variant="outlined"
+            style={{marginLeft: 5}}
+            onClick={() => {
+              setDeleteModalOpen(false);
+            }}
+            color="primary"
+          >
+            No
+          </Button>
+        </DialogContent>
+      </Dialog>
+    ) : null;
 
 
   const downloadApp = (inputdata) => {
@@ -382,7 +482,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-      window.location.host === "shuffler.io" || window.location.host === "localhost:3000"
+      window.location.host === "shuffler.io"
       ? true
       : false;
 
@@ -395,8 +495,10 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
   }
 
 
-  var canEditApp = userdata !== undefined && (userdata?.admin === "true" || userdata?.id === app?.owner || app?.owner === "" || (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org)) || !app?.generated
-
+  var canEditApp = userdata?.support || 
+                   userdata?.id === app?.owner || 
+                   (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org) || 
+                   app?.contributors?.includes(userdata?.id)
   return (
     <Dialog
       open={open}
@@ -425,6 +527,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
         }
       }}
     >
+      {deleteModal}
       <DialogTitle
         sx={{
           display: 'flex',
@@ -437,15 +540,22 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
           fontFamily: theme?.typography?.fontFamily
         }}
       >
+	  	{/*
         <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "20px" }}>
           About {app?.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </Typography>
+		*/}
         <IconButton
           onClick={onClose}
           sx={{
             color: 'rgba(255, 255, 255, 0.7)',
             '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
           }}
+	  	  style={{
+			  position: "absolute",
+			  top: 10,
+			  right: 10, 
+		  }}
         >
           <CloseIcon />
         </IconButton>
@@ -457,7 +567,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
           <div style={{ display: "flex", flexDirection: "row", gap: 10, fontFamily: theme?.typography?.fontFamily }}>
             <img
               alt={app?.name}
-              src={app?.large_image || app?.image_url}
+              src={app?.large_image || app?.image_url || "/images/no_image.png"}
               style={{
                 borderRadius: 4,
                 maxWidth: 100,
@@ -474,12 +584,16 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                 flexDirection: "row",
                 alignItems: "center",
               }}>
-                <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
-                  {newAppname}
-                </Typography>
+	  			<a href={isCloud ? "/apps/" + (app?.id || app?.objectID) : `https://shuffler.io/apps/${app?.objectID || app?.id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "rgba(255,255,255,0.9)", }}>
+					<Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
+					  {newAppname}
+					</Typography>
+	  			</a>
                 <Link
-                  to={"/apps/" + (app?.id || app?.objectID)}
+                  to={isCloud ? `/apps/${app?.id || app?.objectID}` : `/apps/${app?.id || app?.published_id || app?.objectID}`}
                   style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <IconButton
                     style={{
@@ -536,6 +650,36 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                 </Button>
               </Tooltip>
             ) : null}
+            {(userdata?.id === app?.owner)? (
+              <Tooltip title={"Delete app (confirm box will show)"}> 
+              <Button
+                variant="outlined"
+                component="label"
+                color="primary"
+                sx={{
+                  bgcolor: '#494949',
+                  '&:hover': { bgcolor: '#494949', border: 'none' },
+                  textTransform: 'none',
+                  borderRadius: 1,
+                  minWidth: '45px',
+                  width: '45px',
+                  height: '40px',
+                  padding: 2,
+                  color: "#fff",
+                  fontFamily: theme?.typography?.fontFamily,
+                  border: 'none'
+                }}
+                onClick={() => {
+                  setDeleteModalOpen(true);
+                }}
+                disabled={(sharingConfiguration === undefined || sharingConfiguration === null || sharingConfiguration === "public") }
+              >
+                <Delete />
+              </Button>
+            </Tooltip>
+            ): null}
+            
+            {(canEditApp && app?.generated) && (
             <Button
               variant="contained"
               sx={{
@@ -549,10 +693,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                 color: "#fff",
                 fontFamily: theme?.typography?.fontFamily
               }}
-              startIcon={canEditApp ? <EditIcon /> :
-                (app?.generated && app?.activated && userdata?.id !== app?.owner && isCloud ?
-                  <ForkRightIcon /> : null
-                )}
+              startIcon={canEditApp ? <EditIcon /> : <ForkRightIcon />}
               onClick={() => {
                 if (canEditApp) {
                   const editUrl = "/apps/edit/" + (app?.id || app?.objectID);
@@ -563,8 +704,9 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                 }
               }}
             >
-              {canEditApp ? "Edit" : "Fork"}
-            </Button>
+                {canEditApp ? "Edit" : "Fork"}
+              </Button>
+            )}
           </div>
         </Box>
 
@@ -685,13 +827,13 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
               marginBottom: "16px",
               fontWeight: 600
             }}>
-              {
+              {/*
                 (foundAppUsecase?.srcapp !== undefined && foundAppUsecase?.dstapp !== undefined) ? (
                   "Connect " + foundAppUsecase?.srcapp?.replaceAll("_", " ") + " to " + foundAppUsecase?.dstapp?.replaceAll("_", " ")
                 ) : (
                   "Connect " + app?.name.replaceAll("_", " ") + " to any tool"
                 )
-              }
+              */}
             </div>
           )}
 
@@ -703,7 +845,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
             alignItems: 'center',
             mb: 3
           }}>
-            {usecaseLoading ? (
+            {/*usecaseLoading ? (
               <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
                 <Stack direction="row" spacing={-1}>
                   <Skeleton variant="circular" width={32} height={32} />
@@ -752,7 +894,7 @@ const AppModal = ({ open, onClose, app, globalUrl }) => {
                   {foundAppUsecase?.name || "Search for a Usecase"}
                 </Typography>
               </>
-            )}
+            )*/}
           </Box>
         </div>
 

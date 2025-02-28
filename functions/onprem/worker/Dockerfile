@@ -23,11 +23,11 @@ RUN go get
 #	go get github.com/fsouza/go-dockerclient && \
 #	go get google.golang.org/grpc/balancer/grpclb@v1.37.1
 
-RUN go build
+#RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
 ## ALPINE IMAGE
-FROM alpine:3.15.0
+FROM alpine:3.21.2
 
 ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle

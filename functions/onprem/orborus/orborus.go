@@ -108,7 +108,7 @@ var queuePerMinute = os.Getenv("SHUFFLE_EXECUTION_PER_MINIUTE")
 var queuePerMinuteInt int
 
 // For it to download from Sigma?
-var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
+var pipelineApikey = os.Getenv("SHUFFLE_PIPELINE_AUTH")
 var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 
 var executionIds = []string{}
@@ -133,6 +133,16 @@ func init() {
 	}
 
 	getThisContainerId()
+
+	if len(pipelineApikey) == 0 {
+		if len(os.Getenv("SHUFFLE_AUTHORIZATION")) > 0 {
+			log.Printf("[DEBUG] No pipeline API key found. Overriding with api key from SHUFFLE_AUTHORIZATION")
+
+			pipelineApikey = os.Getenv("SHUFFLE_AUTHORIZATION")
+			os.Setenv("SHUFFLE_PIPELINE_AUTH", pipelineApikey)
+		}
+	}
+
 }
 
 // form id of current running container
@@ -1231,18 +1241,20 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 }
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
+
+
 	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
 
-	// if isKubernetes == "true" {
-	// 	err := deployK8sWorker(image, identifier, env, executionRequest)
-	// 	if err != nil {
-	// 		log.Printf("[ERROR] Failed deploying Kubernetes worker: %s", err)
-	// 	}
+	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
+		// FIXME: Should we handle replies properly?
+		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
+		// a 401 from the worker, which returns an error here
+		go sendWorkerRequest(executionRequest, image, env)
 
-	// 	return err
-	// }
+		return nil
+	}
 
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -1290,6 +1302,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
+
+	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
+	parsedUuid := uuid.NewV4()
+
 	config := &container.Config{
 		Image: image,
 		Env:   env,
@@ -1297,20 +1313,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	if isKubernetes != "true" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+
 		if strings.ToLower(cleanupEnv) != "false" {
 			hostConfig.AutoRemove = true
 		}
-	}
-
-	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
-	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
-		// FIXME: Should we handle replies properly?
-		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
-		// a 401 from the worker, which returns an error here
-		go sendWorkerRequest(executionRequest, image, env)
-
-		return nil
 	}
 
 	//log.Printf("[INFO] Identifier: %s", identifier)
@@ -1346,8 +1352,12 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
+	// FIXME: Verbosity for testing
+	//log.Printf("WORKER STARTING WITH ENV: %#v", env)
+
+	ctx := context.Background()
 	containerStartOptions := container.StartOptions{}
-	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+	err = dockercli.ContainerStart(ctx, cont.ID, containerStartOptions)
 	if err != nil {
 		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
 		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
@@ -1380,27 +1390,30 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[INFO][%s] Worker Container created (2). Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
-		//stats, err := cli.ContainerInspect(context.Background(), containerName)
-		//if err != nil {
-		//	log.Printf("Failed checking worker %s", containerName)
-		//	return
-		//}
+		stats, err := dockercli.ContainerInspect(ctx, cont.ID)
+		if err != nil {
+			log.Printf("[WARNING] Failed checking worker '%s': %s", cont.ID, err)
+			return nil 
+		}
 
-		//containerStatus := stats.ContainerJSONBase.State.Status
-		//if containerStatus != "running" {
-		//	log.Printf("Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
-		//	err = stopWorker(containerName)
-		//	if err != nil {
-		//		log.Printf("Failed stopping worker %s", execution.ExecutionId)
-		//		return
-		//	}
+		containerStatus := stats.ContainerJSONBase.State.Status
+		if containerStatus != "running" {
+			log.Printf("[ERROR] Status of %s is %s. Should be running. Contact support@shuffler.io if this persists.", cont.ID, containerStatus)
+		}
+			/*
+			err = stopWorker(containerName)
+			if err != nil {
+				log.Printf("Failed stopping worker %s", execution.ExecutionId)
+				return nil
+			}
 
-		//	err = deployWorke(cli, workerImage, containerName, env)
-		//	if err != nil {
-		//		log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
-		//		return
-		//	}
-		//}
+			err = deployWorker(dockercli, workerImage, containerName, env)
+			if err != nil {
+				log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
+				return nil
+			}
+		}
+		*/
 	} else {
 		log.Printf("[INFO][%s] New Worker created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 	}
@@ -1845,6 +1858,8 @@ func cleanup() {
 
 // Initial loop etc
 func main() {
+	// Get arch. amd64 or arm64
+
 	//sigCh := make(chan os.Signal, 1)
 	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	//defer cleanup()
@@ -1905,6 +1920,10 @@ func main() {
 	// Handle Cleanup - made it cleanup by default
 	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" {
 		cleanupEnv = "true"
+	}
+
+	if len(cleanupEnv) > 0 {
+		log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
 	}
 
 	workerTimeout := 600
@@ -2215,10 +2234,13 @@ func main() {
 				// Looking for specific jobs
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
 
+					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					tenzirDisabled = false 
+
+					// Running NEW or editing pipelines
 					err := handlePipeline(incRequest)
 					if err != nil {
-
-						log.Printf("[ERROR] Failed handling pipeline (%s %s): %s. Deleting job anyway.", incRequest.Type, incRequest.ExecutionSource, err)
+						log.Printf("[ERROR] Failed handling pipeline ('%s' '%s'): %s. Deleting job anyway.", incRequest.Type, incRequest.ExecutionSource, err)
 					}
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
@@ -2237,65 +2259,47 @@ func main() {
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
 				} else if incRequest.Type == "CATEGORY_UPDATE" {
-
-					err := deployTenzirNode()
-					if err != nil {
-						log.Printf("[ERROR] Failed to run CATEGORY UPDATE, reason: %s", err)
-					} else {
-						continue
-					}
+					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					tenzirDisabled = false 
 
 					err = handleFileCategoryChange()
 					if err != nil {
 						log.Printf("[ERROR] Failed to download the file category: %s", err)
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
+					log.Printf("[INFO] Got job to disable sigma rules")
+
+					err = removeFileCategory()
+					if err != nil {
+						log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
 				} else if incRequest.Type == "DISABLE_SIGMA_FILE" {
 					fileName := incRequest.ExecutionArgument
-					err := deployTenzirNode()
-					if err != nil {
-						log.Printf("[ERROR] Failed to run DISABLE SIGMA FILE, reason: %s", err)
-					} else {
-						continue
-					}
+					log.Printf("[INFO] Got job to disable sigma file %s", fileName)
 
 					err = disableRule(fileName)
 					if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
 				} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
 					fileName := incRequest.ExecutionArgument
-					err := deployTenzirNode()
-					if err != nil {
-						log.Printf("[ERROR] Failed to run ENABLE SIGMA FILE, reason: %s", err)
-					} else {
-						continue
-					}
+					log.Printf("[INFO] Got job to enable sigma file %s", fileName)
 
 					err = enableRule(fileName)
 					if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
 
-				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
-					err := deployTenzirNode()
-					if err != nil {
-						log.Printf("[ERROR] Failed to run DISABLE SIGMA FOLDER, reason: %s", err)
-					}
-
-					err = removeAllFiles()
-					if err != nil {
-						log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-					}
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "START_TENZIR" {
 					log.Printf("[INFO] Got job to start tenzir")
 
@@ -2533,7 +2537,7 @@ func main() {
 // docker run tenzir/tenzir:latest 'from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines'
 func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
-	log.Printf("[INFO] Pipeline: %s to %s", incRequest.Type, incRequest.ExecutionSource)
+	log.Printf("[INFO] Pipeline: '%s' with source '%s'", incRequest.Type, incRequest.ExecutionSource)
 
 	err := deployTenzirNode()
 	if err != nil {
@@ -2601,7 +2605,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 		pipelineId, err := searchPipeline(identifier)
 		if err != nil {
 			if err.Error() == "no existing pipeline found with name" {
-				log.Printf("[WARNING] No pipeline found for '%s', creating a new one", identifier)
+				log.Printf("[INFO] Starting a new pipeline with command '%s' and identifier '%s'", command, identifier)
 				_, CreateErr := createPipeline(command, identifier)
 				return CreateErr
 			}
@@ -2778,7 +2782,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		}
 	} else {
 		tenzirStorageFolder = "/tmp/"
-		log.Printf("[DEBUG] Using folder %s for Tenzir storage. Change it using SHUFFLE_STORAGE_FOLDER", tenzirStorageFolder)
+		log.Printf("[DEBUG] Using base folder %s for Tenzir storage. Change it using environment variable SHUFFLE_STORAGE_FOLDER=/filepath/", tenzirStorageFolder)
 	}
 
 	if !anyFound {
@@ -2874,7 +2878,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	time.Sleep(20 * time.Second)
 	err = checkTenzirNode()
 	if err != nil {
-		log.Printf("[ERROR] Tenzir node is not available during deployment: %s", err)
+		log.Printf("[ERROR] Tenzir connection not available: %s. IF the URL seems wrong, set SHUFFLE_PIPELINE_URL=http://<ip>:5160", err)
 		return err
 	}
 
@@ -3042,8 +3046,19 @@ func createPipeline(command, identifier string) (string, error) {
 		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
 		return "", err
 	}
-	defer resp.Body.Close()
 
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading response body: %s", err)
+		return "", err
+	}
+
+	if strings.Contains(string(body), "error") {
+		log.Printf("[ERROR] Pipeline creation response (%d): %s", resp.StatusCode, string(body))
+	}
+
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Printf("[DEBUG] status code is %d instead of 200", resp.StatusCode)
 		return "", fmt.Errorf("got the status code %d instead of 200", resp.StatusCode)
@@ -3051,25 +3066,22 @@ func createPipeline(command, identifier string) (string, error) {
 
 	type PipelineResponse struct {
 		ID string `json:"id"`
+		Message string `json:"message"`
+		Severity string `json:"severity"`
 	}
 
 	var response PipelineResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		log.Printf("[ERROR] decoding response: %s", err)
+	if err := json.Unmarshal(body, &response); err != nil {
+		log.Printf("[ERROR] Failed unmarshalling response: %s", err)
 		return "", err
 	}
 
 	if response.ID == "" {
-		log.Println("[DEBUG] ID not found or empty in response")
-		return "", errors.New("pipeline ID not found or empty in the response")
+		log.Printf("[ERROR] ID not found or empty in response. Severity: %#v, Message: %#v", response.Severity, response.Message)
+		return "", errors.New("Pipeline ID not found or empty in the response. See error logs.")
 	}
 
 	id := response.ID
-
-	//if toBeDeleted {
-	//	go deletePipeline(pipelineId)
-	//}
-
 	return id, nil
 }
 
@@ -3237,17 +3249,24 @@ func handleFileCategoryChange() error {
 		return err
 	}
 
-	req.Header.Add("Authorization", "Bearer "+apiKey)
+	if len(pipelineApikey) == 0 {
+		return errors.New("Shuffle API-key not set for Pipelines: SHUFFLE_PIPELINE_AUTH=<apikey>")
+	}
 
-	client := &http.Client{}
+	req.Header.Add("Authorization", "Bearer "+pipelineApikey)
+	if len(org) > 0 {
+		req.Header.Add("Org-Id", org)
+	}
+
+	client := shuffle.GetExternalClient(apiEndpoint)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("received non-200 response: %s", resp.Status)
+		return fmt.Errorf("Received non-200 response '%d' from backend URL %s. ", resp.StatusCode, apiEndpoint)
 	}
 
 	out, err := os.Create("files.zip")
@@ -3257,64 +3276,29 @@ func handleFileCategoryChange() error {
 
 	defer out.Close()
 	defer os.Remove("files.zip")
-
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
+		log.Printf("[ERROR] Failed to io.Copy ZIP file content: %s", err)
 		return err
 	}
 
-	log.Println("ZIP file downloaded successfully.")
+	//log.Println("[DEBUG] ZIP file downloaded successfully.")
 
-	err = extractZIP("files.zip", "sigma_rules")
+	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
+	if len(tenzirStorageFolder) == 0 {
+		tenzirStorageFolder = "/tmp/"
+	}
+
+	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/") 
+	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
+	err = extractZIP("files.zip", sigmaPath)
 	if err != nil {
+		log.Printf("[ERROR] Failed to extract ZIP file: %s", err)
 		return err
 	}
 
-	destPath := "/var/lib/tenzir/sigma_rules"
 
-	err = copyToTenzir("sigma_rules", destPath)
-	if err != nil {
-		return err
-	}
-
-	log.Println("Files copied to container successfully.")
-
-	checkDisabledDirCmd := exec.Command("docker", "exec", "tenzir-node", "sh", "-c", "test -d /var/lib/tenzir/disabled_rules")
-	if err := checkDisabledDirCmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			// Directory does not exist, nothing to do
-			log.Println("[DEBUG] /var/lib/tenzir/disabled_rules does not exist.")
-			return nil
-		}
-
-		return fmt.Errorf("error checking disabled rules directory: %v", err)
-	}
-
-	// List files in /var/lib/tenzir/disabled_rules
-	listFilesCmd := exec.Command("docker", "exec", "tenzir-node", "sh", "-c", "ls /var/lib/tenzir/disabled_rules")
-	output, err := listFilesCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("error listing files in disabled rules directory: %v, output: %s", err, output)
-	}
-
-	files := strings.Split(strings.TrimSpace(string(output)), "\n")
-	for _, file := range files {
-		disabledFilePath := fmt.Sprintf("/var/lib/tenzir/sigma_rules/%s", file)
-		checkFileCmd := exec.Command("docker", "exec", "tenzir-node", "sh", "-c", fmt.Sprintf("test -f %s", disabledFilePath))
-		if err := checkFileCmd.Run(); err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-				log.Printf("[ERROR] File does not exist: %s, moving on.\n", disabledFilePath)
-				continue
-			}
-			return fmt.Errorf("error checking file: %v", err)
-		}
-
-		deleteFileCmd := exec.Command("docker", "exec", "-u", "root", "tenzir-node", "sh", "-c", fmt.Sprintf("rm -f %s", disabledFilePath))
-		if err := deleteFileCmd.Run(); err != nil {
-			return fmt.Errorf("error deleting file: %v", err)
-		}
-		log.Printf("[INFO] Deleted file: %s\n", disabledFilePath)
-	}
+	log.Printf("[DEBUG] Detection files copied to '%s' successfully.", sigmaPath)
 
 	return nil
 }
@@ -3324,8 +3308,16 @@ func extractZIP(zipFile, destDir string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
 
+	// FInd size of the zip
+	var totalSize uint64
+	for _, f := range r.File {
+		totalSize += f.UncompressedSize64
+	}
+
+	log.Printf("[DEBUG] Total size of the ZIP file: %d bytes", totalSize)
+
+	defer r.Close()
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
@@ -3383,24 +3375,24 @@ func copyToTenzir(srcPath, destPath string) error {
 	return nil
 }
 
-func removeAllFiles() error {
-	containerName := "tenzir-node"
-	sigmaPath := "/var/lib/tenzir/sigma_rules/*"
-
-	checkCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("ls %s", sigmaPath))
-	checkOutput, checkErr := checkCmd.CombinedOutput()
-	if checkErr != nil {
-		if strings.Contains(string(checkOutput), "No such file or directory") {
-			return nil // nothing to delete
-		}
-		return fmt.Errorf("error checking files: %v, output: %s", checkErr, checkOutput)
+func removeFileCategory() error {
+	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
+	if len(tenzirStorageFolder) == 0 {
+		tenzirStorageFolder = "/tmp/"
 	}
 
-	cmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", sigmaPath))
-	output, err := cmd.CombinedOutput()
+	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/") 
+
+	//sigmaPath := "/var/lib/tenzir/sigma_rules/*"
+	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
+
+	err := os.RemoveAll(sigmaPath)
 	if err != nil {
-		return fmt.Errorf("error removing files: %v, output: %s", err, output)
+		return fmt.Errorf("Error removing category files in %s: %v", sigmaPath, err)
 	}
+
+	log.Printf("[INFO] Removed all local category data in %s", sigmaPath)
+
 	return nil
 }
 
@@ -3672,7 +3664,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				//log.Printf("[DEBUG] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {

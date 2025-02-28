@@ -50,6 +50,9 @@ const Appsearch = props => {
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
+					autoFocus
+					autoComplete="off"
+					autocomplete="off"
 					fullWidth
 					style={{backgroundColor: "#2F2F2F", borderRadius: borderRadius, width: "100%",}} 
 					InputProps={{
