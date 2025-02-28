@@ -1,8 +1,7 @@
 module orborus
 
-go 1.22.7
-
-toolchain go1.22.11
+go 1.22.0
+toolchain go1.23.6
 
 //replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
