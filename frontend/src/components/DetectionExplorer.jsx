@@ -36,7 +36,8 @@ const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl, isD
   }
 
   const action = folderDisabled ? "enable_folder" : "disable_folder";
-  const url = `${globalUrl}/api/v1/detections/${action}`;
+  //const url = `${globalUrl}/api/v1/detections/${detectionType}/selected_rules/${action}`;
+  const url = `${globalUrl}/api/v1/detections/sigma/selected_rules/${action}`;
 
   fetch(url, {
     method: "PUT",
@@ -258,7 +259,7 @@ const DetectionExplorer = (props)  => {
     rule.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const lakeNodes = environmentList !== undefined && environmentList !== null ? environmentList.filter((env) => env?.data_lake?.enabled === true).length : 0
+  const lakeNodes = environmentList !== undefined && environmentList !== null ? environmentList.filter((env) => env?.archived === false && env?.data_lake?.enabled === true).length : 0
 
   return (
     <Container>
@@ -284,7 +285,8 @@ const DetectionExplorer = (props)  => {
           </Typography>
 
 	  	  <div style={{display: "flex", }}>
-		  {workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null && workflow.id.length > 0 ?
+
+		  {/*workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null && workflow.id.length > 0 ?
 			  <div style={{display: "flex", }}>
 			  	  <div style={{minWidth: 400, maxWidth: 400, }}>
 					  <WorkflowValidationTimeline 
@@ -313,7 +315,7 @@ const DetectionExplorer = (props)  => {
 			  	  </IconButton>
 			  </div>
 
-		  : 
+		  : */} 
 			  <Button
 				  variant="contained"
 				  onClick={() => {
@@ -331,11 +333,11 @@ const DetectionExplorer = (props)  => {
 					detectionWorkflowId === "" ? `Connect to ${detectionInfo?.category}` :
 					isDetectionValid ? `Connected to ${detectionInfo?.category}` : `Fix ${detectionInfo?.category} connection`}
 			  </Button>
-		  }
+	  	  {/**/}
 
 	      {detectionInfo?.category === "SIGMA" || detectionInfo?.category === "SIEM" ?
 			  <Tooltip title={`You have ${lakeNodes} available Data Lake node(s)`}>
-				<a href="/admin?tab=environments" style={{textDecoration: "none", color: "inherit", }} target="_blank" rel="noreferrer">
+				<a href="/admin?tab=Locations" style={{textDecoration: "none", color: "inherit", }} target="_blank" rel="noreferrer">
                 	<FmdGoodIcon style={{marginLeft: 15, marginTop: 5, color: lakeNodes > 0 ? green : red}} />
 				</a>
 			  </Tooltip>

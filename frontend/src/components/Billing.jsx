@@ -215,8 +215,8 @@ const Billing = memo((props) => {
 
 		var priceItem = "price_1MROFrDzMUgUjxHShcSxgHO1"
 
-		const successUrl = `${window.location.origin}/admin?admin_tab=billing&payment=success`
-		const failUrl = `${window.location.origin}/admin?admin_tab=billing&payment=failure`
+		const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`
+		const failUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=failure`
 		var checkoutObject = {
 			lineItems: [
 				{
@@ -2361,7 +2361,8 @@ const Billing = memo((props) => {
 					</div>
 				</div>
 			)}
-			<div style={{ marginTop: 40, marginLeft: 10 }}>
+			{isCloud ? (
+				<div style={{ marginTop: 40, marginLeft: 10 }}>
 				<Typography
 					style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
 				>
@@ -2545,6 +2546,7 @@ const Billing = memo((props) => {
 				</Button>
 
 			</div>
+			): null}
 			</div>
 			<div style={{ marginTop: 40, display: 'flex', flexDirection: 'column' }}>
 				<Typography

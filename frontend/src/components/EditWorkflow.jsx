@@ -71,7 +71,7 @@ const EditWorkflow = (props) => {
 	const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
 	const [submitLoading, setSubmitLoading] = React.useState(false);
-	const [showMoreClicked, setShowMoreClicked] = React.useState(expanded === true ? true : false);
+	const [showMoreClicked, setShowMoreClicked] = React.useState(isEditing !== false ? true : false);
 
 	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
 
@@ -88,6 +88,8 @@ const EditWorkflow = (props) => {
 	const [inputMarkdown, setInputMarkdown] = React.useState(workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null ? workflow?.form_control?.input_markdown : "")
 	const [scrollDone, setScrollDone] = React.useState(false)
 	const [selectedYieldActions, setSelectedYieldActions] = React.useState(workflow?.form_control?.output_yields !== undefined && workflow?.form_control?.output_yields !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.output_yields)) : [])
+	const [selectedCleanupActions, setSelectedCleanupActions] = React.useState(workflow?.form_control?.cleanup_actions !== undefined && workflow?.form_control?.cleanup_actions !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.cleanup_actions)) : [])
+
 	const [formWidth, setFormWidth] = React.useState(boxWidth === undefined || boxWidth === null ? 500 : boxWidth)
 
 	const classes = useStyles();
@@ -103,9 +105,10 @@ const EditWorkflow = (props) => {
 			const foundScroll = document.getElementById(scrollTo)
 			if (foundScroll !== null) {
 				// Smooth scroll
-				foundScroll.scrollIntoView({ behavior: "smooth" })
+				foundScroll.scrollIntoView({ 
+					behavior: "smooth",
+				})
 			}
-
 		}, 200)
 		setScrollDone(true)
 
@@ -188,6 +191,10 @@ const EditWorkflow = (props) => {
 	var upload = "";
 	var total_count = 0
 
+    const isCloud =
+        window.location.host === "localhost:3002" ||
+        window.location.host === "shuffler.io";
+
 	return (
 		<Drawer
 			anchor={"right"}
@@ -244,15 +251,13 @@ const EditWorkflow = (props) => {
 							Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 						</Typography>
 
-						{/*
-				<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
-					<WorkflowValidationTimeline 
-					
-					  apps={apps}
-					  workflow={workflow}
-					/>
-				</div>
-				*/}
+						<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
+							<WorkflowValidationTimeline 
+							
+							  apps={apps}
+							  workflow={workflow}
+							/>
+						</div>
 
 						{showUpload === true ?
 							<div style={{ float: "right" }}>
@@ -290,7 +295,7 @@ const EditWorkflow = (props) => {
 					bottom: 0, 
 					zIndex: 1002, 
 					backgroundColor: theme.palette.backgroundColor,
-					height: 50, 
+					height: 75, 
 					paddingTop: 20, 
 					paddingLeft: 75, 
 				}}>
@@ -324,15 +329,21 @@ const EditWorkflow = (props) => {
 							innerWorkflow.form_control.input_markdown = inputMarkdown
 							innerWorkflow.form_control.output_yields = selectedYieldActions
 							innerWorkflow.form_control.form_width = formWidth
+							innerWorkflow.form_control.cleanup_actions = selectedCleanupActions
 
 							innerWorkflow.name = name
 							innerWorkflow.description = description
+
 							if (newWorkflowTags.length > 0) {
 								innerWorkflow.tags = newWorkflowTags
+							} else {
+								innerWorkflow.tags = []
 							}
 
 							if (selectedUsecases.length > 0) {
 								innerWorkflow.usecase_ids = selectedUsecases
+							} else {
+								innerWorkflow.usecase_ids = []
 							}
 
 							if (dueDate > 0) {
@@ -361,7 +372,6 @@ const EditWorkflow = (props) => {
 								setWorkflow({})
 							} else {
 								setWorkflow(innerWorkflow)
-								console.log("editing workflow: ", innerWorkflow)
 							}
 
 							setSubmitLoading(true)
@@ -505,7 +515,7 @@ const EditWorkflow = (props) => {
 											color: "white",
 										},
 									}}
-									multiLine
+									multiline
 									rows={3}
 									color="primary"
 									defaultValue={innerWorkflow.description}
@@ -537,81 +547,10 @@ const EditWorkflow = (props) => {
 
 										</RadioGroup>
 									</FormControl>
-									<LocalizationProvider dateAdapter={AdapterDayjs}>
-										<DatePicker
-											sx={{
-												marginTop: 3,
-												marginLeft: 3,
-											}}
-											value={dueDate}
-											label="Due Date"
-											format="YYYY-MM-DD"
-											onChange={(newValue) => {
-												setDueDate(newValue)
-											}}
-										/>
-									</LocalizationProvider>
 								</div>
 								<div />
 
-								<FormControl style={{ marginTop: 15, }}>
-									<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
-									<RadioGroup
-										row
-										aria-labelledby="demo-row-radio-buttons-group-label"
-										name="row-radio-buttons-group"
-										defaultValue={innerWorkflow.workflow_type}
-										onChange={(e) => {
-											console.log("Data: ", e.target.value)
-
-											innerWorkflow.workflow_type = e.target.value
-											setInnerWorkflow(innerWorkflow)
-										}}
-									>
-										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
-										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
-										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
-
-									</RadioGroup>
-								</FormControl>
-
-
-								<TextField
-									onBlur={(event) => {
-										innerWorkflow.blogpost = event.target.value
-										setInnerWorkflow(innerWorkflow)
-									}}
-									InputProps={{
-										style: {
-											color: "white",
-										},
-									}}
-									color="primary"
-									defaultValue={innerWorkflow.blogpost}
-									placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
-									rows="1"
-									label="blogpost"
-									margin="dense"
-									fullWidth
-								/>
-								<TextField
-									onBlur={(event) => {
-										innerWorkflow.video = event.target.value
-										setInnerWorkflow(innerWorkflow)
-									}}
-									InputProps={{
-										style: {
-											color: "white",
-										},
-									}}
-									color="primary"
-									defaultValue={innerWorkflow.video}
-									placeholder="A youtube or loom link to the video"
-									rows="1"
-									label="Video"
-									margin="dense"
-									fullWidth
-								/>
+								
 
 								<TextField
 									onBlur={(event) => {
@@ -633,21 +572,21 @@ const EditWorkflow = (props) => {
 									fullWidth
 								/>
 
-								<Divider style={{ marginTop: 20, marginBottom: 20, }} />
+								<Divider id="mssp_control" style={{ marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h4" style={{ marginTop: 50, }}>
-									MSSP controls
+									Multi-Tenancy, Backups & Security
 								</Typography>
 
-
-								<Typography variant="body1" style={{ marginTop: 50, }}>
-									MSSP Suborg Distribution (<b>beta</b> - contact support@shuffler.io for more info)
+								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
+									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (contact support@shuffler.io if you want a demo. Please try it!)
 								</Typography>
+
 								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
 											<Typography variant="body2" style={{ marginTop: 10, color: "rgba(255,255,255,0.7)" }}>
-												Your organization does not have any suborgs yet OR your user may not have access to available suborgs. Please <a href="/admin?tab=suborgs" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">make one</a> or get access to suborgs by another admin, then try again.
+												Your organization does not have any suborgs yet OR your user may not have access to available suborgs. Please <a href="/admin?tab=tenants" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">make one</a> or get access to suborgs by another admin, then try again.
 											</Typography>
 											:
 											<Typography variant="body2" style={{ marginTop: 10, color: "rgba(255,255,255,0.7)" }}>
@@ -687,12 +626,15 @@ const EditWorkflow = (props) => {
 												All
 											</MenuItem>
 											{userdata.orgs.map((data, index) => {
+
 												var skipOrg = false;
 												if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org === userdata.active_org.id) {
 													// Finds the parent org
 												} else {
 													return null
 												}
+
+												const correctRegion = data?.region_url === userdata?.region_url 
 
 												const imagesize = 22
 												const imageStyle = {
@@ -727,7 +669,11 @@ const EditWorkflow = (props) => {
 
 
 												return (
-													<MenuItem key={index} value={data.id}>
+													<MenuItem 
+														key={index} 
+													 	value={data.id}
+														disabled={isCloud && !correctRegion}
+													>
 														<Checkbox checked={innerWorkflow.suborg_distribution !== undefined && innerWorkflow.suborg_distribution !== null && innerWorkflow.suborg_distribution.includes(data.id)} />
 														{image}{" "}
 														<span style={{ marginLeft: 8 }}>
@@ -738,22 +684,19 @@ const EditWorkflow = (props) => {
 											})}
 										</Select>
 									:
-									<Link to={"/admin?tab=suborgs"} style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">
+									<Link to={"/admin?tab=tenants"} style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">
 										<Typography variant="body2" style={{ marginTop: 10, }}>
 											Create a sub-org to distribute workflows to suborgs.
 										</Typography>
 									</Link>
 								}
 
-								{/*<Divider style={{marginTop: 20, marginBottom: 20, }} />*/}
 
-
-
-								<Typography variant="body1" style={{ marginTop: 100, }}>
+								<Typography variant="h6" style={{ marginTop: 75, }}>
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
-									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides your <a href="/admin?admin_tab=organization" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=priorities" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">notifications</a> if it fails.
+									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' and be formatted, with removed images, to make diffing easy. Overrides your <a href="/admin?admin_tab=org_config" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=notifications" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">notifications</a> if it fails.
 								</Typography>
 								<Grid container style={{ marginTop: 10, }} spacing={2}>
 									<Grid item xs={6} style={{}}>
@@ -894,6 +837,60 @@ const EditWorkflow = (props) => {
 										</span>
 									</Grid>
 								</Grid>
+
+								<div id="cleanup">
+									<Typography variant="h6" style={{ marginTop: 50, }}>
+										Result cleanup ({selectedCleanupActions.length === 0 ? "No cleanup yet" : selectedCleanupActions.length === 1 ? "Cleaning up 1 node" : `Cleaning up ${selectedCleanupActions.length} nodes`})
+									</Typography>
+
+									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
+										<b>Beta Feature</b>: When a workflow run is done, the data from the selected actions will be removed by replacing it with a default value. This is useful for cleaning up sensitive data, or data that is no longer needed. This is done after a workflow run is finished or aborted, and is not reversible. Data will remain in the workflow run result (last node value) even if the action result itself is cleaned up.
+									</Typography>
+
+									<FormControl style={{ marginTop: 15, }}>
+										<Select
+											defaultValue=""
+											id="result-cleanup-control"
+											label="Cleaned Up nodes"
+											multiple
+											fullWidth
+											style={{ width: 500, }}
+											value={selectedCleanupActions === [] ? ["none"] : selectedCleanupActions}
+											renderValue={(selected) => selected.join(', ')}
+											onChange={(event) => {
+												if (event.target.value.length > 0) {
+													if (event.target.value.includes("none")) {
+														setSelectedCleanupActions([])
+														return
+													}
+												}
+
+												const newvalue = event?.target?.value
+												if (newvalue === undefined || newvalue === null) {
+												} else {
+													setSelectedCleanupActions(newvalue)
+												}
+											}}
+										>
+											<MenuItem value="none">
+												<em>None</em>
+											</MenuItem>
+											{workflow?.actions?.map((action, actionIndex) => {
+												return (
+													<MenuItem
+														key={actionIndex}
+														value={action.id}
+													>
+														<Tooltip title={action.app_name} key={actionIndex}>
+															<img src={action.large_image !== undefined && action.large_image !== null && action.large_image.length > 0 ? action.large_image : theme.palette.defaultImage} style={{ width: 20, height: 20, marginRight: 10, }} />
+														</Tooltip>
+														{action.label}
+													</MenuItem>
+												)
+											})}
+										</Select>
+									</FormControl>
+								</div>
 
 								<Divider style={{ marginTop: 20, marginBottom: 20, }} />
 
@@ -1094,11 +1091,11 @@ const EditWorkflow = (props) => {
 
 								<div id="output_control">
 									<Typography variant="h6" style={{ marginTop: 50, }}>
-										Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
+										Form Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
 									</Typography>
 
 									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
-										When running this workflow, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
+										When running this workflow as a form, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
 									</Typography>
 
 									<FormControl style={{ marginTop: 15, }}>
@@ -1146,41 +1143,130 @@ const EditWorkflow = (props) => {
 										</Select>
 									</FormControl>
 								</div>
-							</div>
-							: null}
 
-						{!isEditing ? <>
-							<div style={{ marginTop: 20, }}>
-								<FormControlLabel
-									control={<Checkbox />}
-									label="Create workflow as code"
-									style={{ marginTop: '12px' }}
-									onChange={(e) => {
-										setWorkflowAsCode(e.target.checked)
-										workflow.workflow_as_code = e.target.checked
-										setWorkflow(workflow)
-										setInnerWorkflow(workflow)
+							<Divider style={{marginTop: 75, marginBottom: 75, }}/>
+
+
+							<Typography variant="h4" style={{ }}>
+								Publishing
+
+								<Chip
+									style={{ marginLeft: 20, marginTop: 10, }}
+									color={workflow?.public === true ? "primary" : "secondary"}
+									variant={workflow?.public === true ? "default" : "outlined"}
+									label={workflow?.public === true ? "Public" : "NOT Public"}
+								/>
+							</Typography>
+							<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+								Publishing is related to making this workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to anyone. The fields below will help a user and Shuffle's system understand your workflow better. When a workflow is published, you keep the original, and a copy enters the Shuffle workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator</a> or partner account, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow page. 
+
+								You can always unpublish a workflow after.
+							</Typography>
+
+
+							<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
+								<DatePicker
+									sx={{
+										marginTop: 3,
+										marginLeft: 3,
+									}}
+									value={dueDate}
+									label="Due Date"
+									format="YYYY-MM-DD"
+									onChange={(newValue) => {
+										setDueDate(newValue)
 									}}
 								/>
+							</LocalizationProvider>
 
-							</div>
-						</> : null}
+							<FormControl style={{ marginTop: 15, }}>
+								<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
+								<RadioGroup
+									row
+									aria-labelledby="demo-row-radio-buttons-group-label"
+									name="row-radio-buttons-group"
+									defaultValue={innerWorkflow.workflow_type}
+									onChange={(e) => {
+										console.log("Data: ", e.target.value)
 
-						<Tooltip color="primary" title={"Add more details"} placement="top">
-							<Button
-								style={{ margin: "auto", marginTop: 50, marginBottom: 10, textAlign: "center", textTransform: "none", }}
-								variant="outlined"
-								disabled={newWorkflow === true}
-								color="secondary"
-								onClick={() => {
-									setShowMoreClicked(!showMoreClicked);
+										innerWorkflow.workflow_type = e.target.value
+										setInnerWorkflow(innerWorkflow)
+									}}
+								>
+									<Tooltip title="Agentic workflows takes an input based on input questions (forms) and performs actions based on it by itself, using Large Action Models & Singul">
+										<FormControlLabel value="agentic" control={<Radio />} label="Agentic" />
+									</Tooltip>
+
+									<Tooltip title="Trigger workflows are typically running a schedule to get some data, doing some deduplication before sending it to a subflow or standalone workflow.">
+										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+									</Tooltip>
+
+									<Tooltip title="Subflow workflows are typically used to subprocess some data, and in some cases return the result to the parent workflow.">
+										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+									</Tooltip>
+
+									<Tooltip title="Standalone is default. This has no impact on Shuffle as a system.">
+										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									</Tooltip>
+
+								</RadioGroup>
+							</FormControl>
+
+
+							<TextField
+								onBlur={(event) => {
+									innerWorkflow.blogpost = event.target.value
+									setInnerWorkflow(innerWorkflow)
 								}}
-							>
-								{showMoreClicked ? <ExpandLessIcon style={{ marginRight: 10, }} /> : <ExpandMoreIcon style={{ marginRight: 10, }} />}
-								{showMoreClicked ? "Less Options" : "More Options"}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={innerWorkflow.blogpost}
+								placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
+								rows="1"
+								label="blogpost"
+								margin="dense"
+								fullWidth
+							/>
+							<TextField
+								onBlur={(event) => {
+									innerWorkflow.video = event.target.value
+									setInnerWorkflow(innerWorkflow)
+								}}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={innerWorkflow.video}
+								placeholder="A youtube or loom link to the video"
+								rows="1"
+								label="Video"
+								margin="dense"
+								fullWidth
+							/>
 
-							</Button>
-						</Tooltip>
+							<Tooltip color="primary" title={"Add more details"} placement="top">
+								<Button
+									style={{ margin: "auto", marginTop: 50, marginBottom: 10, textAlign: "center", textTransform: "none", }}
+									variant="outlined"
+									disabled={newWorkflow === true}
+									color="secondary"
+									onClick={() => {
+										setShowMoreClicked(!showMoreClicked);
+									}}
+								>
+									{showMoreClicked ? <ExpandLessIcon style={{ marginRight: 10, }} /> : <ExpandMoreIcon style={{ marginRight: 10, }} />}
+									{showMoreClicked ? "Less Options" : "More Options"}
+
+								</Button>
+							</Tooltip>
+						</div>
+					: null}
 
 					</div>
 

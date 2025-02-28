@@ -92,6 +92,7 @@ import {
     ArrowRight as ArrowRightIcon,
     Visibility as VisibilityIcon,
     EditNote as EditNoteIcon,
+	ErrorOutline as ErrorOutlineIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -107,6 +108,8 @@ import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinementList } from 'react-instantsearch-dom';
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
+
+import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240");
@@ -649,7 +652,6 @@ const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
 
 const Workflows2 = (props) => {
     const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
-    const { leftSideBarOpenByClick } = useContext(Context);
     const location = useLocation();
     const navigate = useNavigate();
     const [currTab, setCurrTab] = useState(0);
@@ -1115,12 +1117,9 @@ const Workflows2 = (props) => {
                 <Button
                     style={{}}
                     onClick={() => {
-                        console.log("Editing: ", editingWorkflow);
                         if (selectedWorkflowId) {
                             deleteWorkflow(selectedWorkflowId)
-                            setTimeout(() => {
-                                getAvailableWorkflows();
-                            }, 1000);
+
                         } else if (selectedWorkflowIndexes.length > 0) {
                             // Do backwards so it doesn't change 
                             toast("Starting deletion of workflows. This might take a while.")
@@ -1131,13 +1130,13 @@ const Workflows2 = (props) => {
                                 }
                             }
 
-                            setTimeout(() => {
-                                getAvailableWorkflows()
-                            }, 1000);
-
+							setTimeout(() => {
+								getAvailableWorkflows()
+							}, 5000)
                             setSelectedWorkflowIndexes([]);
                         }
-                        setDeleteModalOpen(false);
+
+                        setDeleteModalOpen(false)
                     }}
                     color="primary"
                 >
@@ -1188,32 +1187,32 @@ const Workflows2 = (props) => {
                     "",
                     data.status,
                 )
-                    .then((response) => {
-                        if (response !== undefined) {
-                            // SET THE FULL THING
-                            data.id = response.id;
+				.then((response) => {
+					if (response !== undefined) {
+						// SET THE FULL THING
+						data.id = response.id;
 
-                            // Actually create it
-                            setNewWorkflow(
-                                data.name,
-                                data.description,
-                                data.tags,
-                                data.default_return_value,
-                                data,
-                                false,
-                                [],
-                                "",
-                                data.status
-                            ).then((response) => {
-                                if (response !== undefined) {
-                                    toast(`Successfully imported ${data.name}`);
-                                }
-                            });
-                        }
-                    })
-                    .catch((error) => {
-                        toast("Import error: " + error.toString());
-                    });
+						// Actually create it
+						setNewWorkflow(
+							data.name,
+							data.description,
+							data.tags,
+							data.default_return_value,
+							data,
+							false,
+							[],
+							"",
+							data.status
+						).then((response) => {
+							if (response !== undefined) {
+								toast(`Successfully imported ${data.name}`);
+							}
+						});
+					}
+				})
+				.catch((error) => {
+					toast("Import error: " + error.toString());
+				});
             });
         } catch (e) {
             console.log("Error in dropzone: ", e);
@@ -1936,6 +1935,10 @@ const Workflows2 = (props) => {
 
             var parsedworkflows = [];
             for (var key in newSubflows) {
+				if (key === data.id) {
+					continue
+				}
+
                 const foundWorkflow = workflows.find(
                     (workflow) => workflow.id === newSubflows[key]
                 );
@@ -2363,7 +2366,6 @@ const Workflows2 = (props) => {
 
                 <MenuItem
                     style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-                    disabled={isDistributed}
                     onClick={() => {
                         setDeleteModalOpen(true);
                         setSelectedWorkflowId(data.id);
@@ -2480,7 +2482,7 @@ const Workflows2 = (props) => {
 
 
         return (
-            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
+            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
                 <Paper square style={paperAppStyle}>
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2564,13 +2566,13 @@ const Workflows2 = (props) => {
                                         {(isDistributed || hasSuborgs) && (
                                             <div style={{
                                                 backgroundColor: "rgba(64,224,208,0.1)", // Matching the teal color used in border
-                                                border: "1px solid #40E0D0",
+                                                border: `1px solid ${theme.palette.distributionColor}`,
                                                 borderRadius: 4,
                                                 padding: "8px 12px",
                                                 marginTop: 8,
                                             }}>
                                                 <Typography variant="body2" style={{
-                                                    color: "#40E0D0",
+                                                    color: theme.palette.distributionColor,
                                                     display: "flex",
                                                     alignItems: "center",
                                                     gap: 8,
@@ -2808,6 +2810,7 @@ const Workflows2 = (props) => {
                                 {workflowMenuButtons}
                             </div>
                         ) : null}
+
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
                                 <div style={{ position: "absolute", top: 45, right: 8, }}>
@@ -2822,10 +2825,33 @@ const Workflows2 = (props) => {
                                     >
                                         <EditNoteIcon />
                                     </IconButton>
-                                    {workflowMenuButtons}
                                 </div>
                             </Tooltip>
-                            : null}
+                        : null}
+
+						{(data?.validation?.validation_ran === true && data?.validation?.valid === false && data?.validation?.errors?.length > 0 ) ?                            
+							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} errors. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
+                                <div style={{ position: "absolute", top: 45, right: 8, }}>
+                                    <IconButton
+                                        aria-label="more"
+                                        aria-controls="long-menu"
+                                        aria-haspopup="true"
+                                        onClick={() => {
+                                            window.open(`/admin?admin_tab=notifications&workflow=${data.id}`, "_blank")
+                                        }}
+                                        style={{ 
+											padding: "0px", 
+											color: "#979797",
+										}}
+                                    >
+										<ErrorOutlineIcon style={{ 
+											marginRight: 2, 
+										}} />
+                                    </IconButton>
+                                </div>
+                            </Tooltip>
+
+						: null}
                     </Grid>
                 </Paper>
             </div>
@@ -2852,6 +2878,7 @@ const Workflows2 = (props) => {
         if (editingWorkflow.id !== undefined) {
             console.log("Building original workflow");
             method = "PUT";
+            //extraData = "/" + editingWorkflow.id + "?skip_save=true";
             extraData = "/" + editingWorkflow.id + "?skip_save=true";
             workflowdata = editingWorkflow;
 
