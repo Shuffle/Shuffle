@@ -109,6 +109,12 @@ const SearchData = props => {
             }
         }, [searchOpen]);
 
+        useEffect(() => {
+            if (currentRefinement !== inputValue) {
+                refine(inputValue);
+            }
+        }, [currentRefinement]);
+
         return (
 
             <form id="search_form" noValidate type="searchbox" action="" role="search" onClick={() => {
@@ -387,7 +393,7 @@ const SearchData = props => {
           if (responseJson.success === false) {
             toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io for more info`) 
 		  } else {
-			  toast(`App successfully ${type}d. Please refresh the page to use it.`)
+			  toast(`App successfully ${type}d. It may now be used in your workflows.`)
 		  }
         })
         .catch(error => {
@@ -495,7 +501,7 @@ const SearchData = props => {
                                 })
                             }
 
-                            var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://shuffler.io/apps/${hit.objectID}`
+                            var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `/apps/${hit.objectID}`
                             parsedUrl += `?queryID=${hit.__queryID}`
 
                             return (

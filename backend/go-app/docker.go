@@ -289,7 +289,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 				// Handles pulling of the same image if applicable
 				// This fixes some issues with older versions of Docker which can't build
 				// on their own ( <17.05 )
-				pullOptions := types.ImagePullOptions{}
+				pullOptions := image.PullOptions{}
 				downloaded := false
 				for _, image := range tags {
 					// Is this ok? Not sure. Tags shouldn't be controlled here prolly.
@@ -555,7 +555,7 @@ func imageCheckBuilder(images []string) error {
 		return err
 	}
 
-	allImages, err := client.ImageList(ctx, types.ImageListOptions{
+	allImages, err := client.ImageList(ctx, image.ListOptions{
 		All: true,
 	})
 
@@ -631,7 +631,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	images, err := dockercli.ImageList(ctx, types.ImageListOptions{
+	images, err := dockercli.ImageList(ctx, image.ListOptions{
 		All: true,
 	})
 
@@ -665,7 +665,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	pullOptions := types.ImagePullOptions{}
+	pullOptions := image.PullOptions{}
 	if len(img.ID) == 0 {
 		_, err := dockercli.ImagePull(context.Background(), version.Name, pullOptions)
 		if err == nil {

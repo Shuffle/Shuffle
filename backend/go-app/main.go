@@ -1048,6 +1048,20 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	licensed := shuffle.IsLicensed(ctx, *org)
 
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
+	if err != nil {
+		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	orgApps := workflowapps
+	activatedAppIds := []string{}
+	for _, app := range orgApps {
+		activatedAppIds = append(activatedAppIds, app.ID)
+	}
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1069,6 +1083,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Interests:  orgInterests,
 		Priorities: orgPriorities,
 		Licensed:   licensed,
+		ActiveApps: activatedAppIds,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -3064,8 +3079,9 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			return
 		}
 
-		// FIXME: Check whether it's in use.
-		if user.Id != app.Owner && user.Role != "admin" {
+		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id)  {
+			log.Printf("[DEBUG] Editing app %s with user %s (%s) in org %s", test.Id, user.Username, user.Id, user.ActiveOrg.Id)
+		} else {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
 			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@shuffler.io if this persists."}`))
@@ -3139,7 +3155,18 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
-	api.Owner = user.Id
+	if api.Owner == "" {
+		api.Owner = user.Id
+	}
+
+	if len(api.ReferenceOrg) == 0 {
+		api.ReferenceOrg = user.ActiveOrg.Id
+	}
+
+	if len(test.Image) > 0 {
+		api.SmallImage = test.Image
+		api.LargeImage = test.Image
+	}
 
 	err = shuffle.DumpApi(basePath, api)
 	if err != nil {
@@ -3175,7 +3202,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	err = shuffle.DeployAppToDatastore(ctx, api)
 	//func DeployAppToDatastore(ctx context.Context, workflowapp WorkflowApp, bucketName string) error {
 	if err != nil {
-		log.Printf("Failed adding app to db: %s", err)
+		log.Printf("[ERROR] Failed adding app to db: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed adding app to db: %s"}`, err)))
 		return
@@ -3184,7 +3211,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	// 2. Get all the required code
 	appbase, staticBaseline, err := shuffle.GetAppbase()
 	if err != nil {
-		log.Printf("Failed getting appbase: %s", err)
+		log.Printf("[ERROR] Failed getting appbase: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed getting appbase code"}`))
 		return
@@ -3252,9 +3279,9 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		err = shuffle.SetUser(ctx, &user, true)
 		if err != nil {
 			log.Printf("[ERROR] Failed adding verification for user %s: %s", user.Username, err)
-			resp.WriteHeader(500)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
-			return
+			//resp.WriteHeader(500)
+			//resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
+			//return
 		}
 	}
 
@@ -3262,6 +3289,10 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	parsed := shuffle.ParsedOpenApi{
 		ID:   newmd5,
 		Body: string(body),
+	}
+
+	if !shuffle.ArrayContains(api.Contributors, user.Id) {
+		api.Contributors = append(api.Contributors, user.Id)
 	}
 
 	log.Printf("[INFO] API LENGTH FOR %s: %d, ID: %s", api.Name, len(parsed.Body), newmd5)
@@ -4842,7 +4873,7 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - add org check too, and not just owner
 	// Check workflow.Sharing == private / public / org  too
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
-		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+		if workflow.OrgId == user.ActiveOrg.Id {
 			log.Printf("[AUDIT] User %s is accessing workflow %s as admin (public)", user.Username, workflow.ID)
 		} else {
 			log.Printf("[AUDIT] Wrong user (%s) for workflow %s (public)", user.Username, workflow.ID)
@@ -4938,6 +4969,10 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	if cors {
 		return
 	}
+
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false, "reason": "The upload API is not yet implemented in self-hosted Shuffle. Please explore the app hotloading system: https://shuffler.io/docs/app_creation#uploading-an-app"}`))
+	return
 
 	//https://stackoverflow.com/questions/22964950/http-request-formfile-handle-zip-files
 	request.ParseMultipartForm(32 << 20)
@@ -5088,6 +5123,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}/deactivate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}/distribute", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.GetFrameworkConfiguration).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.SetFrameworkConfiguration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.UpdateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
@@ -5107,6 +5144,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
+	r.HandleFunc("/api/v1/authentication/group", shuffle.AddAppAuthenticationGroup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/group", shuffle.GetAppAuthenticationGroup).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/group/{key}", shuffle.DeleteAppAuthenticationGroup).Methods("DELETE", "OPTIONS")
+
+	r.HandleFunc("/api/v1/authentication/groups", shuffle.AddAppAuthenticationGroup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/groups", shuffle.GetAppAuthenticationGroup).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/authentication/groups/{key}", shuffle.DeleteAppAuthenticationGroup).Methods("DELETE", "OPTIONS")
 	// Related to use-cases that are not directly workflows.
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
@@ -5157,6 +5201,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 
+	// This structure is horrendous. Needs fixing after we got the prototype up
+	r.HandleFunc("/api/v1/detections", shuffle.HandleListDetectionCategories).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}", shuffle.HandleGetDetectionRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/selected_rules/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
+
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
@@ -5173,9 +5227,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/github/register", shuffle.HandleNewGithubRegister).Methods("PUT", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/pipelines/{key}", handlePipelineCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
+
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
@@ -5204,8 +5260,13 @@ func initHandlers() {
 
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
+	r.HandleFunc("/api/v1/getenvironments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/setenvironments", shuffle.HandleSetEnvironments).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/stats", shuffle.HandleGetenvStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/config", shuffle.HandleSetenvConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
@@ -5214,8 +5275,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/delete_cache", shuffle.HandleDeleteCacheKeyPost).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/config", shuffle.HandleCacheConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
@@ -5226,7 +5289,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
-	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
@@ -5242,6 +5305,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}/config", shuffle.HandleSetFileConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/files/namespaces/{namespace}/share", shuffle.HandleShareNamespace).Methods("POST", "OPTIONS")
 
 	// This structure is horrendous. Needs fixing after we got the prototype up
 	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")

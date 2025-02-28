@@ -869,8 +869,8 @@ const LicencePopup = (props) => {
             :
             shuffleVariant === 0 ? "price_1PZPSSEJjT17t98NLJoTMYja" : "price_1PZPQuEJjT17t98N3yORUtd9"
 
-        const successUrl = `${window.location.origin}/admin?admin_tab=billing&payment=success`
-        const failUrl = `${window.location.origin}/pricing?admin_tab=billing&payment=failure`
+        const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`
+        const failUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=failure`
 
         console.log("Priceitem: ", priceItem, shuffleVariant)
         var checkoutObject = {
@@ -888,7 +888,7 @@ const LicencePopup = (props) => {
         }
 
 		if (stripe === undefined || stripe === null || stripe.redirectToCheckout === undefined) {
-			window.open("https://shuffler.io/admin?admin_tab=billing&payment=stripe_error", "_self")
+			window.open("https://shuffler.io/admin?admin_tab=billingstats&payment=stripe_error", "_self")
 		}
 
         stripe.redirectToCheckout(checkoutObject)

@@ -465,7 +465,7 @@ const Header = (props) => {
         </Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
-		<Link to="/admin?admin_tab=priorities" style={hrefStyle}>
+		<Link to="/admin?admin_tab=notifications" style={hrefStyle}>
 		  <MenuItem
 			onClick={(event) => {
 			  handleClose();
@@ -1107,7 +1107,7 @@ const Header = (props) => {
                     );
                   })}
                   <Divider />
-                  <Link to="/admin?tab=suborgs" style={hrefStyle}>
+                  <Link to="/admin?tab=tenants" style={hrefStyle}>
                     <MenuItem
                       key={"add suborgs"}
                       style={{
