@@ -922,6 +922,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Env:   env,
 	}
 
+	log.Printf("[DEBUG] Deploying image with env: %#v", env)
+
 	// Checking as late as possible, just in case.
 	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
 	_, err := shuffle.GetCache(ctx, newExecId)

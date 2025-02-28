@@ -2715,10 +2715,12 @@ const AngularWorkflow = (defaultprops) => {
       return newExample
     }
 
+	/*
     for (var i = 0; i < found.length; i++) {
       //newExample = newExample.replace(found[i], "REQUIRED")
       newExample = newExample.replace(found[i], "REPLACE_ME")
     }
+	*/
 
     return newExample
   }
@@ -7116,7 +7118,6 @@ const AngularWorkflow = (defaultprops) => {
           data: newcybranch,
         };
 
-        console.log("SHOULD STITCH WITH STARTNODE");
         cy.add(edgeToBeAdded);
       }
 
@@ -12416,13 +12417,7 @@ const AngularWorkflow = (defaultprops) => {
 
       // Get parent nodes and their data
       if (selectedEdge) {
-
-        let nodeId;
-        if (type === "source") {
-          nodeId = selectedEdge.source;
-        } else if (type === "destination") {
-          nodeId = selectedEdge.target; 
-        }
+        const nodeId = selectedEdge.target; 
 
         const node = cy.getElementById(nodeId);
         if (node?.length > 0) {

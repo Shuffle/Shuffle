@@ -361,7 +361,7 @@ const ParsedAction = (props) => {
 		}
 
 		if (keyorder.join(",") !== newkeyorder.join(",")) {
-			console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
+			//console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
 
 			setSelectedActionParameters(newparams)
 			selectedAction.parameters = newparams
@@ -3657,6 +3657,12 @@ const ParsedAction = (props) => {
 											</Box>
 										</Box>
 									);
+
+									if (selectedApp.name === "email") {
+										//hideBody = false
+										showButtonField = false
+										hideBodyButtonValue = null
+									}
 
 
 									if ((multiline === undefined || multiline === false) && ((data?.autocompleted === true || data?.field_active === true) || data.name.startsWith("${") && data.name.endsWith("}"))) {

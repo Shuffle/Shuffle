@@ -88,7 +88,7 @@ const AppSearchButtons = (props) => {
 
     const foundApp = findSpecificApp(appFramework, appType)
     if (foundApp === undefined || foundApp === null) {
-        console.log("AppSearchButtons: App not found in appFramework: " + appType)
+        //console.log("AppSearchButtons: App not found in appFramework: " + appType)
         return null
     }
 

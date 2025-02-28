@@ -648,18 +648,58 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-        	<Route
-        	  exact
-        	  path="/dashboards"
-        	  element={
-        	    <DashboardView
-        	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
-        	      globalUrl={globalUrl}
-        	      {...props}
-        	    />
-        	  }
-        	/>
+			<Route
+				exact
+				path="/dashboard"
+				element={
+					<DashboardViews
+						serverside={serverside}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboards"
+				element={
+					<DashboardViews
+						serverside={serverside}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboard/:key"
+				element={
+					<DashboardViews
+						serverside={serverside}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboards/:key"
+				element={
+					<DashboardViews
+						serverside={serverside}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
 			<Route
 				exact
 				path="/welcome"
