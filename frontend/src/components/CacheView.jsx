@@ -126,7 +126,7 @@ const CacheView = memo((props) => {
 
 
     const listOrgCache = (orgId, category) => {
-		const url = `${globalUrl}/api/v1/orgs/${orgId}/list_cache${category !== undefined ? `?category=${category.replaceAll(" ", "_")}` : ""}`
+		const url = `${globalUrl}/api/v1/orgs/${orgId}/list_cache${category !== undefined ? `?category=${category.replaceAll(" ", "%20")}` : ""}`
         fetch(url, {
             method: "GET",
             headers: {
