@@ -4,7 +4,7 @@ import ReactDOM from "react-dom"
 
 import theme from "../theme.jsx";
 import { useInterval } from "react-powerhooks";
-import { makeStyles, } from "@mui/styles";
+import { makeStyles, withStyles, } from "@mui/styles";
 
 import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { v4 as uuidv4, v5 as uuidv5, validate as isUUID, } from "uuid";
@@ -953,6 +953,10 @@ const AngularWorkflow = (defaultprops) => {
     }
   }, [workflow]);
 
+  useEffect(() => {
+    console.log("selected Comment:", selectedComment);
+  }, [selectedComment]);
+
   // Event for making sure app is correct
   useEffect(() => {
     if (selectedApp === undefined || selectedApp === null && selectedApp.app_name === undefined) {
@@ -1116,7 +1120,8 @@ const AngularWorkflow = (defaultprops) => {
                 !el.data("isButton") &&
                 !el.data("isDescriptor") &&
                 !el.data("isSuggestion") &&
-                el.data("type") !== "COMMENT") {
+                el.data("type") !== "COMMENT" &&
+                el.data("type") !== "RESIZE-HANDLE") {
                 return true
               }
 
@@ -2276,6 +2281,7 @@ const AngularWorkflow = (defaultprops) => {
     var newBranches = [];
     var newVBranches = [];
     var newComments = [];
+    var newResizes = [];
     for (let cyelementsKey in cyelements) {
       if (cyelements[cyelementsKey].data === undefined) {
         continue;
@@ -2460,7 +2466,40 @@ const AngularWorkflow = (defaultprops) => {
           //console.log(curworkflowComment)
 
           newComments.push(curworkflowComment);
-        } else {
+        } else if (type === "RESIZE-HANDLE") {
+          if (useworkflow.resizes === undefined || useworkflow.resizes === null) {
+            useworkflow.resizes = [];
+          }
+
+          var curworkflowResize = useworkflow.resizes.find(
+            (a) => a.id === cyelements[cyelementsKey].data()["id"]
+          );
+
+          if (curworkflowResize === undefined) {
+            curworkflowResize = cyelements[cyelementsKey].data();
+          }
+
+          // Ensure width and height are properly parsed
+          const parsedHeight = parseInt(curworkflowResize["height"]);
+          if (!isNaN(parsedHeight)) {
+            curworkflowResize.height = parsedHeight;
+          } else {
+            curworkflowResize.height = 150; // Default value if parsing fails
+          }
+
+          const parsedWidth = parseInt(curworkflowResize["width"]);
+          if (!isNaN(parsedWidth)) {
+            curworkflowResize.width = parsedWidth;
+          } else {
+            curworkflowResize.width = 200; // Default value if parsing fails
+          }
+
+          // Update position from Cytoscape
+          curworkflowResize.position = cyelements[cyelementsKey].position();
+
+          newResizes.push(curworkflowResize);
+        }
+        else {
           toast("No handler for type: " + type);
         }
       }
@@ -4445,7 +4484,6 @@ const AngularWorkflow = (defaultprops) => {
 
     // Ensuring overwriting
     if (nodedata?.type === "ACTION") {
-
       if (nodedata?.parameters !== undefined && nodedata.parameters !== null && nodedata.parameters.length > 0 && workflow?.actions !== undefined && workflow?.actions !== null && workflow?.actions.length > 0) {
         for (var actionkey in workflow.actions) {
           const action = workflow.actions[actionkey]
@@ -5432,6 +5470,7 @@ const AngularWorkflow = (defaultprops) => {
     // FIXME: Do absolutely NOT use JSON.stringify on the event.target.data()
     // This causes memory referencing to become a nightmare
     const data = event.target.data()
+    console.log("data", data);
     if (data.app_name === "Shuffle Workflow") {
       if ((data?.parameters !== undefined) && (data?.parameters?.length > 0)) {
         getWorkflowApps(data.parameters[0].value)
@@ -6388,7 +6427,21 @@ const AngularWorkflow = (defaultprops) => {
       } else if (data.type === "COMMENT") {
         setSelectedComment(data);
       } else if (data.type === "RESIZE-HANDLE") {
+        console.log("Resize handle selected:", data);
 
+        const parentNode = cy.getElementById(data.attachedTo);
+        if (parentNode) {
+          console.log("Resizing parent node:", parentNode);
+
+          // Get the parent node's data
+          const parentData = parentNode.data();
+          if (parentData?.type === "COMMENT") {
+
+            // Set the parent node's data as the selected comment
+            setSelectedComment(parentData);
+          }
+        }
+        return; // Exit after handling the resize handle
       } else {
         toast("Can't handle node type " + data.type);
         return;
@@ -9471,7 +9524,8 @@ const AngularWorkflow = (defaultprops) => {
             !el.data("isButton") &&
             !el.data("isDescriptor") &&
             !el.data("isSuggestion") &&
-            el.data("type") !== "COMMENT") {
+            el.data("type") !== "COMMENT" &&
+            el.data("type") !== "RESIZE-HANDLE") {
             return true
           }
 
@@ -15577,7 +15631,7 @@ const AngularWorkflow = (defaultprops) => {
                 placeholder={"150"}
                 defaultValue={selectedComment.height}
                 onChange={(event) => {
-                  selectedComment.height = event.target.value;
+                  selectedComment.height = parseInt(event.target.value, 10) || 0; // Convert to int, default to 0 if NaN
                   setSelectedComment(selectedComment);
                 }}
               />
@@ -15664,7 +15718,6 @@ const AngularWorkflow = (defaultprops) => {
             defaultValue={selectedComment["backgroundimage"]}
             onChange={(event) => {
               selectedComment.backgroundimage = event.target.value;
-              console.log("Comment: ", selectedComment)
               setSelectedComment(selectedComment);
             }}
           />
@@ -19108,6 +19161,15 @@ const AngularWorkflow = (defaultprops) => {
                       return
                     }
 
+                    // Check if the selected node is a comment
+                    if (selectedNode.data("type") === "COMMENT") {
+                      // Remove the child node if it's a comment
+                      const childNodeId = selectedNode.data("childId"); // Assuming childId holds the ID of the child node
+                      if (childNodeId) {
+                        cy.getElementById(childNodeId).remove();
+                      }
+                    }
+
                     removeNode(selectedNode.data("id"))
                   }}
                 >
@@ -19191,53 +19253,89 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const setupResizeHandlers = (cy, nodeId) => {
+    let height;
+    let width;
+    let resizeTimeout;
+
     cy.on("drag", ".resize-handle", (event) => {
-      const handle = event.target;
-      const parent = cy.$(`#${nodeId}`); // Fetch the main node directly
+      if (resizeTimeout) return;
 
-      if (!parent || parent.empty()) {
-        console.warn(`Parent node (${nodeId}) not found.`);
-        return;
-      }
+      resizeTimeout = setTimeout(() => {
+        resizeTimeout = null;
+        const handle = event.target;
+        const parent = cy.$(`#${nodeId}`); // Fetch the main node directly
 
-      if (!handle.position()) {
-        console.warn(`Handle position is undefined for ${handle.id()}`);
-        return;
-      }
+        // Check if the parent node exists
+        if (!parent || parent.empty()) {
+          console.warn(`Parent node (${nodeId}) not found.`);
+          return;
+        }
 
-      const handlePos = handle.position();
-      const parentPos = parent.position();
+        if (!handle?.position()) {
+          console.warn(`Handle position is undefined for ${handle.id()}`);
+          return;
+        }
 
-      if (!parentPos) {
-        console.warn(`Parent position is undefined for ${nodeId}`);
-        return;
-      }
+        const handlePos = handle.position();
+        const parentPos = parent.position();
 
-      // Calculate new width & height based on handle movement
-      const newWidth = Math.abs(handlePos.x - parentPos.x) * 2;
-      const newHeight = Math.abs(handlePos.y - parentPos.y) * 2;
+        if (!parentPos) {
+          console.warn(`Parent position is undefined for ${nodeId}`);
+          return;
+        }
 
-      // Apply min/max constraints
-      const constrainedWidth = Math.max(100, Math.min(newWidth, 500));
-      const constrainedHeight = Math.max(50, Math.min(newHeight, 300));
+        // Calculate new width & height based on handle movement
+        const newWidth = Math.abs(handlePos.x - parentPos.x) * 2;
+        const newHeight = Math.abs(handlePos.y - parentPos.y) * 2;
 
-      // Update node size
-      parent.style({
-        width: constrainedWidth,
-        height: constrainedHeight,
-      });
+        // Apply min/max constraints
+        const constrainedWidth = Math.max(100, Math.min(newWidth, 500));
+        const constrainedHeight = Math.max(50, Math.min(newHeight, 300));
 
-      // Update handle positions
-      cy.$(".resize-handle").forEach((corner) => {
-        if (!corner || !corner.id() || !corner.position()) return;
+        // Update node size
+        parent.style({
+          width: constrainedWidth,
+          height: constrainedHeight,
+        });
 
-        const { x, y } = parent.position();
-        const offsetX = corner.id().includes("left") ? -constrainedWidth / 2 : constrainedWidth / 2;
-        const offsetY = corner.id().includes("top") ? -constrainedHeight / 2 : constrainedHeight / 2;
+        // Store dimensions for state update on drag end
+        height = Math.floor(constrainedHeight);
+        width = Math.floor(constrainedWidth);
 
-        corner.position({ x: x + offsetX, y: y + offsetY });
-      });
+        // Update handle positions
+        cy.$(".resize-handle").forEach((corner) => {
+          if (!corner?.id() || !corner.position()) return;
+
+          const { x, y } = parent.position();
+          const offsetX = corner.id().includes("left") ? -constrainedWidth / 2 : constrainedWidth / 2;
+          const offsetY = corner.id().includes("top") ? -constrainedHeight / 2 : constrainedHeight / 2;
+
+          corner.position({ x: x + offsetX, y: y + offsetY });
+        });
+      }, 16); // Throttle to ~60 FPS
     });
+
+    // Update state when resizing ends
+    cy.on("free", ".resize-handle", (event) => {
+      const data = event.target.data();
+      const parentNode = cy.getElementById(data.attachedTo);
+
+      if (parentNode) {
+
+        parentNode.data({
+          ...parentNode.data(),
+          width: Math.floor(width),
+          height: Math.floor(height),
+        });
+
+        setSelectedComment((prev) => ({
+          ...prev,
+          width: Math.floor(width),
+          height: Math.floor(height),
+        }));
+      }
+    });
+
   };
 
 
@@ -19298,7 +19396,13 @@ const AngularWorkflow = (defaultprops) => {
     corners.forEach((corner) => {
       cy.add({
         group: "nodes",
-        data: { id: corner.id, type: "RESIZE-HANDLE", }, // No parent to avoid edges
+        data: {
+          id: corner.id,
+          type: "RESIZE-HANDLE",
+          is_valid: true,
+          attachedTo: newId,
+          decorator: true,
+        }, // No parent to avoid edges
         position: { x: position.x + corner.dx, y: position.y + corner.dy },
         classes: "resize-handle",
       });

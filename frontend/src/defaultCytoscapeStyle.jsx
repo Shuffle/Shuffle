@@ -127,10 +127,11 @@ const data = [
       "background-color": "red",
       "border-width": 1,
       "border-color": "white",
-      "z-index": 5000, // Ensure it's above the main node
-      "opacity": 1, // Ensure visibility
+      "z-index": 5002, // Ensure it's above the main node
       "overlay-opacity": 0, // Prevents selection highlighting
-      "cursor": "nwse-resize"
+      "cursor": "nwse-resize",
+      "opacity": 0,
+      'pointer-events': 'none',
     },
   }, 
   {
