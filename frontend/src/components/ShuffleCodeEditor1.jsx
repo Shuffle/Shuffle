@@ -27,6 +27,7 @@ import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
 import Draggable from "react-draggable";
 
 import {
+	Storage as StorageIcon, 
 	FullscreenExit as FullscreenExitIcon,
 	Extension as ExtensionIcon,
 	Apps as AppsIcon,
@@ -90,7 +91,7 @@ const pythonFilters = [
 	{ "name": "Using Shuffle variables", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"{\"sample\": \"string\", \"int\": 1}\"\"\"\n  \njsondata = json.loads(nodevalue)\nprint(jsondata)`, "example": `` },
 	{ "name": "Print Execution ID", "value": `print(self.current_execution_id)`, "example": `` },
 	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
-	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"name\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
+	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
 
 	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
 	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
@@ -276,6 +277,8 @@ const CodeEditor = (props) => {
 					parsedPaths = GetParsedPaths(actionlist[i].value, "");
 				}
 			} else {
+				//console.log("EXAMPLE: ", actionlist[i])
+
 				// Handle regular action results
 				if (typeof actionlist[i].example === "object") {
 					parsedPaths = GetParsedPaths(actionlist[i].example, "");
@@ -654,6 +657,7 @@ const CodeEditor = (props) => {
 		}
 
 		if (!inputvariable.includes(".")) {
+			inputvariable = inputvariable.toLowerCase()
 			return inputvariable
 		}
 
@@ -662,6 +666,9 @@ const CodeEditor = (props) => {
 		var removedIndexes = 0
 		for (var key in itemsplit) {
 			var tmpitem = itemsplit[key]
+			if (key == 0) {
+				tmpitem = tmpitem.toLowerCase()
+			}
 
 			// Makes sure #0 and # are same, as we only visualize first one anyway
 			if (tmpitem.startsWith("#")) {
@@ -692,20 +699,24 @@ const CodeEditor = (props) => {
 			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g)
 
 			if (!variable_occurence) {
-				continue;
+				continue
 			}
 
-			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
-			variable_occurence = new_occurences
+			//var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
+			//variable_occurence = new_occurences
 
+			variable_occurence = variable_occurence.filter((occurrence) => occurrence[0]);
+
+			// Checks code lines, not variable occurences. Then remaps later
 			var dollar_occurence = [];
 			for (let ch = 0; ch < current_code_line.length; ch++) {
 				//if (current_code_line[ch] === '$' && (ch === 0)) {
 				if (current_code_line[ch] === '$') {
-					dollar_occurence.push(ch);
+					dollar_occurence.push(ch)
 				}
 			}
 
+			// Lowercase anything between the $ and first .
 			var dollar_occurence_len = []
 			try {
 				for (let occ = 0; occ < variable_occurence.length; occ++) {
@@ -1002,7 +1013,6 @@ const CodeEditor = (props) => {
 
 											// Replace quotes with nothing
 										} else {
-											console.log("NO TYPE? ", typeof new_input)
 											try {
 												new_input = new_input.toString()
 											} catch (e) {
@@ -1228,7 +1238,7 @@ const CodeEditor = (props) => {
 	}
 
 	const editorLoad = (editor) => {
-		console.log("EDITOR: ", editor)
+		//console.log("EDITOR: ", editor)
 		editor.completers = [customCompleter]
 	}
 
@@ -1526,7 +1536,7 @@ const CodeEditor = (props) => {
 							Source Data
 						</Typography>
 						<Typography variant="body2" color="textSecondary">
-							Drag the data you want into the text editor
+							Drag the data you want into the text editor! <b>PS: Only support users can see this test-section!</b>
 						</Typography>
 
 						{actionlist?.map((innerdata) => {
@@ -1803,9 +1813,11 @@ const CodeEditor = (props) => {
 														) : innerdata.type === "workflow_variable" ||
 															innerdata.type === "execution_variable" ? (
 															<FavoriteBorderIcon style={{ marginRight: 10 }} />
-														) : (
+														) : 
+															innerdata.type === "Shuffle DB" ? 
+															<StorageIcon style={{ marginRight: 10,  }} />
+														:
 															<ScheduleIcon style={{ marginRight: 10 }} />
-														);
 
 													const handleExecArgumentHover = (inside) => {
 														var exec_text_field = document.getElementById(
@@ -1875,8 +1887,6 @@ const CodeEditor = (props) => {
 														menuPosition1.left = 0
 													}
 
-													//console.log("POS1: ", menuPosition1)
-
 													return parsedPaths.length > 0 ? (
 														<NestedMenuItem
 															key={innerdata.name}
@@ -1894,7 +1904,7 @@ const CodeEditor = (props) => {
 																overflow: "hidden",
 															}}
 															onClick={() => {
-																console.log(innerdata.example)
+																//console.log(innerdata.example)
 
 																//const handleClick = (item) => {
 																handleItemClick([innerdata]);
@@ -2246,8 +2256,8 @@ const CodeEditor = (props) => {
 												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
 													"Code to run" : 
 													triggerId ? 
-														`Output : ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)}(${triggerField})` :
-														`Output : ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)}(${fieldName})`
+														`Output: ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)} (${triggerField})` :
+														`Output: ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)} (${fieldName})`
 												}
 											</span>
 										}
@@ -2429,7 +2439,10 @@ const CodeEditor = (props) => {
 					variant="outlined"
 					color="secondary"
 					onClick={() => {
-						navigate("")
+						if (isFileEditor !== true) {
+							navigate("")
+						}
+
 						setExpansionModalOpen(false);
 					}}
 				>
@@ -2453,7 +2466,9 @@ const CodeEditor = (props) => {
 						}
 						*/
 
-						navigate("")
+						if (isFileEditor !== true) {
+							navigate("")
+						}
 						// Take localcodedata through the Shuffle JSON parser just in case
 						// This is to make it so we don't need to handle these fixes on the
 						// backend by itself

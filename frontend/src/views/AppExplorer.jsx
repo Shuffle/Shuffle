@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext } from "react";
 
 import theme from "../theme.jsx";
 import ReactGA from "react-ga4";
@@ -223,11 +223,10 @@ const AppExplorer = (props) => {
     result: baseResult,
   });
   const [executing, setExecuting] = useState(false);
-  const [activatedApps, setActivatedApps] = useState([]);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [creatorProfile, setCreatorProfile] = React.useState({});
   const [selectedTab, setSelectedTab] = React.useState(0);
-  const defaultDocs = "\n\n## No Shuffle-specific app documentation is available yet.\n\n## Need more information about the app? [Contact us](/contact) and [Join the Community](https://discord.gg/B2CBzUm) and find others using this app."
+  const defaultDocs = `\n\n## No Shuffle-specific app documentation is available yet.\n\n## Need more information about the app? [Contact us](/contact) and [Join the Community](https://discord.gg/B2CBzUm) and find others using this app.`
   const [sharingConfiguration, setSharingConfiguration] = React.useState("you");
   const [appdata, setAppData] = React.useState({});
   const [appDocumentation, setAppDocumentation] = useState(defaultDocs)
@@ -248,7 +247,6 @@ const AppExplorer = (props) => {
   })
 
   const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
-  const isFirstRequestSentRef = useRef(false); 
 
 
   // FIXME: This is used, as useEffect() creates an issue with apps not loading at all
@@ -301,15 +299,13 @@ const AppExplorer = (props) => {
       if (serverside) {
         console.log("Not getting app because serverside.");
       } else {
-        if (isCloud) {
-          if (params.appid.length === 32 || params.appid.length === 36) {
-            handleEditApp(params.appid);
-            runAlgoliaAppSearch(params.appid, false, true);
-          } else {
-            runAlgoliaAppSearch(params.appid);
-  
-            //handleEditApp()
-          }
+        if (params.appid.length === 32 || params.appid.length === 36) {
+          handleEditApp(params.appid);
+          runAlgoliaAppSearch(params.appid, false, true);
+        } else {
+          runAlgoliaAppSearch(params.appid);
+
+          //handleEditApp()
         }
       }
       //parseIncomingOpenapiData(YAML.parse(data))
@@ -347,86 +343,6 @@ const AppExplorer = (props) => {
   if (serverside === false && firstRequest && isLoggedIn === true && selectedOrganization === undefined && userdata !== undefined && userdata.active_org !== undefined && userdata.active_org !== null && userdata.active_org.id !== undefined && userdata.active_org.id !== null) {
   	  loadOrganization(userdata.active_org.id) 
   }
-
-  const getApps = () => {
-      // Get apps from localstorage
-      var storageApps = []
-      try {
-        const appstorage = localStorage.getItem("apps")
-        storageApps = JSON.parse(appstorage)
-        if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
-          storageApps = []
-        } else {
-          setActivatedApps(storageApps)
-        }
-      } catch (e) {
-        //console.log("Failed to get apps from localstorage: ", e)
-      }
-
-
-      fetch(globalUrl + "/api/v1/apps", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-      })
-        .then((response) => {
-          if (response.status !== 200) {
-            console.log("Status not 200 for apps :O!");
-  
-            //if (isCloud) {
-            //  window.location.pathname = "/search";
-            //}
-          }
-  
-          return response.json();
-        })
-        .then((responseJson) => {
-          var privateapps = [];
-          var valid = [];
-          var invalid = [];
-          for (var key in responseJson) {
-            const app = responseJson[key];
-  
-            if (app.categories !== undefined && app.categories !== null && app?.categories.includes("Eradication")) {
-              app.categories = ["EDR"]
-            }
-  
-            if (app.is_valid && !(!app.activated && app.generated)) {
-              privateapps.push(app);
-            } else if (
-              app.private_id !== undefined &&
-              app.private_id.length > 0
-            ) {
-              valid.push(app);
-            } else {
-              invalid.push(app);
-            }
-          }
-  
-          privateapps.push(...valid);
-          privateapps.push(...invalid);
-          setActivatedApps(privateapps);
-
-          if (params.appid.length === 32 || params.appid.length === 36) {
-            handleEditApp(params.appid, privateapps);
-            runAlgoliaAppSearch(params.appid, false, true, privateapps);
-          } else {
-            runAlgoliaAppSearch(params.appid,true, false, privateapps);
-          }
-        })
-        .catch((error) => {
-          toast(error.toString());
-        });
-  };
-
-  useEffect(() => {
-    if (activatedApps?.length === 0 && !isCloud) {
-      getApps();
-    }
-  }, [activatedApps]);
 
   var activateButton = (
     <Link to={`/apps/new?id=${appId}`} style={{ textDecoration: "none" }}>
@@ -823,13 +739,16 @@ const AppExplorer = (props) => {
     }
   };
 
-  const activateApp = () => {
+  const activateApp = (action) => {
     if (serverside === true) {
-      return;
+      return
     }
 
 	const appExists = userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId)
-	const url = appExists ? `${globalUrl}/api/v1/apps/${appId}/deactivate` : `${globalUrl}/api/v1/apps/${appId}/activate`
+	var url = appExists ? `${globalUrl}/api/v1/apps/${appId}/deactivate` : `${globalUrl}/api/v1/apps/${appId}/activate`
+	if (action !== undefined && action !== null) {
+		url = `${globalUrl}/api/v1/apps/${appId}/${action}`
+	}
 	fetch(url, {
       method: "GET",
       headers: {
@@ -847,21 +766,32 @@ const AppExplorer = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false) {
-        	if (responseJson.reason !== undefined) {
-            toast("Failed to activate the app: "+responseJson.reason);
-          } else {
-            toast("Failed to activate the app");
-          }
+			if (action === undefined || action === null) {
+				if (responseJson.reason !== undefined) {
+					toast("Failed to activate the app: "+responseJson.reason);
+				} else {
+					toast("Failed to activate the app");
+				}
+			} else {
+				if (responseJson.reason !== undefined) {
+					toast("Failed to perform action: "+responseJson.reason);
+				} else {
+					toast("Failed to perform action. Please try again or contact support@shuffler.io");
+				}
+			}
       } else {
           if (checkLogin !== undefined && checkLogin !== null) {
             checkLogin()
           }
 
-          if (appExists) {
-            toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
-          } else {
-                  toast("App activated for your organization!")
-          }
+		  if (action === undefined || action === null) {
+			  if (appExists) {
+				toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
+			  } else {
+				toast("App activated for your organization!")
+			  }
+		  } else {
+		  }
         }
       })
       .catch((error) => {
@@ -869,101 +799,14 @@ const AppExplorer = (props) => {
       });
   };
 
-  
-
-    const HandleActivateApp = (appid) => {
-        if (isFirstRequestSentRef.current) {
-            console.log("Skipping duplicate activation request for app:", appid);
-            return;
-        }
-        
-        isFirstRequestSentRef.current = true; 
-
-        toast.info("App is not activated. Activating it now. Please wait...");
-      
-        const baseURL = globalUrl;
-        const url = `${baseURL}/api/v1/apps/${appid}/activate`;
-      
-        fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "include",
-        })
-          .then((response) => response.json())
-          .then((responseJson) => {
-            if (!responseJson.success) {
-              toast.error("Failed to activate app. Redirecting to https://shuffler.io. Please wait...");
-              setTimeout(() => {
-                window.location.replace(`https://shuffler.io/apps/${appid}`);
-              }, 2000);
-              return;
-            }
-
-            localStorage.removeItem("apps");
-            getApps();
-          })
-          .catch((error) => {
-            console.log("App activation error: ", error.toString());
-            toast.error("Failed to activate app. Redirecting to https://shuffler.io. Please wait...");
-            setTimeout(() => {
-              window.location.href = `https://shuffler.io/apps/${appid}`;
-            }, 2000);
-          });
-    };
-
-  
-  
-
-  const handleEditApp = (appid, privateapps) => {
+  const handleEditApp = (appid) => {
     if (serverside === true) {
       return;
     }
 
-    var newAppId = appid
-    var appIdFound = false
-  
-    if (!isCloud) {
-      // Ensure privateapps is always an array
-      privateapps = Array.isArray(privateapps) ? privateapps : [];
-  
-      let found = privateapps.find(app => {
-          return app.id?.trim().toLowerCase() === appid
-      });
-  
-      if (!found) {
-          found = privateapps.find(app => {
-              return app.published_id?.trim().toLowerCase() === appid;
-          });
-      }
-  
-  
-      if (found && found.id) {
-          newAppId = found.id;
-          appIdFound = true
-      } else {
-        if (!isFirstRequestSentRef.current) {
-          HandleActivateApp(appid);
-          return;
-      } else {
-          toast.info("App activated but can't load it for now. Loading app on https://shuffler.io. Please wait...");
-          setTimeout(() => {
-              window.location.href = `https://shuffler.io/apps/${appid}`;
-          }, 3000);
-      }
-      }
-      
-    }
+		setAppId(appid)
 
-    setAppId(newAppId)
-
-    if (isFirstRequestSentRef.current && !isCloud && !appIdFound) {
-      return
-    }
-
-    fetch(`${globalUrl}/api/v1/apps/${newAppId}/config`, {
+    fetch(globalUrl + "/api/v1/apps/" + appid + "/config", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -997,9 +840,9 @@ const AppExplorer = (props) => {
         ) {
           toast("Failed to get the app")
           setIsAppLoaded(true)
-          // setTimeout(() => {
-          // 	navigate("/search")
-          // }, 1000);
+          setTimeout(() => {
+          	navigate("/search")
+          }, 1000);
           return;
         } else {
           parseIncomingOpenapiData(responseJson);
@@ -1009,7 +852,6 @@ const AppExplorer = (props) => {
         toast("Error in app fetch: " + error.toString());
       });
   };
-
 
   const parseIncomingAppdata = (data, openapiExists) => {
     document.title = data.name + " App - OpenAPI and API";
@@ -1594,7 +1436,7 @@ const AppExplorer = (props) => {
       });
   };
 
-  const runAlgoliaAppSearch = (appname, isOriginal, triggerOnly, privatedapps) => {
+  const runAlgoliaAppSearch = (appname, isOriginal, triggerOnly) => {
     const index = searchClient.initIndex("appsearch");
 
     console.log("Running appsearch for: ", appname);
@@ -1609,7 +1451,7 @@ const AppExplorer = (props) => {
 		if (hits !== undefined && hits !== null && hits.length === 1) {
 			found = true
 			if (isOriginal !== false) {
-				handleEditApp(hits[0].objectID, privatedapps)
+				handleEditApp(hits[0].objectID)
 			} else {
 				setSecondaryApp(hits[0])
 			}
@@ -1644,7 +1486,7 @@ const AppExplorer = (props) => {
 			} else {
 				if (isOriginal !== false) {
 					found = true
-					handleEditApp(hit.objectID, privatedapps);
+					handleEditApp(hit.objectID);
 				} else {
 					console.log("Found second app: ", hit);
 					hit.name = hit.name.charAt(0).toUpperCase() + hit.name.slice(1);
@@ -1659,7 +1501,7 @@ const AppExplorer = (props) => {
 	    if (!found) {
 			if (hits.length > 0) {
 				if (isOriginal !== false) {
-					handleEditApp(hits[0].objectID, privatedapps)
+					handleEditApp(hits[0].objectID)
 				} else {
 					setSecondaryApp(hits[0]);
 				}
@@ -1717,13 +1559,11 @@ const AppExplorer = (props) => {
 	setTriggers([])
     //handleEditApp(params.appid)
 
-    if (isCloud) {
-      if (params.appid.length === 32 || params.appid.length === 36) {
-        handleEditApp(params.appid);
-        runAlgoliaAppSearch(params.appid, false, true);
-      } else {
-        runAlgoliaAppSearch(params.appid);
-      }
+    if (params.appid.length === 32 || params.appid.length === 36) {
+      handleEditApp(params.appid);
+			runAlgoliaAppSearch(params.appid, false, true);
+    } else {
+      runAlgoliaAppSearch(params.appid);
     }
   }
 
@@ -3066,7 +2906,7 @@ const AppExplorer = (props) => {
   const deduplicateByName = (array) => {
     const uniqueNames = {};
     return array.filter(item => {
-		if (!item.hasOwnProperty('name') || !item.name.length) {
+		if (!item?.hasOwnProperty('name') || !item?.name?.length) {
 		  return true
 		}
 		if (!uniqueNames[item.name]) {
@@ -3216,7 +3056,11 @@ const AppExplorer = (props) => {
 
   const getDownloadUrl = () => {
 
-	  return `curl -X POST ${globalUrl}/api/v1/download_docker_image \\\n	-H \"Authorization: Bearer ${userdata?.apikey}" \\\n	-d '{"name": "frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${app.app_version}"}' \\\n	-o image.zip; \\\n	docker load -i image.zip`
+	  console.log("APP: ", app)
+
+	  const appEnding = app?.public === true ? app?.app_version : app?.id
+
+	  return `curl -L \ \\\n    "${globalUrl}/api/v1/download_docker_image?image=frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${appEnding}" \\\n    -H \"Authorization: Bearer APIKEY" \\\n    -o image.zip; \\\n    docker load -i image.zip`
   }
 
   const renderedActionOptions = deduplicateByName((
@@ -3403,12 +3247,14 @@ const AppExplorer = (props) => {
                 <div>
 
 				  <Typography variant="h4">
-				  	Use the App onprem
+				  	Use the App onprem (hybrid)
 				  </Typography> 
 				  <Typography variant="body2" color="textSecondary" style={{marginTop: 5, }}>
-				  	Due to using docker containers with private containers, we had to use a custom registry. Use the command below to download the image to the server if it fails to run.
+				  	Due to using docker containers with privately uploaded containers, we had to use a custom registry. Use the command below to download the image to the server if it fails to run.
 
-				  	<b>&nbsp;PS: This does NOT work for ARM containers.</b>
+				  	It will authenticate and authorize you, before redirecting to a Signed URL on https://storage.googleapis.com
+
+				  	<b>&nbsp;Now also works for ARM containers!</b>
 				  </Typography> 
 
 				  <div
@@ -3753,22 +3599,6 @@ const AppExplorer = (props) => {
 										extraUrl = descSplit[descSplit.length-1]
 									} 
 
-									//for (let [line,lineval] in Object.entries(descSplit)) {
-									//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-									//		const urlsplit = descSplit[line].split("/")
-									//		try {
-									//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-									//		} catch (e) {
-									//			//console.log("Failed - running with -1")
-									//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-									//		}
-
-
-									//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-									//		//break
-									//	} 
-									//}
-
 									if (extraUrl.length > 0) {
 										if (extraUrl.includes(" ")) {
 											extraUrl = extraUrl.split(" ")[0]
@@ -4076,10 +3906,6 @@ const AppExplorer = (props) => {
     </Dialog>
   ) : null;
 
-  console.log("App: ", app);
-
-  console.log("userdata is: ", userdata);
-
   const landingpageDataBrowser = (
     <div
       style={{
@@ -4216,9 +4042,32 @@ const AppExplorer = (props) => {
 			</IconButton>
 		  : null}
 
+	  	  {isMobile || userdata?.active_apps === undefined || userdata?.active_apps === null || !userdata?.active_apps?.includes(appId) ? null :
+            <Button
+			  variant={userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ? "outlined": "contained"}
+              component="label"
+              color="primary"
+              onClick={() => {
+				if (!isLoggedIn) {
+					//navigate("/login?message=You must be logged in to activate this app&view=/apps/" + params.appid);
+					toast("You must be logged in to activate apps! Go to /login first.") 
+					return;
+				}
+
+				toast.info("Sending download job to relevant runtime locations")
+                
+				activateApp("distribute")
+
+              }}
+              style={{ height: 40, marginTop: 5 }}
+            >
+				Push Image
+            </Button>
+          }
+
           {isMobile ? null : (
             <Button
-			  variant={(userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) || !isCloud) ? "outlined": "contained"}
+			  variant={userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ? "outlined": "contained"}
               component="label"
               color="primary"
               onClick={() => {
@@ -4263,7 +4112,7 @@ const AppExplorer = (props) => {
               }}
               style={{ height: 40, marginTop: 5 }}
             >
-			  {((userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) )|| !isCloud ) ?
+			  {userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ?
 				  "Deactivate App"
 				  :
 				  "Activate App"

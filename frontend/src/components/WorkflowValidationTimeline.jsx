@@ -28,7 +28,16 @@ import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import theme from "../theme.jsx";
 const itemHeight = 24
 
-export const getParentNodes = (workflow, action) => {
+export const getParentNodes = (workflow, action, count) => {
+	if (count === undefined) {
+		count = 0
+	}
+
+	// 50 levels of parent nodes
+	if (count > 50) {
+		return []
+	}
+
     if (action === undefined || action === null) {
       return []
     }
@@ -81,8 +90,7 @@ export const getParentNodes = (workflow, action) => {
           continue;
         }
 
-		// FIXME: This part is only handling first level,
-		// but needs to recurse 
+		// FIXME: recursion
 		var incomingEdges = []
 		for (var branchkey in workflow.branches) {
 			const branch = workflow.branches[branchkey]
@@ -90,13 +98,19 @@ export const getParentNodes = (workflow, action) => {
 				continue
 			}
 
-			// Go up in the levels
+			// FIXME: Go up in the levels
+			// This somehow creates infinite recursion for now, so 
+			// we are skipping it.
+			// This function is also not used for cytoscape recursion,
+			// so it doesn't matter much (yet)
+			/*
 			const parents = getParentNodes(workflow, {
 				id: branch.source_id,
-			})
+			}, count+1)
 			if (parents.length > 0) {
 				incomingEdges = incomingEdges.concat(parents)
 			}
+			*/
 
 			incomingEdges.push(branch)
 		}
@@ -215,8 +229,6 @@ const WorkflowValidationTimeline = (props) => {
 			}
 		}
 
-		//const parents = getParentNodes(workflow, action)
-		//console.log("PARENTS", key, parents)
 		if (parents !== undefined && parents !== null && parents.length > 0) {
 			const parentfound = parents.find((element) => element.id === startnodeId)
 			if (parentfound !== undefined) {
@@ -287,7 +299,7 @@ const WorkflowValidationTimeline = (props) => {
 	var scheduleNotStarted = false
 
 	if (workflow.validation !== undefined && workflow.validation !== null && workflow.validation.validation_ran === false) {
-		console.log("Validation didn't run or get set for workflow. Why?")
+		//console.log("Validation didn't run or get set for workflow. Why?")
 		return null
 	}
 

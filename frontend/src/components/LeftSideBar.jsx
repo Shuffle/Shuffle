@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useContext, useCallback, useMemo, memo } from "react";
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
@@ -29,6 +29,7 @@ import {
   Fade,
   Portal,
   Collapse,
+  Tooltip,
 } from "@mui/material";
 import theme from "../theme.jsx";
 import RecentWorkflow from "../components/RecentWorkflow.jsx";
@@ -524,7 +525,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0-rc6
+          Version: 2.0.0
         </Typography>
       </Menu>
     </span>
@@ -657,8 +658,8 @@ useEffect(() => {
 };
 
   const getRegionTag = (region_url) => {
-    //let regiontag = "UK";
-    let regiontag = "EU";
+    let regiontag = "UK";
+    //let regiontag = "EU";
     if (
       region_url !== undefined &&
       region_url !== null &&
@@ -720,11 +721,7 @@ useEffect(() => {
           margin_left:
             org.creator_org !== undefined &&
             org.creator_org !== null &&
-            org.creator_org.length > 0
-              ? org.id === userdata.active_org.id
-                ? 0
-                : 20
-              : 0,
+            org.creator_org.length > 0 ? 20 : 0,
         };
       }) || []
     );
@@ -754,37 +751,8 @@ useEffect(() => {
     fontSize: 18
   };
 
-  const modalView = (
-		<Dialog
-			open={searchBarModalOpen}
-			onClose={() => {
-				setSearchBarModalOpen(false);
-			}}
-			PaperProps={{
-				style: {
-					color: "white",
-					minWidth: 750,
-					height: 785,
-					borderRadius: 16,
-					border: "1px solid var(--Container-Stroke, #494949)",
-					background: "var(--Container, #000000)",
-					boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
-					zIndex: 13000,
-          			paddingTop: 20,
-				},
-			}}
-		>
-			<DialogContent className='dialog-content' style={{}}>
-				<SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
-			</DialogContent>
-			<Divider style={{overflow: "hidden"}}/>
-			<span style={{display:"flex", width:"100%", height:30}}>
-			</span>
-		</Dialog>
-	);
-
   const getRegionFlag = (region_url) => {
-    var region = "gb";
+    var region = "UK";
     const regionMapping = {
 			"US": "us",
 			"EU": "eu",
@@ -821,7 +789,7 @@ useEffect(() => {
         height: "calc((100vh - 32px)*1.2)",
       }}
     >
-      {modalView}
+      {searchBarModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} /> : null}
       <Box
         sx={{
           display: "flex",
@@ -841,14 +809,36 @@ useEffect(() => {
             setExpandLeftNav(false)
           }
         }}
-      >
-        <a href="/" style={{ textDecoration: "none" }}>
-          <img
-            src={ShuffleLogo}
-            alt="Shuffle Logo"
-            style={{ width: 24, height: 24 }}
-          />
-        </a>
+      >  
+        <Tooltip 
+          title="Go to Home" 
+          placement="top"
+          arrow  
+          componentsProps={{
+            tooltip: {
+              sx: {
+                backgroundColor: "rgba(33, 33, 33, 1)",
+                color: "rgba(241, 241, 241, 1)",
+                fontSize: 12,
+                border: "1px solid rgba(73, 73, 73, 1)",
+                fontFamily: theme?.typography?.fontFamily,
+              }
+            },
+            popper: {
+              sx: {
+                zIndex: 1000019,
+              }
+            }
+          }}
+        >
+          <Link to="/">
+            <img
+              src={ShuffleLogo}
+              alt="Shuffle Logo"
+              style={{ width: 24, height: 24 }}
+            />
+          </Link>
+        </Tooltip>
         <Box
           sx={{
             display: "flex",
@@ -1483,7 +1473,7 @@ useEffect(() => {
                               : "#C8C8C8"
                         }}
                       >
-	  					Shuffle Agent
+	  					Hybrid Locations
                       </span>
                     </Button>
                   </Link>
@@ -1908,3 +1898,37 @@ useEffect(() => {
 };
 
 export default LeftSideBar;
+
+
+const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata}) => {
+  return (
+    (
+      <Dialog
+        open={searchBarModalOpen}
+        onClose={() => {
+          setSearchBarModalOpen(false);
+        }}
+        PaperProps={{
+          style: {
+            color: "white",
+            minWidth: 750,
+            height: 785,
+            borderRadius: 16,
+            border: "1px solid var(--Container-Stroke, #494949)",
+            background: "var(--Container, #000000)",
+            boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+            zIndex: 13000,
+                  paddingTop: 20,
+          },
+        }}
+      >
+        <DialogContent className='dialog-content' style={{}}>
+          <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
+        </DialogContent>
+        <Divider style={{overflow: "hidden"}}/>
+        <span style={{display:"flex", width:"100%", height:30}}>
+        </span>
+      </Dialog>
+    )
+  )
+});

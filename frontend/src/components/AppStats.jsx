@@ -343,14 +343,14 @@ const AppStats = (defaultprops) => {
 				*/}
 			</div>
 
-			{clickData === undefined ? 
+			{clickData === undefined  || clickData === null || clickData?.length === 0 ?
 				null
 				: 
 				<LineChartWrapper keys={clickData} height={300} width={"100%"} inputname={"Clicks"}/>
 			}
 
 			<div style={{marginTop: 25, }} />
-			{conversionData === undefined ? 
+			{conversionData === undefined  || conversionData === null || conversionData?.length === 0 ?
 				null
 				: 
 				<LineChartWrapper keys={conversionData} height={300} width={"100%"} inputname={"Conversions"}/>

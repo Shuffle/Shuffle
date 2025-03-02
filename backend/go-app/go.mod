@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.7.0
+	github.com/shuffle/shuffle-shared v0.8.3
 	golang.org/x/crypto v0.32.0
 	google.golang.org/api v0.176.1
 	google.golang.org/grpc v1.68.1

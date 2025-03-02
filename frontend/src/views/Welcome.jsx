@@ -447,6 +447,7 @@ const Welcome = (props) => {
 											}
 
 											navigate("/welcome?tab=2")
+											setActiveStep(1)
 											setShowWelcome(true)
 										}}>
 											<CardActionArea style={actionObject}>

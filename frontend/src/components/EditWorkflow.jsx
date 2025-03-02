@@ -88,6 +88,8 @@ const EditWorkflow = (props) => {
 	const [inputMarkdown, setInputMarkdown] = React.useState(workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null ? workflow?.form_control?.input_markdown : "")
 	const [scrollDone, setScrollDone] = React.useState(false)
 	const [selectedYieldActions, setSelectedYieldActions] = React.useState(workflow?.form_control?.output_yields !== undefined && workflow?.form_control?.output_yields !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.output_yields)) : [])
+	const [selectedCleanupActions, setSelectedCleanupActions] = React.useState(workflow?.form_control?.cleanup_actions !== undefined && workflow?.form_control?.cleanup_actions !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.cleanup_actions)) : [])
+
 	const [formWidth, setFormWidth] = React.useState(boxWidth === undefined || boxWidth === null ? 500 : boxWidth)
 
 	const classes = useStyles();
@@ -188,6 +190,10 @@ const EditWorkflow = (props) => {
 	const priority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
 	var upload = "";
 	var total_count = 0
+
+    const isCloud =
+        window.location.host === "localhost:3002" ||
+        window.location.host === "shuffler.io";
 
 	return (
 		<Drawer
@@ -323,6 +329,7 @@ const EditWorkflow = (props) => {
 							innerWorkflow.form_control.input_markdown = inputMarkdown
 							innerWorkflow.form_control.output_yields = selectedYieldActions
 							innerWorkflow.form_control.form_width = formWidth
+							innerWorkflow.form_control.cleanup_actions = selectedCleanupActions
 
 							innerWorkflow.name = name
 							innerWorkflow.description = description
@@ -568,11 +575,11 @@ const EditWorkflow = (props) => {
 								<Divider id="mssp_control" style={{ marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h4" style={{ marginTop: 50, }}>
-									MSSP & Distribution controls
+									Multi-Tenancy, Backups & Security
 								</Typography>
 
 								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
-									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (<b>late beta</b> - contact support@shuffler.io if you want a demo. Please try it!)
+									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (contact support@shuffler.io if you want a demo. Please try it!)
 								</Typography>
 
 								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
@@ -619,12 +626,15 @@ const EditWorkflow = (props) => {
 												All
 											</MenuItem>
 											{userdata.orgs.map((data, index) => {
+
 												var skipOrg = false;
 												if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org === userdata.active_org.id) {
 													// Finds the parent org
 												} else {
 													return null
 												}
+
+												const correctRegion = data?.region_url === userdata?.region_url 
 
 												const imagesize = 22
 												const imageStyle = {
@@ -659,7 +669,11 @@ const EditWorkflow = (props) => {
 
 
 												return (
-													<MenuItem key={index} value={data.id}>
+													<MenuItem 
+														key={index} 
+													 	value={data.id}
+														disabled={isCloud && !correctRegion}
+													>
 														<Checkbox checked={innerWorkflow.suborg_distribution !== undefined && innerWorkflow.suborg_distribution !== null && innerWorkflow.suborg_distribution.includes(data.id)} />
 														{image}{" "}
 														<span style={{ marginLeft: 8 }}>
@@ -678,7 +692,7 @@ const EditWorkflow = (props) => {
 								}
 
 
-								<Typography variant="body1" style={{ marginTop: 75, }}>
+								<Typography variant="h6" style={{ marginTop: 75, }}>
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
@@ -823,6 +837,60 @@ const EditWorkflow = (props) => {
 										</span>
 									</Grid>
 								</Grid>
+
+								<div id="cleanup">
+									<Typography variant="h6" style={{ marginTop: 50, }}>
+										Result cleanup ({selectedCleanupActions.length === 0 ? "No cleanup yet" : selectedCleanupActions.length === 1 ? "Cleaning up 1 node" : `Cleaning up ${selectedCleanupActions.length} nodes`})
+									</Typography>
+
+									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
+										<b>Beta Feature</b>: When a workflow run is done, the data from the selected actions will be removed by replacing it with a default value. This is useful for cleaning up sensitive data, or data that is no longer needed. This is done after a workflow run is finished or aborted, and is not reversible. Data will remain in the workflow run result (last node value) even if the action result itself is cleaned up.
+									</Typography>
+
+									<FormControl style={{ marginTop: 15, }}>
+										<Select
+											defaultValue=""
+											id="result-cleanup-control"
+											label="Cleaned Up nodes"
+											multiple
+											fullWidth
+											style={{ width: 500, }}
+											value={selectedCleanupActions === [] ? ["none"] : selectedCleanupActions}
+											renderValue={(selected) => selected.join(', ')}
+											onChange={(event) => {
+												if (event.target.value.length > 0) {
+													if (event.target.value.includes("none")) {
+														setSelectedCleanupActions([])
+														return
+													}
+												}
+
+												const newvalue = event?.target?.value
+												if (newvalue === undefined || newvalue === null) {
+												} else {
+													setSelectedCleanupActions(newvalue)
+												}
+											}}
+										>
+											<MenuItem value="none">
+												<em>None</em>
+											</MenuItem>
+											{workflow?.actions?.map((action, actionIndex) => {
+												return (
+													<MenuItem
+														key={actionIndex}
+														value={action.id}
+													>
+														<Tooltip title={action.app_name} key={actionIndex}>
+															<img src={action.large_image !== undefined && action.large_image !== null && action.large_image.length > 0 ? action.large_image : theme.palette.defaultImage} style={{ width: 20, height: 20, marginRight: 10, }} />
+														</Tooltip>
+														{action.label}
+													</MenuItem>
+												)
+											})}
+										</Select>
+									</FormControl>
+								</div>
 
 								<Divider style={{ marginTop: 20, marginBottom: 20, }} />
 
@@ -1023,11 +1091,11 @@ const EditWorkflow = (props) => {
 
 								<div id="output_control">
 									<Typography variant="h6" style={{ marginTop: 50, }}>
-										Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
+										Form Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
 									</Typography>
 
 									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
-										When running this workflow, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
+										When running this workflow as a form, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
 									</Typography>
 
 									<FormControl style={{ marginTop: 15, }}>
@@ -1076,13 +1144,25 @@ const EditWorkflow = (props) => {
 									</FormControl>
 								</div>
 
+							<Divider style={{marginTop: 75, marginBottom: 75, }}/>
 
-							<Typography variant="h4" style={{ marginTop: 100, }}>
+
+							<Typography variant="h4" style={{ }}>
 								Publishing
+
+								<Chip
+									style={{ marginLeft: 20, marginTop: 10, }}
+									color={workflow?.public === true ? "primary" : "secondary"}
+									variant={workflow?.public === true ? "default" : "outlined"}
+									label={workflow?.public === true ? "Public" : "NOT Public"}
+								/>
 							</Typography>
 							<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
-								Publishing is related to making the workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to everyone. The details below will help a user understand this better. When a workflow is published, you keep the original, and a copy enters the workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator account</a>, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow screen. After publishing, you can find it in the Shuffle search engine.
+								Publishing is related to making this workflow itself public. When publishing a workflow, all the details (except sensitive info) become available to anyone. The fields below will help a user and Shuffle's system understand your workflow better. When a workflow is published, you keep the original, and a copy enters the Shuffle workflow search, and is associated with your <a href="/creators" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">creator</a> or partner account, if you have one. You can always unpublish the workflow after. When ready to publish, click the three dots next to a workflow on the main workflow page. 
+
+								You can always unpublish a workflow after.
 							</Typography>
+
 
 							<LocalizationProvider style={{marginLeft: 0, }} dateAdapter={AdapterDayjs}>
 								<DatePicker
@@ -1113,9 +1193,21 @@ const EditWorkflow = (props) => {
 										setInnerWorkflow(innerWorkflow)
 									}}
 								>
-									<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
-									<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
-									<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									<Tooltip title="Agentic workflows takes an input based on input questions (forms) and performs actions based on it by itself, using Large Action Models & Singul">
+										<FormControlLabel value="agentic" control={<Radio />} label="Agentic" />
+									</Tooltip>
+
+									<Tooltip title="Trigger workflows are typically running a schedule to get some data, doing some deduplication before sending it to a subflow or standalone workflow.">
+										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+									</Tooltip>
+
+									<Tooltip title="Subflow workflows are typically used to subprocess some data, and in some cases return the result to the parent workflow.">
+										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+									</Tooltip>
+
+									<Tooltip title="Standalone is default. This has no impact on Shuffle as a system.">
+										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+									</Tooltip>
 
 								</RadioGroup>
 							</FormControl>

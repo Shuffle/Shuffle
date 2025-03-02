@@ -49,15 +49,14 @@ const searchClient = algoliasearch(
 );
 
 // AppCard Component
-const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps }) => {
+const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps, appsToShow, setAppsToShow, setUserApps, }) => {
   const navigate = useNavigate();
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
-  const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
+  //const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
+  const appUrl = `/apps/${data.id}` 
 
-  var canEditApp = userdata?.support || 
-                  userdata?.id === data?.owner || 
-                  (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || 
-                  data?.contributors?.includes(userdata?.id)
+  var canEditApp = userdata?.support || userdata?.id === data?.owner || 
+        (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || data?.contributors?.includes(userdata?.id)
 
   const paperStyle = {
     backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
@@ -71,7 +70,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
     boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
     marginBottom: 20,
     transition: "width 0.3s ease",
-  };
+  }
 
   return (
     <Grid item xs={12} key={index}>
@@ -133,6 +132,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               margin: "12px 0",
               fontFamily: theme?.typography?.fontFamily,
             }}>
+
               <div style={{
                 display: 'flex',
                 flexDirection: 'row',
@@ -144,6 +144,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 maxWidth: "90%",
                 gap: 8
               }}>
+
                 <div style={{
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -152,6 +153,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 }}>
                   {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
                 </div>
+
               </div>
               <div style={{
                 overflow: "hidden",
@@ -162,6 +164,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               }}>
                 {data.categories ? data.categories.join(", ") : "NA"}
               </div>
+
               <div style={{
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -187,6 +190,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                     </span>
                   ))}
                 </div>
+
                 {/* Deactivate button */}
                 {(currTab === 0 || currTab === 1) && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
                   <div style={{
@@ -222,7 +226,9 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         </button>
                       )
                     }
+
                     <Button
+					  disabled={data?.reference_org === userdata?.active_org?.id}
                       className="deactivate-button"
                       sx={{
                         width: 110,
@@ -244,7 +250,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         event.preventDefault();
                         event.stopPropagation();
                         const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
-                        toast("Deactivating app. Please wait...");
+                        //toast("Deactivating app. Please wait...");
                         fetch(url, {
                           method: 'GET',
                           headers: {
@@ -256,11 +262,14 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                           .then((response) => response.json())
                           .then((responseJson) => {
                             if (responseJson.success === false) {
-                              toast.error(responseJson.reason);
+							  if (responseJson?.reason !== undefined && responseJson?.reason !== null && responseJson?.reason !== "") {
+                              	  toast.error(responseJson.reason);
+							  } else {
+								  toast.error("Failed to deactivate app. Please try again later.")
+							  }
                             } else {
-                              toast.success("App Deactivated Successfully.");
-                              fetchApps();
-                            }
+                              toast.success("App deactivated successfully. Will take effect on refresh..")
+							}
                           })
                           .catch(error => {
                             console.log("app error: ", error.toString());
@@ -629,6 +638,7 @@ const Hits = ({
                                     </div>
                                   )}
                                 </div>
+
                                 <div style={{
                                   display: 'flex',
                                   justifyContent: 'flex-end',
@@ -638,7 +648,7 @@ const Hits = ({
                                 }}>
                                   {hoverEffect === index && (
                                     <div>
-                                      {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                      {allActivatedAppIds && allActivatedAppIds?.includes(data.objectID) ? (
                                         <Button
                                           style={{
                                             width: 110,
@@ -657,7 +667,9 @@ const Hits = ({
                                           }}>
                                           Deactivate
                                         </Button>
+
                                       ) : (
+
                                         <Button
                                           style={{
                                             backgroundColor: "#FF8544",
@@ -1860,8 +1872,6 @@ const Apps2 = (props) => {
     color: "#FF8544"
   }
 
-  console.log("User", userdata)
-
   return (
     <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
@@ -2247,6 +2257,10 @@ const Apps2 = (props) => {
                                 leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 userdata={userdata}
                                 fetchApps={fetchApps}
+
+								setUserApps={setUserApps}
+								appsToShow={appsToShow}
+								setAppsToShow={setAppsToShow}
                               />
                             ))}
                           </div>
@@ -2296,6 +2310,9 @@ const Apps2 = (props) => {
                               <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
                                 handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 fetchApps={fetchApps}
+								setUserApps={setUserApps}
+								appsToShow={appsToShow}
+								setAppsToShow={setAppsToShow}
                               />
                             ))}
                           </div>

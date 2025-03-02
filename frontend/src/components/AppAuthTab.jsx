@@ -67,7 +67,7 @@ import { Context } from '../context/ContextApi.jsx';
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
   "db08e40265e2941b9a7d8f644b6e5240"
-);
+)
 
 const AppAuthTab = memo((props) => {
     const { globalUrl, userdata, isCloud, selectedOrganization } = props;
@@ -842,7 +842,7 @@ const AppAuthTab = memo((props) => {
               hitsPerPage={5}
               searchQuery={searchQuery}
               globalUrl={globalUrl}
-              isCloud={isCloud}
+              isCloud={isCloud !== true}
               userdata={userdata}
               getAppAuthentication={getAppAuthentication}
             />
@@ -878,6 +878,7 @@ const AppAuthTab = memo((props) => {
                     style={{ color: '#1a1a1a', textTransform: 'none', backgroundColor: "#FF8444", marginLeft:"auto", borderRadius: 4,fontSize: 16, minWidth: 162, height: 40, boxShadow:'none', }}
                     variant="contained"
                     color="primary"
+					disabled={!isCloud}
                     onClick={() => setShowAppModal(true)}
                 >
                     Add App Auth

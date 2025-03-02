@@ -39,6 +39,7 @@ import {
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
 import { green, red } from '../views/AngularWorkflow.jsx'
+import AppSearch from "../components/AppSearch1.jsx";
 
 const EnvironmentTab = memo((props) => {
     const { globalUrl, isCloud, userdata, selectedOrganization } = props;
@@ -59,6 +60,9 @@ const EnvironmentTab = memo((props) => {
     const [showDistributionPopup, setShowDistributionPopup] = React.useState(false);
     const [selectedEnvironment, setSelectedEnvironment] = React.useState(null);
     const [selectedSubOrg, setSelectedSubOrg] = React.useState([]);
+	const [showLocationActionModal, setShowLocationActionModal] = React.useState(undefined)
+
+
     useEffect(() => {
         getEnvironments();
         setModalUser({});
@@ -417,10 +421,12 @@ const EnvironmentTab = memo((props) => {
         -e AUTH="${auth}" \\
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${environment.org_id}" \\
-        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:nightly" \\
+        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:latest" \\
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e SHUFFLE_LOGS_DISABLED=true \\
-        -e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
+        -e BASE_URL="${newUrl}" \\${addProxy ? `
+		-e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+		-e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest
             `)
         } else if (installationTab === 2) {
@@ -435,7 +441,9 @@ const EnvironmentTab = memo((props) => {
         -e AUTH="${auth}" \\
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${props.userdata.active_org.id}" \\
-        -e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
+        -e BASE_URL="${newUrl}" \\${addProxy ? `
+		-e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+		-e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest`
     
         return commandData
@@ -592,6 +600,70 @@ const EnvironmentTab = memo((props) => {
         return queue;
     };
 
+	const LocationActionModal = (props) => {
+		const { showLocationActionModal } = props
+
+    	const [searchQuery, setSearchQuery] = React.useState("");
+
+		if (showLocationActionModal === undefined || showLocationActionModal === null) {
+			return null
+		}
+
+		if (showLocationActionModal?.open !== true) {
+			return null
+		}
+
+
+
+		return (
+			<Dialog
+			  open={true}
+			  onClose={() => {
+				  setShowLocationActionModal(undefined)
+			  }}
+			  PaperProps={{
+				sx: {
+				  borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+				  border: theme?.palette?.DialogStyle?.border,
+				  fontFamily: theme?.typography?.fontFamily,
+				  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  zIndex: 1000,
+				  minWidth: 600,
+				  minHeight: 500,
+				  overflow: "auto",
+				  '& .MuiDialogContent-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  },
+				  '& .MuiDialogTitle-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  },
+				  '& .MuiDialogActions-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				  },
+				},
+			  }}
+		  >
+			  <DialogTitle>
+				<div style={{ color: "rgba(255,255,255,0.9)" }}>
+					Select a job to send
+				</div>
+			  </DialogTitle>
+			  <DialogContent style={{ backgroundColor: theme.palette.backgroundColor }}>
+				  <Checkbox
+					checked={true}
+					disabled={true}
+				  />
+				  <span style={{ marginLeft: 8 }}>
+					Find app to re-download
+				  </span>
+
+				  <AppSearch 
+				  />
+			  </DialogContent>
+			</Dialog>
+		)
+	}
+
     const editEnvironmentConfig = (id, selectedSubOrg, cacheKey) => {
                     const data = {
                         action: "suborg_distribute",
@@ -734,9 +806,9 @@ const EnvironmentTab = memo((props) => {
             <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin' }}>
               <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
               <div style={{ marginBottom: 20 }}>
-                <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Locations</h2>
+                <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Runtime Locations</h2>
                 <span style={{ color: textColor }}>
-                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously Environments. <br /> If you have scale problems, talk to our team: support@shuffler.io.&nbsp;
+                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously called Environments. <br /> If you have scale problems, <a href="https://shuffler.io/docs/configuration#high-availability" target="_blank" rel="noopener noreferrer" style={{ color: "#FF8444" }}>check the docs</a> or talk to our team: support@shuffler.io.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
@@ -804,20 +876,23 @@ const EnvironmentTab = memo((props) => {
                     borderBottom: "1px solid #494949",    
                   }}
               >
-                    {["Type", "Status", "Scale", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => (
-                        <ListItemText
-                            key={index}
-                            primary={header}
-                            style={{
-                              padding: "0px 8px 8px 8px",
-                              whiteSpace: "nowrap",
-                              textOverflow: "ellipsis",
-                              overflow: "hidden",
-                              fontWeight: "bold",
-                              textAlign: "center",                
-                             }}
-                        />
-                    ))}
+                    {["Type", "Status", "Scale", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => {
+
+						return (
+							<ListItemText
+								key={index}
+								primary={header}
+								style={{
+								  padding: "0px 8px 8px 8px",
+								  whiteSpace: "nowrap",
+								  textOverflow: "ellipsis",
+								  overflow: "hidden",
+								  fontWeight: "bold",
+								  textAlign: header === "Actions" ? "left" : header === "Distribution" ? "right" : "center",                
+								}}
+							/>
+                    	)
+					})}
                 </ListItem>
                 {showLoader
     ? [...Array(6)].map((_, rowIndex) => (
@@ -919,9 +994,10 @@ const EnvironmentTab = memo((props) => {
   
         return ( 
          <>
+
            <ListItem
             key={index}
-            style={{ cursor: "pointer", backgroundColor: bgColor, marginLeft: 0, borderBottomLeftRadius: environments?.length - 1 === index ? 8 : 0, borderBottomRightRadius: environments?.length - 1 === index ? 8 : 0, display: 'grid', gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 350px 150px", }}
+            style={{ cursor: "pointer", backgroundColor: bgColor, marginLeft: 0, borderBottomLeftRadius: environments?.length - 1 === index ? 8 : 0, borderBottomRightRadius: environments?.length - 1 === index ? 8 : 0, display: 'grid', gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 405px 125px", }}
             onClick={() => {
             if (environment.Type === "cloud") {
               toast("Cloud environments are not configurable. To see what is possible, create a new environment.")
@@ -988,17 +1064,26 @@ const EnvironmentTab = memo((props) => {
 				  }}
 				  style={{minWidth:120, display: "table-cell",}}
 				  primary={
-					<Tooltip title={environment.Type !== "cloud"
-					  ? environment.running_ip === undefined ||
-						environment.running_ip === null ||
-						environment.running_ip.length === 0
-						? 
-						"Not running. Click to get the start command that can be ran on your server."
-						: 
-						<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
-					  : 
-						"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
-					  } placement="top">
+					<Tooltip title={
+						<Typography variant="body1" style={{margin: 10, }}>
+						{environment.Type !== "cloud"
+						  ? environment.running_ip === undefined ||
+							environment.running_ip === null ||
+							environment.running_ip.length === 0
+							? 
+							"Not running. Click to get the start command that can be ran on your server."
+							: 
+							<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
+						  : 
+							"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
+						}
+
+						<br />
+						<br />
+
+						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"}
+						</Typography>
+					} placement="top">
 					  <Typography
 					  style={{
 						minWidth: 100,
@@ -1156,7 +1241,7 @@ const EnvironmentTab = memo((props) => {
                           primary={environment.Type}
                           primaryTypographyProps={{
                             style:{
-                              minWidth:  100,
+                              minWidth:  70,
                               overflow: "hidden",
                               whiteSpace: 'nowrap',
                               textOverflow: 'ellipsis',
@@ -1228,6 +1313,7 @@ const EnvironmentTab = memo((props) => {
                                 >
                                   {environment.archived ? "Activate" : "Disable"}
                                 </Button>
+
                                 <Button
                                   variant={"outlined"}
                                   disabled={selectedOrganization.id !== environment.org_id}
@@ -1254,7 +1340,34 @@ const EnvironmentTab = memo((props) => {
                                     ? "Rerun"
                                     : "Clear"}
                                 </Button>
+
+								{environment.Type === "cloud" ? null : 
+									<Button
+									  variant={"outlined"}
+									  style={{
+										fontSize: 16,
+										textTransform: 'none',
+										whiteSpace: "nowrap", // Prevent text wrapping
+									  }}
+									  onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+
+										toast.info("Please choose an app you want to re-distribute to this environment")
+										setShowLocationActionModal({
+											environment: environment,
+											open: true,
+										})
+                                		setUpdate(Math.random())
+									  }}
+									  color="primary"
+									>
+										Send Job	
+									</Button>
+								}
+
                               </ButtonGroup>
+
                               <IconButton disabled={environment.Type === "cloud"} onClick={()=> {setIsExpanded(prev => !prev)}}>
                                 {listItemExpanded === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                               </IconButton>
@@ -1310,7 +1423,7 @@ const EnvironmentTab = memo((props) => {
                     <div style={{minWidth: 700, maxWidth: 700, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
-                            Your Self-Hosted Orborus instance
+                            Self-Hosted Orborus instance
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
                             Orborus is the Shuffle queue handler that runs your hybrid workflows and manages pipelines. It can be run in Docker/k8s container on your server or in your cluster. Follow the steps below, and configure as need be.
@@ -1399,9 +1512,23 @@ const EnvironmentTab = memo((props) => {
                               >
                                 {getOrborusCommand(environment)}
                               </code>
-                              <CopyToClipboard
-                                text={orborusCommandWrapper()}
-                              />
+
+        						<div
+        						    style={{
+										position: "absolute",
+        								right: 0,
+        								top: -10,
+									}}
+        						>
+        						    <IconButton
+        						        onClick={() => {
+        						            navigator.clipboard.writeText(orborusCommandWrapper())
+        						            toast("Copied to clipboard")
+        						        }}
+        						    >
+        						        <FileCopyIcon />
+        						    </IconButton>
+        						</div>
                             </div>
         
                             <Divider style={{marginTop: 25, marginBottom: 10, }}/>
@@ -1415,7 +1542,7 @@ const EnvironmentTab = memo((props) => {
                                 }
         
                                 setCommandController(commandController)
-                                        setUpdate(Math.random())
+                                setUpdate(Math.random())
                               }}
                             />
                             <div />
@@ -1530,10 +1657,19 @@ const EnvironmentTab = memo((props) => {
     ) }
             </List>
             </div>
-            {/* <EnvironmentStats /> */}
-              </div>
-            </div>
+          </div>
         </div>
+
+		{showLocationActionModal !== undefined && showLocationActionModal !== null && showLocationActionModal?.open === true ? 
+			<div>
+				<LocationActionModal 
+					showLocationActionModal={showLocationActionModal}
+				/>
+			</div>
+
+		: null }
+    </div>
+
 
     )
 });

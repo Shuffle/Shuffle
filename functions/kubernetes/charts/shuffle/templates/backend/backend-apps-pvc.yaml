@@ -1,0 +1,30 @@
+{{- if .Values.persistence.enabled }}
+{{- if (not .Values.persistence.apps.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ printf "%s-apps" (include "shuffle.backend.name" .) }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.backend.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  annotations:
+    {{- if eq .Values.persistence.resourcePolicy "keep" }}
+    helm.sh/resource-policy: keep
+    {{- end }}
+    {{- if or .Values.persistence.apps.annotations .Values.commonAnnotations }}
+    {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.persistence.apps.annotations .Values.commonAnnotations ) "context" . ) }}
+    {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+  {{- range .Values.persistence.apps.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.apps.size }}
+  {{- if .Values.persistence.apps.selector }}
+  selector: {{- include "common.tplvalues.render" (dict "value" .Values.persistence.apps.selector "context" $) | nindent 2 }}
+  {{- end }}
+  {{- include "common.storage.class" ( dict "persistence" .Values.persistence.apps "global" .Values.global ) | nindent 2 }}
+{{- end }}
+{{- end }}

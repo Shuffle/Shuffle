@@ -25,7 +25,8 @@ import {
   TableRow,
   InputAdornment,
   Divider,
-  LinearProgress
+  LinearProgress,
+  Tooltip,
 } from "@mui/material";
 import throttle from "lodash/throttle";
 import theme from "../theme.jsx";
@@ -1447,19 +1448,28 @@ const ActionsList = memo(({
     <div style={{ borderBottom: '1px solid #494949', paddingTop: 10, paddingBottom: 10}}>
             <div>
                 {info?.title ? (
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                        <img
-                            src={openapi?.info["x-logo"]}
-                            width={48}
-                            height={48}
-                            alt="app logo"
-                            style={{ marginLeft: 20, borderRadius: 8 }}
-                        />
-                        <Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
-                        }}> 
-                            {info.title}
-                        </Typography>
-                    </div>
+					<a 
+						href={`/apps/${openapi?.id}`}
+						style={{ textDecoration: 'none', }} 
+						target="_blank" 
+						rel="noreferrer"
+					>
+						<Tooltip title="Go to app" placement="right">
+							<div style={{ display: "flex", alignItems: "center" }}>
+								<img
+									src={openapi?.info["x-logo"]}
+									width={48}
+									height={48}
+									alt="app logo"
+									style={{ marginLeft: 20, borderRadius: 8 }}
+								/>
+								<Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
+								}}> 
+									{info.title}
+								</Typography>
+                    		</div>
+						</Tooltip>
+					</a>
                 ) : (
                   <Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
                   }}> 
@@ -1468,6 +1478,7 @@ const ActionsList = memo(({
                 )}
             </div>
      </div>
+
       <TextField
         value={searchQuery}
         placeholder="Search endpoints"
@@ -1488,6 +1499,7 @@ const ActionsList = memo(({
           },
         }}
       />
+
       <div
         style={{
           marginLeft: 20,

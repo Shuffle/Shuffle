@@ -281,7 +281,7 @@ export const appCategories = [
 		"name": "AI",
 		"color": "#FFC107",
 		"icon": "AI",
-		"action_labels": ["Answer Question", "Run Action"],
+		"action_labels": ["Answer Question", "Run Action", "Run LLM",],
 	},
 	{
 		"name": "Other",
