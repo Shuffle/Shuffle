@@ -953,10 +953,6 @@ const AngularWorkflow = (defaultprops) => {
     }
   }, [workflow]);
 
-  useEffect(() => {
-    console.log("selected Comment:", selectedComment);
-  }, [selectedComment]);
-
   // Event for making sure app is correct
   useEffect(() => {
     if (selectedApp === undefined || selectedApp === null && selectedApp.app_name === undefined) {
@@ -5470,7 +5466,6 @@ const AngularWorkflow = (defaultprops) => {
     // FIXME: Do absolutely NOT use JSON.stringify on the event.target.data()
     // This causes memory referencing to become a nightmare
     const data = event.target.data()
-    console.log("data", data);
     if (data.app_name === "Shuffle Workflow") {
       if ((data?.parameters !== undefined) && (data?.parameters?.length > 0)) {
         getWorkflowApps(data.parameters[0].value)
@@ -9592,6 +9587,27 @@ const AngularWorkflow = (defaultprops) => {
     cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
     cy.on("mouseover", "node", (e) => onNodeHover(e));
     cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+
+    cy.on("mouseover", "node[type='RESIZE-HANDLE']", (e) => {
+      const nodeId = e.target.id();
+      
+      // Check the node ID to determine the cursor style based on position
+      if (nodeId.includes("bottom-right")) {
+        cy.container().style.cursor = "nwse-resize"; // Bottom-right resize cursor
+      } else if (nodeId.includes("top-right")) {
+        cy.container().style.cursor = "nesw-resize"; // Top-right resize cursor
+      } else if (nodeId.includes("top-left")) {
+        cy.container().style.cursor = "nwse-resize"; // Top-left resize cursor
+      } else if (nodeId.includes("bottom-left")) {
+        cy.container().style.cursor = "nesw-resize"; // Bottom-left resize cursor
+      } else {
+        cy.container().style.cursor = "default"; // Default cursor for other cases
+      }
+    });
+
+    cy.on("mouseout", "node[type='RESIZE-HANDLE']", (e) => {
+      cy.container().style.cursor = "";
+    });
 
     // Handles dragging
     cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
@@ -15551,7 +15567,8 @@ const AngularWorkflow = (defaultprops) => {
               <Select
                 style={{ backgroundColor: theme.palette.inputColor }}
                 fullWidth
-                value={selectedComment.textHalign !== "center" ? selectedComment.textHalign === "left" ? "right" : "left" : "center"}
+                defaultValue="center"
+                value={selectedComment.textHalign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textHalign === "left" ? "right" : "left" : "center"}
                 onChange={(event) => {
                   const alignment = event.target.value;
                   const width = selectedComment.width || 250; // Default width if undefined
@@ -15587,7 +15604,8 @@ const AngularWorkflow = (defaultprops) => {
               <Select
                 fullWidth
                 style={{ backgroundColor: theme.palette.inputColor }}
-                value={selectedComment.textValign !== "center" ? selectedComment.textValign === "top" ? "bottom" : "top" : "center" || "center"}
+                defaultValue="center"
+                value={selectedComment.textValign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textValign === "top" ? "bottom" : "top" : "center" || "center"}
                 onChange={(event) => {
                   const height = selectedComment.height || 150; // Default width if undefined
 
@@ -19327,7 +19345,6 @@ const AngularWorkflow = (defaultprops) => {
           width: Math.floor(width),
           height: Math.floor(height),
         });
-
         setSelectedComment((prev) => ({
           ...prev,
           width: Math.floor(width),
@@ -19416,7 +19433,7 @@ const AngularWorkflow = (defaultprops) => {
   const RightSideBar = (props) => {
 
     var defaultReturn = null
-    if (Object.getOwnPropertyNames(selectedComment).length > 0) {
+    if (Object.getOwnPropertyNames(selectedComment).length > 0 && selectedComment.hasOwnProperty('id')) {
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
       if (selectedTrigger.trigger_type === undefined) {

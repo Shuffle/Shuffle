@@ -127,13 +127,13 @@ const data = [
       "background-color": "red",
       "border-width": 1,
       "border-color": "white",
-      "z-index": 5002, // Ensure it's above the main node
-      "overlay-opacity": 0, // Prevents selection highlighting
+      "z-index": 5002, 
+      "overlay-opacity": 0, 
       "cursor": "nwse-resize",
-      "opacity": 0,
-      'pointer-events': 'none',
+      "opacity": 0, 
+      "pointer-events": "auto", 
     },
-  }, 
+  },  
   {
     selector: `node[app_name="Integration Framework"]`,
     css: {
