@@ -680,10 +680,9 @@ const LoginPage = props => {
 					<form onSubmit={onSubmit} style={{ margin: 15, width: isMobile ? "100%" : "360px", width: "max-content", overflow: "hidden", textAlign: "center", }}>
 						<img
 							style={{
-								minHeight: 40,
-								minWidth: isMobile ? "100%" : 40,
-								paddingBottom: isMobile ? null : 35,
-
+								height: isMobile ? 44 : 75,
+								width: isMobile ? 44 : 75,
+								paddingBottom: isMobile ? null : 40
 							}}
 							src="images/logos/orange_logo.svg"
 							alt="Shuffle Logo"
