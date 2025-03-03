@@ -203,7 +203,7 @@ const menuData = {
         social: true,
         platforms: [
           { name: "Discord", icon: "/images/icons/discord.svg", link: "https://discord.gg/B2CBzUm", gaData: { category: "navbar", action: "social_click", label: "discord_icon_click" } },
-          { name: "GitHub", icon: "/images/icons/github.svg", link: "https://github.com/shuffle/shuffle", gaData: { category: "navbar", action: "social_click", label: "github_icon_click" } },
+          { name: "GitHub", icon: "/images/icons/github.svg", link: "https://github.com/shuffle/shuffle/blob/main/.github/install-guide.md", gaData: { category: "navbar", action: "social_click", label: "github_icon_click" } },
         ],
         followUs: [
           { name: "LinkedIn", icon: "/images/icons/linkedIn.svg", link: "https://www.linkedin.com/company/shuffleio", gaData: { category: "navbar", action: "social_click", label: "linkedin_icon_click" } },
@@ -403,7 +403,7 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                         fontSize: '14px',
                         fontFamily: theme.typography.fontFamily,
                       }}>
-                        {column.title}
+                        {column.title} 
                       </Typography>
                       
                       {column.social ? (
@@ -1103,9 +1103,9 @@ const Navbar = (props) => {
                         if (isCloud) {
                           ReactGA.event(item.gaData);
                           handleMenuClose();
-                        } else if(item.link.includes("docs") || item.link.includes("usecases")){
+                        } else if (item.link.includes("docs") || item.link.includes("usecases")) {
                           handleMenuClose();
-                        }else{
+                        } else {
                           window.open("https://shuffler.io" + item.link, '_blank');
                           return;
                         }
@@ -2509,36 +2509,39 @@ const Navbar = (props) => {
                     >
                       Login
                     </Button>
-                    <Button
-                      variant="outlined"
-                      sx={{
-                        ...sharedButtonStyles,
-                        display: {
-                          xs: "none",
-                          lg: "block"
-                        },
-                        color: "white",
-                        backgroundColor: "#2F2F2F",
-                        border: "1px solid #2F2F2F",
-                        borderRadius: "8px",
-                        "&:hover": {
-                          border: "1px solid white",
-                          backgroundColor: "#2F2F2F",
-                        },
-                      }}
-                      onClick={() => {
-                        if (isCloud) {
-                          ReactGA.event({
-                            category: "navbar",
-                            action: "signup_click",
-                            label: "signup_click",
-                          });
-                        }
-                        navigate("/register");
-                      }}
-                    >
-                      Sign Up
-                    </Button>
+
+					{isCloud && 
+						<Button
+						  variant="outlined"
+						  sx={{
+							...sharedButtonStyles,
+							display: {
+							  xs: "none",
+							  lg: "block"
+							},
+							color: "white",
+							backgroundColor: "#2F2F2F",
+							border: "1px solid #2F2F2F",
+							borderRadius: "8px",
+							"&:hover": {
+							  border: "1px solid white",
+							  backgroundColor: "#2F2F2F",
+							},
+						  }}
+						  onClick={() => {
+							if (isCloud) {
+							  ReactGA.event({
+								category: "navbar",
+								action: "signup_click",
+								label: "signup_click",
+							  });
+							}
+							navigate("/register");
+						  }}
+						>
+						  Sign Up
+						</Button>
+					}
                     <Button
                       variant="contained"
                       sx={{

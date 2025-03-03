@@ -256,7 +256,7 @@ const MarketplaceCard = ({ classes }) => {
 				</a>
 				*/}
 				<a
-					href="https://shuffler.io/docs/configuration#installing-shuffle"
+					href="/docs/configuration#installing-shuffle"
 					target="_blank"
 					style={{ color: "rgba(255, 132, 68, 1)", textDecoration: "underline" }}
 				>
