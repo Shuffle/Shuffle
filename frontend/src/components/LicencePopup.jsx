@@ -864,10 +864,14 @@ const LicencePopup = (props) => {
             return
         }
 
-        const priceItem = window.location.origin === "https://shuffler.io" ?
-            shuffleVariant === 0 ? "app_executions" : "cores"
-            :
-            shuffleVariant === 0 ? "price_1PZPSSEJjT17t98NLJoTMYja" : "price_1PZPQuEJjT17t98N3yORUtd9"
+        const priceItem =
+			window.location.origin === "https://shuffler.io/" || "https://sandbox.shuffler.io/"
+				? shuffleVariant === 0
+					? "app_executions"
+					: "cores"
+				: shuffleVariant === 0
+					? "price_1PZPSSEJjT17t98NLJoTMYja"
+					: "price_1PZPQuEJjT17t98N3yORUtd9";
 
         const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`
         const failUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=failure`

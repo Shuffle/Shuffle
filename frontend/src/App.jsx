@@ -60,9 +60,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import Drift from "react-driftjs";
 
 import { AppContext } from './context/ContextApi.jsx';
+import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
-import Navbar from "./views/Navbar.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
