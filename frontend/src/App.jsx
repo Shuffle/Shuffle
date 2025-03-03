@@ -34,7 +34,7 @@ import RunWorkflow from "./views/RunWorkflow.jsx";
 import Admin2 from "./views/Admin2.jsx";
 
 import LoginPage from "./views/LoginPage.jsx";
-//import LoginPage from "./views/LoginPage.jsx";
+import LoginPageOld from "./views/LoginPageOld.jsx";
 
 import SettingsPage from "./views/SettingsPage.jsx";
 import KeepAlive from "./views/KeepAlive.jsx";
@@ -259,6 +259,44 @@ const App = (message, props) => {
 
         	<Route
         	  exact
+        	  path="/login2"
+        	  element={
+        	    <LoginPageOld
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={false}
+        	      inregister={false}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
+        	<Route
+        	  exact
+        	  path="/loginsetup"
+        	  element={
+        	    <LoginPageOld
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={false}
+        	      inregister={false}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
+        	<Route
+        	  exact
         	  path="/register"
         	  element={
         	    <LoginPage
@@ -376,6 +414,7 @@ const App = (message, props) => {
         	    }
         	  />
         	) : null}
+
         	<Route
         	  exact
         	  path="/AdminSetup"
@@ -388,6 +427,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
         	<Route
         	  exact
         	  path="/detectionframework"

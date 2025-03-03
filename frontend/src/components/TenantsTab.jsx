@@ -785,7 +785,7 @@ const TenantsTab = memo((props) => {
                 <div style={{ marginBottom: 20 }}>
                     <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Tenants</h2>
                     <span style={{ color: textColor }}>
-                        Control sub organizations (tenants)! {" "}
+                        Create, manage and change to sub-organizations (tenants)! {" "}
                         {isCloud
                             ? "You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact support@shuffler.io to try it out."
                             : ''}

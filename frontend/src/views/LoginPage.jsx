@@ -1,9 +1,10 @@
 /* eslint-disable react/no-multi-comp */
-import React, { useState } from 'react';
+import React, { useState, useEffect, } from 'react';
 import { makeStyles } from '@mui/styles';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { isMobile } from "react-device-detect";
 import { toast } from 'react-toastify';
+import { useInterval } from "react-powerhooks";
 
 
 import {
@@ -259,7 +260,7 @@ const MarketplaceCard = ({ classes }) => {
 					target="_blank"
 					style={{ color: "rgba(255, 132, 68, 1)", textDecoration: "underline" }}
 				>
-					Read more about self hosting
+					Learn more about self hosting
 				</a>
 			</div >
 
@@ -269,7 +270,7 @@ const MarketplaceCard = ({ classes }) => {
 
 
 const LoginPage = props => {
-	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, inregister, serverside } = props;
+	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, inregister, serverside, checkLogin, } = props;
 	let navigate = useNavigate();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -284,6 +285,21 @@ const LoginPage = props => {
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
 	const parsedsearch = serverside === true ? "" : window.location.search
+
+	useEffect(() => {
+		if (!isCloud) {
+			checkAdmin() 
+		} 
+	}, [])
+
+    const { start, stop } = useInterval({
+      duration: 3000,
+      startImmediate: false,
+      callback: () => {
+        checkAdmin()
+      },
+    })
+
 	if (serverside !== true) {
 		const tmpMessage = new URLSearchParams(window.location.search).get("message")
 		if (tmpMessage !== undefined && tmpMessage !== null && message !== tmpMessage) {
@@ -408,6 +424,38 @@ const LoginPage = props => {
 
 		window.location.pathname = "/workflows"
 	}
+
+  const checkAdmin = () => {
+    const url = globalUrl + "/api/v1/checkusers";
+    fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          if (responseJson["success"] === false) {
+            setLoginInfo(responseJson["reason"]);
+          } else {
+
+			// Stay = 0 users 
+			// Redirect = >1 user
+            if (responseJson.reason === "stay") {
+				setTimeout(() => {
+              		navigate("/adminsetup")
+				}, 2500)
+			}
+          }
+        })
+      )
+      .catch((error) => {
+		  setTimeout(() => {
+		  	navigate("/adminsetup")
+		  }, 2500)
+      })
+  };
+
 
 	const onSubmit = (e) => {
 		//toast("Testing from login page")
@@ -629,12 +677,13 @@ const LoginPage = props => {
 						width: "max-content",
 					}}
 				>
-					<form onSubmit={onSubmit} style={{ margin: 15, width: isMobile ? "100%" : "360px", width: "max-content", overflow: "hidden" }}>
+					<form onSubmit={onSubmit} style={{ margin: 15, width: isMobile ? "100%" : "360px", width: "max-content", overflow: "hidden", textAlign: "center", }}>
 						<img
 							style={{
-								height: 44,
-								width: isMobile ? "100%" : 44,
-								paddingBottom: isMobile ? null : 40
+								minHeight: 40,
+								minWidth: isMobile ? "100%" : 40,
+								paddingBottom: isMobile ? null : 35,
+
 							}}
 							src="images/logos/orange_logo.svg"
 							alt="Shuffle Logo"
@@ -667,12 +716,12 @@ const LoginPage = props => {
 							variant="body2"
 						>
 							{register
-								? "Find new ways to automate by discovering usecases made by Shufflers"
+								? "Find new ways to automate by discovering usecases Shufflers"
 								: "Please fill in the information to continue to discover the power of Shuffle"
 							}
 						</Typography>
 
-						<div style={{ marginBottom: 20 }}>
+						<div style={{ marginBottom: 20, textAlign: "left", }}>
 							<div style={{ marginBottom: 5 }}>{isCloud ? "Email" : "Username"}</div>
 							<TextField
 								color="primary"
@@ -704,7 +753,7 @@ const LoginPage = props => {
 						</div>
 
 						{!loginWithSSO && (
-							<div style={{ marginBottom: 20 }}>
+							<div style={{ marginBottom: 20, textAlign: "left", }}>
 								<div style={{ marginBottom: 5 }}>Password</div>
 								<TextField
 									color="primary"
@@ -781,14 +830,9 @@ const LoginPage = props => {
 							flexDirection: "column",
 							marginTop: "0px"
 						}}>
-							{register && !loginWithSSO && (
+							{isCloud && register && !loginWithSSO && (
 								<Link
 									to={`/passwordreset${parsedsearch}`}
-									onChange={() => {
-										if (!isCloud) {
-											toast.warn("Talk to your administrator")
-										}
-									}}
 									style={{
 										...hrefStyle,
 										alignSelf: isMobile ? "center" : "flex-end"

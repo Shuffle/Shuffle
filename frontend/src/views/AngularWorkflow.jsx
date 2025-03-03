@@ -2540,18 +2540,21 @@ const AngularWorkflow = (defaultprops) => {
     }
     */
 
+	// FIXME: What is this?
     if (cy !== undefined && cy !== null) {
       // scale: 0.3,
       // bg: "#27292d",
-      const cyImageData = cy.png({
-        output: "base64uri",
-        maxWidth: 480,
-        maxHeight: 270,
-      })
+	  if (cy.png !== undefined && cy.png !== null) {
+		  const cyImageData = cy.png({
+			output: "base64uri",
+			maxWidth: 480,
+			maxHeight: 270,
+		  })
 
-      if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
-        useworkflow.image = cyImageData
-      }
+		  if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
+			useworkflow.image = cyImageData
+		  }
+	  }
     }
 
     if (useworkflow.id === undefined || useworkflow.id === null || useworkflow.id.length === 0) {
@@ -9785,9 +9788,14 @@ const AngularWorkflow = (defaultprops) => {
           toast("Successfully stopped schedule");
         }
 
-        workflow.triggers[triggerindex].status = "stopped";
-        trigger.status = "stopped";
-        setSelectedTrigger(trigger);
+		if (triggerindex !== undefined && triggerindex !== null && triggerindex >= 0) {
+        	workflow.triggers[triggerindex].status = "stopped";
+		}
+
+        //trigger.status = "stopped";
+		//console.log("TRIGGER: ", trigger)
+        //setSelectedTrigger(trigger);
+
         setWorkflow(workflow);
         saveWorkflow(workflow)
 
@@ -14637,20 +14645,19 @@ const AngularWorkflow = (defaultprops) => {
         cy.add(cybranch);
       }
 
-      console.log("Value to be set: ", e.target.value);
       try {
-        workflow.triggers[
-          selectedTriggerIndex
-        ].parameters[3].value = e.target.value.id;
-      } catch {
-        workflow.triggers[selectedTriggerIndex].parameters[3] =
-        {
-          name: "startnode",
-          value: e.target.value.id,
-        };
+        workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
+      } catch(e) {
+		  console.log("Error: ", e)
+          workflow.triggers[selectedTriggerIndex].parameters[3] =
+          {
+            name: "startnode",
+            value: e.target.value.id,
+          };
       }
 
-      setWorkflow(workflow);
+      setWorkflow(workflow)
+	  setUpdate(Math.random())
     }
   }
 
@@ -15035,7 +15042,7 @@ const AngularWorkflow = (defaultprops) => {
                   <Tooltip arrow placement="left" title={
                     <span style={{}}>
                       {data.image !== undefined && data.image !== null && data.image.length > 0 ?
-                        <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
+                        <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, maxWidth: 285, borderRadius: theme.palette?.borderRadius, }} />
                         : null}
                       <Typography>
                         Choose Subflow '{data.name}'
