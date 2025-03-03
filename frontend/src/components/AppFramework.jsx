@@ -198,7 +198,7 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  } 
   } else {
-	  console.log("findSpecificApp: unknown category: ", category)
+	  //console.log("findSpecificApp: unknown category: ", category)
   }
 
   return null

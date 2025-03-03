@@ -14,6 +14,8 @@ import {
 	Menu,
 	MenuItem,
 	Button,
+	ButtonGroup,
+	Collapse,
 } from '@mui/material';
 
 import theme from '../theme.jsx';
@@ -22,8 +24,10 @@ import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
+import Draggable from "react-draggable";
 
 import {
+	Storage as StorageIcon, 
 	FullscreenExit as FullscreenExitIcon,
 	Extension as ExtensionIcon,
 	Apps as AppsIcon,
@@ -41,6 +45,7 @@ import {
 	Close as CloseIcon,
 	DragIndicator as DragIndicatorIcon,
 	RestartAlt as RestartAltIcon,
+	ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 
 
@@ -50,7 +55,7 @@ import PaperComponent from "../components/PaperComponent.jsx";
 
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
-import { useNavigate, Link, useParams } from "react-router-dom";
+import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom";
 import { tags as t } from '@lezer/highlight';
 
 
@@ -77,21 +82,29 @@ const liquidFilters = [
 	{ "name": "URL decode ", "value": `url_decode`, "example": `{{ "https://www.google.com/search?q=hello%20world" | url_decode }}` },
 	{ "name": "base64_encode", "value": `base64_encode`, "example": `{{ "https://www.google.com/search?q=hello%20world" | base64_encode }}` },
 	{ "name": "base64_decode", "value": `base64_decode`, "example": `{{ "aGVsbG8K" | base64_encode }}` },
-]
-
-const mathFilters = [
 	{ "name": "Plus", "value": "plus: 1", "example": `{{ "1" | plus: 1 }}` },
 	{ "name": "Minus", "value": "minus: 1", "example": `{{ "1" | minus: 1 }}` },
 ]
 
 const pythonFilters = [
-	{ "name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": `` },
-	{ "name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": `` },
+	{ "name": "Hello World", "value": `print("hello world")`, "example": `` },
+	{ "name": "Using Shuffle variables", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"{\"sample\": \"string\", \"int\": 1}\"\"\"\n  \njsondata = json.loads(nodevalue)\nprint(jsondata)`, "example": `` },
+	{ "name": "Filter a list", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"[{\"sample\": \"string\", \"int\": 1, "malicious": "no"}, {\"sample\": \"string2\", \"int\": 1, "malicious": "yes"}]\"\"\"\n  \njsondata = json.loads(nodevalue)\nfiltered = []\nfor item in jsondata:\n  try:\n    if item[\"malicious\"] == \"yes\":\n      filtered.append(item)\n  except:\n    pass\nprint(json.dumps(filtered))`, "example": `` },
+	{ "name": "Print Execution ID", "value": `print(self.current_execution_id)`, "example": `` },
+	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
+	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
+
+	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
+	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
+	{ "name": "Run a Singul AI Action", "value": `response = singul.create_ticket(app="jira/iris/ticketingsystem", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": true, },
+
 ]
 
 const extensions = []
 const CodeEditor = (props) => {
 	const {
+		cy,
+		workflow,
 		globalUrl,
 		fieldCount,
 		actionlist,
@@ -99,12 +112,15 @@ const CodeEditor = (props) => {
 		expansionModalOpen,
 		setExpansionModalOpen,
 		codedata,
+		handleActionParamChange,
 		setcodedata,
 		isFileEditor,
 		runUpdateText,
 		toolsAppId,
 		parameterName,
-		selectedAction,
+		// selectedAction,
+		// selectedTrigger,
+		selectedEdge,
 		workflowExecutions,
 		getParents,
 		activeDialog,
@@ -112,9 +128,13 @@ const CodeEditor = (props) => {
 		fieldname,
 		contentLoading,
 		editorData,
-
+		handleSubflowParamChange,
 		setAiQueryModalOpen,
-		fullScreenMode
+		fullScreenMode,
+		environment,
+		fixExample,
+		userdata,
+		handleConditionFieldChange,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -134,7 +154,9 @@ const CodeEditor = (props) => {
 
 	const [currentCharacter, setCurrentCharacter] = React.useState(-1);
 	const [currentLine, setCurrentLine] = React.useState(-1);
-
+	const [selectedAction, setSelectedAction] = React.useState({});
+	const [selectedTrigger, setSelectedTrigger] = React.useState({});
+	const [selectedCondition, setSelectedCondition] = React.useState({});
 	const [variableOccurences, setVariableOccurences] = React.useState([]);
 	const [currentLocation, setCurrentLocation] = React.useState([]);
 	const [currentVariable, setCurrentVariable] = React.useState("");
@@ -143,6 +165,7 @@ const CodeEditor = (props) => {
 	const [anchorEl3, setAnchorEl3] = React.useState(null);
 	const [mainVariables, setMainVariables] = React.useState([]);
 	const [availableVariables, setAvailableVariables] = React.useState([]);
+	const [sourceDataOpen, setSourceDataOpen] = React.useState(false);
 
 	const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
 
@@ -175,22 +198,92 @@ const CodeEditor = (props) => {
 	}, [localcodedata])
 
 	let navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const actionId = searchParams.get('action_id');
+	const appName = searchParams.get('app_name');
+	const fieldName = searchParams.get('field');
+	const triggerId = searchParams.get('trigger_id');
+	const triggerField = searchParams.get('trigger_field');
+	const triggerName = searchParams.get('trigger_name');
+	const conditionId = searchParams.get('condition_id');
+	const conditionField = searchParams.get('field');
 
 	useEffect(() => {
-		var allVariables = []
-		var tmpVariables = []
+		if (actionId === undefined || actionId === null) {
+			return;
+		}
 
+		const action = workflow?.actions?.find(action => action.id === actionId);
+		setlocalcodedata(editorData?.value);
+		setSelectedAction(action);
+
+		// Update available variables when action changes
+		updateAvailableVariables(actionlist);
+	}, [actionId, fieldName])
+
+	useEffect(() => {
+		if (triggerId === undefined || triggerId === null) {
+			return;
+		}
+
+		const trigger = workflow?.triggers?.find(trigger => trigger.id === triggerId);
+		setlocalcodedata(editorData?.value);
+		setSelectedTrigger(trigger);
+
+		// Update available variables when trigger changes
+		updateAvailableVariables(actionlist);
+	}, [triggerId])
+
+
+	useEffect(() => {
+		if (conditionId === undefined || conditionId === null) {
+			return;
+		}
+
+		const condition = selectedEdge?.conditions?.find(condition => condition.id === conditionId);
+		setlocalcodedata(editorData?.value);
+		setSelectedCondition(condition);
+		// Update available variables when condition changes
+		updateAvailableVariables(actionlist);
+	}, [conditionId, fieldName])
+
+	// Extract variable updating logic into a separate function
+	const updateAvailableVariables = (actionlist) => {
 		if (actionlist === undefined || actionlist === null) {
 			return
 		}
+
+		var allVariables = []
+		var tmpVariables = []
 
 		for (var i = 0; i < actionlist.length; i++) {
 			allVariables.push('$' + actionlist[i].autocomplete.toLowerCase())
 			tmpVariables.push('$' + actionlist[i].autocomplete.toLowerCase())
 
 			var parsedPaths = []
-			if (typeof actionlist[i].example === "object") {
-				parsedPaths = GetParsedPaths(actionlist[i].example, "");
+			if (actionlist[i].type === "workflow_variable") {
+				// Try to parse the value if it's a string that could be JSON
+				if (typeof actionlist[i].value === "string") {
+					try {
+						const parsedValue = JSON.parse(actionlist[i].value)
+						if (typeof parsedValue === "object") {
+							parsedPaths = GetParsedPaths(parsedValue, "");
+						}
+					} catch (e) {
+						// Not valid JSON, skip parsing
+						continue
+					}
+				} else if (typeof actionlist[i].value === "object") {
+					// Direct object/array value
+					parsedPaths = GetParsedPaths(actionlist[i].value, "");
+				}
+			} else {
+				//console.log("EXAMPLE: ", actionlist[i])
+
+				// Handle regular action results
+				if (typeof actionlist[i].example === "object") {
+					parsedPaths = GetParsedPaths(actionlist[i].example, "");
+				}
 			}
 
 			for (var key in parsedPaths) {
@@ -204,7 +297,11 @@ const CodeEditor = (props) => {
 
 		setAvailableVariables(allVariables)
 		setMainVariables(tmpVariables)
-		expectedOutput(localcodedata)
+	}
+
+	// Remove the original useEffect for actionlist since we'll update on action/trigger changes
+	useEffect(() => {
+		updateAvailableVariables(actionlist)
 	}, [])
 
 	useEffect(() => {
@@ -561,6 +658,7 @@ const CodeEditor = (props) => {
 		}
 
 		if (!inputvariable.includes(".")) {
+			inputvariable = inputvariable.toLowerCase()
 			return inputvariable
 		}
 
@@ -569,6 +667,9 @@ const CodeEditor = (props) => {
 		var removedIndexes = 0
 		for (var key in itemsplit) {
 			var tmpitem = itemsplit[key]
+			if (key == 0) {
+				tmpitem = tmpitem.toLowerCase()
+			}
 
 			// Makes sure #0 and # are same, as we only visualize first one anyway
 			if (tmpitem.startsWith("#")) {
@@ -596,23 +697,27 @@ const CodeEditor = (props) => {
 		var code_lines = value.split('\n')
 		for (var i = 0; i < code_lines.length; i++) {
 			var current_code_line = code_lines[i]
-			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g);
+			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g)
 
 			if (!variable_occurence) {
-				continue;
+				continue
 			}
 
-			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
-			variable_occurence = new_occurences
+			//var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
+			//variable_occurence = new_occurences
 
+			variable_occurence = variable_occurence.filter((occurrence) => occurrence[0]);
+
+			// Checks code lines, not variable occurences. Then remaps later
 			var dollar_occurence = [];
 			for (let ch = 0; ch < current_code_line.length; ch++) {
 				//if (current_code_line[ch] === '$' && (ch === 0)) {
 				if (current_code_line[ch] === '$') {
-					dollar_occurence.push(ch);
+					dollar_occurence.push(ch)
 				}
 			}
 
+			// Lowercase anything between the $ and first .
 			var dollar_occurence_len = []
 			try {
 				for (let occ = 0; occ < variable_occurence.length; occ++) {
@@ -651,6 +756,75 @@ const CodeEditor = (props) => {
 							endRow: i,
 							endCol: endCh,
 							className: correctVariable ? "good-marker" : "bad-marker",
+							type: "text",
+						})
+					}
+
+					setMarkers(newMarkers)
+				}
+
+
+			} catch (e) {
+				console.log("Error in color highlighting: ", e);
+			}
+		}
+
+		var code_lines = value.split('\n')
+		for (var i = 0; i < code_lines.length; i++) {
+			var current_code_line = code_lines[i]
+
+			// Look for REPLACE_ME
+			var variable_occurence = current_code_line.match(/REPLACE_ME/g)
+
+			if (!variable_occurence) {
+				continue;
+			}
+
+			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0])
+			variable_occurence = new_occurences
+
+			// Find the start position of REPLACE_ME and highlight it
+			var dollar_occurence = []
+			for (let ch = 0; ch < current_code_line.length; ch++) {
+				// Not allowing it then lol
+				if (ch + 9 >= current_code_line.length) {
+					continue
+				}
+
+				// Rofl - at least it is specific
+				if (current_code_line[ch] === 'R' && current_code_line[ch + 1] === 'E' && current_code_line[ch + 2] === 'P' && current_code_line[ch + 3] === 'L' && current_code_line[ch + 4] === 'A' && current_code_line[ch + 5] === 'C' && current_code_line[ch + 6] === 'E' && current_code_line[ch + 7] === '_' && current_code_line[ch + 8] === 'M' && current_code_line[ch + 9] === 'E') {
+					dollar_occurence.push(ch)
+				}
+			}
+
+			try {
+				if (variable_occurence.length === 0) {
+					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #282828; border-radius: 0px; color: #b8bb26"})
+					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #; border-radius: 0px; color: inherit"})
+				}
+
+				for (let occ = 0; occ < variable_occurence.length; occ++) {
+					const fixedVariable = variable_occurence[occ]
+
+					var startCh = dollar_occurence[occ]
+					var endCh = dollar_occurence[occ] + 10
+					try {
+						newMarkers.push({
+							startRow: i,
+							startCol: startCh,
+							endRow: i,
+							endCol: endCh,
+							className: "bad-marker",
+							type: "text",
+						})
+					} catch (e) {
+						console.log("Error in color highlighting: ", e);
+						newMarkers.push({
+							startRow: i,
+							startCol: startCh,
+							endRow: i,
+							endCol: endCh,
+							className: "bad-marker",
 							type: "text",
 						})
 					}
@@ -720,6 +894,34 @@ const CodeEditor = (props) => {
 						const fixedVariable = fixVariable(found[i])
 
 						var valuefound = false
+
+						  // First check if it's a workflow variable
+						  if (actionlist !== undefined && actionlist.length > 0) {
+							const workflowVar = actionlist?.find(item => 
+								item.type === "workflow_variable" && 
+								`$${item.autocomplete.toLowerCase()}` === fixedVariable.toLowerCase()
+							)
+	
+							if (workflowVar && workflowVar.example) {
+								valuefound = true
+								try {
+									// Try to parse the example value if it's stored as a JSON string
+									if (typeof workflowVar.example === "string" && 
+									   (workflowVar.example.startsWith("[") || workflowVar.example.startsWith("{"))) {
+										const parsedExample = JSON.parse(workflowVar.example)
+										input = input.replace(found[i], JSON.stringify(parsedExample), -1)
+									} else {
+										input = input.replace(found[i], workflowVar.example, -1)
+									}
+									continue
+								} catch (e) {
+									console.log("Error parsing workflow variable:", e)
+									input = input.replace(found[i], workflowVar.example, -1)
+									continue
+								}
+							}
+						}
+	
 						for (var j = 0; j < actionlist.length; j++) {
 							if (fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()) {
 								continue
@@ -750,9 +952,26 @@ const CodeEditor = (props) => {
 							var shouldbreak = false
 							for (var k = 0; k < actionlist.length; k++) {
 								var parsedPaths = []
-								if (typeof actionlist[k].example === "object") {
-									parsedPaths = GetParsedPaths(actionlist[k].example, "");
-								}
+								
+								    // Handle both workflow variables and regular actions
+									if (actionlist[k].type === "workflow_variable") {
+										// Try to parse the value if it's a string that could be JSON
+										if (typeof actionlist[k].value === "string") {
+											try {
+												const parsedValue = JSON.parse(actionlist[k].value)
+												if (typeof parsedValue === "object") {
+													parsedPaths = GetParsedPaths(parsedValue, "");
+												}
+											} catch (e) {
+												// Not valid JSON, use the value directly
+												parsedPaths = GetParsedPaths(actionlist[k].value, "");
+											}
+										} else if (typeof actionlist[k].value === "object") {
+											parsedPaths = GetParsedPaths(actionlist[k].value, "");
+										}
+									} else if (typeof actionlist[k].example === "object") {
+										parsedPaths = GetParsedPaths(actionlist[k].example, "");
+								}				
 
 								for (var key in parsedPaths) {
 									const fullpath = "$" + actionlist[k].autocomplete.toLowerCase() + parsedPaths[key].autocomplete.toLowerCase()
@@ -766,7 +985,22 @@ const CodeEditor = (props) => {
 
 									var new_input = ""
 									try {
-										new_input = FindJsonPath(fullpath, actionlist[k].example)
+										const sourceData = actionlist[k].type === "workflow_variable" ? 
+										(() => {
+											// Try to parse the value if it's a JSON string
+											if (typeof actionlist[k].value === "string") {
+												try {
+													return JSON.parse(actionlist[k].value);
+												} catch (e) {
+													// If parsing fails, return the original string value
+													return actionlist[k].value;
+												}
+											}
+											return actionlist[k].value;
+										})() : 
+										actionlist[k].example;
+	
+										new_input = FindJsonPath(fullpath, sourceData)	
 									} catch (e) {
 										console.log("ERR IN INPUT: ", e)
 									}
@@ -780,7 +1014,6 @@ const CodeEditor = (props) => {
 
 											// Replace quotes with nothing
 										} else {
-											console.log("NO TYPE? ", typeof new_input)
 											try {
 												new_input = new_input.toString()
 											} catch (e) {
@@ -789,8 +1022,9 @@ const CodeEditor = (props) => {
 										}
 									}
 
-									input = input.replace(fixedVariable, new_input, -1)
-									input = input.replace(found[i], new_input, -1)
+									// Replace both the fixed and original variable to handle both #0 and # cases
+									input = input.replace(found[i], new_input)
+									input = input.replace(fixedVariable, new_input)
 
 									shouldbreak = true
 									break
@@ -859,12 +1093,14 @@ const CodeEditor = (props) => {
 				var currentLineData = codedatasplit[currentLine]
 
 				// Remove newlines from item.value
+				/*
 				if (item.value.includes("% python %")) {
 					item.value = item.value.replaceAll("\n", ";")
 					item.value = item.value.replaceAll("python %};", "python %}")
 				} else {
 					item.value = item.value.replaceAll("\n", "")
 				}
+				*/
 
 				currentLineData = currentLineData.slice(0, currentCharacter) + item.value + currentLineData.slice(currentCharacter)
 				codedatasplit[currentLine] = currentLineData
@@ -876,8 +1112,12 @@ const CodeEditor = (props) => {
 		}
 
 		if (edited === false) {
-			if (!item.value.includes("{%") && !item.value.includes("{{")) {
-				setlocalcodedata(localcodedata + " | " + item.value + " }}")
+			if (item.value.includes("{%") || item.value.includes("{{")) {
+				if (!item.value.includes("}}") && !item.value.includes("%}")) {
+					setlocalcodedata(localcodedata + " | " + item.value + " }}")
+				} else {
+					setlocalcodedata(localcodedata + item.value)
+				}
 			} else {
 				setlocalcodedata(localcodedata + item.value)
 			}
@@ -899,7 +1139,7 @@ const CodeEditor = (props) => {
 		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : selectedAction.name === "execute_bash" ? "execute_bash" : "repeat_back_to_me"
 		const params = actionname === "execute_python" ? [{ "name": "code", "value": inputdata }] : actionname === "execute_bash" ? [{ "name": "code", "value": inputdata }, { "name": "shuffle_input", "value": "", }] : [{ "name": "call", "value": inputdata }]
 
-		const actiondata = { "description": "Repeats the call parameter", "id": "", "name": actionname, "label": "", "node_type": "", "environment": "", "sharing": false, "private_id": "", "public_id": "", "app_id": appid, "tags": null, "authentication": [], "tested": false, "parameters": params, "execution_variable": { "description": "", "id": "", "name": "", "value": "" }, "returns": { "description": "", "example": "", "id": "", "schema": { "type": "string" } }, "authentication_id": "", "example": "", "auth_not_required": false, "source_workflow": "", "run_magic_output": false, "run_magic_input": false, "execution_delay": 0, "app_name": "Shuffle Tools", "app_version": "1.2.0", "selectedAuthentication": {} }
+		const actiondata = { "description": "Repeats the call parameter", "id": "", "name": actionname, "label": "", "node_type": "", "environment": environment?.Name, "sharing": false, "private_id": "", "public_id": "", "app_id": appid, "tags": null, "authentication": [], "tested": false, "parameters": params, "execution_variable": { "description": "", "id": "", "name": "", "value": "" }, "returns": { "description": "", "example": "", "id": "", "schema": { "type": "string" } }, "authentication_id": "", "example": "", "auth_not_required": false, "source_workflow": "", "run_magic_output": false, "run_magic_input": false, "execution_delay": 0, "app_name": "Shuffle Tools", "app_version": "1.2.0", "selectedAuthentication": {} }
 
 		setExecutionResult({
 			"valid": false,
@@ -938,9 +1178,9 @@ const CodeEditor = (props) => {
 					toast(responseJson.reason)
 					newResult = { "valid": false, "result": responseJson.reason }
 				} else if (responseJson.success === true) {
-					newResult = { "valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution." }
+					newResult = { "valid": false, "result": "Result is Empty or Couldn't finish execution (1). If using python, use print('value') to see the result" }
 				} else {
-					newResult = { "valid": false, "result": "Couldn't finish execution (2). Please fill all the required fields, and validate the execution." }
+					newResult = { "valid": false, "result": "Result is Empty or Couldn't finish execution (2). If using python, use print('value') to see the result" }
 				}
 
 				if (responseJson.errors !== undefined && responseJson.errors !== null && responseJson.errors.length > 0) {
@@ -986,18 +1226,21 @@ const CodeEditor = (props) => {
 	// Define a custom completer for the Ace Editor
 	const customCompleter = {
 		getCompletions: function(editor, session, pos, prefix, callback) {
-			console.log("CUSTOM COMPLETER: ", prefix)
-
 			callback(null, availableVariables.map((variable) => {
-				console.log("CUSTOM VAR: ", variable)
+				//console.log("CUSTOM VAR: ", variable)
 
 				return ({
 					caption: variable,
 					value: variable,
-					meta: 'custom',
+					meta: 'var',
 				})
 			}))
 		}
+	}
+
+	const editorLoad = (editor) => {
+		//console.log("EDITOR: ", editor)
+		editor.completers = [customCompleter]
 	}
 
 	if (fullScreenMode) {
@@ -1023,7 +1266,6 @@ const CodeEditor = (props) => {
 				highlightActiveLine={false}
 
 				enableBasicAutocompletion={true}
-				completers={[customCompleter]}
 
 				style={{
 					wordBreak: "break-word",
@@ -1032,7 +1274,6 @@ const CodeEditor = (props) => {
 					overflowY: "auto",
 					whiteSpace: "pre-wrap",
 					wordWrap: "break-word",
-					backgroundColor: "rgba(40,40,40,1)",
 					zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 				}}
 
@@ -1049,19 +1290,166 @@ const CodeEditor = (props) => {
 		)
 	}
 
+
+	const ValueBox = (props) => {
+		const { name, value } = props
+
+		const [dragging, setDragging] = React.useState(false)
+		const [hovering, setHovering] = React.useState(false)
+
+		if (name === undefined || name === null || name.length === 0) {
+			return null
+		}
+
+		if (value === undefined || value === null || value.length === 0) {
+			return null
+		}
+
+		return (
+			<Draggable
+			  style={{
+				  position: "absolute",
+				  zIndex: 15000,
+			  }}
+			  onDrag={(e) => {
+				  e.preventDefault()
+				  // Check if inside div.ace_content
+				  if (e.srcElement.className === "ace_content") {
+					  // Input on the correct line. Each line is: 
+					  // Show some tooltip at mouse cursor that shows "Insert Action"
+
+					  // Append the text to the DOM
+				  } else {
+					  //console.log("PAGEX: ", e.pageX, e.pageY)
+					  //console.log("OffsetX: ", e.offsetX, e.offsetY)
+					  //console.log("E: ", e)
+				  }
+
+				  if (!dragging) {
+				  	setDragging(true)
+				  }
+			  }}
+			  onStop={(e) => {
+				  if (e.srcElement.className === "ace_content") {
+					  console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
+
+					  const usedposition = e.offsetY
+					  if (usedposition  === undefined || usedposition === null) {
+						  toast.info("Error: LayerY is undefined or null. Please contact support@shuffler.io")
+						  return
+					  }
+
+					  if (usedposition  === 0) {
+						  usedposition = 1
+					  }
+
+					  const lineheight = 15
+					  const codedatasplit = localcodedata.split('\n')
+					  if (codedatasplit === undefined || codedatasplit === null || codedatasplit.length === 0) {
+						  return
+					  }
+
+					  // Int 
+					  const lineposition = parseInt(usedposition/lineheight)
+
+					  // Find the correct line
+					  if (lineposition > codedatasplit.length) {
+						  codedatasplit[codedatasplit.length-1] += value
+					  } else {
+						  codedatasplit[lineposition] += value
+					  }
+
+
+					  //e.srcElement.layerY
+					  setlocalcodedata(codedatasplit.join('\n'))
+				  }
+
+				  setDragging(false)
+			  }}
+			  dragging={dragging}
+			  position={{ 
+				  x: 0, 
+				  y: 0,
+			  }}
+			  onMouseHover={() => {
+			  	setHovering(true)
+			  }}
+			  onMouseLeave={() => {
+			  	setHovering(false)
+			  }}
+			>
+				<div 
+					style={{
+						cursor: dragging ? "grabbing" : "grab", 
+						minWidth: 100, 
+						border: "1px solid rgba(255,255,255,0.5)", 
+						borderRadius: theme.palette.borderRadius/2, 
+						marginRight: 10, 
+						padding: 5, 
+					}}
+				>
+					{value}
+				</div>
+			</Draggable>
+		)
+	}
+
+	const SourceDataOption = (option) => {
+		const { innerdata, parsedPaths, defaultExpanded } = option
+
+		const [expanded, setExpanded] = React.useState(defaultExpanded === true ? true : false)
+
+
+		return (
+			<div style={{minHeight: 40, marginTop: 10, }}>
+				<div style={{
+					cursor: "pointer", 
+					display: "flex", 
+					position: "relative", 
+				}} onClick={() => {
+					setExpanded(!expanded)
+				}}>
+					<ValueBox name={innerdata?.name} value={innerdata?.value} />
+					<Typography style={{marginTop: 5, maxWidth: 150, maxHeight: 40, overflow: "hidden", }}>
+						{innerdata?.name}
+					</Typography>
+				</div>
+				<Collapse in={expanded}>
+					HELO
+				</Collapse>
+			</div>
+		)
+	}
+
+	var sourceAction = ""
+	var targetAction = ""
+	var sourceImage = ""
+	var targetImage = ""
+
+	if (cy !== undefined && cy !== null) {
+		sourceAction = cy.getElementById(selectedEdge?.source)
+		targetAction = cy.getElementById(selectedEdge?.target)
+		sourceImage = sourceAction?.data()?.large_image
+		targetImage = targetAction?.data()?.large_image
+	}
+
 	return (
 		<Dialog
 			aria-labelledby="draggable-dialog-title"
 			// disableBackdropClick={true}
 			disableEnforceFocus={true}
-			style={{ pointerEvents: "none", zIndex: activeDialog === "codeeditor" ? 1200 : 1100 }}
+			style={{ 
+				pointerEvents: "none", 
+				zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+			}}
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
+				navigate("")
 				console.log("In closer")
 
 				if (changeActionParameterCodeMirror !== undefined) {
-					changeActionParameterCodeMirror({ target: { value: "" } }, fieldCount, localcodedata)
+					changeActionParameterCodeMirror({ target: { value: "" } }, fieldCount, localcodedata, selectedAction, setSelectedAction)
 				} else {
 					console.log("No action called changeActionParameterCodeMirror in code editor")
 				}
@@ -1082,9 +1470,8 @@ const CodeEditor = (props) => {
 					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
 					minHeight: isMobile ? "100%" : "auto",
 					maxHeight: isMobile ? "100%" : 700,
-					border: theme.palette.defaultBorder,
+					border: "3px solid rgba(255,255,255,0.3)",
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					// zoom: 0.8, 
 					backgroundColor: "black",
 				},
 			}}
@@ -1136,6 +1523,7 @@ const CodeEditor = (props) => {
 						color: "grey",
 					}}
 					onClick={() => {
+						navigate("")
 						setExpansionModalOpen(false)
 					}}
 				>
@@ -1143,7 +1531,92 @@ const CodeEditor = (props) => {
 				</IconButton>
 			</Tooltip>
 			<div style={{ display: "flex" }}>
-				<div style={{ flex: 1, }}>
+				{sourceDataOpen ? 
+					<div style={{ minWidth: 350, maxWidth: 350, marginLeft: 5, borderRight: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", marginRight: 10, }}>
+						<Typography variant="h6">
+							Source Data
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							Drag the data you want into the text editor! <b>PS: Only support users can see this test-section!</b>
+						</Typography>
+
+						{actionlist?.map((innerdata) => {
+							const icon =
+								innerdata.type === "action" ? (
+									<AppsIcon style={{ marginRight: 10 }} />
+								) : innerdata.type === "workflow_variable" ||
+									innerdata.type === "execution_variable" ? (
+									<FavoriteBorderIcon style={{ marginRight: 10 }} />
+								) : (
+									<ScheduleIcon style={{ marginRight: 10 }} />
+								);
+
+							const handleExecArgumentHover = (inside) => {
+								var exec_text_field = document.getElementById(
+									"execution_argument_input_field"
+								);
+								if (exec_text_field !== null) {
+									if (inside) {
+										exec_text_field.style.border = "2px solid #f85a3e";
+									} else {
+										exec_text_field.style.border = "";
+									}
+								}
+							};
+
+							const handleActionHover = (inside, actionId) => {
+								};
+
+							const handleMouseover = () => {
+								if (innerdata.type === "Execution Argument") {
+									handleExecArgumentHover(true);
+								} else if (innerdata.type === "action") {
+									handleActionHover(true, innerdata.id);
+								}
+							};
+
+							const handleMouseOut = () => {
+								if (innerdata.type === "Execution Argument") {
+									handleExecArgumentHover(false);
+								} else if (innerdata.type === "action") {
+									handleActionHover(false, innerdata.id);
+								}
+							};
+
+							var parsedPaths = [];
+							if (innerdata.type === "workflow_variable") {
+								// Try to parse the value if it's a string that could be JSON
+								  if (typeof innerdata.value === "string") {
+									try {
+									  const parsedValue = JSON.parse(innerdata.value)
+									  if (typeof parsedValue === "object") {
+										parsedPaths = GetParsedPaths(parsedValue, "");
+									  }
+									} catch (e) {
+									  // Not valid JSON, use the value directly
+									  parsedPaths = GetParsedPaths(innerdata.value, "");
+									}
+								  } else if (typeof innerdata.value === "object") {
+									parsedPaths = GetParsedPaths(innerdata.value, "");
+								  }
+							  } else if (typeof innerdata.example === "object") {
+								parsedPaths = GetParsedPaths(innerdata.example, "");
+							}
+
+							const coverColor = "#82ccc3"
+
+							if (innerdata?.name === "Execution Argument") {
+								innerdata.name = "Runtime Argument"
+							}
+
+							return (
+								<SourceDataOption innerdata={innerdata} parsedPaths={parsedPaths} />
+							)
+						})}
+					</div>
+				: null}
+
+				<div style={{ flex: 3, }}>
 					{isFileEditor ?
 						<div
 							style={{
@@ -1182,398 +1655,394 @@ const CodeEditor = (props) => {
 							*/}
 								{isFileEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
-										{selectedAction?.name === "execute_python" ?
-											<Typography variant="body1" style={{ marginTop: 5, }}>
-												Run Python Code
-											</Typography>
-											:
-											selectedAction.name === "execute_bash" ?
-												<Typography variant="body1" style={{ marginTop: 5, }}>
-													Run Bash Code
-												</Typography>
-												:
-												<div style={{ display: "flex", }}>
-													<Button
-														id="basic-button"
-														aria-haspopup="true"
-														aria-controls={liquidOpen ? 'basic-menu' : undefined}
-														aria-expanded={liquidOpen ? 'true' : undefined}
-														variant="outlined"
-														color="secondary"
-														style={{
-															textTransform: "none",
-															width: 100,
-														}}
-														onClick={(event) => {
-															setAnchorEl(event.currentTarget);
-														}}
-													>
-														Filters
-													</Button>
-													<Menu
-														id="basic-menu"
-														anchorEl={anchorEl}
-														open={liquidOpen}
-														onClose={() => {
-															setAnchorEl(null);
-														}}
-														MenuListProps={{
-															'aria-labelledby': 'basic-button',
-														}}
-													>
-														{liquidFilters.map((item, index) => {
-															return (
-																<MenuItem key={index} onClick={() => {
-																	handleClick(item)
-																}}>{item.name}</MenuItem>
-															)
-														})}
-													</Menu>
-													<Button
-														id="basic-button"
-														aria-haspopup="true"
-														aria-controls={mathOpen ? 'basic-menu' : undefined}
-														aria-expanded={mathOpen ? 'true' : undefined}
-														variant="outlined"
-														color="secondary"
-														style={{
-															textTransform: "none",
-															width: 100,
-														}}
-														onClick={(event) => {
-															setAnchorEl2(event.currentTarget);
-														}}
-													>
-														Math
-													</Button>
-													<Menu
-														id="basic-menu"
-														anchorEl={anchorEl2}
-														open={mathOpen}
-														onClose={() => {
-															setAnchorEl2(null);
-														}}
-														MenuListProps={{
-															'aria-labelledby': 'basic-button',
-														}}
-													>
-														{mathFilters.map((item, index) => {
-															return (
-																<MenuItem key={index} onClick={() => {
-																	handleClick(item)
-																}}>{item.name}</MenuItem>
-															)
-														})}
-													</Menu>
-													<Button
-														id="basic-button"
-														aria-haspopup="true"
-														aria-controls={pythonOpen ? 'basic-menu' : undefined}
-														aria-expanded={pythonOpen ? 'true' : undefined}
-														variant="outlined"
-														color="secondary"
-														style={{
-															textTransform: "none",
-															width: 100,
-														}}
-														onClick={(event) => {
-															setAnchorEl3(event.currentTarget);
-														}}
-													>
-														Python
-													</Button>
-													<Menu
-														id="basic-menu"
-														anchorEl={anchorEl3}
-														open={pythonOpen}
-														onClose={() => {
-															setAnchorEl3(null);
-														}}
-														MenuListProps={{
-															'aria-labelledby': 'basic-button',
-														}}
-													>
-														{pythonFilters.map((item, index) => {
-															return (
-																<MenuItem key={index} onClick={() => {
-																	handleClick(item)
-																}}>{item.name}</MenuItem>
-															)
-														})}
-													</Menu>
-												</div>
-										}
+										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
+											{userdata !== undefined && userdata !== null && userdata.support === true ? 
+												<Button
+													id="basic-button"
+													aria-haspopup="true"
+													aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+													aria-expanded={!!menuPosition ? 'true' : undefined}
+													variant={!sourceDataOpen ? "contained" : "outlined"}
+													color="secondary"
+													style={{
+														textTransform: "none",
+														width: 175,
+													}}
+													onClick={(event) => {
+														setSourceDataOpen(!sourceDataOpen)
+													}}
+												>
+													<AddIcon /> Show Source Data 
+												</Button>
+											: null}
 
-										<Button
-											id="basic-button"
-											aria-haspopup="true"
-											aria-controls={!!menuPosition ? 'basic-menu' : undefined}
-											aria-expanded={!!menuPosition ? 'true' : undefined}
-											variant="outlined"
-											color="secondary"
-											style={{
-												textTransform: "none",
-												width: 130,
-												marginLeft: 20,
-											}}
-											onClick={(event) => {
-												setMenuPosition({
-													top: event.pageY,
-													left: event.pageX,
-												})
-											}}
-										>
-											<AddIcon /> Autocomplete
-										</Button>
-										<Menu
-											anchorReference="anchorPosition"
-											anchorPosition={menuPosition}
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={liquidOpen ? 'basic-menu' : undefined}
+												aria-expanded={liquidOpen ? 'true' : undefined}
+												variant="outlined"
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 120,
+												}}
+												onClick={(event) => {
+													setAnchorEl(event.currentTarget);
+												}}
+											>
+												Liquid Filters
+											</Button>
+											<Menu
+												id="basic-menu"
+												anchorEl={anchorEl}
+												open={liquidOpen}
+												onClose={() => {
+													setAnchorEl(null);
+												}}
+												MenuListProps={{
+													'aria-labelledby': 'basic-button',
+												}}
+											>
+												{liquidFilters.map((item, index) => {
+													return (
+														<MenuItem key={index} onClick={() => {
+															handleClick(item)
+														}}>{item.name}</MenuItem>
+													)
+												})}
+											</Menu>
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={pythonOpen ? 'basic-menu' : undefined}
+												aria-expanded={pythonOpen ? 'true' : undefined}
+												variant="outlined"
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 120,
+												}}
+												onClick={(event) => {
+													setAnchorEl3(event.currentTarget);
+												}}
+											>
+												Python Code
+											</Button>
+											<Button
+												id="basic-button"
+												aria-haspopup="true"
+												aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+												aria-expanded={!!menuPosition ? 'true' : undefined}
+												variant={"outlined"}
+												color="secondary"
+												style={{
+													textTransform: "none",
+													width: 130,
+												}}
+												onClick={(event) => {
+													setMenuPosition({
+														top: event.pageY,
+														left: event.pageX,
+													})
+												}}
+											>
+												<AddIcon /> Autocomplete
+											</Button>
+											<Menu
+												id="basic-menu"
+												anchorEl={anchorEl3}
+												open={pythonOpen}
+												onClose={() => {
+													setAnchorEl3(null);
+												}}
+												MenuListProps={{
+													'aria-labelledby': 'basic-button',
+												}}
+											>
+												{pythonFilters.map((item, index) => {
+													return (
+														<MenuItem key={index} onClick={() => {
+															if (item.disabled) {
+																toast.error("This feature may not work in your environment until you update your Shuffle Tools app.", { autoClose: 10000 })
+															}
 
-											anchorOrigin={{
-												vertical: 'bottom',
-												horizontal: 'left',
-											}}
-											keepMounted
-											transformOrigin={{
-												vertical: 'top',
-												horizontal: 'left',
-											}}
-											//MenuListProps={{
-											//	style: adjustPosition(), 
-											//}}
+															if (selectedAction.name !== "execute_python") {
+																var newitem = JSON.parse(JSON.stringify(item))
+																newitem.value = `{% python %}\n${item.value}\n{% endpython %}`
+																handleClick(newitem)
+															} else {
+																handleClick(item)
+															}
+														}}>{item.name}</MenuItem>
+													)
+												})}
+											</Menu>
 
-											onClose={() => {
-												handleMenuClose();
-											}}
-											open={!!menuPosition}
-											style={{
-												color: "white",
-												marginTop: 2,
-												maxHeight: 650,
-											}}
-										>
-											{actionlist?.map((innerdata) => {
-												const icon =
-													innerdata.type === "action" ? (
-														<AppsIcon style={{ marginRight: 10 }} />
-													) : innerdata.type === "workflow_variable" ||
-														innerdata.type === "execution_variable" ? (
-														<FavoriteBorderIcon style={{ marginRight: 10 }} />
-													) : (
-														<ScheduleIcon style={{ marginRight: 10 }} />
-													);
 
-												const handleExecArgumentHover = (inside) => {
-													var exec_text_field = document.getElementById(
-														"execution_argument_input_field"
-													);
-													if (exec_text_field !== null) {
-														if (inside) {
-															exec_text_field.style.border = "2px solid #f85a3e";
-														} else {
-															exec_text_field.style.border = "";
+											<Menu
+												anchorReference="anchorPosition"
+												anchorPosition={menuPosition}
+
+												anchorOrigin={{
+													vertical: 'bottom',
+													horizontal: 'left',
+												}}
+												keepMounted
+												transformOrigin={{
+													vertical: 'top',
+													horizontal: 'left',
+												}}
+												//MenuListProps={{
+												//	style: adjustPosition(), 
+												//}}
+
+												onClose={() => {
+													handleMenuClose();
+												}}
+												open={!!menuPosition}
+												style={{
+													color: "white",
+													marginTop: 2,
+													maxHeight: 650,
+												}}
+											>
+												{actionlist?.map((innerdata) => {
+													const icon =
+														innerdata.type === "action" ? (
+															<AppsIcon style={{ marginRight: 10 }} />
+														) : innerdata.type === "workflow_variable" ||
+															innerdata.type === "execution_variable" ? (
+															<FavoriteBorderIcon style={{ marginRight: 10 }} />
+														) : 
+															innerdata.type === "Shuffle DB" ? 
+															<StorageIcon style={{ marginRight: 10,  }} />
+														:
+															<ScheduleIcon style={{ marginRight: 10 }} />
+
+													const handleExecArgumentHover = (inside) => {
+														var exec_text_field = document.getElementById(
+															"execution_argument_input_field"
+														);
+														if (exec_text_field !== null) {
+															if (inside) {
+																exec_text_field.style.border = "2px solid #f85a3e";
+															} else {
+																exec_text_field.style.border = "";
+															}
 														}
-													}
-												};
+													};
 
-												const handleActionHover = (inside, actionId) => {
-												};
+													const handleActionHover = (inside, actionId) => {
+													};
 
-												const handleMouseover = () => {
-													if (innerdata.type === "Execution Argument") {
-														handleExecArgumentHover(true);
-													} else if (innerdata.type === "action") {
-														handleActionHover(true, innerdata.id);
-													}
-												};
-
-												const handleMouseOut = () => {
-													if (innerdata.type === "Execution Argument") {
-														handleExecArgumentHover(false);
-													} else if (innerdata.type === "action") {
-														handleActionHover(false, innerdata.id);
-													}
-												};
-
-												var parsedPaths = [];
-												if (typeof innerdata.example === "object") {
-													parsedPaths = GetParsedPaths(innerdata.example, "");
-												}
-
-												const coverColor = "#82ccc3"
-												//menuPosition.left -= 50
-												//menuPosition.top -= 250 
-												//console.log("POS: ", menuPosition1)
-												var menuPosition1 = menuPosition
-												if (menuPosition1 === null) {
-													menuPosition1 = {
-														"left": 0,
-														"top": 0,
-													}
-												} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
-													menuPosition1.top = 0
-												} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
-													menuPosition1.left = 0
-												}
-
-												//console.log("POS1: ", menuPosition1)
-
-												return parsedPaths.length > 0 ? (
-													<NestedMenuItem
-														key={innerdata.name}
-														label={
-															<div style={{ display: "flex", marginLeft: 0, }}>
-																{icon} {innerdata.name}
-															</div>
+													const handleMouseover = () => {
+														if (innerdata.type === "Execution Argument") {
+															handleExecArgumentHover(true);
+														} else if (innerdata.type === "action") {
+															handleActionHover(true, innerdata.id);
 														}
-														parentMenuOpen={!!menuPosition}
-														style={{
-															color: "white",
-															minWidth: 250,
-															maxWidth: 250,
-															maxHeight: 50,
-															overflow: "hidden",
-														}}
-														onClick={() => {
-															console.log("CLICKED: ", innerdata);
-															console.log(innerdata.example)
+													};
 
-															//const handleClick = (item) => {
-															handleItemClick([innerdata]);
-														}}
-													>
-														<Paper style={{ minHeight: 550, maxHeight: 550, minWidth: 275, maxWidth: 275, position: "fixed", left: menuPosition1.left - 270, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)", }}>
-															<MenuItem
-																key={innerdata.name}
-																style={{
-																	marginLeft: 15,
-																	color: "white",
-																	minWidth: 250,
-																	maxWidth: 250,
-																	padding: 0,
-																	position: "relative",
-																}}
-																value={innerdata}
-																onMouseOver={() => {
-																	//console.log("HOVER: ", pathdata);
-																}}
-																onClick={() => {
-																	handleItemClick([innerdata]);
-																}}
-															>
-																<Typography variant="h6" style={{ paddingBottom: 5 }}>
-																	{innerdata.name}
-																</Typography>
-															</MenuItem>
-															{parsedPaths.map((pathdata, index) => {
-																// FIXME: Should be recursive in here
-																//<VpnKeyIcon style={iconStyle} />
-																const icon =
-																	pathdata.type === "value" ? (
-																		<span style={{ marginLeft: 9, }} />
-																	) : pathdata.type === "list" ? (
-																		<FormatListNumberedIcon style={{ marginLeft: 9, marginRight: 10, }} />
-																	) : (
-																		<CircleIcon style={{ marginLeft: 9, marginRight: 10, color: coverColor }} />
-																	);
-																//<ExpandMoreIcon style={iconStyle} />
+													const handleMouseOut = () => {
+														if (innerdata.type === "Execution Argument") {
+															handleExecArgumentHover(false);
+														} else if (innerdata.type === "action") {
+															handleActionHover(false, innerdata.id);
+														}
+													};
 
-																const indentation_count = (pathdata.name.match(/\./g) || []).length + 1
-																//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
-																const boxPadding = 0
-																const namesplit = pathdata.name.split(".")
-																const newname = namesplit[namesplit.length - 1]
-																return (
-																	<MenuItem
-																		key={pathdata.name}
-																		style={{
-																			color: "white",
-																			minWidth: 250,
-																			maxWidth: 250,
-																			padding: boxPadding,
-																		}}
-																		value={pathdata}
-																		onMouseOver={() => {
-																			//console.log("HOVER: ", pathdata);
-																		}}
-																		onClick={() => {
-																			handleItemClick([innerdata, pathdata]);
-																		}}
-																	>
-																		<Tooltip
-																			color="primary"
-																			title={`Ex. value: ${pathdata.value}`}
-																			placement="left"
-																		>
-																			<div style={{ display: "flex", height: 30, }}>
-																				{Array(indentation_count).fill().map((subdata, subindex) => {
-																					return (
-																						<div key={subindex} style={{ marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor, }} />
-																					)
-																				})}
-																				{icon} {newname}
-																				{pathdata.type === "list" ? <SquareFootIcon style={{ marginleft: 10, }} onClick={(e) => {
-																					e.preventDefault()
-																					e.stopPropagation()
+													var parsedPaths = [];
+													if (innerdata.type === "workflow_variable") {
+														// Try to parse the value if it's a string that could be JSON
+														  if (typeof innerdata.value === "string") {
+															try {
+															  const parsedValue = JSON.parse(innerdata.value)
+															  if (typeof parsedValue === "object") {
+																parsedPaths = GetParsedPaths(parsedValue, "");
+															  }
+															} catch (e) {
+															  // Not valid JSON, use the value directly
+															  parsedPaths = GetParsedPaths(innerdata.value, "");
+															}
+														  } else if (typeof innerdata.value === "object") {
+															parsedPaths = GetParsedPaths(innerdata.value, "");
+														  }
+													  } else if (typeof innerdata.example === "object") {
+														parsedPaths = GetParsedPaths(innerdata.example, "");
+													}
 
-																					console.log("INNER: ", innerdata, pathdata)
+													const coverColor = "#82ccc3"
+													//menuPosition.left -= 50
+													//menuPosition.top -= 250 
+													//console.log("POS: ", menuPosition1)
+													var menuPosition1 = menuPosition
+													if (menuPosition1 === null) {
+														menuPosition1 = {
+															"left": 0,
+															"top": 0,
+														}
+													} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
+														menuPosition1.top = 0
+													} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
+														menuPosition1.left = 0
+													}
 
-																					// Removing .list from autocomplete
-																					var newname = pathdata.name
-																					if (newname.length > 5) {
-																						newname = newname.slice(0, newname.length - 5)
-																					}
+													return parsedPaths.length > 0 ? (
+														<NestedMenuItem
+															key={innerdata.name}
+															label={
+																<div style={{ display: "flex", marginLeft: 0, }}>
+																	{icon} {innerdata.name}
+																</div>
+															}
+															parentMenuOpen={!!menuPosition}
+															style={{
+																color: "white",
+																minWidth: 250,
+																maxWidth: 250,
+																maxHeight: 50,
+																overflow: "hidden",
+															}}
+															onClick={() => {
+																//console.log(innerdata.example)
 
-																					//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
-																					//selectedAction.parameters[count].value = selectedActionParameters[count].value;
-																					//setSelectedAction(selectedAction);
-																					//setShowDropdown(false);
-																					setMenuPosition(null);
-
-																					// innerdata.name
-																					// pathdata.name
-																					//handleItemClick([innerdata, newpathdata])
-																					//console.log("CLICK LENGTH!")
-																				}} /> : null}
-																			</div>
-																		</Tooltip>
-																	</MenuItem>
-																);
-															})}
-														</Paper>
-													</NestedMenuItem>
-												) : (
-													<MenuItem
-														key={innerdata.name}
-														style={{
-															backgroundColor: theme.palette.inputColor,
-															color: "white",
-															minWidth: 250,
-															maxWidth: 250,
-															marginRight: 0,
-														}}
-														value={innerdata}
-														onMouseOver={() => handleMouseover()}
-														onMouseOut={() => {
-															handleMouseOut();
-														}}
-														onClick={() => {
-															handleItemClick([innerdata]);
-														}}
-													>
-														<Tooltip
-															color="primary"
-															title={`Value: ${innerdata.value}`}
-															placement="left"
+																//const handleClick = (item) => {
+																handleItemClick([innerdata]);
+															}}
 														>
-															<div style={{ display: "flex" }}>
-																{icon} {innerdata.name}
-															</div>
-														</Tooltip>
-													</MenuItem>
-												);
-											})}
-										</Menu>
+															<Paper style={{ minHeight: 550, maxHeight: 550, minWidth: 275, maxWidth: 275, position: "fixed", left: menuPosition1.left - 270, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)", }}>
+																<MenuItem
+																	key={innerdata.name}
+																	style={{
+																		marginLeft: 15,
+																		color: "white",
+																		minWidth: 250,
+																		maxWidth: 250,
+																		padding: 0,
+																		position: "relative",
+																	}}
+																	value={innerdata}
+																	onMouseOver={() => {
+																		//console.log("HOVER: ", pathdata);
+																	}}
+																	onClick={() => {
+																		handleItemClick([innerdata]);
+																	}}
+																>
+																	<Typography variant="h6" style={{ paddingBottom: 5 }}>
+																		{innerdata.name}
+																	</Typography>
+																</MenuItem>
+																{parsedPaths.map((pathdata, index) => {
+																	// FIXME: Should be recursive in here
+																	//<VpnKeyIcon style={iconStyle} />
+																	const icon =
+																		pathdata.type === "value" ? (
+																			<span style={{ marginLeft: 9, }} />
+																		) : pathdata.type === "list" ? (
+																			<FormatListNumberedIcon style={{ marginLeft: 9, marginRight: 10, }} />
+																		) : (
+																			<CircleIcon style={{ marginLeft: 9, marginRight: 10, color: coverColor }} />
+																		);
+																	//<ExpandMoreIcon style={iconStyle} />
+
+																	const indentation_count = (pathdata.name.match(/\./g) || []).length + 1
+																	//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+																	const boxPadding = 0
+																	const namesplit = pathdata.name.split(".")
+																	const newname = namesplit[namesplit.length - 1]
+																	return (
+																		<MenuItem
+																			key={pathdata.name}
+																			style={{
+																				color: "white",
+																				minWidth: 250,
+																				maxWidth: 250,
+																				padding: boxPadding,
+																			}}
+																			value={pathdata}
+																			onMouseOver={() => {
+																				//console.log("HOVER: ", pathdata);
+																			}}
+																			onClick={() => {
+																				handleItemClick([innerdata, pathdata]);
+																			}}
+																		>
+																			<Tooltip
+																				color="primary"
+																				title={`Ex. value: ${pathdata.value}`}
+																				placement="left"
+																			>
+																				<div style={{ display: "flex", height: 30, }}>
+																					{Array(indentation_count).fill().map((subdata, subindex) => {
+																						return (
+																							<div key={subindex} style={{ marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor, }} />
+																						)
+																					})}
+																					{icon} {newname}
+																					{pathdata.type === "list" ? <SquareFootIcon style={{ marginleft: 10, }} onClick={(e) => {
+																						e.preventDefault()
+																						e.stopPropagation()
+
+																						console.log("INNER: ", innerdata, pathdata)
+
+																						// Removing .list from autocomplete
+																						var newname = pathdata.name
+																						if (newname.length > 5) {
+																							newname = newname.slice(0, newname.length - 5)
+																						}
+
+																						//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+																						//selectedAction.parameters[count].value = selectedActionParameters[count].value;
+																						//setSelectedAction(selectedAction);
+																						//setShowDropdown(false);
+																						setMenuPosition(null);
+
+																						// innerdata.name
+																						// pathdata.name
+																						//handleItemClick([innerdata, newpathdata])
+																					}} /> : null}
+																				</div>
+																			</Tooltip>
+																		</MenuItem>
+																	);
+																})}
+															</Paper>
+														</NestedMenuItem>
+													) : (
+														<MenuItem
+															key={innerdata.name}
+															style={{
+																backgroundColor: theme.palette.inputColor,
+																color: "white",
+																minWidth: 250,
+																maxWidth: 250,
+																marginRight: 0,
+															}}
+															value={innerdata}
+															onMouseOver={() => handleMouseover()}
+															onMouseOut={() => {
+																handleMouseOut();
+															}}
+															onClick={() => {
+																handleItemClick([innerdata]);
+															}}
+														>
+															<Tooltip
+																color="primary"
+																title={`Value: ${innerdata.value}`}
+																placement="left"
+															>
+																<div style={{ display: "flex" }}>
+																	{icon} {innerdata.name}
+																</div>
+															</Tooltip>
+														</MenuItem>
+													);
+												})}
+											</Menu>
+										</ButtonGroup>
 									</div>
 								}
 
@@ -1585,7 +2054,13 @@ const CodeEditor = (props) => {
 									}}
 									disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
 									onClick={() => {
-										setlocalcodedata(editorData.example)
+										if (fixExample !== undefined) {
+											const newExample = fixExample(editorData.example)
+											setlocalcodedata(newExample)
+										} else {
+											console.log("No fix example available!")
+											setlocalcodedata(editorData.example)
+										}
 									}}
 									color="secondary"
 								>
@@ -1627,13 +2102,19 @@ const CodeEditor = (props) => {
 						</div>
 					}
 
-					<div style={{
-						borderRadius: theme.palette?.borderRadius,
-						position: "relative",
-						paddingTop: 0,
-						// minHeight: 548,
-						// overflow: "hidden",
-					}}>
+					<div 
+						style={{
+							borderRadius: theme.palette?.borderRadius,
+							position: "relative",
+							paddingTop: 0,
+						}}
+						onDragOver={(e) => {
+							console.log("DRAGGING OVER: ", e)
+						}}
+						onDrop={(e) => {
+							console.log("DROP: ", e)
+						}}
+					>	
 						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
 							<AceEditor
 								id="shuffle-codeeditor"
@@ -1659,9 +2140,12 @@ const CodeEditor = (props) => {
 									wordWrap: "break-word",
 									backgroundColor: "rgba(40,40,40,1)",
 									zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+
+									
 								}}
 								onLoad={(editor) => {
 									highlight_variables(localcodedata)
+									editorLoad(editor)
 								}}
 								onCursorChange={(cursorPosition, editor, value) => {
 									setCurrentCharacter(cursorPosition.cursor.column)
@@ -1700,8 +2184,15 @@ const CodeEditor = (props) => {
 					</div>
 				</div>
 
-				{isFileEditor ? null :
-					<div style={{ flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", }}>
+				{isFileEditor  ? null :
+					<div style={{ 
+						flex: sourceDataOpen ? 1.5 : 3, 
+						marginLeft: 5, 
+						borderLeft: "1px solid rgba(255,255,255,0.3)", 
+						paddingLeft: 5, 
+						overflow: "hidden", 
+						transitions: "all 1s ease-in-out",
+					}}>
 						<div>
 							{isMobile ? null :
 								<DialogTitle
@@ -1713,10 +2204,64 @@ const CodeEditor = (props) => {
 									}}
 								>
 									<div>
-										<span style={{ color: "white" }}>
+											{actionId === null && triggerId === null ? 
+												<div style={{display: "flex", alignItems: "center"}}>
+													{`Condition ${selectedEdge?.conditions?.findIndex(cond => cond.condition.id === conditionId) + 1 || "0"}`}
+													{/* Source node image */}
+													{selectedEdge?.source ? 
+														<img 
+															src={sourceImage || ""}
+															alt="Source"
+															style={{
+																width: 30,
+																height: 30,
+																marginRight: 10,
+																borderRadius: "50%",
+																marginLeft: 10,
+																border: conditionField === "source" ? `3px solid #FF8544` : null,
+															}}
+														/>
+														: null
+													}
 
-											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Expected Output for '${selectedAction.name}'`}
-										</span>
+													  {/* Add arrow icon */}
+													{
+														selectedEdge && Object.keys(selectedEdge).length > 0 ?
+														<ArrowForwardIcon style={{ 
+															color: "rgba(255,255,255,0.7)",
+															fontSize: 18,
+															marginLeft: -5,
+															marginRight: -5,
+														}} />
+														: null
+													}
+
+													{/* Destination node image */}
+													{selectedEdge?.target ?
+														<img
+															src={targetImage || ""}
+															alt="Destination" 
+															style={{
+																width: 30,
+																height: 30,
+																marginLeft: 10,
+																borderRadius: "50%",
+																border: conditionField === "destination" ? `3px solid #FF8544` : null,
+															}}
+														/>
+														: null
+													}
+												</div>
+												: 
+												<span style={{ color: "white" }}>
+												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
+													"Code to run" : 
+													triggerId ? 
+														`Output: ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)} (${triggerField})` :
+														`Output: ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)} (${fieldName})`
+												}
+											</span>
+										}
 									</div>
 
 								</DialogTitle>
@@ -1729,12 +2274,28 @@ const CodeEditor = (props) => {
 										disabled={executing}
 										color="primary"
 										style={{
-											border: `1px solid ${theme.palette.primary.main}`,
+											border: `1px solid rgba(255, 255, 255, 0.15)`,
 											position: "absolute",
-											top: 24,
+											top: 20,
 											right: 100,
 											maxHeight: 35,
 											minWidth: 70,
+											zIndex: 1200,
+											fontWeight: 500,
+											fontSize: 14,
+											backgroundColor: "rgba(33, 33, 33, 0.95)",
+											backdropFilter: "blur(8px)",
+											boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
+											transition: "all 0.2s ease",
+											borderRadius: "4px",
+											"&:hover": {
+												backgroundColor: "rgba(45, 45, 45, 0.95)",
+												transform: "translateY(-1px)",
+												boxShadow: "0 7px 14px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08)",
+											},
+											"&:active": {
+												transform: "translateY(1px)",
+											}
 										}}
 										onClick={() => {
 											executeSingleAction(expOutput)
@@ -1743,7 +2304,7 @@ const CodeEditor = (props) => {
 										{executing ?
 											<CircularProgress style={{ height: 18, width: 18, }} />
 											:
-											<span>{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} /> </span>
+											<span>{selectedAction === undefined ? "Try it" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} /> </span>
 										}
 									</Button>
 								</Tooltip>
@@ -1879,6 +2440,10 @@ const CodeEditor = (props) => {
 					variant="outlined"
 					color="secondary"
 					onClick={() => {
+						if (isFileEditor !== true) {
+							navigate("")
+						}
+
 						setExpansionModalOpen(false);
 					}}
 				>
@@ -1894,6 +2459,17 @@ const CodeEditor = (props) => {
 						marginTop: 5,
 					}}
 					onClick={(event) => {
+						/*
+						const clickedFieldId = "rightside_field_" + fieldCount 
+						const clickedField = document.getElementById(clickedFieldId)
+						if (clickedField !== undefined && clickedField !== null) {
+							clickedField.focus()
+						}
+						*/
+
+						if (isFileEditor !== true) {
+							navigate("")
+						}
 						// Take localcodedata through the Shuffle JSON parser just in case
 						// This is to make it so we don't need to handle these fixes on the
 						// backend by itself
@@ -1908,20 +2484,23 @@ const CodeEditor = (props) => {
 						if (isFileEditor === true) {
 							runUpdateText(fixedcodedata);
 							setcodedata(fixedcodedata);
-							setExpansionModalOpen(false)
 						} else if (changeActionParameterCodeMirror !== undefined) {
 							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
-							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
-							setExpansionModalOpen(false)
+							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist, parameterName, selectedAction, setSelectedAction)
 							setcodedata(fixedcodedata)
 						}
 
-						// Check if fieldname is set, and try to find and inject the text
-						if (fieldname !== undefined && fieldname !== null && fieldname.length > 0) {
-							const foundfield = document.getElementById(fieldname)
-							if (foundfield !== undefined && foundfield !== null) {
-								foundfield.value = fixedcodedata
-							}
+						// Handle condition fields
+						if (conditionField !== null && handleConditionFieldChange !== undefined) {
+							handleConditionFieldChange(conditionField, fieldName, fixedcodedata);
+						}
+						// Handle action fields
+						else if (actionId !== undefined && actionId !== null && actionId.length > 0) {
+							handleActionParamChange(actionId, fieldName, fixedcodedata)
+						}
+						// Handle trigger fields
+						else if (triggerId !== undefined && triggerId !== null && triggerId.length > 0) {
+							handleSubflowParamChange(triggerId, triggerField, fixedcodedata)
 						}
 
 						setExpansionModalOpen(false)

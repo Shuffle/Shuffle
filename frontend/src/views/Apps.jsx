@@ -176,16 +176,18 @@ export const GetParsedPaths = (inputdata, basekey) => {
   }
 
   if (typeof inputdata !== "object") {
-    return parsedValues;
+    return parsedValues
   }
 
-  for (const [key, value] of Object.entries(inputdata)) {
+  for (var [key, value] of Object.entries(inputdata)) {
+	key = key.replaceAll(" ", "_")
+
     // Check if loop or JSON
     const extra = basekey.length > 0 ? splitkey : "";
     const basekeyname = `${basekey
       .slice(1, basekey.length)
       .split(".")
-      .join(splitkey)}${extra}${key}`;
+      .join(splitkey)}${extra}${key}`
 
     // Handle direct loop!
     if (!isNaN(key) && basekey === "") {
@@ -205,7 +207,8 @@ export const GetParsedPaths = (inputdata, basekey) => {
         type: "list",
         name: `${splitkey}list`,
         autocomplete: `${basekey.replaceAll(" ", "_")}.#`,
-      });
+      })
+
       const returnValues = GetParsedPaths(value, `${basekey}.#`);
       for (var subkey in returnValues) {
         parsedValues.push(returnValues[subkey]);
@@ -1258,7 +1261,6 @@ const Apps = (props) => {
                 style={{
                   width: 150,
                   backgroundColor: theme.palette.surfaceColor,
-                  backgroundColor: inputColor,
                   color: "white",
                   height: 35,
                   marginleft: 10,
