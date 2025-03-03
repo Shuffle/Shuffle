@@ -1074,7 +1074,6 @@ const AngularWorkflow = (defaultprops) => {
     // Special multi-workflow edgecase handler for events
     if (distributedFromParent === "" && suborgWorkflows === []) {
     } else {
-      console.log("here");
       if (cy !== undefined && cy !== null) {
         cy.removeListener("select");
         cy.removeListener("unselect");
