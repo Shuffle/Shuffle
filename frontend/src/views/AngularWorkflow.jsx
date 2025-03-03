@@ -1288,56 +1288,6 @@ const AngularWorkflow = (defaultprops) => {
 		return
 	}
 	
-	//console.log("Failed in trigger selection: ", selectedTriggerIndex, "Trigger: ", selectedTrigger)
-
-	var found = null
-	try {
-		for (var key in workflows) {
-			const curworkflow = workflows[key]
-			const curtrigger = curworkflow?.triggers[selectedTriggerIndex]
-			if (curtrigger === undefined || curtrigger === null) {
-				console.log("Failed in trigger selection (1): ", curworkflow)
-				continue
-			}
-
-			if (curtrigger?.parameters === undefined || curtrigger?.parameters === null || curtrigger?.parameters.length === 0) {
-				console.log("Failed in trigger selection (2): ", curworkflow)
-				continue
-			}
-
-			if (curtrigger?.parameters[0] === undefined || curtrigger?.parameters[0] === null || curtrigger?.parameters[0].value === undefined || curtrigger?.parameters[0].value === null) {
-				console.log("Failed in trigger selection (3): ", curworkflow)
-				continue
-			}
-
-			if (curtrigger?.parameters[0].value === selectedTrigger?.parameters[0]?.value) {
-				found = curworkflow
-				setSubworkflow(curworkflow)
-			}
-		}
-
-		if (found !== null) {
-    		setSubworkflow(found)
-		}
-	} catch (e) {
-		console.log("Failed in trigger selection (4): ", e)
-		//return
-	}
-
-    if (found) {
-      const startNode = found.actions?.find((action) => action.id === workflow?.triggers[selectedTriggerIndex]?.parameters[3]?.value)
-      setSubworkflowStartnode(startNode)
-    }
-
-	/*
-	// Multi-tenant sometimes gives us shit :(
-	if (selectedTrigger === undefined || selectedTrigger === null || selectedTrigger.id === undefined || selectedTrigger.id === null && selectedTriggerIndex >= 0) {
-		if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > selectedTriggerIndex) {
-			setSelectedTrigger(workflow.triggers[selectedTriggerIndex])
-		}
-	}
-	*/
-
 	// Check if the running state is correct or not according to allTriggers
 	if (allTriggers !== undefined && allTriggers !== null) { 
 		// Find the active trigger
@@ -1592,10 +1542,10 @@ const AngularWorkflow = (defaultprops) => {
                   if (Object.getOwnPropertyNames(baseSubflow).length > 0) {
                     const foundAction = baseSubflow.actions.find(action => action?.id === param.value)
                     if (foundAction !== null && foundAction !== undefined) {
-                      setSubworkflowStartnode(foundAction);
+                      setSubworkflowStartnode(foundAction)
                     }
                   } else {
-                    setSubworkflowStartnode(param.value);
+                    setSubworkflowStartnode(param.value)
                   }
                 }
               }
@@ -3951,7 +3901,7 @@ const AngularWorkflow = (defaultprops) => {
           apps.push(responseJson.actions[index]);
         }
 
-        console.log("Setting used subflow apps: ", apps)
+        //console.log("Setting used subflow apps: ", apps)
         setUsedSubflowApps(apps);
 
         return apps
@@ -15102,6 +15052,7 @@ const AngularWorkflow = (defaultprops) => {
                   <b>Select the Startnode</b>
                 </div>
               </div>
+
               <Autocomplete
                 id="subflow_node_search"
                 autoHighlight
