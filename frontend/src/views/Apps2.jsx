@@ -510,7 +510,6 @@ const Hits = ({
                             fontFamily: theme?.typography?.fontFamily
                           }}
                             onClick={() => {
-                              console.log("App modal", data)
                               handleAppClick(data);
                             }}
                           >
@@ -1298,6 +1297,8 @@ const Apps2 = (props) => {
     } catch (e) {
       //console.log("Failed to get apps from localstorage: ", e)
     }
+
+    setIsLoading(true);
 
     fetch(globalUrl + "/api/v1/apps", {
       method: "GET",
