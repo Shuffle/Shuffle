@@ -62,6 +62,7 @@ import Drift from "react-driftjs";
 import { AppContext } from './context/ContextApi.jsx';
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
+import Navbar from "./views/Navbar.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -213,7 +214,20 @@ const App = (message, props) => {
 		
 					{ window?.location?.pathname === "/"  || window?.location?.pathname === "/training" || !(isLoggedIn && isLoaded) ? (
 						<div style={{ minHeight: 68, maxHeight: 68 }}>
-						<Header
+						{/* <Header
+						notifications={notifications}
+						setNotifications={setNotifications}
+						userdata={userdata}
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						globalUrl={globalUrl}
+						setIsLoggedIn={setIsLoggedIn}
+						isLoggedIn={isLoggedIn}
+						curpath={curpath}
+						{...props}
+						/> */}
+						<Navbar
 						notifications={notifications}
 						setNotifications={setNotifications}
 						userdata={userdata}
