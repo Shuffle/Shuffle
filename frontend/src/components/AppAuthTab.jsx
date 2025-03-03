@@ -874,15 +874,18 @@ const AppAuthTab = memo((props) => {
                       </a>
                    </div>
                 </div>
-                <Button
-                    style={{ color: '#1a1a1a', textTransform: 'none', backgroundColor: "#FF8444", marginLeft:"auto", borderRadius: 4,fontSize: 16, minWidth: 162, height: 40, boxShadow:'none', }}
-                    variant="contained"
-                    color="primary"
-					disabled={!isCloud}
-                    onClick={() => setShowAppModal(true)}
-                >
-                    Add App Auth
-                </Button>
+
+				{isCloud ? 
+					<Button
+						style={{ color: '#1a1a1a', textTransform: 'none', backgroundColor: "#FF8444", marginLeft:"auto", borderRadius: 4,fontSize: 16, minWidth: 162, height: 40, boxShadow:'none', }}
+						variant="contained"
+						color="primary"
+						disabled={!isCloud}
+						onClick={() => setShowAppModal(true)}
+					>
+						Add App Auth
+					</Button>
+				: null}
             </div>
             {/* <Divider
                 style={{
@@ -1217,6 +1220,8 @@ const AppAuthTab = memo((props) => {
             {editAuthenticationModal}
             {authenticationView}
             <div style={{marginTop: 50, }}>
+
+		{/*
         <div style={{ marginTop: 150, marginBottom: 20 }}>
           <h2 style={{ color: "#FFFFFF" }}>App Authentication Groups</h2>
           <span style={{ marginLeft: 0 }}>
@@ -1415,13 +1420,14 @@ const AppAuthTab = memo((props) => {
               );
             }
           )}
-          </List>
-          </div>
-        
-        </div>
-      </div> 
-            </div>
-        </div>
+          		</List>
+			  </div>
+			
+			</div>
+			*/}
+		  </div> 
+		</div>
+	  </div>
     );
 });
 

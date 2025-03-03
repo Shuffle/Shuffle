@@ -590,7 +590,7 @@ const Hits = ({
                                 <div style={{
                                   flex: 1
                                 }}>
-                                  {hoverEffect === index && isCloud ? (
+                                  {hoverEffect === index ? (
                                     <div>
                                       {data.tags && (
                                         <Tooltip
@@ -764,7 +764,7 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
     <TextField
       fullWidth
       variant="outlined"
-      placeholder="Search for apps"
+      placeholder="Search from 2500+ public apps"
       value={localQuery}
       id="shuffle_search_field"
       inputRef={inputRef}
@@ -2009,7 +2009,7 @@ const Apps2 = (props) => {
                 }}
               />
               <Tab
-                label="Discover Apps"
+                label="Discover Public Apps"
                 style={{
                   ...tabStyle,
                   marginRight: 0,
@@ -2028,7 +2028,7 @@ const Apps2 = (props) => {
                 <TextField
                   fullWidth
                   variant="outlined"
-                  placeholder="Search for apps"
+                  placeholder={currTab === 1 ? "Search your apps" : "Search org apps"}
                   disabled={!isLoggedIn}
                   value={searchQuery}
                   id="shuffle_search_field"

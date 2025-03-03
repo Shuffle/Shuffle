@@ -3295,6 +3295,8 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		api.Contributors = append(api.Contributors, user.Id)
 	}
 
+	shuffle.SetAppRevision(ctx, api)
+
 	log.Printf("[INFO] API LENGTH FOR %s: %d, ID: %s", api.Name, len(parsed.Body), newmd5)
 	// FIXME: Might cause versioning issues if we re-use the same!!
 	// FIXME: Need a way to track different versions of the same app properly.
@@ -3365,10 +3367,26 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
+
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
+	}
+
+	org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org during image build (%s): %s", user.ActiveOrg.Id, err)
+	} else {
+		imagenames := []string{
+			fmt.Sprintf("%s_%s", api.Name, api.AppVersion),
+			fmt.Sprintf("%s_%s", api.Name, api.ID),
+		}
+
+		err = shuffle.DistributeAppToEnvironments(ctx, *org, imagenames)
+		if err != nil {
+			log.Printf("[ERROR] Failed distributing app to environments: %s", err)
+		}
 	}
 }
 
@@ -4359,8 +4377,8 @@ func runInitEs(ctx context.Context) {
 	}
 
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 30
-		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
+		healthcheckInterval := 60 
+		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats, and dashboard on /health. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter
 			resp := httptest.NewRecorder()

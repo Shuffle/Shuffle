@@ -11446,7 +11446,7 @@ const AngularWorkflow = (defaultprops) => {
       var type = "app"
       const baseImage = <LibraryBooksIcon />
       return (
-        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
+        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize+30, maxWidth: 340, boxShadows: "none", overflowX: "hidden", }}>
           <List style={{ backgroundColor: theme.palette.inputColor, }}>
             {hits.length === 0 ?
               <ListItem style={outerlistitemStyle}>
@@ -11736,7 +11736,7 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 >
                   <Typography variant="body1" color="textSecondary">
-                    Click one of the relevant public apps below to Activate it for your organization.
+                    Click one of the public apps below to Activate it for your organization.
                   </Typography>
                   <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
                     console.log("CLICKED")

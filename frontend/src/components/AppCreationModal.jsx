@@ -59,6 +59,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     : "1px solid rgba(255,255,255,0.3)",
             borderImage: makeFancy ? "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1" : "none",
             transition: 'all 0.2s ease-in-out',
+			paddingBottom: isCloud ? 0 : 175, 
         }
 
         return (
@@ -416,7 +417,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 3 }}>
-                    <div style={{ display: "flex", gap: '16px' }}>
+                    <div style={{ display: "flex", gap: 16, }}>
                         <AppCreateButton
                             text="Upload OpenAPI or Swagger"
                             func={() => {

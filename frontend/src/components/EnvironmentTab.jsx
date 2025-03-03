@@ -1420,7 +1420,7 @@ const EnvironmentTab = memo((props) => {
           <Collapse in={listItemExpanded === index} timeout="auto" unmountOnExit>
           	<Grid container justifyContent="center" style={{minWidth: 850, maxWidth: 850, }}>
     			<Grid item xs={12} sm={8} md={6}>
-                    <div style={{minWidth: 700, maxWidth: 700, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
+                    <div style={{minWidth: 750, maxWidth: 750, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
                             Self-Hosted Orborus instance

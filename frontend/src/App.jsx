@@ -34,9 +34,10 @@ import RunWorkflow from "./views/RunWorkflow.jsx";
 import Admin2 from "./views/Admin2.jsx";
 
 import LoginPage from "./views/LoginPage.jsx";
+//import LoginPage from "./views/LoginPage.jsx";
+
 import SettingsPage from "./views/SettingsPage.jsx";
 import KeepAlive from "./views/KeepAlive.jsx";
-
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -236,6 +237,7 @@ const App = (message, props) => {
         <div style={{ height: 60 }} />
 				*/}
 				<Routes>
+
         	<Route
         	  exact
         	  path="/login"
@@ -243,7 +245,8 @@ const App = (message, props) => {
         	    <LoginPage
         	      isLoggedIn={isLoggedIn}
         	      setIsLoggedIn={setIsLoggedIn}
-        	      register={true}
+        	      register={false}
+        	      inregister={false}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
@@ -253,6 +256,25 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
+        	<Route
+        	  exact
+        	  path="/register"
+        	  element={
+        	    <LoginPage
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      inregister={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
         	<Route
         	  exact
         	  path="/admin2"
