@@ -58,9 +58,9 @@ const LoginDialog = (props) => {
 
   // Used to swap from login to register. True = login, false = register
 
-	useEffect(() => {
-		checkAdmin() 
-	}, [loginViewLoading])
+  useEffect(() => {
+  	checkAdmin() 
+  }, [loginViewLoading])
 
   // Error messages etc
   const [loginInfo, setLoginInfo] = useState("");
@@ -91,6 +91,8 @@ const LoginDialog = (props) => {
             if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {
               setSSOUrl(responseJson.sso_url);
             }
+			  
+			navigate("/login")
 
             if (loginViewLoading) {
               setLoginViewLoading(false);
@@ -125,7 +127,7 @@ const LoginDialog = (props) => {
     callback: () => {
       checkAdmin();
     },
-  });
+  })
 
   if (firstRequest) {
     setFirstRequest(false);
@@ -294,7 +296,7 @@ const LoginDialog = (props) => {
               style={{ marginBottom: 20, color: "white" }}
             >
               Waiting for the Shuffle database to become available. This may
-              take up to a minute.
+              take up to two minutes.
             </Typography>
 
             {loginInfo === undefined ||
