@@ -48,7 +48,7 @@ const menuData = {
       description:
         "The most versatile automation engine with focus on security.",
       icon: "images/logos/orange_logo.svg",
-      path: "/docs",
+      path: "/docs/about",
       gaData: {
         category: "navbar",
         action: "products_click",
@@ -150,7 +150,7 @@ const menuData = {
             title: "Documentation",
             icon: "/images/icons/docs.svg",
             hoverIcon: "/images/icons/docs_hover.svg",
-            link: "/docs",
+            link: "/docs/about",
             gaData: {
               category: "navbar",
               action: "resources_click",
@@ -1516,7 +1516,7 @@ const Navbar = (props) => {
         <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
           <Typography style={{ paddingTop: 7, fontSize:16, margin: "auto", textAlign: "center", color: "white", }}>
             {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
-            Shuffle 2.0.0 is out now! 
+            Shuffle 2.0.0 is out now!&nbsp;
             <u>
               <span onClick={() => {
                 ReactGA.event({
@@ -1528,7 +1528,7 @@ const Navbar = (props) => {
                 navigate("/articles/2.0_release")
 
               }} style={{ cursor: "pointer", textDecoration: "none", fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
-				&nbsp;Read about it here.
+				Read about it here.
              </span>
             </u>
           </Typography>
@@ -1701,6 +1701,7 @@ const Navbar = (props) => {
     <AppBar
       position="fixed"
       sx={{
+		transition: serverside === true ? "none": undefined,
         backgroundColor: "transparent",
         boxShadow: "none",
         backgroundImage: "none",
@@ -2137,6 +2138,7 @@ const Navbar = (props) => {
                         </IconButton>
 
                         <Menu
+						  disabledPortal={serverside === true ? true : false}
                           anchorEl={anchorElUser}
                           open={Boolean(anchorElUser)}
                           onClose={handleCloseUserMenu}

@@ -1758,9 +1758,17 @@ const Workflows2 = (props) => {
         let exportFileDefaultName = data.name + ".json";
 
         data["owner"] = "";
+        data["updated_by"] = "";
         data["org"] = [];
         data["org_id"] = "";
         data["execution_org"] = {};
+        data["created"] = 0
+        data["due_date"] = 0
+        data["edited"] = 0
+
+        data["validation"] = {};
+        data["suborg_distribution"] = []
+        data["parentorg_workflow"] = ""
 
         // These are backwards.. True = saved before. Very confuse.
         data["previously_saved"] = false;
