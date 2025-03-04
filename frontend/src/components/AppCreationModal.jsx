@@ -22,7 +22,6 @@ import CreateIcon from '@mui/icons-material/Create'
 import { toast } from 'react-toastify'
 import YAML from "yaml";
 
-
 const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
     const [openApiModal, setOpenApiModal] = useState(false)
     const [generateAppModal, setGenerateAppModal] = useState(false)
@@ -257,26 +256,27 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
             body: openApidata,
             credentials: "include",
         })
-            .then((response) => {
+		.then((response) => {
 
-                setValidation(false);
-                return response.json();
-            })
-            .then((responseJson) => {
-                if (responseJson.success) {
-                    setAppValidation(responseJson.id);
-                } else {
-                    if (responseJson.reason !== undefined) {
-                        setOpenApiError(responseJson.reason);
-                    }
-                    toast("An error occurred in the response");
-                }
-            })
-            .catch((error) => {
-                setValidation(false);
-                toast(error.toString());
-                setOpenApiError(error.toString());
-            });
+			setValidation(false);
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success === true) {
+				setAppValidation(responseJson?.id)
+				navigate(`/apps/new?id=${responseJson?.id}`)
+			} else {
+				if (responseJson.reason !== undefined) {
+					setOpenApiError(responseJson.reason)
+				}
+				toast("An error occurred in the response");
+			}
+		})
+		.catch((error) => {
+			setValidation(false);
+			toast(error.toString());
+			setOpenApiError(error.toString());
+		});
     };
 
     const redirectOpenApi = () => {
