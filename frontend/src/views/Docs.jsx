@@ -694,8 +694,7 @@ const Docs = (defaultprops) => {
                         <LinkIcon />
                     </Link>
                 </div>
-
-                {extraInfo && userdata?.support}
+                {isArticlePage ? (userdata?.support ? extraInfo : "") : extraInfo}
             </Typography>
         )
     }

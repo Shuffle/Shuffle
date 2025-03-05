@@ -282,6 +282,8 @@ const LoginPage = props => {
 	const [register, setRegister] = useState(inregister);
 	const [checkboxClicked, setCheckboxClicked] = useState(false);
 	const [loginWithSSO, setLoginWithSSO] = useState(false)
+  
+	const [ssoUrl, setSSOUrl] = useState("");
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
 	const parsedsearch = serverside === true ? "" : window.location.search
@@ -438,6 +440,9 @@ const LoginPage = props => {
           if (responseJson["success"] === false) {
             setLoginInfo(responseJson["reason"]);
           } else {
+            if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {
+              setSSOUrl(responseJson.sso_url);
+            }
 
 			// Stay = 0 users 
 			// Redirect = >1 user
@@ -901,6 +906,29 @@ const LoginPage = props => {
 						<div style={{ marginTop: "10px", color: "white" }}>
 							{loginInfo}
 						</div>
+
+						{ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0 ? (
+						  <div>
+							<Typography style={{ textAlign: "center" }}>Or</Typography>
+							<div style={{ textAlign: "center", margin: 10 }}>
+							  <Button
+								fullWidth
+								id="sso_button"
+								color="secondary"
+								variant="outlined"
+								type="button"
+								style={{ flex: "1", marginTop: 5 }}
+								onClick={() => {
+								  //console.log("CLICK SSO");
+														window.location.href = ssoUrl
+								  //navigate(ssoUrl)
+								}}
+							  >
+								Use SSO
+							  </Button>
+							</div>
+						  </div>
+						) : null}
 					</form>
 				</Paper>
 

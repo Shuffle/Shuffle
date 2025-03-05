@@ -498,7 +498,7 @@ const LoginDialog = (props) => {
                 <div style={{ textAlign: "center", margin: 10 }}>
                   <Button
                     fullWidth
-										id="sso_button"
+					id="sso_button"
                     color="secondary"
                     variant="outlined"
                     type="button"
