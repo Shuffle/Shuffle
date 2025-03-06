@@ -1094,10 +1094,12 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		workflow.Errors = []string{}
 	}
 
+	/*
 	if !workflow.IsValid {
 		log.Printf("[ERROR] Stopped execution as workflow %s is not valid.", workflow.ID)
 		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
+	*/
 
 	maxExecutionDepth := 10
 	if os.Getenv("SHUFFLE_MAX_EXECUTION_DEPTH") != "" {
