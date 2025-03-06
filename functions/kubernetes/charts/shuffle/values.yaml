@@ -104,7 +104,7 @@ backend:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-backend
-    tag: nightly
+    tag: 2.0.0
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -573,7 +573,7 @@ frontend:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-frontend
-    tag: nightly
+    tag: 2.0.0
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -978,7 +978,7 @@ orborus:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-orborus
-    tag: nightly
+    tag: 2.0.0
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1383,7 +1383,7 @@ worker:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-worker
-    tag: nightly
+    tag: 2.0.0
     digest: ""
 
   ## ServiceAccount configuration
