@@ -122,43 +122,45 @@ jobs:
           exit 1
         fi
 
-        HEALTH_RESPONSE=$(curl -s 'http://localhost:3001/api/v1/health?force=true' \
-          -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
-          -H 'Accept-Language: en-US,en;q=0.9' \
-          -H 'Connection: keep-alive' \
-          -H 'Sec-Fetch-Dest: document' \
-          -H 'Sec-Fetch-Mode: navigate' \
-          -H 'Sec-Fetch-Site: none' \
-          -H "Authorization: Bearer $API_KEY" \
-          -H 'Sec-Fetch-User: ?1' \
-          -H 'Upgrade-Insecure-Requests: 1' \
-          -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
-          -H 'sec-ch-ua: "Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"' \
-          -H 'sec-ch-ua-mobile: ?0' \
-          -H 'sec-ch-ua-platform: "macOS"')
+        MAX_RETRIES=5  # Total attempts (1 initial + 4 retries)
+        RETRY_INTERVAL=10  # Retry every 10 seconds after first failure
 
-        echo "health_response<<EOF" >> $GITHUB_ENV
-        echo "$HEALTH_RESPONSE" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        echo "Waiting 1 minute before the first health check..."
+        sleep 60  # Initial wait before first attempt
 
-        WORKFLOWS_CREATE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.create')
-        WORKFLOWS_RUN=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run')
-        WORKFLOWS_RUN_FINISHED=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_finished')
-        WORKFLOWS_RUN_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_status')
-        WORKFLOWS_DELETE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.delete')
+        for ((i=1; i<=$MAX_RETRIES; i++)); do
+          echo "Attempt $i/$MAX_RETRIES: Checking health API..."
+          
+          HEALTH_RESPONSE=$(curl -s 'http://localhost:3001/api/v1/health?force=true' \
+            -H "Authorization: Bearer $API_KEY")
 
-        echo "WORKFLOWS_CREATE: $WORKFLOWS_CREATE"
-        echo "WORKFLOWS_RUN: $WORKFLOWS_RUN"
-        echo "WORKFLOWS_RUN_FINISHED: $WORKFLOWS_RUN_FINISHED"
-        echo "WORKFLOWS_RUN_STATUS: $WORKFLOWS_RUN_STATUS"
-        echo "WORKFLOWS_DELETE: $WORKFLOWS_DELETE"
+          echo "Health API Response: $HEALTH_RESPONSE"
 
-        if [ "$WORKFLOWS_CREATE" = "true" ] && [ "$WORKFLOWS_RUN" = "true" ] && [ "$WORKFLOWS_RUN_FINISHED" = "true" ] && [ "$WORKFLOWS_RUN_STATUS" = "FINISHED" ] && [ "$WORKFLOWS_DELETE" = "true" ]; then
-          echo "Health endpoint check was successful."
-        else
-          echo "Health endpoint check failed. Response did not meet expected criteria."
-          exit 1
-        fi
+          WORKFLOWS_CREATE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.create')
+          WORKFLOWS_RUN=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run')
+          WORKFLOWS_RUN_FINISHED=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_finished')
+          WORKFLOWS_RUN_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_status')
+          WORKFLOWS_DELETE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.delete')
+
+          echo "WORKFLOWS_CREATE: $WORKFLOWS_CREATE"
+          echo "WORKFLOWS_RUN: $WORKFLOWS_RUN"
+          echo "WORKFLOWS_RUN_FINISHED: $WORKFLOWS_RUN_FINISHED"
+          echo "WORKFLOWS_RUN_STATUS: $WORKFLOWS_RUN_STATUS"
+          echo "WORKFLOWS_DELETE: $WORKFLOWS_DELETE"
+
+          if [ "$WORKFLOWS_CREATE" = "true" ] && [ "$WORKFLOWS_RUN" = "true" ] && [ "$WORKFLOWS_RUN_FINISHED" = "true" ] && [ "$WORKFLOWS_RUN_STATUS" = "FINISHED" ] && [ "$WORKFLOWS_DELETE" = "true" ]; then
+            echo "Health endpoint check was successful."
+            exit 0
+          fi
+
+          if [ "$i" -lt "$MAX_RETRIES" ]; then
+            echo "Health check failed. Retrying in $RETRY_INTERVAL seconds..."
+            sleep $RETRY_INTERVAL
+          fi
+        done
+
+        echo "Health check failed after $MAX_RETRIES attempts."
+        exit 1
     - name: Get shuffle-orborus logs if health check fails
       if: failure()
       run: |
