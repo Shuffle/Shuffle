@@ -47,6 +47,7 @@ services:
       - ENVIRONMENT_NAME=Shuffle
       - ORG_ID=Shuffle
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
+      # - BASE_URL=http://192.168.1.4:5001
       - DOCKER_API_VERSION=1.40
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
