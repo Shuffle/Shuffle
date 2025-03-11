@@ -2906,7 +2906,7 @@ const AppExplorer = (props) => {
   const deduplicateByName = (array) => {
     const uniqueNames = {};
     return array.filter(item => {
-		if (!item.hasOwnProperty('name') || !item.name.length) {
+		if (!item?.hasOwnProperty('name') || !item?.name?.length) {
 		  return true
 		}
 		if (!uniqueNames[item.name]) {

@@ -52,12 +52,11 @@ const searchClient = algoliasearch(
 const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps, appsToShow, setAppsToShow, setUserApps, }) => {
   const navigate = useNavigate();
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
-  const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
+  //const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
+  const appUrl = `/apps/${data.id}` 
 
-  var canEditApp = userdata?.support || 
-                  userdata?.id === data?.owner || 
-                  (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || 
-                  data?.contributors?.includes(userdata?.id)
+  var canEditApp = userdata?.support || userdata?.id === data?.owner || 
+        (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || data?.contributors?.includes(userdata?.id)
 
   const paperStyle = {
     backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
@@ -71,7 +70,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
     boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
     marginBottom: 20,
     transition: "width 0.3s ease",
-  };
+  }
 
   return (
     <Grid item xs={12} key={index}>
@@ -133,6 +132,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               margin: "12px 0",
               fontFamily: theme?.typography?.fontFamily,
             }}>
+
               <div style={{
                 display: 'flex',
                 flexDirection: 'row',
@@ -144,6 +144,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 maxWidth: "90%",
                 gap: 8
               }}>
+
                 <div style={{
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -152,6 +153,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 }}>
                   {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
                 </div>
+
               </div>
               <div style={{
                 overflow: "hidden",
@@ -162,6 +164,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               }}>
                 {data.categories ? data.categories.join(", ") : "NA"}
               </div>
+
               <div style={{
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -187,6 +190,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                     </span>
                   ))}
                 </div>
+
                 {/* Deactivate button */}
                 {(currTab === 0 || currTab === 1) && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
                   <div style={{
@@ -222,6 +226,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         </button>
                       )
                     }
+
                     <Button
 					  disabled={data?.reference_org === userdata?.active_org?.id}
                       className="deactivate-button"
@@ -264,18 +269,6 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 							  }
                             } else {
                               toast.success("App deactivated successfully. Will take effect on refresh..")
-
-							  /*
-							  // This somehow didn't work
-							  if (appsToShow !== undefined && appsToShow !== null && appsToShow.length > 0) {
-								  const newApps = appsToShow?.filter((app) => app.id !== data.id)
-								  if (newApps !== undefined && newApps !== null && newApps.length > 0) {
-									  setAppsToShow(newApps)
-									  setUserApps(newApps)
-								  }
-								}
-							  }
-							  */
 							}
                           })
                           .catch(error => {
@@ -517,7 +510,6 @@ const Hits = ({
                             fontFamily: theme?.typography?.fontFamily
                           }}
                             onClick={() => {
-                              console.log("App modal", data)
                               handleAppClick(data);
                             }}
                           >
@@ -645,6 +637,7 @@ const Hits = ({
                                     </div>
                                   )}
                                 </div>
+
                                 <div style={{
                                   display: 'flex',
                                   justifyContent: 'flex-end',
@@ -654,7 +647,7 @@ const Hits = ({
                                 }}>
                                   {hoverEffect === index && (
                                     <div>
-                                      {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                      {allActivatedAppIds && allActivatedAppIds?.includes(data.objectID) ? (
                                         <Button
                                           style={{
                                             width: 110,
@@ -673,7 +666,9 @@ const Hits = ({
                                           }}>
                                           Deactivate
                                         </Button>
+
                                       ) : (
+
                                         <Button
                                           style={{
                                             backgroundColor: "#FF8544",
@@ -1302,6 +1297,8 @@ const Apps2 = (props) => {
     } catch (e) {
       //console.log("Failed to get apps from localstorage: ", e)
     }
+
+    setIsLoading(true);
 
     fetch(globalUrl + "/api/v1/apps", {
       method: "GET",

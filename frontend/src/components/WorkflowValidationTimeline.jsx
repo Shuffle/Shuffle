@@ -299,7 +299,7 @@ const WorkflowValidationTimeline = (props) => {
 	var scheduleNotStarted = false
 
 	if (workflow.validation !== undefined && workflow.validation !== null && workflow.validation.validation_ran === false) {
-		console.log("Validation didn't run or get set for workflow. Why?")
+		//console.log("Validation didn't run or get set for workflow. Why?")
 		return null
 	}
 

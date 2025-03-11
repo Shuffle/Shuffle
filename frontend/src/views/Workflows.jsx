@@ -427,9 +427,13 @@ const chipStyle = {
   color: "white",
 };
 
-export const collapseField = (field) => {
+export const collapseField = (field, inputdata) => {
   if (field === undefined || field === null) {
     return true
+  }
+
+  if (field.namespace !== undefined && field.namespace !== null && field.namespace.length === 1) {
+	  return false 
   }
 
   if (field.name === "headers" || field.name === "cookies") {
@@ -451,44 +455,44 @@ export const collapseField = (field) => {
 }
 
 export const validateJson = (showResult) => {
-  if (showResult === undefined || showResult === null) {
-    return {
-      valid: false,
-      result: "",
-    }
-  }
+	if (showResult === undefined || showResult === null) {
+		return {
+			valid: false,
+			result: "",
+		}
+	}
 
-  if (typeof showResult === 'string') {
-    showResult = showResult.split(" False").join(" false")
-    showResult = showResult.split(" True").join(" true")
+	if (typeof showResult === 'string') {
+		showResult = showResult.split(" False").join(" false")
+		showResult = showResult.split(" True").join(" true")
 
-    showResult.replaceAll("False,", "false,")
-    showResult.replaceAll("True,", "true,")
-  }
+		showResult.replaceAll("False,", "false,")
+		showResult.replaceAll("True,", "true,")
+	}
 
-  if (typeof showResult === "object" || typeof showResult === "array") {
-    return {
-      valid: true,
-      result: showResult,
-    }
-  }
+	if (typeof showResult === "object" || typeof showResult === "array") {
+  	  return {
+  	    valid: true,
+  	    result: showResult,
+  	  }
+	}
 
-  if (showResult[0] === "\"") {
-    return {
-      valid: false,
-      result: showResult,
-    }
-  }
+	if (showResult[0] === "\"") {
+  		return {
+  	  		valid: false,
+  	  		result: showResult,
+		}
+	}
 
   var jsonvalid = true
   try {
     if (!showResult.includes("{") && !showResult.includes("[")) {
       jsonvalid = false
 
-      return {
-        valid: jsonvalid,
-        result: showResult,
-      };
+		return {
+			valid: jsonvalid,
+			result: showResult,
+		};
     }
   } catch (e) {
 
@@ -505,108 +509,101 @@ export const validateJson = (showResult) => {
 
   var result = showResult;
   try {
-    result = jsonvalid ? JSON.parse(showResult, { "storeAsString": true }) : showResult;
+    result = jsonvalid ? JSON.parse(showResult, {"storeAsString": true}) : showResult;
   } catch (e) {
     ////console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
   }
 
-  if (jsonvalid === false) {
+	if (jsonvalid === false) {
 
-    if (typeof showResult === 'string') {
-      showResult = showResult.trim()
-    }
-
-    try {
-      var newstr = showResult.replaceAll("'", '"')
-
-      // Basic workarounds for issues with Python Dicts -> JSON
-      if (newstr.includes(": None")) {
-        newstr = newstr.replaceAll(": None", ': null')
-      }
-
-      if (newstr.includes("[\"{") && newstr.includes("}\"]")) {
-        newstr = newstr.replaceAll("[\"{", '[{')
-        newstr = newstr.replaceAll("}\"]", '}]')
-      }
-
-      if (newstr.includes("{\"[") && newstr.includes("]\"}")) {
-        newstr = newstr.replaceAll("{\"[", '[{')
-        newstr = newstr.replaceAll("]\"}", '}]')
-      }
-
-      result = JSON.parse(newstr)
-      jsonvalid = true
-    } catch (e) {
-
-      //console.log("Failed parsing JSON even though its valid (2): ", e)
-      jsonvalid = false
-    }
-  }
-
-  if (jsonvalid && typeof result === "number") {
-    jsonvalid = false
-  }
-
-  // This is where we start recursing
-  if (jsonvalid) {
-    // Check fields if they can be parsed too 
-    try {
-      for (const [key, value] of Object.entries(result)) {
-        if (typeof value === "string") {
-			value = value.replaceAll(" ", "_")
+		if (typeof showResult === 'string') {
+			showResult = showResult.trim()
 		}
 
-        if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-          //console.log("CHECKING STRING: ", value)
+		try {
+			var newstr = showResult.replaceAll("'", '"')
 
-          const inside_result = validateJson(value)
-          if (inside_result.valid) {
-            //console.log("INSIDE RESULT: ", inside_result.result)
+			// Basic workarounds for issues with Python Dicts -> JSON
+			if (newstr.includes(": None")) {
+				newstr = newstr.replaceAll(": None", ': null')
+			}
 
-            if (typeof inside_result.result === "string") {
-              const newres = JSON.parse(inside_result.result)
+			if (newstr.includes("[\"{") && newstr.includes("}\"]")) {
+				newstr = newstr.replaceAll("[\"{", '[{')
+				newstr = newstr.replaceAll("}\"]", '}]')
+			}
 
-              result[key] = newres
-            } else {
-              result[key] = inside_result.result
-            }
-          }
-        } else {
+			if (newstr.includes("{\"[") && newstr.includes("]\"}")) {
+				newstr = newstr.replaceAll("{\"[", '[{')
+				newstr = newstr.replaceAll("]\"}", '}]')
+			}
 
-          // Usually only reaches here if raw array > dict > value
-          if (typeof showResult !== "array") {
-            for (const [subkey, subvalue] of Object.entries(value)) {
-			  if (typeof subvalue === "string") {
-				subvalue = subvalue.replaceAll(" ", "_")
-			  }
+			result = JSON.parse(newstr)
+			jsonvalid = true
+		} catch (e) {
 
-              if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
-                const inside_result = validateJson(subvalue)
-                if (inside_result.valid) {
-                  if (typeof inside_result.result === "string") {
-                    const newres = JSON.parse(inside_result.result)
-                    result[key][subkey] = newres
-                  } else {
-                    result[key][subkey] = inside_result.result
-                  }
-                }
-              }
+			//console.log("Failed parsing JSON even though its valid (2): ", e)
+			jsonvalid = false
+		}
+	}
 
-            }
-          }
-        }
-      }
-    } catch (e) {
-      //console.log("Failed parsing inside json subvalues: ", e)
-    }
-  }
+	if (jsonvalid && typeof result === "number") {
+		jsonvalid = false
+	}
+
+	// This is where we start recursing
+	if (jsonvalid) {
+		// Check fields if they can be parsed too
+		try {
+			for (const [key, value] of Object.entries(result)) {
+				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+					//console.log("CHECKING STRING: ", value)
+
+					const inside_result = validateJson(value)
+					if (inside_result.valid) {
+						//console.log("INSIDE RESULT: ", inside_result.result)
+
+						if (typeof inside_result.result === "string") {
+          					const newres = JSON.parse(inside_result.result)
+
+							result[key] = newres
+						} else {
+							result[key] = inside_result.result
+						}
+					}
+				} else {
+
+					// Usually only reaches here if raw array > dict > value
+					if (typeof showResult !== "array") {
+						for (const [subkey, subvalue] of Object.entries(value)) {
+							if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
+								const inside_result = validateJson(subvalue)
+								if (inside_result.valid) {
+									if (typeof inside_result.result === "string") {
+										const newres = JSON.parse(inside_result.result)
+										result[key][subkey] = newres
+									} else {
+										result[key][subkey] = inside_result.result
+									}
+								}
+							}
+
+						}
+					}
+				}
+			}
+		} catch (e) {
+			//console.log("Failed parsing inside json subvalues: ", e)
+		}
+	}
 
   return {
     valid: jsonvalid,
     result: result,
   };
 };
+
 
 //Custom hook for handling styling of the dropzone
 const useDropzoneStyles = () => {

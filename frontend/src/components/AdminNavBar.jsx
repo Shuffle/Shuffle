@@ -96,7 +96,7 @@ const AdminNavBar = (props) => {
     return (
         <Wrapper>
             <div style={{ flexDirection: 'column', width: 220, }}>
-                <nav style={{ padding: '25px 25px 3px 25px', height: "calc(100% - 30px)", fontSize: '16px', borderTopLeftRadius: 8, borderBottomLeftRadius: 8, background: '#212121', color: '#9CA3AF' }}>
+                <nav style={{ padding: '25px 25px 3px 25px', height: isCloud ? "calc(100% - 60px)" : "calc(100% - 30px)" , fontSize: '16px', borderTopLeftRadius: 8, borderBottomLeftRadius: 8, background: '#212121', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', alignItems: 'center', }}>
                         <img loading="lazy" src={imageData} alt="Logo" style={{ width: '30px', borderRadius: 8, height: '30px', marginRight: '8px' }} />
                         <div style={{

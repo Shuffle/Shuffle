@@ -652,6 +652,7 @@ func deployServiceWorkers(image string) {
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 	}
 
 	if len(workerServerUrl) > 0 {
@@ -1351,10 +1352,12 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
-	log.Printf("WORKER STARTING WITH ENV: %#v", env)
+	// FIXME: Verbosity for testing
+	//log.Printf("WORKER STARTING WITH ENV: %#v", env)
 
+	ctx := context.Background()
 	containerStartOptions := container.StartOptions{}
-	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+	err = dockercli.ContainerStart(ctx, cont.ID, containerStartOptions)
 	if err != nil {
 		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
 		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
@@ -1387,15 +1390,15 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[INFO][%s] Worker Container created (2). Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
-		stats, err := dockercli.ContainerInspect(context.Background(), containerName)
+		stats, err := dockercli.ContainerInspect(ctx, cont.ID)
 		if err != nil {
-			log.Printf("[WARNING] Failed checking worker %s", containerName)
+			log.Printf("[WARNING] Failed checking worker '%s': %s", cont.ID, err)
 			return nil 
 		}
 
 		containerStatus := stats.ContainerJSONBase.State.Status
 		if containerStatus != "running" {
-			log.Printf("[ERROR] Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
+			log.Printf("[ERROR] Status of %s is %s. Should be running. Contact support@shuffler.io if this persists.", cont.ID, containerStatus)
 		}
 			/*
 			err = stopWorker(containerName)

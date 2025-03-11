@@ -421,7 +421,7 @@ const EnvironmentTab = memo((props) => {
         -e AUTH="${auth}" \\
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${environment.org_id}" \\
-        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:nightly" \\
+        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:latest" \\
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e SHUFFLE_LOGS_DISABLED=true \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `

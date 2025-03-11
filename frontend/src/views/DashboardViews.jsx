@@ -6,12 +6,9 @@ import classNames from "classnames";
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 
-// react plugin used to create charts
-//import { Line, Bar } from "react-chartjs-2";
-//import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
 import Draggable from "react-draggable";
-import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
+// import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
 
 import {
 	Autocomplete, 
@@ -311,9 +308,13 @@ const RadialChart = ({keys, setSelectedCategory}) => {
   //axis={<RadialAxis type="category" />}
 }
 
+
+// 0x0elliot: not cleaning this up. this seems clearly experimental. not worth my time.
+
 // This is the start of a dashboard that can be used.
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
+
   const { globalUrl, isLoggedIn } = props;
   //const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
@@ -397,7 +398,7 @@ const Dashboard = (props) => {
 		if (foundQuery !== null && foundQuery !== undefined) {
 			setSelectedUsecaseCategory(foundQuery)
 
-      const newitem = removeParam("selected", cursearch);
+      		const newitem = removeParam("selected", cursearch);
 			navigate(curpath + newitem)
 		}
 

@@ -6,6 +6,7 @@ on:
     types:
       - completed
   workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,7 +30,7 @@ jobs:
       run: chmod -R 777 shuffle-database
 
     - name: Build the stack
-      run: docker-compose up -d
+      run: docker compose up -d
 
     - name: Wait for 30 seconds
       run: sleep 30

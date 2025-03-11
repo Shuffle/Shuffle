@@ -89,6 +89,7 @@ const liquidFilters = [
 const pythonFilters = [
 	{ "name": "Hello World", "value": `print("hello world")`, "example": `` },
 	{ "name": "Using Shuffle variables", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"{\"sample\": \"string\", \"int\": 1}\"\"\"\n  \njsondata = json.loads(nodevalue)\nprint(jsondata)`, "example": `` },
+	{ "name": "Filter a list", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"[{\"sample\": \"string\", \"int\": 1, "malicious": "no"}, {\"sample\": \"string2\", \"int\": 1, "malicious": "yes"}]\"\"\"\n  \njsondata = json.loads(nodevalue)\nfiltered = []\nfor item in jsondata:\n  try:\n    if item[\"malicious\"] == \"yes\":\n      filtered.append(item)\n  except:\n    pass\nprint(json.dumps(filtered))`, "example": `` },
 	{ "name": "Print Execution ID", "value": `print(self.current_execution_id)`, "example": `` },
 	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
 	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
@@ -657,6 +658,7 @@ const CodeEditor = (props) => {
 		}
 
 		if (!inputvariable.includes(".")) {
+			inputvariable = inputvariable.toLowerCase()
 			return inputvariable
 		}
 
@@ -665,6 +667,9 @@ const CodeEditor = (props) => {
 		var removedIndexes = 0
 		for (var key in itemsplit) {
 			var tmpitem = itemsplit[key]
+			if (key == 0) {
+				tmpitem = tmpitem.toLowerCase()
+			}
 
 			// Makes sure #0 and # are same, as we only visualize first one anyway
 			if (tmpitem.startsWith("#")) {
@@ -695,20 +700,24 @@ const CodeEditor = (props) => {
 			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g)
 
 			if (!variable_occurence) {
-				continue;
+				continue
 			}
 
-			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
-			variable_occurence = new_occurences
+			//var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
+			//variable_occurence = new_occurences
 
+			variable_occurence = variable_occurence.filter((occurrence) => occurrence[0]);
+
+			// Checks code lines, not variable occurences. Then remaps later
 			var dollar_occurence = [];
 			for (let ch = 0; ch < current_code_line.length; ch++) {
 				//if (current_code_line[ch] === '$' && (ch === 0)) {
 				if (current_code_line[ch] === '$') {
-					dollar_occurence.push(ch);
+					dollar_occurence.push(ch)
 				}
 			}
 
+			// Lowercase anything between the $ and first .
 			var dollar_occurence_len = []
 			try {
 				for (let occ = 0; occ < variable_occurence.length; occ++) {
@@ -1005,7 +1014,6 @@ const CodeEditor = (props) => {
 
 											// Replace quotes with nothing
 										} else {
-											console.log("NO TYPE? ", typeof new_input)
 											try {
 												new_input = new_input.toString()
 											} catch (e) {
@@ -1897,7 +1905,7 @@ const CodeEditor = (props) => {
 																overflow: "hidden",
 															}}
 															onClick={() => {
-																console.log(innerdata.example)
+																//console.log(innerdata.example)
 
 																//const handleClick = (item) => {
 																handleItemClick([innerdata]);

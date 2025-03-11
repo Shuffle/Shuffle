@@ -25,6 +25,7 @@ import AdminSetup from "./views/AdminSetup.jsx";
 import Admin from "./views/Admin.jsx";
 import Docs from "./views/Docs.jsx";
 import Usecases2 from "./views/Usecases2.jsx";
+import DashboardViews from "./views/DashboardViews.jsx";
 //import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication.jsx";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO.jsx";
@@ -650,18 +651,58 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-        	<Route
-        	  exact
-        	  path="/dashboards"
-        	  element={
-        	    <DashboardView
-        	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
-        	      globalUrl={globalUrl}
-        	      {...props}
-        	    />
-        	  }
-        	/>
+			<Route
+				exact
+				path="/dashboard"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboards"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboard/:key"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboards/:key"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
 			<Route
 				exact
 				path="/welcome"

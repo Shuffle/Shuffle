@@ -3079,8 +3079,9 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			return
 		}
 
-		// FIXME: Check whether it's in use.
-		if user.Id != app.Owner && user.Role != "admin" {
+		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id)  {
+			log.Printf("[DEBUG] Editing app %s with user %s (%s) in org %s", test.Id, user.Username, user.Id, user.ActiveOrg.Id)
+		} else {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
 			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@shuffler.io if this persists."}`))
@@ -3154,7 +3155,18 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
-	api.Owner = user.Id
+	if api.Owner == "" {
+		api.Owner = user.Id
+	}
+
+	if len(api.ReferenceOrg) == 0 {
+		api.ReferenceOrg = user.ActiveOrg.Id
+	}
+
+	if len(test.Image) > 0 {
+		api.SmallImage = test.Image
+		api.LargeImage = test.Image
+	}
 
 	err = shuffle.DumpApi(basePath, api)
 	if err != nil {
@@ -3277,6 +3289,10 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	parsed := shuffle.ParsedOpenApi{
 		ID:   newmd5,
 		Body: string(body),
+	}
+
+	if !shuffle.ArrayContains(api.Contributors, user.Id) {
+		api.Contributors = append(api.Contributors, user.Id)
 	}
 
 	log.Printf("[INFO] API LENGTH FOR %s: %d, ID: %s", api.Name, len(parsed.Body), newmd5)
@@ -5184,6 +5200,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
+
+	// This structure is horrendous. Needs fixing after we got the prototype up
+	r.HandleFunc("/api/v1/detections", shuffle.HandleListDetectionCategories).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}", shuffle.HandleGetDetectionRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/selected_rules/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
 
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")

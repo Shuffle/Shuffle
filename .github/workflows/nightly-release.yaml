@@ -3,6 +3,7 @@ on:
   release:
     types: [published]
     branches:
+      - main
       - nightly
 
 jobs:
@@ -18,9 +19,6 @@ jobs:
             experimental: true
           - app: backend
             path: backend
-            experimental: true
-          - app: app_sdk
-            path: backend/app_sdk
             experimental: true
           - app: orborus
             path: functions/onprem/orborus

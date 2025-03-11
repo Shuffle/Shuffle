@@ -361,7 +361,7 @@ const ParsedAction = (props) => {
 		}
 
 		if (keyorder.join(",") !== newkeyorder.join(",")) {
-			console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
+			//console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
 
 			setSelectedActionParameters(newparams)
 			selectedAction.parameters = newparams
@@ -1160,6 +1160,12 @@ const ParsedAction = (props) => {
 
 					selectedActionParameters[1].value = splitparsed[1]
 					selectedAction.parameters[1].value = splitparsed[1]
+
+					if (splitparsed.length > 2) {
+						toast.warn("Filter list only supports filtering at the first level. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.")
+					} else if (selectedAction.parameters[1].value.includes(".#")) {
+						toast.warn("This filter may not work due to using .# indexing. Please use the 'execute python' action and try the 'filter a list' function in the code editor.")
+					}
 				} else {
 					// Remove .# and after
 					const splitparsed = parsedvalue.split(".#")
@@ -3657,6 +3663,12 @@ const ParsedAction = (props) => {
 											</Box>
 										</Box>
 									);
+
+									if (selectedApp.name === "email") {
+										//hideBody = false
+										showButtonField = false
+										hideBodyButtonValue = null
+									}
 
 
 									if ((multiline === undefined || multiline === false) && ((data?.autocompleted === true || data?.field_active === true) || data.name.startsWith("${") && data.name.endsWith("}"))) {

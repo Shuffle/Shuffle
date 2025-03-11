@@ -581,7 +581,7 @@ const EditWorkflow = (props) => {
 								</Typography>
 
 								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
-									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (<b>late beta</b> - contact support@shuffler.io if you want a demo. Please try it!)
+									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (contact support@shuffler.io if you want a demo. Please try it!)
 								</Typography>
 
 								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
