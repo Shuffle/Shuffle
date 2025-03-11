@@ -100,12 +100,12 @@ jobs:
         echo "User registration failed after $MAX_RETRIES attempts."
         exit 1
 
-    # - name: Run Selenium testing for frontend
-    #   run: |
-    #     cd $GITHUB_WORKSPACE/frontend
-    #     # write some log to see the current directory
-    #     chmod +x frontend-testing.sh
-    #     ./frontend-testing.sh
+    - name: Run Selenium testing for frontend
+      run: |
+        cd $GITHUB_WORKSPACE/frontend
+        # write some log to see the current directory
+        chmod +x frontend-testing.sh
+        ./frontend-testing.sh
 
     - name: Get the API key and run a health check
       id: health_check
@@ -161,11 +161,6 @@ jobs:
 
         echo "Health check failed after $MAX_RETRIES attempts."
         exit 1
-    - name: Get shuffle-orborus logs if health check fails
-      if: failure()
-      run: |
-        echo "Health check failed. Fetching shuffle-orborus logs..."
-        docker logs --tail 50 shuffle-orborus
 
   # notify:
   #   needs: build
