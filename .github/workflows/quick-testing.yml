@@ -14,12 +14,6 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         architecture: [x64, arm64]
-
-    env:
-      SHUFFLE_DEFAULT_USERNAME: demo@demo.io
-      SHUFFLE_DEFAULT_PASSWORD: supercoolpassword
-      SHUFFLE_DEFAULT_APIKEY: supercoolapikey
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -66,6 +60,45 @@ jobs:
           echo "The word 'Shuffle' was not found in the response."
           exit 1
         fi
+    - name: Register a user and check the status code
+      run: |
+        MAX_RETRIES=30
+        RETRY_INTERVAL=10
+        CONTAINER_NAME="shuffle-backend"
+
+        for (( i=1; i<=$MAX_RETRIES; i++ ))
+        do
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:3001/api/v1/register' \
+            -H 'Accept: */*' \
+            -H 'Accept-Language: en-US,en;q=0.9' \
+            -H 'Connection: keep-alive' \
+            -H 'Content-Type: application/json' \
+            --data-raw '{"username":"demo@demo.io","password":"supercoolpassword"}')
+
+          if [ "$STATUS_CODE" -eq 200 ]; then
+            echo "User registration was successful with status code 200."
+            exit 0
+          elif [ "$STATUS_CODE" -ne 502 ]; then
+            echo "User registration failed with status code $STATUS_CODE."
+            exit 1
+          fi
+
+          echo "Received status code $STATUS_CODE. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+          echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
+
+          logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
+          echo "$logs_output"
+
+          echo "Fetching last 30 lines of logs from container shuffle-opensearch..."
+
+          opensearch_logs=$(docker logs --tail 30 shuffle-opensearch)
+          echo "$opensearch_logs"
+
+          sleep $RETRY_INTERVAL
+        done
+
+        echo "User registration failed after $MAX_RETRIES attempts."
+        exit 1
 
     # - name: Run Selenium testing for frontend
     #   run: |
@@ -77,7 +110,7 @@ jobs:
     - name: Get the API key and run a health check
       id: health_check
       run: |
-        RESPONSE=$(curl -s -k -u "$SHUFFLE_DEFAULT_USERNAME:$SHUFFLE_DEFAULT_PASSWORD" 'https://localhost:9200/users/_search')
+        RESPONSE=$(curl -s -k -u admin:StrongShufflePassword321! 'https://localhost:9200/users/_search')
         echo "Raw Response: $RESPONSE"
 
         API_KEY=$(echo "$RESPONSE" | jq -r '.hits.hits[0]._source.apikey')
