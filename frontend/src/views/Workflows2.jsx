@@ -2043,7 +2043,10 @@ const Workflows2 = (props) => {
             .then((response) => {
                 if (response.status !== 200) {
                     console.log("Status not 200 for setting workflows :O!");
-                    toast("Failed deleting workflow. Do you have access?");
+		  
+					if (bulk !== true) {
+                    	toast("Failed deleting workflow. Do you have access?");
+					}
                 } else {
                     if (bulk !== true) {
                         toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
@@ -2821,7 +2824,7 @@ const Workflows2 = (props) => {
 
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
-                                <div style={{ position: "absolute", top: 45, right: 8, }}>
+                                <div style={{ position: "absolute", top: 50, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2838,8 +2841,8 @@ const Workflows2 = (props) => {
                         : null}
 
 						{(data?.validation?.validation_ran === true && data?.validation?.valid === false && data?.validation?.errors?.length > 0 ) ?                            
-							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} errors. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
-                                <div style={{ position: "absolute", top: 45, right: 8, }}>
+							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} notifications. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
+                                <div style={{ position: "absolute", top: 85, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2858,8 +2861,8 @@ const Workflows2 = (props) => {
                                     </IconButton>
                                 </div>
                             </Tooltip>
-
 						: null}
+
                     </Grid>
                 </Paper>
             </div>
@@ -3235,6 +3238,7 @@ const Workflows2 = (props) => {
                                             </span>
                                         </Tooltip>
                                     }
+
                                     <Tooltip
                                         color="primary"
                                         title="Amount of triggers"
