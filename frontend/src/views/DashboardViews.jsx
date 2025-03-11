@@ -8,7 +8,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 
 import { ToastContainer, toast } from "react-toastify" 
 import Draggable from "react-draggable";
-// import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
+import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
 
 import {
 	Autocomplete, 

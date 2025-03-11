@@ -23,6 +23,7 @@ console.log('Starting Selenium script for testing pages...');
 
     try {
         await driver.manage().window().setRect({ width: 1600, height: 1200 });
+        await driver.manage().window().maximize()
         await driver.manage().setTimeouts({ implicit: 15000 });
 
         const frontendURL = process.argv[2];
@@ -85,8 +86,10 @@ console.log('Starting Selenium script for testing pages...');
             await driver.wait(until.elementLocated(By.css('#outlined-password-input')), 10000);
             await driver.findElement(By.css('#outlined-password-input')).sendKeys(PASSWORD);
 
-            await driver.wait(until.elementLocated(By.css('#loginButton')), 10000);
-            await driver.findElement(By.css('#loginButton')).click();
+            const loginButton = await driver.findElement(By.css('#loginButton'));
+            await driver.executeScript("arguments[0].scrollIntoView(true);", loginButton);
+            await loginButton.click();
+
 
 
              // Ensure signup success by checking URL change
