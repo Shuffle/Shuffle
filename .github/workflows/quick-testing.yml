@@ -147,6 +147,12 @@ jobs:
         WORKFLOWS_RUN_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_status')
         WORKFLOWS_DELETE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.delete')
 
+        echo "WORKFLOWS_CREATE: $WORKFLOWS_CREATE"
+        echo "WORKFLOWS_RUN: $WORKFLOWS_RUN"
+        echo "WORKFLOWS_RUN_FINISHED: $WORKFLOWS_RUN_FINISHED"
+        echo "WORKFLOWS_RUN_STATUS: $WORKFLOWS_RUN_STATUS"
+        echo "WORKFLOWS_DELETE: $WORKFLOWS_DELETE"
+
         if [ "$WORKFLOWS_CREATE" = "true" ] && [ "$WORKFLOWS_RUN" = "true" ] && [ "$WORKFLOWS_RUN_FINISHED" = "true" ] && [ "$WORKFLOWS_RUN_STATUS" = "FINISHED" ] && [ "$WORKFLOWS_DELETE" = "true" ]; then
           echo "Health endpoint check was successful."
         else
