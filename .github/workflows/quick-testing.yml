@@ -162,21 +162,21 @@ jobs:
         echo "Health check failed after $MAX_RETRIES attempts."
         exit 1
 
-  # notify:
-  #   needs: build
-  #   if: failure()
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Send Twilio Alert
-  #       run: |
-  #         WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-  #         MESSAGE="🚨 Shuffle Workflow Failed!
-  #         Repository: ${{ github.repository }}
-  #         Branch: ${{ github.ref_name }}
-  #         Workflow URL: $WORKFLOW_URL"
+  notify:
+    needs: build
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Twilio Alert
+        run: |
+          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="🚨 Shuffle Workflow Failed!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Workflow URL: $WORKFLOW_URL"
           
-  #         curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
-  #             --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
-  #             --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
-  #             --data-urlencode "Body=$MESSAGE" \
-  #             -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
+          curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
+              --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
+              --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
+              --data-urlencode "Body=$MESSAGE" \
+              -u "${{ secrets.TWILIO_ACCOUNT_SID }}:${{ secrets.TWILIO_AUTH_TOKEN }}" > /dev/null
