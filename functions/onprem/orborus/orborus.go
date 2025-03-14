@@ -466,8 +466,9 @@ func deployServiceWorkers(image string) {
 	}
 
 	ip := "shuffle-cache"
-
-	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
+	if len(os.Getenv("SHUFFLE_MEMCACHED")) == 0 {
+		os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
+	}
 
 	defaultNetworkAttach := false
 	if containerId != "" {
@@ -608,7 +609,7 @@ func deployServiceWorkers(image string) {
 					fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 					fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 					fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
-					fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%d", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
+					fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%s", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
 					fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", os.Getenv("SHUFFLE_BASE_IMAGE_NAME")),
 					fmt.Sprintf("SHUFFLE_APP_REQUEST_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_REQUEST_TIMEOUT")),
 				},
