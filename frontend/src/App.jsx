@@ -34,9 +34,10 @@ import RunWorkflow from "./views/RunWorkflow.jsx";
 import Admin2 from "./views/Admin2.jsx";
 
 import LoginPage from "./views/LoginPage.jsx";
+import LoginPageOld from "./views/LoginPageOld.jsx";
+
 import SettingsPage from "./views/SettingsPage.jsx";
 import KeepAlive from "./views/KeepAlive.jsx";
-
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -59,6 +60,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Drift from "react-driftjs";
 
 import { AppContext } from './context/ContextApi.jsx';
+import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
 
@@ -212,7 +214,20 @@ const App = (message, props) => {
 		
 					{ window?.location?.pathname === "/"  || window?.location?.pathname === "/training" || !(isLoggedIn && isLoaded) ? (
 						<div style={{ minHeight: 68, maxHeight: 68 }}>
-						<Header
+						{/* <Header
+						notifications={notifications}
+						setNotifications={setNotifications}
+						userdata={userdata}
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						globalUrl={globalUrl}
+						setIsLoggedIn={setIsLoggedIn}
+						isLoggedIn={isLoggedIn}
+						curpath={curpath}
+						{...props}
+						/> */}
+						<Navbar
 						notifications={notifications}
 						setNotifications={setNotifications}
 						userdata={userdata}
@@ -236,6 +251,7 @@ const App = (message, props) => {
         <div style={{ height: 60 }} />
 				*/}
 				<Routes>
+
         	<Route
         	  exact
         	  path="/login"
@@ -243,7 +259,8 @@ const App = (message, props) => {
         	    <LoginPage
         	      isLoggedIn={isLoggedIn}
         	      setIsLoggedIn={setIsLoggedIn}
-        	      register={true}
+        	      register={false}
+        	      inregister={false}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
@@ -253,6 +270,63 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
+        	<Route
+        	  exact
+        	  path="/login2"
+        	  element={
+        	    <LoginPageOld
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={false}
+        	      inregister={false}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
+        	<Route
+        	  exact
+        	  path="/loginsetup"
+        	  element={
+        	    <LoginPageOld
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={false}
+        	      inregister={false}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
+        	<Route
+        	  exact
+        	  path="/register"
+        	  element={
+        	    <LoginPage
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      inregister={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
         	<Route
         	  exact
         	  path="/admin2"
@@ -354,6 +428,7 @@ const App = (message, props) => {
         	    }
         	  />
         	) : null}
+
         	<Route
         	  exact
         	  path="/AdminSetup"
@@ -366,6 +441,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
         	<Route
         	  exact
         	  path="/detectionframework"

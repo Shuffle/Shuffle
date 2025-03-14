@@ -9,7 +9,7 @@ require (
 	github.com/docker/docker v27.5.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.8.3
+	github.com/shuffle/shuffle-shared v0.8.7
 	k8s.io/api v0.30.2
 	k8s.io/apimachinery v0.30.2
 )

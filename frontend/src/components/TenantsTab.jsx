@@ -497,7 +497,9 @@ const TenantsTab = memo((props) => {
                 response.json().then((responseJson) => {
                     if (responseJson["success"] === false) {
                         if (responseJson.reason !== undefined) {
-                            toast(responseJson.reason);
+                            toast.error(responseJson.reason, {
+								autoClose: 5000,
+							})
                         } else {
                             toast("Failed creating suborg. Please try again");
                         }
@@ -781,9 +783,9 @@ const TenantsTab = memo((props) => {
             <div style={{height: "100%", maxHeight: 1700, overflowY: "auto",overflowX: 'hidden', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
                 <div style={{ height: "100%", width: "calc(100% - 20px)",  scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin' }}>   
                 <div style={{ marginBottom: 20 }}>
-                    <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Organizations</h2>
+                    <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Tenants</h2>
                     <span style={{ color: textColor }}>
-                        Control sub organizations (tenants)! {" "}
+                        Create, manage and change to sub-organizations (tenants)! {" "}
                         {isCloud
                             ? "You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact support@shuffler.io to try it out."
                             : ''}

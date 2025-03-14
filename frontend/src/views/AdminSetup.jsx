@@ -1,6 +1,8 @@
 /* eslint-disable react/no-multi-comp */
 import React, { useState } from "react";
 import { makeStyles } from "@mui/styles";
+import theme from '../theme.jsx';
+import { useNavigate } from "react-router-dom";
 
 import {
   CircularProgress,
@@ -20,11 +22,8 @@ const surfaceColor = "#27292D";
 const inputColor = "#383B40";
 
 const boxStyle = {
-  paddingLeft: "30px",
-  paddingRight: "30px",
-  paddingBottom: "30px",
-  paddingTop: "30px",
-  backgroundColor: surfaceColor,
+  padding: 40, 
+  backgroundColor: theme.palette.backgroundColor,
 };
 
 const useStyles = makeStyles({
@@ -41,8 +40,10 @@ const AdminAccount = (props) => {
   const [firstRequest, setFirstRequest] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
 
+
   // Used to swap from login to register. True = login, false = register
   const register = true;
+  let navigate = useNavigate();
 
   const classes = useStyles();
   // Error messages etc
@@ -70,13 +71,16 @@ const AdminAccount = (props) => {
             setLoginInfo(responseJson["reason"]);
           } else {
             if (responseJson.reason === "redirect") {
-              window.location.pathname = "/login";
+			  setTimeout(() => {
+              	window.location.pathname = "/login";
+			  }, 2500)
             }
           }
         })
       )
       .catch((error) => {
-        setLoginInfo("Error in userdata: ", error);
+        setLoginInfo("Error in userdata (1): ", error);
+		navigate("/loginsetup")
       });
   };
 
@@ -108,13 +112,17 @@ const AdminAccount = (props) => {
             setLoginInfo(responseJson["reason"]);
           } else {
             setLoginInfo("Successful register :)");
-            window.location.pathname = "/login";
+
+			setTimeout(() => {
+            	window.location.pathname = "/login";
+			}, 2500)
           }
         })
       )
       .catch((error) => {
-        setLoginLoading(false);
-        setLoginInfo("Error in userdata: ", error);
+        setLoginInfo("Error in userdata (2): ", error);
+        setLoginLoading(false)
+		navigate("/loginsetup")
       });
   };
 
