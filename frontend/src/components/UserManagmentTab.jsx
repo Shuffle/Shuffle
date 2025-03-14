@@ -1557,10 +1557,12 @@ const UserManagmentTab = memo((props) => {
                                     style={{ display:'table-cell', verticalAlign: 'middle' }}
                                 />
 
+								{/*
                                 <ListItemText
                                     primary={data.active ? "True" : "False"}
                                     style={{display:'table-cell',verticalAlign: 'middle' , padding: "8px", textAlign: "center", color: data.active ? "#02CB70" : "#F53434" }}
                                 />
+								*/}
 
                                 <ListItemText
                                     primary={
@@ -1573,7 +1575,6 @@ const UserManagmentTab = memo((props) => {
                                     style={{  display:'table-cell',verticalAlign: 'middle', padding: "8px",  }}
                                 />
 
-								{/*
                                 <ListItemText
                                     primary={
                                         data?.mfa_info !== undefined &&
@@ -1584,7 +1585,6 @@ const UserManagmentTab = memo((props) => {
                                     }
                                     style={{ display:'table-cell', verticalAlign: 'middle',padding: "8px", color: data.mfa_info.active ? "#02CB70" : "#F53434" }}
                                 />
-								*/} 
 
                                 {selectedOrganization?.child_orgs !== undefined &&
                                     selectedOrganization?.child_orgs !== null &&

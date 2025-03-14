@@ -87,21 +87,21 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
 
-//With this code it is opening search bar on google chrome search bar as well which is not required
-useEffect(() => {
-  const handleKeyDown = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
-      event.preventDefault();
-      setSearchBarModalOpen((prev)=> !prev);
-    }
-  };
+	//With this code it is opening search bar on google chrome search bar as well which is not required
+	useEffect(() => {
+	  const handleKeyDown = (event) => {
+		if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+		  event.preventDefault();
+		  setSearchBarModalOpen((prev)=> !prev);
+		}
+	  };
 
-  window.addEventListener("keydown", handleKeyDown);
+	  window.addEventListener("keydown", handleKeyDown);
 
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, [setSearchBarModalOpen]);
+	  return () => {
+		window.removeEventListener("keydown", handleKeyDown);
+	  };
+	}, [setSearchBarModalOpen]);
   
   const CustomPopper = (props) => {
     return (
@@ -155,6 +155,7 @@ useEffect(() => {
         >
           {props.children}
         </Box>
+
         <Link to="/admin?tab=tenants" style={hrefStyle}>
 			<Box
 				sx={{
@@ -1605,6 +1606,18 @@ useEffect(() => {
           marginLeft: 5,
         }}
       >
+	  	
+	  	{expandLeftNav &&
+	  	<Button
+	  		variant="outlined"
+	  		style={{marginBottom: 15, borderWidth: 2, }}
+	  		onClick={() => {
+				window.open("https://shuffler.io/contact?category=book_a_demo", "_blank")
+			}}
+	  	>
+	  		Book a Demo
+	  	</Button>
+		}
         <Box ref={autocompleteRef}>
           <Autocomplete
             disablePortal
@@ -1898,8 +1911,6 @@ useEffect(() => {
 };
 
 export default LeftSideBar;
-
-
 const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata}) => {
   return (
     (

@@ -359,7 +359,7 @@ const RuntimeDebugger = (props) => {
 						imageSource = "/images/no_image.png"
 					}
 				}else {
-					if (userdata.active_org.image?.length > 0){
+					if (userdata?.active_org.image?.length > 0){
 						imageSource = userdata?.active_org?.image
 					}else {
 						imageSource = "/images/no_image.png"
