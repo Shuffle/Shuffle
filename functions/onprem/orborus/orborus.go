@@ -456,6 +456,7 @@ func deployServiceWorkers(image string) {
 		}
 	}
 
+	/*
 	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
 	if err != nil {
 		log.Printf("[ERROR] Failed checking memcached: %s", err)
@@ -469,6 +470,7 @@ func deployServiceWorkers(image string) {
 	if len(os.Getenv("SHUFFLE_MEMCACHED")) == 0 {
 		os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 	}
+	*/
 
 	defaultNetworkAttach := false
 	if containerId != "" {
@@ -767,10 +769,8 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 	// Remove the image
 	handled := []string{}
-	log.Printf("[DEBUG] Should remove existing image (s): %s. Waiting 30 seconds to ensure backend has the latest images built and ready to distribute.", images)
-	removeOptions := image.RemoveOptions{}
-
-	time.Sleep(time.Duration(30) * time.Second)
+	log.Printf("[DEBUG] Removing existing image (s): %s. Waiting 30 seconds before starting to ensure backend has the latest images built and ready to distribute.", images) 
+	//time.Sleep(time.Duration(30) * time.Second)
 
 	newImages := []string{}
 	for _, image := range strings.Split(images, ",") {
@@ -786,23 +786,12 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 		newImages = append(newImages, image)
 
-		// There is no real point in actual removal. This may however be a good idea, as Worker will force download the new one anyway
-		resp, err := dockercli.ImageRemove(ctx, image, removeOptions)
+		log.Printf("[DEBUG] Downloading image: %s", image)
+		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
 		if err != nil {
-			log.Printf("[ERROR] Failed removing image: %s. Resp: %#v", err, resp)
-
-			// Goroutining images that don't already exist, as they are most likely not the correct one
-			go shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+			log.Printf("[ERROR] Failed downloading image: %s", err)
 		} else {
-			log.Printf("[DEBUG] Removed image: %s", image)
-
-			err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
-			if err != nil {
-				log.Printf("[ERROR] Failed downloading image: %s", err)
-			} else {
-				log.Printf("[DEBUG] Downloaded image: %s", image)
-				//break
-			}
+			log.Printf("[DEBUG] Downloaded image: %s", image)
 		}
 	}
 
@@ -821,20 +810,18 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		)
 
 		if err != nil {
-			log.Printf("[ERROR] Failed finding containers: %s", err)
+			log.Printf("[ERROR] Failed finding services: %s", err)
 		} else {
-			log.Printf("[DEBUG] Found %d services", len(services))
-
+			found := false
 			for _, service := range services {
-
-				log.Printf("Imagename: %s", service.Spec.TaskTemplate.ContainerSpec.Image)
+				//log.Printf("Service image: %s", service.Spec.TaskTemplate.ContainerSpec.Image)
 
 				for _, image := range newImages {
 					if !strings.Contains(service.Spec.TaskTemplate.ContainerSpec.Image, image) {
 						continue
 					}
 
-					log.Printf("[DEBUG] Found service for image %#v: %#v", service.Spec.Annotations.Name)
+					log.Printf("[DEBUG] Found service for image: %#v", service.Spec.Annotations.Name)
 
 					// Update the service to run with the new image
 					//docker service update --image username/imagename:latest servicename --force
@@ -854,9 +841,20 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
 							break
+						} else {
+							found = true 
+							log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 						}
 					}
 				}
+
+				if found {
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[DEBUG] Failed to find service to update for service %s", newImages)
 			}
 
 		}
@@ -1480,29 +1478,34 @@ func initializeImages() {
 	}
 
 	// check whether they are the same first
-	images := []string{
-		fmt.Sprintf("frikky/shuffle:app_sdk"),
-		fmt.Sprintf("shuffle/shuffle:app_sdk"),
-		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
-		newWorker,
-	}
 
-	pullOptions := image.PullOptions{}
-	for _, image := range images {
-		if isKubernetes == "true" {
-			log.Printf("[DEBUG] Skipping image pull of '%s' because Kubernetes does it in realtime instead", image)
-		} else {
-			log.Printf("[DEBUG] Pulling image %s", image)
-			reader, err := dockercli.ImagePull(ctx, image, pullOptions)
-			if err != nil {
-				log.Printf("[ERROR] Failed getting image %s: %s", image, err)
-
-				continue
-			}
-
-			io.Copy(os.Stdout, reader)
-			log.Printf("[DEBUG] Successfully downloaded and built %s", image)
+	if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "true" {
+		images := []string{
+			fmt.Sprintf("frikky/shuffle:app_sdk"),
+			fmt.Sprintf("shuffle/shuffle:app_sdk"),
+			fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
+			newWorker,
 		}
+
+		pullOptions := image.PullOptions{}
+		for _, image := range images {
+			if isKubernetes == "true" {
+				log.Printf("[DEBUG] Skipping image pull of '%s' because Kubernetes does it in realtime instead", image)
+			} else {
+				log.Printf("[DEBUG] Pulling image %s", image)
+				reader, err := dockercli.ImagePull(ctx, image, pullOptions)
+				if err != nil {
+					log.Printf("[ERROR] Failed getting image %s: %s", image, err)
+
+					continue
+				}
+
+				io.Copy(os.Stdout, reader)
+				log.Printf("[DEBUG] Successfully downloaded and built %s", image)
+			}
+		}
+	} else {
+		log.Printf("[DEBUG] Skipping image download as SHUFFLE_AUTO_IMAGE_DOWNLOAD is set to true")
 	}
 }
 
@@ -2246,7 +2249,7 @@ func main() {
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
-					log.Printf("[INFO] Should delete -> download new images: %#v", incRequest.ExecutionArgument)
+					log.Printf("[INFO] Re-downloading new image(s): %#v", incRequest.ExecutionArgument)
 
 					if len(incRequest.ExecutionArgument) > 0 {
 						// FIXME: Wait X seconds before running this as the image build may not be done yet. This is shitty, but may be ok to do in Orborus. Easy fix for the future: Just let it run through jobs 5-10 times before actually picking it up
@@ -3463,7 +3466,7 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 
 		} else {
 			tenzirDisabled = true
-			log.Printf("[ERROR] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)
+			log.Printf("[WARNING] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)
 		}
 
 		return pipelinePayload, err

@@ -106,9 +106,7 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
 	"http:1.4.0":               "frikky/shuffle:http_1.4.0",
-	"http:1.3.0":               "frikky/shuffle:http_1.3.0",
 	"shuffle-tools:1.2.0":      "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.0.0":    "frikky/shuffle:shuffle-subflow_1.0.0",
 	"shuffle-subflow:1.1.0":    "frikky/shuffle:shuffle-subflow_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }

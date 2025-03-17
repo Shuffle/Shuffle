@@ -1,9 +1,10 @@
 module orborus
 
-go 1.22.0
+go 1.22.7
+
 toolchain go1.23.6
 
-//replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
 require (
 	github.com/docker/docker v27.5.0+incompatible

@@ -636,6 +636,32 @@ const App = (message, props) => {
 
         	<Route
         	  exact
+        	  path="/legal/:key"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/legal"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
         	  path="/docs/:key"
         	  element={
         	    <Docs
@@ -651,7 +677,6 @@ const App = (message, props) => {
         	  exact
         	  path="/docs"
         	  element={
-							//navigate(`/docs/about`)
         	    <Docs
         	      isMobile={isMobile}
         	      isLoaded={isLoaded}

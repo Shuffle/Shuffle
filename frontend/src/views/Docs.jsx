@@ -191,11 +191,13 @@ export const Img = (props) => {
 	}
 
     return(
-	  <img 
-		style={isArticlePage ? articleImageStyle : docsImageStyle} 
-		alt={props.alt} 
-		src={props.src} 
-	  />
+	  <div style={{width: "100%", textAlign: "center", }}> 
+		  <img 
+			style={isArticlePage ? articleImageStyle : docsImageStyle} 
+			alt={props.alt} 
+			src={props.src} 
+		  />
+	  </div>
 	)
 }
 
@@ -278,8 +280,6 @@ export const CodeHandler = (props) => {
 const Docs = (defaultprops) => {
     const { globalUrl, selectedDoc, serverside, serverMobile, isLoggedIn, isLoaded, userdata } = defaultprops;
 
-	console.log("\n\nSELECTED DOC\n", selectedDoc, "\n\n")
-
     let navigate = useNavigate();
     const location = useLocation();
     // Quickfix for react router 5 -> 6 
@@ -321,14 +321,22 @@ const Docs = (defaultprops) => {
     useEffect(() => {
         fetchDocList();
         setSidebarOpen(false);
-    }, [location]);
 
-    useEffect(() => {
-        //if (params["key"] === undefined) {
-        //	navigate("/docs/about")
-        //	return
-        //}
-    }, [])
+		if (props.match.params === undefined || props.match.params === null) {
+			return
+		}
+
+		const propkey = props.match.params.key
+		if (propkey === undefined || propkey === null) {
+			return
+		}
+
+		if (location.pathname.includes("/docs/")) {
+			if (propkey === "cookie_policy" || propkey === "compliance" || propkey === "privacy_policy" || propkey === "terms_of_service") {
+				navigate(`/legal/${propkey}`)
+			}
+		}
+    }, [location]);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -761,7 +769,13 @@ const Docs = (defaultprops) => {
     }
 
     const fetchDocList = (resetCache = false) => {
-        const url = isArticlePage ? `${globalUrl}/api/v1/articles?resetCache=${resetCache}` : `${globalUrl}/api/v1/docs`;
+        var url = `${globalUrl}/api/v1/docs`
+		if (location.pathname.includes("/legal")) {
+			url = `${globalUrl}/api/v1/docs?folder=legal&resetCache=${resetCache}`
+		} else if (location.pathname.includes("/articles")) {
+			url = `${globalUrl}/api/v1/docs?folder=articles&resetCache=${resetCache}`
+		}
+
         fetch(url, {
             method: "GET",
             headers: {
@@ -782,8 +796,18 @@ const Docs = (defaultprops) => {
             .catch((error) => { });
     };
 
-    const fetchDocs = (docId) => {
-        const url = isArticlePage ? `${globalUrl}/api/v1/articles/${docId}` : `${globalUrl}/api/v1/docs/${docId}`;
+    const fetchDoc = (docId) => {
+		if (docId === undefined) {
+			return 
+		}
+
+        var url = `${globalUrl}/api/v1/docs/${docId}`
+		if (location.pathname.includes("/legal")) {
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=legal`
+		} else if (location.pathname.includes("/articles")) {
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=articles`
+		}
+
         fetch(url, {
             method: "GET",
             headers: {
@@ -902,7 +926,7 @@ const Docs = (defaultprops) => {
                         });
                 } else {
                     console.log("DOCID: ", props.match.params.key)
-                    fetchDocs(props.match.params.key)
+                    fetchDoc(props.match.params.key)
                 }
             }
         }
@@ -911,7 +935,7 @@ const Docs = (defaultprops) => {
     // Handles search-based changes that origin from outside this file
     if (serverside !== true && window.location.href !== baseUrl) {
         setBaseUrl(window.location.href);
-        fetchDocs(props.match.params.key);
+        fetchDoc(props.match.params.key);
     }
 
     const markdownStyle = {
@@ -1106,7 +1130,14 @@ const Docs = (defaultprops) => {
                                 if (item === undefined) {
                                     return null;
                                 }
-                                const path = "/docs/" + item;
+
+                                var path = "/docs/" + item;
+								if (location.pathname.includes("/legal")) {
+									path = "/legal/" + item
+								} else if (location.pathname.includes("/articles")) {
+									path = "/articles/" + item
+								}
+
                                 const newname =
                                     item.charAt(0).toUpperCase() +
                                     item.substring(1).split("_").join(" ").split("-").join(" ");
