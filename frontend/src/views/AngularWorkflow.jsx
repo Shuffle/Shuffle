@@ -575,11 +575,17 @@ const AngularWorkflow = (defaultprops) => {
   }, [editWorkflowModalOpen])
 
   useEffect(() => {
-      if(selectedTrigger?.trigger_type === "SUBFLOW"){
+	  // Check if selectedTriggerIndex is a number >= 0
+	  if (isNaN(selectedTriggerIndex) || selectedTriggerIndex < 0) {
+		  return
+	  }
+
+      if (selectedTrigger?.trigger_type === "SUBFLOW" && selectedTriggerIndex !== undefined && selectedTriggerIndex !== null && workflow?.triggers[selectedTriggerIndex].parameters.length > 1) {
         setSelectedTriggerValue(workflow.triggers[selectedTriggerIndex].parameters[1].value || "")
-      } else if(selectedTrigger?.trigger_type === "USERINPUT"){
+      } else if (selectedTrigger?.trigger_type === "USERINPUT" && selectedTriggerIndex !== undefined && selectedTriggerIndex !== null && workflow?.triggers[selectedTriggerIndex].parameters.length > 0) {
         setSelectedTriggerValue(workflow.triggers[selectedTriggerIndex].parameters[0].value || "Do you want to continue the workflow? Start parameters: $exec")
       }
+
   }, [selectedTriggerIndex, selectedTrigger, workflow])
 
   useEffect(() => {
@@ -948,10 +954,14 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   useEffect(() => {
-    if (workflow.actions?.length == 1) {
-      if (workflow.actions[0].app_id == "3e320a20966d33c9b7e6790b2705f0bf") {
+    if (workflow?.actions?.length == 1) {
+      if (workflow?.actions[0].app_id == "3e320a20966d33c9b7e6790b2705f0bf") {
         setWorkflowAsCode(true);
       }
+    }
+
+    if (workflow?.suborg_distribution !== undefined && workflow?.suborg_distribution !== null && workflow?.suborg_distribution.length > 0) {
+    	getChildWorkflows(workflow.id)
     }
   }, [workflow]);
 
@@ -1495,6 +1505,8 @@ const AngularWorkflow = (defaultprops) => {
     if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
       headers["Org-Id"] = workflow.org_id
     }
+          
+	setWorkflows([])
 
     fetch(globalUrl + "/api/v1/workflows?subflow=true", {
       method: "GET",
@@ -1512,7 +1524,7 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson !== undefined) {
 
           // Sets up subflow trigger with the right info
-          if (trigger_index > -1) {
+          if (isNaN(trigger_index) === false && trigger_index > -1) {
 
             var baseSubflow = {}
             const trigger = workflow.triggers[trigger_index];
@@ -2494,15 +2506,19 @@ const AngularWorkflow = (defaultprops) => {
     if (cy !== undefined && cy !== null) {
       // scale: 0.3,
       // bg: "#27292d",
-	  if (cy.png !== undefined && cy.png !== null) {
-		  const cyImageData = cy.png({
-			output: "base64uri",
-			maxWidth: 480,
-			maxHeight: 270,
-		  })
+	  if (cy?.png !== undefined && cy?.png !== null) {
+		  try {
+			  const cyImageData = cy.png({
+				output: "base64uri",
+				maxWidth: 480,
+				maxHeight: 270,
+			  })
 
-		  if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
-			useworkflow.image = cyImageData
+			  if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
+				useworkflow.image = cyImageData
+			  }
+		  } catch (e) {
+			  console.log("Failed to get image data: ", e)
 		  }
 	  }
     }
@@ -3914,6 +3930,10 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const findWorkflowDiff = (parentWorkflow, childWorkflow) => {
+	  // Ensures new memory is used
+	  parentWorkflow = JSON.parse(JSON.stringify(parentWorkflow))
+	  childWorkflow = JSON.parse(JSON.stringify(childWorkflow))
+
 	  var diff = {
 		  "different": false,
 		  "environment": false,
@@ -3931,9 +3951,13 @@ const AngularWorkflow = (defaultprops) => {
 		  return diff
 	  }
 
-
 	  var parentEnvironment = ""
 	  var childEnvironment = ""
+
+	  if (parentWorkflow.triggers !== undefined && parentWorkflow.triggers !== null && parentWorkflow.triggers.length > 0) {
+		  parentWorkflow.actions = parentWorkflow.actions.concat(parentWorkflow.triggers)
+	  }
+
 	  for (var parentKey in parentWorkflow.actions) {
 		  const parentAction = parentWorkflow.actions[parentKey]
 		  if (parentAction.environment !== undefined && parentAction.environment !== null && parentAction.environment !== "") {
@@ -3945,6 +3969,19 @@ const AngularWorkflow = (defaultprops) => {
 		  }
 
 		  var found = false
+		  if (childWorkflow.triggers !== undefined && childWorkflow.triggers !== null && childWorkflow.triggers.length > 0) {
+			  for (var triggerKey in childWorkflow.triggers) {
+				  if (childWorkflow.triggers[triggerKey].replacement_for_trigger !== parentAction.id) {
+					  continue
+				  }
+
+				  // Rewrapping the ID just in case
+				  childWorkflow.triggers[triggerKey].id = childWorkflow.triggers[triggerKey].replacement_for_trigger
+				  childWorkflow.actions.push(childWorkflow.triggers[triggerKey])
+				  break
+			  }
+		  }
+
 		  for (var childKey in childWorkflow.actions) {
 			  const childAction = childWorkflow.actions[childKey]
 			  if (childAction.environment !== undefined && childAction.environment !== null && childAction.environment !== "") {
@@ -3991,6 +4028,10 @@ const AngularWorkflow = (defaultprops) => {
 				  continue
 			  }
 
+			  var parentworkflow = ""
+			  var parentstartnode = ""
+			  var childworkflow = ""
+			  var childstartnode = ""
 			  for (var parentParamIndex in parentAction.parameters) {
 				  const parentParam = parentAction.parameters[parentParamIndex]
 				  for (var childParamIndex in childAction.parameters) {
@@ -3999,10 +4040,26 @@ const AngularWorkflow = (defaultprops) => {
 						  continue
 					  }
 
+					  if (childParam.name === "workflow" || childParam.name === "subflow") {
+						  parentworkflow = parentParam.value
+						  childworkflow = childParam.value
+						  continue
+					  }
+
+					  if (childParam.name == "startnode") {
+						  parentstartnode = parentParam.value
+						  childstartnode = childParam.value
+						  continue
+					  }
+
 					  if (childParam.value !== parentParam.value) {
 						  actionDiff.parameters.push(childParam.name) 
 					  }
 				  }
+			  }
+
+			  if (parentworkflow !== childworkflow && parentstartnode !== childstartnode) {
+				  actionDiff.parameters.push("subflow")
 			  }
 		  }
 
@@ -4010,9 +4067,11 @@ const AngularWorkflow = (defaultprops) => {
 			  actionDiff.params = true
 		  }
 
+		  /*
 		  if (!found) {
 			  actionDiff.new = true
 		  }
+		  */
 
 		  if (actionDiff !== undefined && actionDiff !== null && Object.keys(actionDiff).length > 1) {
 			  actionDiff.label = parentAction.label.replaceAll("_", " ")
@@ -6305,11 +6364,15 @@ const AngularWorkflow = (defaultprops) => {
 			if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0 && originalWorkflow.org_id !== undefined && originalWorkflow.org_id !== null && originalWorkflow.org_id.length > 0 && workflow.org_id === originalWorkflow.org_id) {
 				// Allows a parent workflow to control the schedule
 			} else if (data.replacement_for_trigger !== undefined && data.replacement_for_trigger !== null && data.replacement_for_trigger.length > 0) {
-				toast.warning("This schedule is controlled by the parent workflow. If you want additional schedule control, please add a custom schedule to this workflow.", {
-					autoClose: 30000,
-				})
-        		event.target.unselect()
-				return
+
+				// No custom control on cloud 
+				if (isCloud) {
+					toast.warning("This schedule is controlled by the parent workflow. If you want additional schedule control, please add a custom schedule to this workflow.", {
+						autoClose: 30000,
+					})
+					event.target.unselect()
+					return
+				}
 			}
 
         } else if (data.app_name === "Webhook" && trigger_index >= 0) {
@@ -6885,7 +6948,7 @@ const AngularWorkflow = (defaultprops) => {
     )
     if (targetnode !== -1) {
       if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow" || workflow.triggers[targetnode].app_name === "Shuffle Subflow") {
-        console.log("User Input or Shuffle Workflow")
+        //console.log("User Input or Shuffle Workflow")
       } else {
         toast("Can't have triggers as target of branch")
         event.target.remove()
@@ -9217,11 +9280,15 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     insertedNodes = insertedNodes.concat(newedges);
-    setWorkflow(inputworkflow);
+    setWorkflow(inputworkflow)
 
     // Reset view for cytoscape
     if (cy !== undefined && cy !== null) {
-      cy.add(insertedNodes)
+	  try {
+      	cy.add(insertedNodes)
+	  } catch (error) {
+		  console.log("Error adding nodes to cytoscape (6): ", error)
+	  }
 
 	  try {
       	cy.fit(null, 250)
@@ -9300,12 +9367,6 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-    //if (selectedNode.data("id") === selectedAction.id) {
-    //	setSelectedApp({});
-    //	setSelectedAction({});
-    //setSelectedTrigger({});
-    //setSelectedTriggerIndex({});
-    //}
     const parsedSelection = cy.$(":selected");
     if (selectedNode.data().decorator === true && selectedNode.data("type") !== "COMMENT") {
       toast("This node can't be deleted.");
@@ -9505,7 +9566,6 @@ const AngularWorkflow = (defaultprops) => {
   if (firstrequest) {
     setFirstrequest(false)
     getWorkflow(props.match.params.key, {})
-    getChildWorkflows(props.match.params.key)
     getRevisionHistory(props.match.params.key)
     loadTriggers()
     getApps()
@@ -14891,12 +14951,15 @@ const AngularWorkflow = (defaultprops) => {
               }}
             >
               <div style={{ flex: "10" }}>
-                <b>Select a workflow to execute </b>
+                <b>Select a workflow to run</b>
               </div>
             </div>
+
             {workflow.triggers[selectedTriggerIndex].parameters[0].value
               .length === 0 ? null : workflow.triggers[selectedTriggerIndex]
-                .parameters[0].value === props.match.params.key ? null : (
+                .parameters[0].value === props.match.params.key ? 
+				null
+				: (
               <div style={{ marginLeft: 5, flex: 1 }}>
                 <a
                   rel="noopener noreferrer"
@@ -14917,8 +14980,9 @@ const AngularWorkflow = (defaultprops) => {
 
           {workflows === undefined ||
             workflows === null ||
-            workflows.length === 0 ? null : (
-
+            workflows.length === 0 ? 
+			  <CircularProgress color="secondary" style={{ margin: "auto", marginTop: 10, width: 25, height: 25, }} />
+			: (
             <Autocomplete
               id="subflow_search"
               autoHighlight
@@ -18175,6 +18239,10 @@ const AngularWorkflow = (defaultprops) => {
             	    value={workflow.org_id}
             	    disabled={savingState !== 0 || suborgWorkflows?.length === 0 || allTriggers === undefined}
             	    onChange={(e) => {
+					  if (cy !== undefined && cy !== null) {
+						  cy.nodes().unselect()
+					  }
+
 					  if (lastSaved === false && originalWorkflow.id === workflow.id) {
   					  	  setSuborgWorkflows([])
 

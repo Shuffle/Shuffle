@@ -1032,10 +1032,14 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("[INFO] Should have deleted workflow %s (%s)", workflow.Name, fileId)
 
-	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
-	shuffle.DeleteCache(ctx, cacheKey)
+	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.Id))
 	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.ActiveOrg.Id))
+	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_%s", user.Username, fileId))
 	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
+	shuffle.DeleteCache(ctx, fmt.Sprintf("workflow_%s_childworkflows", workflow.ID))
+	if len(workflow.ParentWorkflowId) > 0 {
+		shuffle.DeleteCache(ctx, fmt.Sprintf("workflow_%s_childworkflows", workflow.ParentWorkflowId))
+	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
