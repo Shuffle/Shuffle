@@ -77,8 +77,6 @@ const Billing = memo((props) => {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [deleteAlertIndex, setDeleteAlertIndex] = useState(-1);
 	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
-	const [isScale, setIsScale] = useState(false);
-
 	useEffect(() => {
 		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
 			const percentage = (userdata.app_execution_usage / userdata.app_execution_limit) * 100;
@@ -178,10 +176,11 @@ const Billing = memo((props) => {
 		padding: 20,
 		// maxWidth: 400,
 		width: 340,
-		height: 'auto',
+		height: 480,
 		// width: "100%",
-		backgroundColor: "#1e1e1e",
-		borderRadius: 10,
+		backgroundColor: theme.palette.backgroundColor,
+		borderRadius: theme.palette?.borderRadius * 2,
+		border: "1px solid rgba(255,255,255,0.3)",
 		marginRight: 10,
 		marginTop: 15,
 	}
@@ -362,7 +361,7 @@ const Billing = memo((props) => {
 		var showSupport = false
 		if (subscription.name.includes("default")) {
 			top_text = "Custom Contract"
-			// newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
+			newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
 			showSupport = true
 		}
 
@@ -378,17 +377,16 @@ const Billing = memo((props) => {
 
 		if (subscription.name.includes("Scale")) {
 			top_text = "Scale access"
-			setIsScale(true)
 		}
 
 		if (highlight === true) {
 			// Add an "Upgrade now" button
-			// newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
+			newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
 		}
 
-		// if (hovered) {
-		// 	newPaperstyle.backgroundColor = "#2b2b2b"
-		// }
+		if (hovered) {
+			newPaperstyle.backgroundColor = "#2b2b2b"
+		}
 
 		const handleClickOpen = () => {
 			setOpenChangeEmailBox(true);
@@ -558,7 +556,6 @@ const Billing = memo((props) => {
 						</div>
 					</DialogContent>
 				</Dialog>
-				<Button style={{ backgroundColor: '#2F2F2F', color: "white", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', width: 144, height: 40 }}>Current Plan</Button>
 				<div style={{ display: "flex", width: 340 }}>
 					{top_text === "Base Cloud Access" && userdata.has_card_available === true ?
 						<Chip
@@ -662,8 +659,8 @@ const Billing = memo((props) => {
 											<TextField
 												value={feature.split("Worker License: ")[1]}
 												style={{
-													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-													borderRadius: theme.palette?.textFieldStyle.borderRadius,
+													backgroundColor: theme.palette.inputColor,
+													borderRadius: theme.palette?.borderRadius,
 												}}
 												id={fieldId}
 												onClick={() => { }}
@@ -2016,33 +2013,7 @@ const Billing = memo((props) => {
 				</Typography>
 				: null}
 
-			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : "100%", marginTop: 20}} >
-				<div style={{ display: "flex", flexDirection: "column", width: "100%",  }}>
-				{isCloud &&
-					selectedOrganization.subscriptions !== undefined &&
-					selectedOrganization.subscriptions !== null &&
-					selectedOrganization.subscriptions.length > 0 &&
-					!isChildOrg ?
-					selectedOrganization.subscriptions
-						.reverse()
-						.map((sub, index) => {
-							return (
-									<SubscriptionObject
-									index={index + 1}
-									globalUrl={globalUrl}
-									userdata={userdata}
-									serverside={serverside}
-									billingInfo={billingInfo}
-									stripeKey={stripeKey}
-									selectedOrganization={selectedOrganization}
-									subscription={sub}
-									highlight={true}
-								/>
-							)
-						})
-					: null}
-				
-				<div style={{ display: "flex", flexDirection: "row", width: "100%", marginTop: 20, marginBottom: 20, maxWidth: 860, }}>
+			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : "100%", maxWidth: 860, marginTop: 20}} >
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
 					<LicencePopup
 					serverside={serverside}
@@ -2055,7 +2026,6 @@ const Billing = memo((props) => {
 					isCloud={isCloud}
 					userdata={userdata}
 					stripeKey={stripeKey}
-					isScale={isScale}
 					{...props}
 					/>
 					: !isCloud ?
@@ -2091,7 +2061,6 @@ const Billing = memo((props) => {
 								isCloud={isCloud}
 								userdata={userdata}
 								stripeKey={stripeKey}
-								isScale={isScale}
 							/>	
 
 							{/* <SubscriptionObject
@@ -2115,9 +2084,30 @@ const Billing = memo((props) => {
 							/> */}
 						</span>
 						: null}
-						</div>
-				</div>
 
+				{isCloud &&
+					selectedOrganization.subscriptions !== undefined &&
+					selectedOrganization.subscriptions !== null &&
+					selectedOrganization.subscriptions.length > 0 &&
+					!isChildOrg ?
+					selectedOrganization.subscriptions
+						.reverse()
+						.map((sub, index) => {
+							return (
+								<SubscriptionObject
+									index={index + 1}
+									globalUrl={globalUrl}
+									userdata={userdata}
+									serverside={serverside}
+									billingInfo={billingInfo}
+									stripeKey={stripeKey}
+									selectedOrganization={selectedOrganization}
+									subscription={sub}
+									highlight={true}
+								/>
+							)
+						})
+					: null}
 				{/*
 									<Grid item key={index} xs={12/selectedOrganization.subscriptions.length}>
 										<Card
@@ -2162,6 +2152,7 @@ const Billing = memo((props) => {
 									</Grid>
 									*/}
 			</div>
+
 
 			{/*isCloud &&
 						selectedOrganization.partner_info !== undefined &&

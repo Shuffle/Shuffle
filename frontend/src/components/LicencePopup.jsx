@@ -46,7 +46,7 @@ import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 import Billing from "./Billing.jsx";
 
 const LicencePopup = (props) => {
-    const { globalUrl, userdata, serverside, billingInfo, stripeKey, setModalOpen, isScale, isLoggedIn, isMobile, selectedOrganization, isCloud } = props;
+    const { globalUrl, userdata, serverside, billingInfo, stripeKey, setModalOpen, isLoggedIn, isMobile, selectedOrganization, isCloud } = props;
     //const alert = useAlert();
     let navigate = useNavigate();
     const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
@@ -165,25 +165,11 @@ const LicencePopup = (props) => {
             ]
         }
 
-        if (userdata?.app_execution_limit >= 300000) {
-            subscription.name = "Enterprise"
-            subscription.currency_text = "$"
-            subscription.price = typecost_single
-            subscription.limit = userdata?.app_execution_limit
-            subscription.interval = "app run / month"
-            subscription.features = [
-                "Includes " + (userdata?.app_execution_limit/1000) + "K app runs/month. ",
-                "Multi-Tenancy and Region-Selection",
-                "And all other features from /pricing",
-            ]
-        }
-
-
         var newPaperstyle = JSON.parse(JSON.stringify(paperStyle))
         if (subscription.name === "Enterprise" && subscription.active === true) {
-            top_text = "Enterprise Plan"
+            top_text = "Current Plan"
 
-            // newPaperstyle.border = "1px solid #f85a3e"
+            newPaperstyle.border = "1px solid #f85a3e"
         }
 
         var showSupport = false
@@ -269,7 +255,7 @@ const LicencePopup = (props) => {
                 style={{ borderRadius: theme.palette?.borderRadius, }}
                 placement="bottom"
             >
-                <div style={{ backgroundColor: "#1e1e1e"}}>
+                <div style={{}}>
                     <Paper
                         style={newPaperstyle}
                     // onMouseEnter={() => setHovered(true)}
@@ -357,9 +343,9 @@ const LicencePopup = (props) => {
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        {subscription.active === true && !isScale && <Button style={{ backgroundColor: '#2F2F2F', color: "white", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', width: 144, height: 40 }}>Current Plan</Button>                    }
+                        <Button style={{ backgroundColor: '#2F2F2F', color: "white", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', width: 144, height: 40 }}>Current Plan</Button>
                         <div style={{ display: "flex" }}>
-                            {top_text === "Base Cloud Access" && userdata.has_card_available === true && !isScale ?
+                            {top_text === "Base Cloud Access" && userdata.has_card_available === true ?
                                 <Chip
                                     style={{
                                         backgroundColor: "#f86a3e",
@@ -525,10 +511,7 @@ const LicencePopup = (props) => {
 									"While you have a card attached to your account, Shuffle will no longer prevent workflows from running. Billing will occur at the start of each month."
 									:
 									isCloud ?
-                                        userdata?.app_execution_limit && userdata?.app_execution_limit >= 300000 ?
-                                            "You have subscribed to the Enterprise plan, which includes " + (userdata?.app_execution_limit/1000) + "K app runs/month. You can increase the limit by upgrading current plan. Contact support@shuffler.io for more information." :
-                                            `You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
-
+										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
 										:
 										`You are not subscribed to any plan and are using the free, open source plan. This plan has no enforced limits, but scale issues may occur due to CPU congestion.`
 							}
@@ -716,33 +699,8 @@ const LicencePopup = (props) => {
 			setCalculatedCost("$960")
 			setSelectedValue(8)
 		} else {
-            if (userdata && userdata?.app_execution_limit) {
-                if (userdata.app_execution_limit >= 300000 && userdata.app_execution_limit < 400000) {
-                    setSelectedValue(400)
-                    setCalculatedCost("$1280")
-                }else if (userdata?.app_execution_limit >= 400000 && userdata?.app_execution_limit < 500000) {
-                    setSelectedValue(500)
-                    setCalculatedCost("$1600")
-                } else if (userdata?.app_execution_limit >= 500000 && userdata?.app_execution_limit < 600000) {
-                    setSelectedValue(600)
-                    setCalculatedCost("$1920")
-                } else if (userdata?.app_execution_limit >= 600000 && userdata?.app_execution_limit < 700000) {
-                    setSelectedValue(700)
-                    setCalculatedCost("$2240")
-                } else if (userdata?.app_execution_limit >= 700000 && userdata?.app_execution_limit < 800000) {
-                    setSelectedValue(800)
-                    setCalculatedCost("$2560")
-                } else if (userdata?.app_execution_limit >= 800000 && userdata?.app_execution_limit < 900000) {
-                    setSelectedValue(900)
-                    setCalculatedCost("$2880")
-                }else {
-                    setCalculatedCost("$960")
-                    setSelectedValue(300)
-                }
-            }else {
-                setCalculatedCost("$960")
-                setSelectedValue(300)
-            }
+			setCalculatedCost("$960")
+			setSelectedValue(300)
 		}
 	}, [shuffleVariant])
 
@@ -1019,7 +977,7 @@ const LicencePopup = (props) => {
                             </span>
                             : null}
 
-                    {/* {isCloud &&
+                    {isCloud &&
                         selectedOrganization.subscriptions !== undefined &&
                         selectedOrganization.subscriptions !== null &&
                         selectedOrganization.subscriptions.length > 0 ?
@@ -1040,7 +998,7 @@ const LicencePopup = (props) => {
                                     />
                                 )
                             })
-                        : null} */}
+                        : null}
                 </Grid>
                 <Grid item xs={8}>
                     <Grid style={{}}>
@@ -1048,12 +1006,12 @@ const LicencePopup = (props) => {
                         <Card style={{
                             padding: 20,
                             borderRadius: theme.palette?.borderRadius,
-                            border: !isScale ? "1px solid #f85a3e" : 'none',
+                            border: "1px solid #f85a3e",
                         }}>
                             <div>
-                                { !isScale && <Button style={{ backgroundColor: 'rgba(255, 132, 68, 0.2)', color: "#FF8444", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', }}
+                                <Button style={{ backgroundColor: 'rgba(255, 132, 68, 0.2)', color: "#FF8444", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', }}
                                     variant="contained"
-                                    color="primary">Recommended </Button> }
+                                    color="primary">Recommended </Button>
 
                             </div>
                             <Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, flex: 5, }}>{shuffleVariant === 1 ? "Scale" : "Enterprise"}</Typography>

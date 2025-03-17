@@ -1946,10 +1946,7 @@ const Workflows = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for setting workflows :O!");
-
-		  if (bulk !== true) {
-          	toast(`Failed deleting workflow ${id}. Do you have access?`);
-		  }
+          toast("Failed deleting workflow. Do you have access?");
         } else {
           if (bulk !== true) {
             toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)

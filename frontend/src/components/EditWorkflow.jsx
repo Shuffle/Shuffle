@@ -577,20 +577,12 @@ const EditWorkflow = (props) => {
 								<Typography variant="h4" style={{ marginTop: 50, }}>
 									Multi-Tenancy, Backups & Security
 								</Typography>
+
 								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
-									Control mechanisms for multi-tenancy, backups, and security.
+									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (contact support@shuffler.io if you want a demo. Please try it!)
 								</Typography>
 
-								<Typography variant="h6" style={{ marginTop: 50, }}>
-									Multi-Tenant Workflows
-								</Typography>
-
-								<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, marginBottom: 10, }}>
-									Make one workflow, and keep a separate, synced copy in your other tenants. Control distributed auth, runtime locations, files, datastore keys etc. Can only distribute from parent org to child org. Need help trying it? <a href="https://shuffler.io/contact" target="_blank" style={{color: "#f85a3e", textDecoration: "none",}}>Contact us for a demo</a>
-								</Typography>
-
-								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0  ?
-
+								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
 											<Typography variant="body2" style={{ marginTop: 10, color: "rgba(255,255,255,0.7)" }}>
@@ -608,7 +600,6 @@ const EditWorkflow = (props) => {
 											multiple
 											style={{ marginTop: 10, }}
 											value={innerWorkflow.suborg_distribution === undefined || innerWorkflow.suborg_distribution === null ? ["none"] : innerWorkflow.suborg_distribution}
-											disabled={workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0}
 											onChange={(e) => {
 												var newvalue = e.target.value
 												if (newvalue.length > 1 && newvalue[0] === "none") {

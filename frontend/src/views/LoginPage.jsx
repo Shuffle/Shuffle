@@ -427,14 +427,14 @@ const LoginPage = props => {
 		window.location.pathname = "/workflows"
 	}
 
-    const checkAdmin = () => {
-      const url = globalUrl + "/api/v1/checkusers";
-      fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+  const checkAdmin = () => {
+    const url = globalUrl + "/api/v1/checkusers";
+    fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
@@ -459,7 +459,7 @@ const LoginPage = props => {
 		  	navigate("/adminsetup")
 		  }, 2500)
       })
-    }
+  };
 
 
 	const onSubmit = (e) => {
@@ -952,7 +952,7 @@ const LoginPage = props => {
 		</div>
 
 	return (
-		<div style={{zoom: 0.8, paddingTop: 75, paddingBottom: 90 }}>
+		<div style={{zoom: 0.8, paddingTop: 150, paddingBottom: 90 }}>
 			{loadedCheck}
 		</div>
 	)
