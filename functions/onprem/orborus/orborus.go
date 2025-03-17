@@ -456,20 +456,18 @@ func deployServiceWorkers(image string) {
 		}
 	}
 
-	// Only do this if no memcached is set manually
-	if os.Getenv("SHUFFLE_MEMCACHED") == "" {
-		isMemcachedRunning, err := checkMemcached(ctx, dockercli)
-		if err != nil {
-			log.Printf("[ERROR] Failed checking memcached: %s", err)
-		}
-		if isMemcachedRunning == false {
-			log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
-			deployMemcached(dockercli)
-		}
-
-		ip := "shuffle-cache"
-		os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
+	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
+	if err != nil {
+		log.Printf("[ERROR] Failed checking memcached: %s", err)
 	}
+	if isMemcachedRunning == false {
+		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
+		deployMemcached(dockercli)
+	}
+
+	ip := "shuffle-cache"
+
+	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 
 	defaultNetworkAttach := false
 	if containerId != "" {

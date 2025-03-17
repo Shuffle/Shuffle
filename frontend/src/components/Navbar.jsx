@@ -47,7 +47,7 @@ const menuData = {
       title: "Shuffle",
       description:
         "The most versatile automation engine with focus on security.",
-      icon: "images/logos/orange_logo.svg",
+      icon: "images/icons/shuffleLogo.svg",
       path: "/docs/about",
       gaData: {
         category: "navbar",
