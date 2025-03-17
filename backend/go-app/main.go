@@ -4385,7 +4385,7 @@ func runInitEs(ctx context.Context) {
 
 			request := http.Request{}
 			// Add the "force=true" query to the fake request
-			request.URL, err = url.Parse("/api/v1/health/stats?force=true")
+			request.URL, err = url.Parse("/api/v1/health?force=true")
 			if err != nil {
 				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
 			}
