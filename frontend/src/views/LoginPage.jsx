@@ -461,7 +461,6 @@ const LoginPage = props => {
       })
     }
 
-
 	const onSubmit = (e) => {
 		//toast("Testing from login page")
 
