@@ -773,25 +773,36 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	//time.Sleep(time.Duration(30) * time.Second)
 
 	newImages := []string{}
-	for _, image := range strings.Split(images, ",") {
-		image = strings.TrimSpace(image)
-		if shuffle.ArrayContains(handled, image) {
+	for _, curimage := range strings.Split(images, ",") {
+		curimage = strings.TrimSpace(curimage)
+		if shuffle.ArrayContains(handled, curimage) {
 			continue
 		}
 
-		handled = append(handled, image)
-		if !strings.Contains(image, "/") {
-			image = fmt.Sprintf("frikky/shuffle:%s", image)
+		handled = append(handled, curimage)
+		if !strings.Contains(curimage, "/") {
+			curimage = fmt.Sprintf("frikky/shuffle:%s", curimage)
 		}
 
-		newImages = append(newImages, image)
+		newImages = append(newImages, curimage)
 
-		log.Printf("[DEBUG] Downloading image: %s", image)
-		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+		// Force remove the current image to avoid cached layers
+		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
+			Force: true,
+			PruneChildren: true,
+		})
+
+		if err != nil {
+			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+		} else {
+			log.Printf("[DEBUG] Removed image: %s", curimage)
+		}
+
+		err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
 			log.Printf("[ERROR] Failed downloading image: %s", err)
 		} else {
-			log.Printf("[DEBUG] Downloaded image: %s", image)
+			log.Printf("[DEBUG] Downloaded image: %s", curimage)
 		}
 	}
 

@@ -8,6 +8,7 @@ export const AppContext = (props) => {
 
     // Left side bar global states
     const [searchBarModalOpen, setSearchBarModalOpen] = useState(false);
+    const [isDocSearchModalOpen, setIsDocSearchModalOpen] = useState(false);
     const [leftSideBarOpenByClick, setLeftSideBarOpenByClick] = useState(currentLocation?.includes('/workflows/') ? false : true)
     const [windowWidth, setWindowWidth] = useState(serverside === true ? 100 : window.innerWidth);
 
@@ -37,6 +38,8 @@ export const AppContext = (props) => {
 
     return (
         <Context.Provider value={{
+            isDocSearchModalOpen,
+            setIsDocSearchModalOpen,
             searchBarModalOpen,
             setSearchBarModalOpen,
             leftSideBarOpenByClick,

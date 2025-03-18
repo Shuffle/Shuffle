@@ -57,7 +57,7 @@ const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
-  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen} = useContext(Context);
+  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen, isDocSearchModalOpen} = useContext(Context);
 
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
@@ -790,7 +790,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         height: "calc((100vh - 32px)*1.2)",
       }}
     >
-      {searchBarModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} /> : null}
+      {searchBarModalOpen && !isDocSearchModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} isDocSearchModalOpen={isDocSearchModalOpen} /> : null}
       <Box
         sx={{
           display: "flex",
@@ -1911,11 +1911,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 };
 
 export default LeftSideBar;
-const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata}) => {
+const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata, isDocSearchModalOpen}) => {
   return (
     (
       <Dialog
-        open={searchBarModalOpen}
+        open={searchBarModalOpen && !isDocSearchModalOpen}
         onClose={() => {
           setSearchBarModalOpen(false);
         }}

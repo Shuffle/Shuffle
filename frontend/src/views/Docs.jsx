@@ -23,7 +23,12 @@ import {
     List,
     Collapse,
     ListItemButton,
-    ListItemText
+    ListItemText,
+    Dialog,
+    DialogTitle,
+    Box,
+    DialogContent,
+    InputAdornment
 } from "@mui/material";
 import {
     Link as LinkIcon,
@@ -32,9 +37,12 @@ import {
     ExpandMore as ExpandMoreIcon,
     FileCopy as FileCopyIcon,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Search as SearchIcon,
+    Close as CloseIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
+import SearchBox from "../components/SearchData.jsx";
 
 const Body = {
     //maxWidth: 1000,
@@ -280,6 +288,8 @@ export const CodeHandler = (props) => {
 const Docs = (defaultprops) => {
     const { globalUrl, selectedDoc, serverside, serverMobile, isLoggedIn, isLoaded, userdata } = defaultprops;
 
+    const { searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen, setIsDocSearchModalOpen, leftSideBarOpenByClick } = useContext(Context);
+
     let navigate = useNavigate();
     const location = useLocation();
     // Quickfix for react router 5 -> 6 
@@ -316,6 +326,7 @@ const Docs = (defaultprops) => {
     const [activeSubItem, setActiveSubItem] = useState(false);
     const headingElementsRef = useRef({})
     var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
+    const searchFieldRef = useRef(null);
 
 
     useEffect(() => {
@@ -338,6 +349,13 @@ const Docs = (defaultprops) => {
 		}
     }, [location]);
 
+    useEffect(() => {
+        return () => {
+            setIsDocSearchModalOpen(false);
+            setSearchBarModalOpen(false);
+        };
+    }, []); 
+    
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     }
@@ -466,6 +484,71 @@ const Docs = (defaultprops) => {
         }
         return headings;
     };
+
+    const modalView = (
+        <Dialog
+          open={searchBarModalOpen && isDocSearchModalOpen}
+          onClose={() => {
+            setSearchBarModalOpen(false);
+            if (searchFieldRef.current) {
+                searchFieldRef.current.blur();
+            }
+          }}
+          PaperProps={{
+            style: {
+              color: "white",
+              minWidth: 750,
+              minHeight: "180px",
+              maxHeight: "85vh",
+              borderRadius: 16,
+              border: "1px solid var(--Container-Stroke, #494949)",
+              background: "var(--Container, #000000)",
+              boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+              position: "fixed",
+              top: "70px",
+              left: "50%",
+              transform: "translateX(-50%)",
+            },
+          }}
+          sx={{
+            zIndex: 50005,
+            '& .MuiBackdrop-root': {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2, pr: 3, pt: 2 }}>
+            <DialogTitle
+              sx={{ 
+                color: "var(--Paragraph-text, #C8C8C8)",
+                p: 0,
+                m: 0,
+                ml: 1.5,
+                fontFamily: theme.typography.fontFamily,
+              }}
+            >
+              Search for Documentation
+            </DialogTitle>
+            <IconButton 
+              onClick={() => setSearchBarModalOpen(false)}
+              sx={{ 
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <DialogContent>
+            <Box sx={{ pt: 3 }}>
+              <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
+            </Box>
+          </DialogContent>
+          <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}/>
+        </Dialog>
+      );
 
 
     // extract TOC from actual markdown
@@ -1117,9 +1200,50 @@ const Docs = (defaultprops) => {
             <div style={Body}>
                 <div style={!isArticlePage ? SideBar : (sidebarOpen ? SideBar : collapsedSideBar)}>
                     <Paper style={SidebarPaperStyle}>
+                        {modalView}
+                        {
+                            !isArticlePage && (
+                                <TextField
+                                    variant="outlined"
+                                    placeholder="Search Docs..."
+                                    size="small"
+                                    onClick={() => {
+                                        setIsDocSearchModalOpen(true)
+                                        setSearchBarModalOpen(true)
+                                    }}
+                                    inputRef={searchFieldRef}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <SearchIcon style={{ color: "white" }} />
+                                            </InputAdornment>
+                                        ),
+                                        style: {
+                                            backgroundColor: "#212121",
+                                            borderRadius: 4,
+                                            color: "white",
+                                        },
+                                    }}
+                                    style={{
+                                        marginTop: 10,
+                                        marginLeft: 10,
+                                        borderRadius: 4,
+                                        width: !isLoggedIn ? "14%" : !leftSideBarOpenByClick ?  "12%" : "11%",
+                                        maxWidth: "285px",
+                                        position: "fixed",
+                                        zIndex: 1100,
+                                    }}
+                                    inputProps={{
+                                        readOnly: true,
+                                    }}
+                                />
+                            )
+                        }
                         <List style={{ 
                             listStyle: "none", 
                             paddingLeft: "0",
+                            paddingTop: !isArticlePage ? "60px" : undefined,
+                            paddingBottom: !isArticlePage ? "30px" : undefined,
                             display: isArticlePage ? sidebarOpen ? "block" : "none" : undefined,
                             opacity: isArticlePage ? sidebarOpen ? 1 : 0 : undefined,
                             transition: isArticlePage ? "opacity 0.3s ease" : undefined,
