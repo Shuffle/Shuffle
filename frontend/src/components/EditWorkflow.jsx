@@ -302,6 +302,7 @@ const EditWorkflow = (props) => {
 					<Button
 						variant="contained"
 						style={{}}
+						id="save_workflow_button"
 						disabled={name.length === 0 || submitLoading === true}
 						onClick={() => {
 							setSubmitLoading(true)
@@ -406,6 +407,7 @@ const EditWorkflow = (props) => {
 							label="Name"
 							autoFocus
 							fullWidth
+							id="Enter-Workflow-Name"
 						/>
 
 						<div style={{ display: "flex", marginTop: 10, }}>

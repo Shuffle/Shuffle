@@ -4616,6 +4616,7 @@ const Workflows2 = (props) => {
                                     variant="contained"
                                     color="primary"
                                     onClick={handleCreateWorkflow}
+                                    id="create_workflow_button"
                                     style={{
                                         borderRadius: 4,
                                         flex: 0.8,
