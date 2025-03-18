@@ -5,8 +5,8 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import { isMobile } from "react-device-detect";
 import { toast } from 'react-toastify';
 import { useInterval } from "react-powerhooks";
-
-
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import {
 	ConnectingAirportsOutlined,
 	ConstructionOutlined,
@@ -80,21 +80,6 @@ const inputColor = "#383B40"
 const useStyles = makeStyles({
 	notchedOutline: {
 		borderColor: "#f85a3e !important"
-	},
-	marketplaceButton: {
-		width: "100%",
-		justifyContent: "flex-start",
-		padding: "12px",
-		marginBottom: "12px",
-		backgroundColor: "#1A1A1A",
-		border: "1px solid #494949",
-		borderRadius: "8px",
-		color: "white",
-		opacity: 0.7,
-		'&:hover': {
-			opacity: 1,
-			cursor: "not-allowed",
-		},
 	},
 	marketplaceIcon: {
 		width: 28,
@@ -175,6 +160,14 @@ const FreePlanCard = ({ classes }) => {
 const MarketplaceCard = ({ classes }) => {
 	const marketplaceOptions = [
 		{
+			name: "Open Source Install",
+			logo: "https://static.cdnlogo.com/logos/g/69/github-icon.svg",
+			tooltipText: "Click to install!",
+			valid: true,
+
+			link: "https://github.com/shuffle/shuffle/blob/main/.github/install-guide.md"
+		},
+		{
 			name: "Amazon Web Services",
 			logo: "https://cdn.cdnlogo.com/logos/a/19/aws.svg",
 			tooltipText: "Coming soon to AWS Marketplace!",
@@ -213,31 +206,50 @@ const MarketplaceCard = ({ classes }) => {
 				Self Host
 			</h2>
 
-			{marketplaceOptions.map((option, index) => (
-				<Tooltip
-					key={index}
-					title={option.tooltipText}
-					placement="top"
-					arrow
-				>
-					<button
-						className={classes.marketplaceButton}
-						disabled
+			{marketplaceOptions.map((option, index) => {
+				return (
+					<Tooltip
+						key={index}
+						title={option.tooltipText}
+						placement="top"
+						arrow
 					>
-						<img
-							src={option.logo}
-							alt={option.name}
-							className={classes.marketplaceIcon}
-							style={{
-								filter: option.valid === true ? null : "grayscale(1)",
+						<button
+							onClick={() => {
+								if (option.valid === true) {
+									window.open(option.link, "_blank")
+								}
+								
 							}}
-						/>
-						<Typography className={classes.marketplaceText}>
-							{option.name}
-						</Typography>
-					</button>
-				</Tooltip>
-			))}
+							style={{
+								width: "100%",
+								justifyContent: "flex-start",
+								padding: "12px",
+								marginBottom: "12px",
+								backgroundColor: "#1A1A1A", 
+								border: "1px solid #494949",
+								borderRadius: "8px",
+								color: "white",
+								opacity: 0.7,
+								cursor: option.valid === true ? "pointer" : "not-allowed",
+							}}
+							disabled={option.valid === false}
+						>
+							<img
+								src={option.logo}
+								alt={option.name}
+								className={classes.marketplaceIcon}
+								style={{
+									filter: option.valid === true ? null : "grayscale(1)",
+								}}
+							/>
+							<Typography className={classes.marketplaceText}>
+								{option.name}
+							</Typography>
+						</button>
+					</Tooltip>
+				)
+			})}
 
 			<div style={{
 				marginTop: "0.5rem",
@@ -256,7 +268,7 @@ const MarketplaceCard = ({ classes }) => {
 				</a>
 				*/}
 				<a
-					href="/docs/configuration#installing-shuffle"
+					href="/docs/configuration#installation"
 					target="_blank"
 					style={{ color: "rgba(255, 132, 68, 1)", textDecoration: "underline" }}
 				>
@@ -282,7 +294,7 @@ const LoginPage = props => {
 	const [register, setRegister] = useState(inregister);
 	const [checkboxClicked, setCheckboxClicked] = useState(false);
 	const [loginWithSSO, setLoginWithSSO] = useState(false)
-  
+	const [showPassword, setShowPassword] = useState(false)
 	const [ssoUrl, setSSOUrl] = useState("");
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
@@ -315,7 +327,15 @@ const LoginPage = props => {
 		} else {
 			document.title = "Register to Shuffle SaaS"
 		}
-	}
+  }
+  
+  useEffect(() => {
+
+    if (loginWithSSO && window?.location?.pathname === "/register") {
+      setLoginWithSSO(false)
+    }
+
+  },[window?.location?.pathname])
 
 	// Just a way to force location loading properly
 	// Register & login should be split :3
@@ -354,7 +374,8 @@ const LoginPage = props => {
 		color: "white",
 		padding: "40px",
 		flex: 1,
-		maxWidth: isMobile ? "100%" : "550px",
+		maxWidth: isMobile ? "100%" : 410,
+		minWidth: 410, 
 		background: "#212121",
 		borderRadius: "12px",
 		display: "flex",
@@ -649,26 +670,16 @@ const LoginPage = props => {
 		setLoginWithSSO(true)
 	}
 
-	//const onClickRegister = () => {
-	//	if (props.location.pathname === "/login") {
-	//		window.location.pathname = "/register"	
-	//	} else {
-	//		window.location.pathname = "/login"	
-	//	}
-
-	//	setLoginCheck(!register)
-	//}
-
-	//var loginChange = register ? (<div><p onClick={setLoginCheck(false)}>Want to register? Click here.</p></div>) : (<div><p onClick={setLoginCheck(true)}>Go back to login? Click here.</p></div>);
 	var formtitle = register ? <div>Welcome Back!</div> : <div>Create your account</div>
 	var formButton = !isCloud ? "" : register ? <div style={{ display: "flex" }}> <div style={{ fontSize: "14px", paddingRight: "7px", textDecoration: "none", }}>Don’t have an account yet?</div> <Link style={hrefStyle} to={`/register${parsedsearch}`}><div>Register here</div></Link></div> : <>
+
 		<div style={{ display: "flex", marginTop: 40, marginBottom: -10 }}> <div style={{ fontSize: "14px", paddingRight: "7px", textDecoration: "none", }}>Already have an account?</div> <Link style={hrefStyle} to={`/login${parsedsearch}`}><div>Login here</div></Link></div>
 	</>
 	//<Link to={`/login${parsedsearch}`} style={hrefStyle}><div>Click here to Login</div></Link>
 
 	//	<DialogTitle>{formtitle}</DialogTitle>
 
-	const buttonBackground = "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)"
+  const buttonBackground = "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)"
 
 	const buttonStyle = { borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(username, password) || loginLoading || (checkboxClicked && register) ? buttonBackground : "grey", color: "white" }
 	//<Button variant="contained" type="submit" fullWidth style={buttonStyle} disabled={!handleValidateForm() || loginLoading}>
@@ -774,15 +785,29 @@ const LoginPage = props => {
 											color: "white",
 											fontSize: "1em",
 										},
+										endAdornment: (
+											<Tooltip title={showPassword ? "Hide password" : "Show password"} arrow>
+												<div
+													style={{
+														cursor: "pointer",
+														marginRight: 10,
+														color: "white"
+													}}
+													onClick={() => setShowPassword(!showPassword)}
+												>
+													{showPassword ? <VisibilityOutlinedIcon /> : <VisibilityOffOutlinedIcon />}
+												</div>
+											</Tooltip>
+										)
 									}}
 									required
 									id="outlined-password-input"
 									fullWidth={true}
-									type="password"
 									autoComplete="current-password"
 									placeholder="at least 10 characters"
 									margin="normal"
 									variant="outlined"
+									type={showPassword ? "text" : "password"}
 									onChange={onChangePass}
 									helperText={
 										handleValidateForm(username, password)
@@ -906,7 +931,10 @@ const LoginPage = props => {
 							{loginInfo}
 						</div>
 
-						{ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0 ? (
+						{(
+							ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length) > 0 
+							//|| (isCloud && !loginWithSSO && window?.location?.pathname !== "/register")   
+							? (
 						  <div>
 							<Typography style={{ textAlign: "center" }}>Or</Typography>
 							<div style={{ textAlign: "center", margin: 10 }}>
@@ -916,11 +944,17 @@ const LoginPage = props => {
 								color="secondary"
 								variant="outlined"
 								type="button"
-								style={{ flex: "1", marginTop: 5 }}
-								onClick={() => {
+								style={{ flex: "1", marginTop: 5, textTransform: 'none', fontSize: 16 }}
+								onClick={(e) => {
 								  //console.log("CLICK SSO");
-														window.location.href = ssoUrl
+								  e.preventDefault();				
 								  //navigate(ssoUrl)
+								  if (isCloud) {
+									setLoginWithSSO(true)
+									setPassword("")
+								  }else {
+									window.location.href = ssoUrl
+								  }
 								}}
 							  >
 								Use SSO
@@ -928,6 +962,19 @@ const LoginPage = props => {
 							</div>
 						  </div>
 						) : null}
+						{isCloud && loginWithSSO && (
+							<Button 
+								variant="outlined"
+								color="secondary"
+								onClick={() => {
+									setLoginWithSSO(false)
+									setLoginInfo("")
+								}}
+								style={{ width: '100%', marginTop: 5, flex: "1", textTransform: 'none', fontSize: 16 }}
+							>
+								Back to login
+							</Button>
+						)}
 					</form>
 				</Paper>
 
@@ -951,7 +998,7 @@ const LoginPage = props => {
 		</div>
 
 	return (
-		<div style={{zoom: 0.8, paddingTop: 75, paddingBottom: 90 }}>
+		<div style={{zoom: 0.8, minHeight: "75vh", paddingTop: 75, paddingBottom: 90 }}>
 			{loadedCheck}
 		</div>
 	)

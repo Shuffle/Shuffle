@@ -1210,8 +1210,8 @@ const Billing = memo((props) => {
 									}
 
 									const url = userdata.licensed === true
-										? "https://book.stripe.com/6oEeY23fw2T84M06oq"
-										: "https://book.stripe.com/00g6rw3fw9hwguI289"
+										? "https://buy.stripe.com/aEU3fk17o0L092g5kt"
+										: "https://buy.stripe.com/aEU3fk17o0L092g5kt"
 									window.open(url, "_blank")
 								}}
 							>
