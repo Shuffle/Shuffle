@@ -57,11 +57,10 @@ var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
-var baseimagename = "frikky/shuffle"
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var executionCount int64
 
-// var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
 // var baseimagename = "registry.hub.docker.com/frikky/shuffle"
 var registryName = "registry.hub.docker.com"
@@ -3724,7 +3723,7 @@ func main() {
 	}
 
 	if baseimagename == "" {
-		log.Printf("[DEBUG] Setting baseimagename")
+		log.Printf("[DEBUG] Setting baseimagename to frikky/shuffle")
 		baseimagename = "frikky/shuffle" // Dockerhub
 		//baseimagename = "shuffle"        // Github 		(ghcr.io)
 	}
