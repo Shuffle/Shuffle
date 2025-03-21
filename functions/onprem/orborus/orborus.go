@@ -986,8 +986,6 @@ func fixk8sRoles() {
 	}
 }
 
-func int32Ptr(i int32) *int32 { return &i }
-
 func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
@@ -1199,7 +1197,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 			Name: identifier,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(replicaNumberInt32),
+			Replicas: &replicaNumberInt32,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: containerLabels,
 			},
@@ -3338,6 +3336,11 @@ func extractZIP(zipFile, destDir string) error {
 	}
 
 	for _, f := range r.File {
+		// Fix path traversal
+		if strings.Contains(f.Name, "..") {
+			return fmt.Errorf("illegal file name: %s", f.Name)
+		}
+
 		err := extractFile(f, destDir)
 		if err != nil {
 			return err

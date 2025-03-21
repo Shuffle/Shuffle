@@ -31,12 +31,13 @@ import (
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
 
-	//"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
+	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
+	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -46,7 +47,8 @@ import (
 
 	// Web
 	"github.com/gorilla/mux"
-	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	//http2 "gopkg.in/src-d/go-git.v5/plumbing/transport/http"
+	//http2 "github.com/go-git/go-git/plumbing/transport/http"
 )
 
 // This is used to handle onprem vs offprem databases etc
@@ -4456,7 +4458,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
 	}
 
-	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s", org.Id, syncUrl)
 
 	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(

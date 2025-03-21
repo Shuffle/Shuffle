@@ -1,6 +1,5 @@
 module shuffle
 
-
 go 1.23.0
 
 toolchain go1.23.7
@@ -25,7 +24,6 @@ require (
 	golang.org/x/crypto v0.36.0
 	google.golang.org/api v0.176.1
 	google.golang.org/grpc v1.68.1
-	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.30.2
 	k8s.io/apimachinery v0.30.2
@@ -110,7 +108,6 @@ require (
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/src-d/gcfg v1.4.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
