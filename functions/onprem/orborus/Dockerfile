@@ -1,11 +1,13 @@
-FROM golang:1.22 as builder
+FROM golang:1.23 as builder
 
 WORKDIR /app
 
 COPY orborus.go /app/orborus.go
 COPY go.mod /app/go.mod
 
-RUN go get
+#RUN go get
+RUN go mod download
+RUN go mod tidy 
 #RUN go build -v
 
 # Enabled CGO January 2025 (?)

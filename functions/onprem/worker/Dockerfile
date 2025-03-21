@@ -1,4 +1,4 @@
-FROM golang:1.22 as builder
+FROM golang:1.23 as builder
 
 WORKDIR /app
 #RUN go get github.com/docker/docker/api/types github.com/docker/docker/api/types/container github.com/docker/docker/client
@@ -9,7 +9,8 @@ COPY go.mod /app/go.mod
 #COPY go.sum /app/go.sum
 #RUN go
 #COPY go.sum /app/go.sum
-RUN go get
+RUN go mod download 
+RUN go mod tidy 
 
 #RUN go mod init worker
 #RUN go get
