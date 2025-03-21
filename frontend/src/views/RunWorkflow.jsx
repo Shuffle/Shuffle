@@ -1197,6 +1197,7 @@ const RunWorkflow = (defaultprops) => {
       				<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "25px 0px 15px 0px",}}>
 						{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? null : 
 						<div>
+							{/*
 							<img
 								alt={workflow.name}
 								src={image}
@@ -1211,6 +1212,7 @@ const RunWorkflow = (defaultprops) => {
 									left: 200,
 								}}
 							/>
+							*/}
 
 							<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
 								{organization}

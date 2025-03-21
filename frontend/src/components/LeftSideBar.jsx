@@ -526,7 +526,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0
+          Version: 2.0.1
         </Typography>
       </Menu>
     </span>
@@ -773,6 +773,9 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   }, [window?.location?.pathname]);
 
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+
   return (
     <div
       style={{
@@ -785,8 +788,9 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         transition: "width 0.3s ease",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" ,
         resize: 'both',
-
-		zoom: 0.8, 
+        zoom: isSafari ? undefined : 0.8,
+        transform: isSafari ? "scale(0.8)" : undefined,
+        transformOrigin: isSafari ? "top left" : undefined,
         height: "calc((100vh - 32px)*1.2)",
       }}
     >

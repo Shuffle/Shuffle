@@ -166,12 +166,13 @@ export const OuterLink = (props) => {
 
 export const Img = (props) => {
 	// Find parent container and check width
-    const isArticlePage = window.location.pathname.includes("/articles/");
+    const isArticlePage = window.location.pathname.includes("/articles/")
+    const isFormPage = window.location.pathname.includes("/forms/")
 	var height = "auto" 
-	var width = isArticlePage ? 1000 : 750
+	var width = isArticlePage ? 1000 : isFormPage ? 400: 750
 
     const docsImageStyle = {
-        border: "1px solid rgba(255,255,255,0.3)", 
+		border: isFormPage ? null : "1px solid rgba(255,255,255,0.3)", 
         borderRadius: theme.palette?.borderRadius, 
         width: width, 
         maxWidth: width, 
