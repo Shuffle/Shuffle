@@ -33,9 +33,11 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/plumbing"
+	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
+	//http2 "gopkg.in/src-d/go-git.v5/plumbing/transport/http"
+	//http2 "github.com/go-git/go-git/plumbing/transport/http"
 
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
