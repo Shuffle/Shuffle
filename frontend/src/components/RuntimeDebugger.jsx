@@ -52,6 +52,8 @@ import {
   } from "@mui/material"
 
 import ClearIcon from '@mui/icons-material/Clear';
+import { formatLocalTime } from "../utils/dateUtils";
+import { getTimeZoneAbbreviation } from "../utils/dateUtils";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -69,6 +71,7 @@ const RuntimeDebugger = (props) => {
 	const [endTime, setEndTime] = useState("")
 	const [startTime, setStartTime] = useState("")
 	const [totalCount, setTotalCount] = useState(0)
+	const [timezone, setTimezone] = useState("")
 
 	const [workflow, setWorkflow] = useState({})
 	const [ignoreOrg, setIgnoreOrg] = useState(false)
@@ -269,7 +272,7 @@ const RuntimeDebugger = (props) => {
 	  }
 
 	useEffect(() => {
-
+		setTimezone(getTimeZoneAbbreviation())
 		// Find workflow_id in url query
 		const urlParams = new URLSearchParams(window.location.search);
 		const workflowId = urlParams.get('workflow_id');
@@ -505,7 +508,7 @@ const RuntimeDebugger = (props) => {
 				)
 			},
 		  },
-		{ field: 'startTimestamp', headerName: 'Start time (UTC)', width: 160, 
+		{ field: 'startTimestamp', headerName: 'Start time ('+timezone+')', width: 160, 
 			renderCell: (params) => {
 				const comparisonTimestamp = params.row.completed_at === 0 ? timenowUnix : params.row.completed_at
 				const hasError = comparisonTimestamp-params.row.started_at > 300 
@@ -517,7 +520,7 @@ const RuntimeDebugger = (props) => {
 							//setEndTimestamp(params.row.endTimestamp)
 
 							// Make a new Date() from params.row.startTimestamp and set it in the endTime
-							const newEndTime = new Date(params.row.startTimestamp)
+							const newEndTime = new Date(formatLocalTime(params.row.startTimestamp))
 							if (newEndTime !== null && newEndTime !== undefined && newEndTime !== "" && newEndTime !== "Invalid Date") {
 								// Translate newEndTime to UTC no matter what timezone we are in. Based it on local()
 								// Plus 1 minute to make sure it comes in
@@ -530,13 +533,23 @@ const RuntimeDebugger = (props) => {
 								//setStartTime(dayjs(newEndTime))
 							}
 						}}>
-							{params.row.startTimestamp}
+							{formatLocalTime(params.row.startTimestamp)}
 						</span>
 					</Tooltip>
 				)
 			}
 		},
-		{ field: 'endTimestamp', headerName: 'End time (UTC)', width: 160, },
+		{ field: 'endTimestamp', headerName: 'End time ('+timezone+')', width: 160, 
+			renderCell: (params) => {
+				return (
+					<Tooltip title="" placement="top">
+						<span style={{cursor: "pointer"}}>
+							{formatLocalTime(params.row.endTimestamp)}
+						</span>
+					</Tooltip>
+				)
+			}
+		},
 	    {
 			field: 'id',
 			headerName: 'Explore',
@@ -655,7 +668,7 @@ const RuntimeDebugger = (props) => {
 					</div>
 				)
 			}
-		  },
+		},
 	]
 
 	useEffect(() => {
@@ -1122,7 +1135,9 @@ const RuntimeDebugger = (props) => {
 					  format="YYYY-MM-DD HH:mm:ss"
 					  value={endTime}
 					  onChange={handleEndTimeChange}
-					  renderInput={(params) => <TextField {...params} />}
+					  renderInput={(params) => {
+						return <TextField {...params} />;
+					  }}
 					/>
 				</LocalizationProvider>
 
