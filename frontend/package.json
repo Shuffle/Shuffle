@@ -21,7 +21,7 @@
     "@uiw/codemirror-themes": "^4.21.9",
     "@uiw/react-codemirror": "^4.21.21",
     "algoliasearch": "^4.8.3",
-    "class-transformer": "^0.2.0",
+    "class-transformer": "^0.5.1",
     "codemirror": "^6.0.1",
     "cpx": "^1.5.0",
     "create-react-app": "^5.0.1",
