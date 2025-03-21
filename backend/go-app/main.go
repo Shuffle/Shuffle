@@ -4458,7 +4458,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
 	}
 
-	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s", org.Id, syncUrl)
 
 	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(

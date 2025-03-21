@@ -389,8 +389,6 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	}
 }
 
-func int32Ptr(i int32) *int32 { return &i }
-
 // ** STARTREMOVE ***/
 func deployk8sApp(image string, identifier string, env []string) error {
 	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 {
@@ -569,7 +567,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			Name: podName,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(replicaNumberInt32),
+			Replicas: &replicaNumberInt32,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": podName,
@@ -919,7 +917,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Env:   env,
 	}
 
-	log.Printf("[DEBUG] Deploying image with env: %#v", env)
+	//log.Printf("[DEBUG] Deploying image with env: %#v", env)
 
 	// Checking as late as possible, just in case.
 	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
