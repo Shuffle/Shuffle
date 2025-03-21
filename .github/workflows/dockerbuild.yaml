@@ -20,19 +20,19 @@ jobs:
         include:
           - app: frontend
             path: frontend
-            version: 2.0.1
+            version: latest
             experimental: true
           - app: backend
             path: backend
-            version: 2.0.1
+            version: latest
             experimental: true
           - app: orborus
             path: functions/onprem/orborus
-            version: 2.0.1
+            version: latest
             experimental: true
           - app: worker
             path: functions/onprem/worker
-            version: 2.0.1 
+            version: latest 
             experimental: true
     steps:
       - name: Checkout
