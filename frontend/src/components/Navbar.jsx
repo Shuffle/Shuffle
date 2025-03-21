@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -35,6 +35,7 @@ import { toast } from "react-toastify";
 import AddIcon from '@mui/icons-material/Add';
 import Mousetrap from "mousetrap";
 import LicencePopup from "../components/LicencePopup.jsx";
+import { Context } from "../context/ContextApi.jsx";
 
 const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
 ? window.location.pathname
@@ -47,7 +48,7 @@ const menuData = {
       title: "Shuffle",
       description:
         "The most versatile automation engine with focus on security.",
-      icon: "images/icons/shuffleLogo.svg",
+      icon: "/images/icons/shuffleLogo.svg",
       path: "/docs/about",
       gaData: {
         category: "navbar",
@@ -750,7 +751,7 @@ const Navbar = (props) => {
   const topbar_var = "topbar_closed10"
 
   const theme = useTheme();
-  const [searchBarModalOpen, setSearchBarModalOpen] = useState(false);
+  const {searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen} = useContext(Context)
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const isTabletOrMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -845,7 +846,7 @@ const Navbar = (props) => {
 
   const modalView = (
     <Dialog
-      open={searchBarModalOpen}
+      open={searchBarModalOpen && !isDocSearchModalOpen}
       onClose={() => {
         setSearchBarModalOpen(false);
       }}
@@ -1287,10 +1288,21 @@ const Navbar = (props) => {
           <Button
             onMouseEnter={() => handleMenuOpen(item)}
             onMouseLeave={(e) => {
-              // Only close if not moving to dropdown
+              
+              const dropdown = document.querySelector('.dropdown-content'); // Adjust the selector as needed
               const rect = e.currentTarget.getBoundingClientRect();
+              const dropdownRect = dropdown ? dropdown.getBoundingClientRect() : null;
+
+              // Check if the cursor is moving down
               const isMovingDown = e.clientY > rect.bottom;
-              if (!isMovingDown) {
+
+              // Check if the cursor is within the dropdown area or a buffer zone
+              const isOverDropdown = dropdownRect && (
+                (e.clientY >= dropdownRect.top - 20 && e.clientY <= dropdownRect.bottom + 20) && // Buffer zone
+                (e.clientX >= dropdownRect.left && e.clientX <= dropdownRect.right)
+              );
+
+              if (!isMovingDown && !isOverDropdown) {
                 handleMenuClose();
               }
             }}
@@ -1352,6 +1364,11 @@ const Navbar = (props) => {
         onClick={() => {
           if(isCloud) {
             navigate("/pricing");
+            ReactGA.event({
+              category: "navbar",
+              action: "pricing_click",
+              label: "go_to_pricing",
+            })
           } else {
             window.open("https://shuffler.io/pricing", '_blank');
             return;
@@ -1365,6 +1382,11 @@ const Navbar = (props) => {
         onClick={() => {
           if(isCloud) {
             navigate("/partners");
+            ReactGA.event({
+              category: "navbar",
+              action: "partners_click",
+              label: "go_to_partners",
+            })
           } else {
             window.open("https://shuffler.io/partners", '_blank');
             return;
@@ -1722,7 +1744,11 @@ const Navbar = (props) => {
       }}
     >
       {topbar}
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ zoom: {
+        md: "0.7",
+        lg: "0.8",
+        xl: "1",
+      } }}>
         <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Link

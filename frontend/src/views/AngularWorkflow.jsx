@@ -386,6 +386,8 @@ const useStyles = makeStyles({
 
 const splitter = "|~|";
 const svgSize = 24;
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
@@ -1320,33 +1322,45 @@ const AngularWorkflow = (defaultprops) => {
 			const allTriggersInOne = useTriggers.pipelines.concat(useTriggers.schedules).concat(useTriggers.webhooks) 
 			for (let triggerkey in allTriggersInOne) {
 				const curtrigger = allTriggersInOne[triggerkey]
-				if (curtrigger.id === selectedTrigger.id) {
-					if (curtrigger.status === undefined || curtrigger.status === null) {
-						continue
-					}
-
-					if (curtrigger.running === undefined || curtrigger.running === null) {
-						continue
-					}
-
-					var changed = false
-					if (curtrigger.status !== selectedTrigger.status) {
-						changed = true
-						selectedTrigger.status = curtrigger.status
-					}
-
-					if (curtrigger.running !== selectedTrigger.running) {
-						changed = true
-						selectedTrigger.running = curtrigger.running
-					}
-
-					if (changed) {
-						//console.log("TRIGGER FIX: ", selectedTrigger)
-						setSelectedTrigger(selectedTrigger)
-					}
-
-					break
+				if (curtrigger.id !== selectedTrigger.id) {
+					continue
 				}
+
+				if (curtrigger.status === undefined || curtrigger.status === null) {
+					continue
+				}
+
+				var changed = false
+				if (selectedTrigger?.parameters === undefined || selectedTrigger?.parameters === null) {
+					changed = true
+
+					if (selectedTrigger?.trigger_type === "SCHEDULE" && curtrigger?.frequency !== undefined && curtrigger?.frequency !== null) {
+						selectedTrigger.parameters = [{
+							name: "cron",
+							value: curtrigger.frequency,
+						},
+						{
+							name: "execution_argument",
+							value: curtrigger.argument,
+						}]
+					}
+				}
+
+				if (curtrigger.status !== selectedTrigger.status) {
+					changed = true
+					selectedTrigger.status = curtrigger.status
+				}
+
+				if (curtrigger.running !== selectedTrigger.running) {
+					changed = true
+					selectedTrigger.running = curtrigger.running
+				}
+
+				if (changed) {
+					setSelectedTrigger(selectedTrigger)
+				}
+
+				break
 			}
 		}
 	}
@@ -2799,11 +2813,11 @@ const AngularWorkflow = (defaultprops) => {
 
       // FIXME: Check if any node contains $exec in a param
       // If they do, show a popup asking if they want to execute it without an execution argument, or to use a previous one
-      if (skip_popup !== true && executionArgument === undefined || executionArgument === null || executionArgument.length === 0)
+      if (skip_popup !== true && executionArgument === undefined || executionArgument === null || executionArgument?.length === 0)
 
-        if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+        if (workflow?.actions !== undefined && workflow?.actions !== null && workflow?.actions?.length > 0) {
           var foundmissing = false
-          for (let actionkey in workflow.actions) {
+          for (let actionkey in workflow?.actions) {
             if (workflow.actions[actionkey].parameters === undefined || workflow.actions[actionkey].parameters === null || workflow.actions[actionkey].parameters.length === 0) {
               continue
             }
@@ -12236,7 +12250,9 @@ const AngularWorkflow = (defaultprops) => {
     overflowAnchor: "none",
     minWidth: minSize,
     width: isMobile ? "100%" : minSize,
-    zoom: 0.9,
+    zoom: isSafari ? undefined : 0.9,
+    transform: isSafari ? "scale(0.9)" : undefined,
+    transformOrigin: isSafari ? "top right" : undefined,
   };
 
   const setTriggerFolderWrapperMulti = (event) => {
@@ -18011,10 +18027,10 @@ const AngularWorkflow = (defaultprops) => {
   const topBarStyle = {
     position: "absolute",
 
-    top: isMobile ? 30 : 25,
+    top: isMobile ? 30 : isSafari ? 15 : 25,
     transform: isMobile ? "translateX(20px)" : `translateX(${leftBarSize}px)`,
     transition: "all 0.3s ease",
-    zoom: 0.9,
+    zoom: isSafari ? undefined : 0.9,
   }
 
   const TopCytoscapeBar = (props) => {
@@ -21834,13 +21850,23 @@ const AngularWorkflow = (defaultprops) => {
                 const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
                 const chosenNodeId = new URLSearchParams(cursearch).get("node");
                 const highlightNode = chosenNodeId !== null && chosenNodeId !== undefined && chosenNodeId !== "" && chosenNodeId === data.action.id
+				var relevant_errors = []
+				if (data?.action?.parameters !== undefined && data?.action?.parameters !== null && data?.action?.parameters.length > 0) {
+					for (var i = 0; i < data.action.parameters.length; i++) {
+						// Specific error patterns in params
+						const param = data.action.parameters[i]
+						if (param?.name?.endsWith("_error") && (param?.name?.startsWith("shuffle_") || param?.name?.startsWith("liquid_"))) {
+							relevant_errors.push(param)
+						}
+					}
+				}
 
                 return (
                   <div
                     key={index}
                     style={{
                       marginBottom: 20,
-                      border: highlightNode ? "2px solid red"
+                      border: highlightNode ? `2px solid ${red}`
                         :
                         data.action.sub_action === true
                           ? "1px solid rgba(255,255,255,0.3)"
@@ -21913,11 +21939,17 @@ const AngularWorkflow = (defaultprops) => {
                         >
                           <Tooltip
                             color="primary"
-                            title="Expand result window"
+                            title={
+								<Typography variant="body1">
+									Expand result window. Errors: {relevant_errors.length}
+								</Typography>
+							}
                             placement="top"
                             style={{ zIndex: 50000 }}
                           >
-                            <ArrowLeftIcon style={{ color: "white" }} />
+                            <ArrowLeftIcon style={{ 
+								color: relevant_errors.length > 0 ? yellow : "rgba(255,255,255,0.7)",
+							}} />
                           </Tooltip>
                         </IconButton>
                         {actionimg}
@@ -22087,6 +22119,11 @@ const AngularWorkflow = (defaultprops) => {
     const checked = validateJson(data.value.trim())
 
     if (data.name === "shuffle_action_logs" && data.value !== undefined && data.value !== null && data.value.length > 0 && data.value.includes("add env SHUFFLE_LOGS_DISABLED")) {
+
+		if (isCloud) {
+			return null
+		}
+
 		  return (
 			<div style={{ maxWidth: 600, marginTop: 75, overflowX: "hidden", }}>
 			  <Typography

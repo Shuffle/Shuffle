@@ -909,21 +909,23 @@ const LicencePopup = (props) => {
         const priceItem =
 			window.location.origin === "https://shuffler.io/" || "https://sandbox.shuffler.io/"
 				? shuffleVariant === 0
-					? "app_executions"
-					: "cores"
+					? "price_1PWI3uDzMUgUjxHSffUBwWCy"
+					: "price_1PWI8EDzMUgUjxHSfEhUB7oL"
+
 				: shuffleVariant === 0
 					? "price_1PZPSSEJjT17t98NLJoTMYja"
 					: "price_1PZPQuEJjT17t98N3yORUtd9";
 
         const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`
         const failUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=failure`
+		const quantity = shuffleVariant === 0 ? selectedValue / 100 : selectedValue
 
-        console.log("Priceitem: ", priceItem, shuffleVariant)
+        console.log("Priceitem: ", priceItem, quantity, shuffleVariant)
         var checkoutObject = {
             lineItems: [
                 {
                     price: priceItem,
-                    quantity: shuffleVariant === 0 ? selectedValue / 100 : selectedValue,
+                    quantity: quantity,
                 },
             ],
             mode: "subscription",
@@ -1141,6 +1143,7 @@ const LicencePopup = (props) => {
                 >
                     View all plans
                 </Button>
+
                 <Button
                     variant="contained"
                     style={{ borderRadius: 4, textTransform: "capitalize", color: "#1a1a1a", backgroundColor: "#ff8544", width: "100%", fontSize: 16}}

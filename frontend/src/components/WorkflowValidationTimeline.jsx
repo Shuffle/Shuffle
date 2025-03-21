@@ -398,8 +398,9 @@ const WorkflowValidationTimeline = (props) => {
 									nodecolor = green
 									branchcolor = green
 								} else {
-									nodecolor = grey 
-									branchcolor = grey 
+									// Green by default
+									nodecolor = green 
+									branchcolor = green 
 								}
 							} else {
 								nodecolor = green
@@ -561,8 +562,6 @@ const WorkflowValidationTimeline = (props) => {
 					nodecolor = green
 					branchcolor = green
 				} 
-				
-
 
 				var flex = index !== 0 && index !== relevantactions.length - 1 ? 1 : 3
 				if (nodecolor === green) {
@@ -608,6 +607,8 @@ const WorkflowValidationTimeline = (props) => {
 				const ballcolor = branchcolor 
 				const ballsize = 8
 				const topMargin = 20
+
+				console.log("CHIP: ", index, chipColor, chipBackground)
 
 				const chipStyle = {
 					height: 40, 
@@ -676,7 +677,6 @@ const WorkflowValidationTimeline = (props) => {
 									{founderror.length > 0 ? founderror : `App: ${appname} - Action: ${action.label}`} 
 								</Typography>
 							} placement="top">
-
 								<Chip label={`${appname}`} style={chipStyle}  icon={
 									<Avatar
 										variant="round"

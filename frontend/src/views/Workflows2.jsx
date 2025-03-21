@@ -724,6 +724,8 @@ const Workflows2 = (props) => {
 
     const [apps, setApps] = React.useState([]);
 
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
     document.title = "Shuffle - Workflows";
 
     useEffect(() => {
@@ -2327,7 +2329,7 @@ const Workflows2 = (props) => {
                     key={"explore forms"}
                 >
                     <EditNoteIcon style={{ marginLeft: 0, marginRight: 8 }} />
-                    {"Create Form"}
+                    {"Edit Form"}
                 </MenuItem>
 
                 <Divider />
@@ -4289,7 +4291,7 @@ const Workflows2 = (props) => {
                         display: "flex",
                         flexDirection: "column",
                         width: "100%",
-                        maxWidth: "70%",
+                        maxWidth: isSafari ? "100%" : "70%",
                         margin: "auto",
                     }}>
                         <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
@@ -4616,6 +4618,7 @@ const Workflows2 = (props) => {
                                     variant="contained"
                                     color="primary"
                                     onClick={handleCreateWorkflow}
+                                    id="create_workflow_button"
                                     style={{
                                         borderRadius: 4,
                                         flex: 0.8,
@@ -5060,8 +5063,9 @@ const Workflows2 = (props) => {
             </iframe>
         </Dialog>
 
+    //isLoaded && isLoggedIn && workflowDone ? (
     const loadedCheck =
-        isLoaded && isLoggedIn && workflowDone ? (
+        workflowDone ? (
             <div>
                 {/*
 				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>
@@ -5128,8 +5132,14 @@ const Workflows2 = (props) => {
             </div>
         );
 
+    const safariStyle = {
+        transform: 'scale(0.7)',
+        transformOrigin: 'top',
+        width: '100%',
+        height: '100%',
+    }
     // Maybe use gridview or something, idk
-    return <div style={{zoom: 0.7, }}>{loadedCheck}</div>;
+    return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
 };
 
 

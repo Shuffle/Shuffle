@@ -23,7 +23,12 @@ import {
     List,
     Collapse,
     ListItemButton,
-    ListItemText
+    ListItemText,
+    Dialog,
+    DialogTitle,
+    Box,
+    DialogContent,
+    InputAdornment
 } from "@mui/material";
 import {
     Link as LinkIcon,
@@ -32,9 +37,12 @@ import {
     ExpandMore as ExpandMoreIcon,
     FileCopy as FileCopyIcon,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Search as SearchIcon,
+    Close as CloseIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
+import SearchBox from "../components/SearchData.jsx";
 
 const Body = {
     //maxWidth: 1000,
@@ -158,12 +166,13 @@ export const OuterLink = (props) => {
 
 export const Img = (props) => {
 	// Find parent container and check width
-    const isArticlePage = window.location.pathname.includes("/articles/");
+    const isArticlePage = window.location.pathname.includes("/articles/")
+    const isFormPage = window.location.pathname.includes("/forms/")
 	var height = "auto" 
-	var width = isArticlePage ? 1000 : 750
+	var width = isArticlePage ? 1000 : isFormPage ? 400: 750
 
     const docsImageStyle = {
-        border: "1px solid rgba(255,255,255,0.3)", 
+		border: isFormPage ? null : "1px solid rgba(255,255,255,0.3)", 
         borderRadius: theme.palette?.borderRadius, 
         width: width, 
         maxWidth: width, 
@@ -191,11 +200,13 @@ export const Img = (props) => {
 	}
 
     return(
-	  <img 
-		style={isArticlePage ? articleImageStyle : docsImageStyle} 
-		alt={props.alt} 
-		src={props.src} 
-	  />
+	  <div style={{width: "100%", textAlign: "center", }}> 
+		  <img 
+			style={isArticlePage ? articleImageStyle : docsImageStyle} 
+			alt={props.alt} 
+			src={props.src} 
+		  />
+	  </div>
 	)
 }
 
@@ -278,7 +289,7 @@ export const CodeHandler = (props) => {
 const Docs = (defaultprops) => {
     const { globalUrl, selectedDoc, serverside, serverMobile, isLoggedIn, isLoaded, userdata } = defaultprops;
 
-	console.log("\n\nSELECTED DOC\n", selectedDoc, "\n\n")
+    const { searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen, setIsDocSearchModalOpen, leftSideBarOpenByClick } = useContext(Context);
 
     let navigate = useNavigate();
     const location = useLocation();
@@ -316,20 +327,36 @@ const Docs = (defaultprops) => {
     const [activeSubItem, setActiveSubItem] = useState(false);
     const headingElementsRef = useRef({})
     var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
+    const searchFieldRef = useRef(null);
 
 
     useEffect(() => {
         fetchDocList();
         setSidebarOpen(false);
+
+		if (props.match.params === undefined || props.match.params === null) {
+			return
+		}
+
+		const propkey = props.match.params.key
+		if (propkey === undefined || propkey === null) {
+			return
+		}
+
+		if (location.pathname.includes("/docs/")) {
+			if (propkey === "cookie_policy" || propkey === "compliance" || propkey === "privacy_policy" || propkey === "terms_of_service") {
+				navigate(`/legal/${propkey}`)
+			}
+		}
     }, [location]);
 
     useEffect(() => {
-        //if (params["key"] === undefined) {
-        //	navigate("/docs/about")
-        //	return
-        //}
-    }, [])
-
+        return () => {
+            setIsDocSearchModalOpen(false);
+            setSearchBarModalOpen(false);
+        };
+    }, []); 
+    
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     }
@@ -458,6 +485,71 @@ const Docs = (defaultprops) => {
         }
         return headings;
     };
+
+    const modalView = (
+        <Dialog
+          open={searchBarModalOpen && isDocSearchModalOpen}
+          onClose={() => {
+            setSearchBarModalOpen(false);
+            if (searchFieldRef.current) {
+                searchFieldRef.current.blur();
+            }
+          }}
+          PaperProps={{
+            style: {
+              color: "white",
+              minWidth: 750,
+              minHeight: "180px",
+              maxHeight: "85vh",
+              borderRadius: 16,
+              border: "1px solid var(--Container-Stroke, #494949)",
+              background: "var(--Container, #000000)",
+              boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+              position: "fixed",
+              top: "70px",
+              left: "50%",
+              transform: "translateX(-50%)",
+            },
+          }}
+          sx={{
+            zIndex: 50005,
+            '& .MuiBackdrop-root': {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2, pr: 3, pt: 2 }}>
+            <DialogTitle
+              sx={{ 
+                color: "var(--Paragraph-text, #C8C8C8)",
+                p: 0,
+                m: 0,
+                ml: 1.5,
+                fontFamily: theme.typography.fontFamily,
+              }}
+            >
+              Search for Documentation
+            </DialogTitle>
+            <IconButton 
+              onClick={() => setSearchBarModalOpen(false)}
+              sx={{ 
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <DialogContent>
+            <Box sx={{ pt: 3 }}>
+              <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
+            </Box>
+          </DialogContent>
+          <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}/>
+        </Dialog>
+      );
 
 
     // extract TOC from actual markdown
@@ -761,7 +853,13 @@ const Docs = (defaultprops) => {
     }
 
     const fetchDocList = (resetCache = false) => {
-        const url = isArticlePage ? `${globalUrl}/api/v1/articles?resetCache=${resetCache}` : `${globalUrl}/api/v1/docs`;
+        var url = `${globalUrl}/api/v1/docs`
+		if (location.pathname.includes("/legal")) {
+			url = `${globalUrl}/api/v1/docs?folder=legal&resetCache=${resetCache}`
+		} else if (location.pathname.includes("/articles")) {
+			url = `${globalUrl}/api/v1/docs?folder=articles&resetCache=${resetCache}`
+		}
+
         fetch(url, {
             method: "GET",
             headers: {
@@ -782,8 +880,18 @@ const Docs = (defaultprops) => {
             .catch((error) => { });
     };
 
-    const fetchDocs = (docId) => {
-        const url = isArticlePage ? `${globalUrl}/api/v1/articles/${docId}` : `${globalUrl}/api/v1/docs/${docId}`;
+    const fetchDoc = (docId) => {
+		if (docId === undefined) {
+			return 
+		}
+
+        var url = `${globalUrl}/api/v1/docs/${docId}`
+		if (location.pathname.includes("/legal")) {
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=legal`
+		} else if (location.pathname.includes("/articles")) {
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=articles`
+		}
+
         fetch(url, {
             method: "GET",
             headers: {
@@ -902,7 +1010,7 @@ const Docs = (defaultprops) => {
                         });
                 } else {
                     console.log("DOCID: ", props.match.params.key)
-                    fetchDocs(props.match.params.key)
+                    fetchDoc(props.match.params.key)
                 }
             }
         }
@@ -911,7 +1019,7 @@ const Docs = (defaultprops) => {
     // Handles search-based changes that origin from outside this file
     if (serverside !== true && window.location.href !== baseUrl) {
         setBaseUrl(window.location.href);
-        fetchDocs(props.match.params.key);
+        fetchDoc(props.match.params.key);
     }
 
     const markdownStyle = {
@@ -1093,9 +1201,50 @@ const Docs = (defaultprops) => {
             <div style={Body}>
                 <div style={!isArticlePage ? SideBar : (sidebarOpen ? SideBar : collapsedSideBar)}>
                     <Paper style={SidebarPaperStyle}>
+                        {modalView}
+                        {
+                            !isArticlePage && (
+                                <TextField
+                                    variant="outlined"
+                                    placeholder="Search Docs..."
+                                    size="small"
+                                    onClick={() => {
+                                        setIsDocSearchModalOpen(true)
+                                        setSearchBarModalOpen(true)
+                                    }}
+                                    inputRef={searchFieldRef}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <SearchIcon style={{ color: "white" }} />
+                                            </InputAdornment>
+                                        ),
+                                        style: {
+                                            backgroundColor: "#212121",
+                                            borderRadius: 4,
+                                            color: "white",
+                                        },
+                                    }}
+                                    style={{
+                                        marginTop: 10,
+                                        marginLeft: 10,
+                                        borderRadius: 4,
+                                        width: !isLoggedIn ? "14%" : !leftSideBarOpenByClick ?  "12%" : "11%",
+                                        maxWidth: "285px",
+                                        position: "fixed",
+                                        zIndex: 1100,
+                                    }}
+                                    inputProps={{
+                                        readOnly: true,
+                                    }}
+                                />
+                            )
+                        }
                         <List style={{ 
                             listStyle: "none", 
                             paddingLeft: "0",
+                            paddingTop: !isArticlePage ? "60px" : undefined,
+                            paddingBottom: !isArticlePage ? "30px" : undefined,
                             display: isArticlePage ? sidebarOpen ? "block" : "none" : undefined,
                             opacity: isArticlePage ? sidebarOpen ? 1 : 0 : undefined,
                             transition: isArticlePage ? "opacity 0.3s ease" : undefined,
@@ -1106,7 +1255,14 @@ const Docs = (defaultprops) => {
                                 if (item === undefined) {
                                     return null;
                                 }
-                                const path = "/docs/" + item;
+
+                                var path = "/docs/" + item;
+								if (location.pathname.includes("/legal")) {
+									path = "/legal/" + item
+								} else if (location.pathname.includes("/articles")) {
+									path = "/articles/" + item
+								}
+
                                 const newname =
                                     item.charAt(0).toUpperCase() +
                                     item.substring(1).split("_").join(" ").split("-").join(" ");

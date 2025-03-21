@@ -189,6 +189,7 @@ const App = (message, props) => {
           color: "rgba(255, 255, 255, 0.65)",
           minHeight: "100vh",
         }}
+		className='parent-component'
       >
         <ScrollToTop
           getUserNotifications={getUserNotifications}
@@ -371,6 +372,7 @@ const App = (message, props) => {
         	  element={
         	    <Admin
         	      isLoggedIn={isLoggedIn}
+				  userdata={userdata}
         	      setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}
@@ -636,6 +638,32 @@ const App = (message, props) => {
 
         	<Route
         	  exact
+        	  path="/legal/:key"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/legal"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
         	  path="/docs/:key"
         	  element={
         	    <Docs
@@ -651,7 +679,6 @@ const App = (message, props) => {
         	  exact
         	  path="/docs"
         	  element={
-							//navigate(`/docs/about`)
         	    <Docs
         	      isMobile={isMobile}
         	      isLoaded={isLoaded}

@@ -81,7 +81,7 @@ const theme = createTheme(adaptV4Theme({
 	singulBlackWhite: "/images/singul_black_white.png",
   },
   typography: {
-    fontFamily: `"Roboto", "Helvetica", "Arial", "inter", sans-serif`,
+    fontFamily: `"inter", "Roboto", "Helvetica", "Arial", sans-serif`,
     useNextVariants: true,
     fontWeightLight: 300,
     fontWeightRegular: 400,

@@ -860,6 +860,7 @@ const Billing = memo((props) => {
 								"Add Card Details"
 							}
 						</Button>
+
 						{userdata.has_card_available === true ?
 							<Button
 								fullWidth
@@ -888,7 +889,8 @@ const Billing = memo((props) => {
 							: null}
 
 					</span>
-					: null}
+				: null}
+
 				{showSupport ?
 					<Button variant="outlined" color="primary" style={{ marginTop: 20, marginBottom: 10, }} onClick={() => {
 						if (window.drift !== undefined) {
@@ -1204,12 +1206,13 @@ const Billing = memo((props) => {
 										ReactGA.event({
 											category: "Billing",
 											action: "Buy_consultation_hours",
-										});
+										})
 									}
+
 									const url = userdata.licensed === true
-										? "https://book.stripe.com/6oEeY23fw2T84M06oq"
-										: "https://book.stripe.com/00g6rw3fw9hwguI289";
-									window.open(url, "_blank");
+										? "https://buy.stripe.com/aEU3fk17o0L092g5kt"
+										: "https://buy.stripe.com/aEU3fk17o0L092g5kt"
+									window.open(url, "_blank")
 								}}
 							>
 								Book Professional Service Hours

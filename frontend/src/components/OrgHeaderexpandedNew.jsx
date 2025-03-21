@@ -307,17 +307,16 @@ const OrgHeaderexpandedNew = (props) => {
 	const setSelectedRegion = (region) => {
 
 		// send a POST request to /api/v1/orgs/{org_id}/region with the region as the body
-		if (region === "US") {
-			region = "us-west2"
-		} else if (region === "EU") {
-			region = "europe-west2"
-		} else if (region === "CA") {
-			region = "northamerica-northeast1"
-		} else if (region === "UK") {
-			region = "europe-west2"
-		} else if (region === "EU-2") {
-			region = "europe-west3"
-		}
+		const regionMap = {
+			"US": "us-west2",
+			"EU": "europe-west2",
+			"CA": "northamerica-northeast1",
+			"UK": "europe-west2",
+			"EU-2": "europe-west3",
+			"AUS": "australia-southeast1"
+		  };
+
+		region = regionMap[region] || region;
 
 		var data = {
 			dst_region: region
@@ -336,7 +335,11 @@ const OrgHeaderexpandedNew = (props) => {
 			timeOut: 1000
 		}).then((response) => {
 			if (response.status !== 200) {
-				toast("Failed to change region!")
+				response.json().then((reason) => {
+					toast.error("Failed to change region: " + reason.reason)
+				}).catch((err) => {
+					toast.error("Failed to change region")
+				});
 			}
 			else {
 				toast("Region changed successfully! Reloading in 5 seconds..")
@@ -347,7 +350,7 @@ const OrgHeaderexpandedNew = (props) => {
 
 			}
 
-			return response.json();
+			// return responseJson
 		})
 	}
 
@@ -1091,6 +1094,7 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		"EU-2": "eu",
 		"CA": "ca",
 		"UK": "gb",
+		"AUS": "au",
 	};
 
 	//let regiontag = "UK";
@@ -1112,6 +1116,9 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		} else if (regiontag === "ca") {
 			regiontag = "CA";
 			regionCode = "ca";
+		} else if (regiontag === "austrailia") {
+			regiontag = "AUS";
+			regionCode = "au"
 		}
 	}
 
@@ -1124,11 +1131,12 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 				value={regiontag}
 				style={{ minWidth: 120, height: 35, borderRadius: 4 }}
 				onChange={(e) => {
-					if (userdata?.support) {
-						setSelectedRegion(e.target.value)
-					} else {
-						handleSendChangeRegionMail(e.target.value)
-					}
+					// if (userdata?.support) {
+					// 	setSelectedRegion(e.target.value)
+					// } else {
+					// 	handleSendChangeRegionMail(e.target.value)
+					// }
+					setSelectedRegion(e.target.value)
 				}}
 			>
 				{Object.keys(regionMapping).map((region, index) => {
@@ -1136,6 +1144,10 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 					// Set the default region if selectedOrganization.region is not set
 					if (selectedOrganization.region === undefined) {
 						selectedOrganization.region = "europe-west2";
+					}
+
+					if (region === "AUS") {
+						region = "AUS (test)"
 					}
 
 					// Check if the current region matches the selected region

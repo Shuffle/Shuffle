@@ -2551,7 +2551,7 @@ const ParsedAction = (props) => {
 
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
 				<div style={{ marginTop: "20px" }}>
-					<Typography>Execution variable (optional)</Typography>
+					<Typography color="textSecondary">Runtime variable (optional)</Typography>
 					<Select
 						MenuProps={{
 							disableScrollLock: true,

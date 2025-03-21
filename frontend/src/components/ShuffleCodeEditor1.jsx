@@ -2476,7 +2476,8 @@ const CodeEditor = (props) => {
 						var fixedcodedata = localcodedata
 						const valid = validateJson(localcodedata, true)
 						if (valid.valid) {
-							fixedcodedata = JSON.stringify(valid.result, null, 2)
+							//fixedcodedata = JSON.stringify(valid.result, null, 2)
+							fixedcodedata = JSON.stringify(valid.result)
 						}
 
 						// console.log(codedata)

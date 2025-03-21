@@ -51,12 +51,13 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const SearchData = props => {
     const { serverside, globalUrl, userdata } = props
     let navigate = useNavigate();
-    const { searchBarModalOpen, setSearchBarModalOpen } = useContext(Context);
+    const { searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen } = useContext(Context);
     const borderRadius = 3
     const node = useRef()
     const [searchOpen, setSearchOpen] = useState(false)
     const [oldPath, setOldPath] = useState("")
     const [value, setValue] = useState("");
+    const isDocSearchModal = isDocSearchModalOpen;
 
     const handleLinkClick = () => {
         if (searchBarModalOpen) {
@@ -90,6 +91,8 @@ const SearchData = props => {
         const [inputValue, setInputValue] = useState(currentRefinement);
 
         const textFieldRef = useRef(null);
+        const debounceTimeoutRef = useRef(null);
+
         const keyPressHandler = (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
@@ -110,10 +113,25 @@ const SearchData = props => {
         }, [searchOpen]);
 
         useEffect(() => {
-            if (currentRefinement !== inputValue) {
-                refine(inputValue);
+            // Clear any existing timeout to prevent multiple executions
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
             }
-        }, [currentRefinement]);
+
+            // Set a new timeout that will execute the search after a 200ms delay
+            debounceTimeoutRef.current = setTimeout(() => {
+                refine(inputValue);
+                setSearchOpen(inputValue.trim() !== '');
+            }, 200);
+
+            // Cleanup function that runs when component unmounts or when dependencies change
+            // This ensures we don't have any hanging timeouts
+            return () => {
+                if (debounceTimeoutRef.current) {
+                    clearTimeout(debounceTimeoutRef.current);
+                }
+            };
+        }, [inputValue, refine]); // Effect runs when inputValue or refine function changes
 
         return (
 
@@ -122,7 +140,7 @@ const SearchData = props => {
             >
                 <TextField
                     fullWidth
-                    style={{ zIndex: 1100, marginTop: -20, marginBottom: 200, position: "fixed", backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: 685, }}
+                    style={{ zIndex: 1100, marginTop: -20, marginBottom: 200, position: "fixed", backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: 690, }}
                     InputProps={{
                         style: {
                             color: "white",
@@ -149,7 +167,7 @@ const SearchData = props => {
                     autoComplete='off'
                     type="search"
                     color="primary"
-                    placeholder="Find Public Apps, Workflows, Documentation..."
+                    placeholder={isDocSearchModal ? "Type to search documentation..." : "Find Public Apps, Workflows, Documentation..."}
                     value={inputValue}
                     id="shuffle_search_field"
                     onClick={(event) => {
@@ -163,12 +181,6 @@ const SearchData = props => {
                     onChange={(event) => {
                         const newValue = event.target.value;
                         setInputValue(newValue);
-                        refine(newValue);
-                        if (newValue.trim() !== '') {
-                            setSearchOpen(true);
-                        } else {
-                            setSearchOpen(false);
-                        }
                     }}
                     onKeyDown={keyPressHandler}
                     inputRef={textFieldRef}
@@ -605,7 +617,11 @@ const SearchData = props => {
         }
 
         if (hits.length > 4) {
-            hits = hits.slice(0, 4)
+            if(!isDocSearchModal) {
+                hits = hits.slice(0, 4)
+            } else {
+                hits = hits.slice(0, 15)
+            }
         }
 
         const type = "documentation"
@@ -614,15 +630,19 @@ const SearchData = props => {
         //console.log(type, hits.length, hits)
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, marginTop: isDocSearchModal ? 0 : 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
                 {/* <IconButton style={{ zIndex: 5000, position: "absolute", right: 14, color: "grey" }} onClick={() => {
                     setSearchOpen(false)
                 }}>
                     <CloseIcon />
                 </IconButton> */}
-                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 152 }}>
-                    Documentation
-                </Typography>
+                {
+                    !isDocSearchModal && (
+                        <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 152 }}>
+                            Documentation
+                        </Typography>
+                    )
+                }
                 {/*
 				<IconButton edge="end" aria-label="delete" style={{position: "absolute", top: 5, right: 15,}} onClick={() => {
 					setSearchOpen(false)
@@ -630,7 +650,7 @@ const SearchData = props => {
 					<DeleteIcon />
 				</IconButton>
 				*/}
-                <List style={{ backgroundColor: theme.palette.inputColor, }}>
+                <List style={{ backgroundColor: theme.palette.inputColor, marginTop: isDocSearchModal ? 35 : 0, }}>
                     {hits.length === 0 ?
                         <ListItem style={outerlistitemStyle}>
                             <ListItemAvatar onClick={() => console.log(hits)}>
@@ -654,8 +674,8 @@ const SearchData = props => {
                                 cursor: "pointer",
                                 marginLeft: 5,
                                 marginRight: 5,
-                                maxHeight: 75,
-                                minHeight: 75,
+                                maxHeight: isDocSearchModal ? 100 : 75,
+                                minHeight: isDocSearchModal ? 100 : 75,
                                 maxWidth: 420,
                                 minWidth: "100%",
                             }
@@ -666,9 +686,13 @@ const SearchData = props => {
                                 (hit.name.charAt(0).toUpperCase() + hit.name.slice(1)).replaceAll("_", " ")
 
                             if (name.length > 30) {
-                                name = name.slice(0, 30) + "..."
+                                if(isDocSearchModal) {
+                                    name = name.slice(0, 70) + "..."
+                                } else {
+                                    name = name.slice(0, 30) + "..."
+                                }
                             }
-                            const secondaryText = hit.data !== undefined ? hit.data.slice(0, 40) + "..." : ""
+                            const secondaryText = hit.data !== undefined ? hit.data.slice(0, 80) + "..." : ""
                             const avatar = hit.image_url === undefined ?
                                 baseImage
                                 :
@@ -719,7 +743,7 @@ const SearchData = props => {
                                         </ListItemAvatar>
                                         <ListItemText
                                             primary={name}
-                                            secondary={secondaryText}
+                                            secondary={<div style={{ padding: '8px 0' }}>{secondaryText}</div>}
                                         />
                                         {/*
 									<ListItemSecondaryAction>
@@ -897,28 +921,38 @@ const SearchData = props => {
 
     const modalView = (
         <div>
-            <Grid container style={{ display: "contents", }}>
-                <Grid item xs="auto" style={{}}>
-                    <Index indexName="appsearch">
-                        <CustomAppHits />
-                    </Index>
+            {
+                !isDocSearchModal ? (
+                <Grid container style={{ display: "contents", }}>
+                    <Grid item xs="auto" style={{}}>
+                        <Index indexName="appsearch">
+                            <CustomAppHits />
+                        </Index>
+                    </Grid>
+                    <Grid item xs="auto" style={{}}>
+                        <Index indexName="workflows">
+                            <CustomWorkflowHits />
+                        </Index>
+                    </Grid>
+                    <Grid item xs="auto" style={{}}>
+                        <Index indexName="documentation">
+                            <CustomDocHits />
+                        </Index>
+                    </Grid>
+                    <Grid item xs="auto" style={{}}>
+                        <Index indexName="discord_chat">
+                            <CustomDiscordHits />
+                        </Index>
+                    </Grid>
                 </Grid>
-                <Grid item xs="auto" style={{}}>
-                    <Index indexName="workflows">
-                        <CustomWorkflowHits />
-                    </Index>
-                </Grid>
-                <Grid item xs="auto" style={{}}>
-                    <Index indexName="documentation">
-                        <CustomDocHits />
-                    </Index>
-                </Grid>
-                <Grid item xs="auto" style={{}}>
-                    <Index indexName="discord_chat">
-                        <CustomDiscordHits />
-                    </Index>
-                </Grid>
-            </Grid>
+                ) : (
+                    <Grid item xs="auto" style={{width: "100%"}}>
+                        <Index indexName="documentation">
+                            <CustomDocHits />
+                        </Index>
+                    </Grid>
+                )
+            }
         </div>
     )
 
@@ -932,7 +966,7 @@ const SearchData = props => {
                 <CustomSearchBox />
                 {modalView}
             </InstantSearch>
-            {gettingStartData}
+            {!isDocSearchModal && gettingStartData}
         </div>
     )
 }

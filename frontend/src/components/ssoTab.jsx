@@ -7,11 +7,7 @@ import {
     Tooltip, 
     TextField, 
     Grid, 
-    Skeleton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    Box,
+    Checkbox
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import { Link } from "react-router-dom";
@@ -30,6 +26,8 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
     const classes = useStyles();
     const [show2faSetup, setShow2faSetup] = React.useState(false);
 	const [autoPrivision, setAutoProvision] = React.useState(selectedOrganization?.sso_config?.auto_provision)
+	const [showOpenIdCred, setShowOpenIdCred] = React.useState(false);
+	const [showSamlCred, setShowSamlCred] = React.useState(false);
     const [ssoEntrypoint, setSsoEntrypoint] = React.useState(
 		selectedOrganization.sso_config === undefined
 			? ""
@@ -393,7 +391,27 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					</span>
 					<Typography style={{ textAlign: "left", fontSize: 16, marginTop: 8, color: "rgba(158, 158, 158, 1)", fontWeight: 400 }}>
 						IdP URL for Shuffle OpenID: <Link to={`${globalUrl}/api/v1/login_openid`} target="_blank" style={{ color: "rgba(241, 241, 241, 1)", textDecoration: "none", fontSize: 16,}}>{`${globalUrl}/api/v1/login_openid`}</Link>
-					</Typography>
+						</Typography>
+						<div style={{ display: 'flex', marginTop: 10, }}>
+						<Typography
+								style={{
+								textAlign: "left",
+								fontSize: 16,
+								marginTop: 8,
+								color: "rgba(158, 158, 158, 1)",
+								fontWeight: 400,
+								}}
+							>
+								Show OpenID Credentials
+							</Typography>
+							<Checkbox
+								checked={showOpenIdCred}
+								onChange={(e) => setShowOpenIdCred(e.target.checked)}
+								name="showOpenIdCred"
+								color="primary"
+								style={{ color: "rgba(255, 255, 255, 1)", }}
+							/>
+							</div>
 					<Grid container style={{ marginTop: 8, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
@@ -407,30 +425,29 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
 									multiline={true}
 									rows={2}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									placeholder="The OpenID client ID from the identity provider"
-									value={openidClientId}
-									onChange={(e) => {
-										setOpenidClientId(e.target.value);
-									}}
+									value={showOpenIdCred ? openidClientId : openidClientId?.length > 0 ? "•".repeat(50) : ""}
+										onChange={(e) => setOpenidClientId(e.target.value)}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
-											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
-											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
-											fontWeight: 400,
-											fontSize: 16,
-											borderRadius: 4,
+										color: "white",
+										fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+										fontWeight: 400,
+										fontSize: 16,
+										borderRadius: 4,
 										},
 									}}
-								/>
+									/>
 							</span>
 						</Grid>
 						<Grid item xs={6} style={{}}>
@@ -445,17 +462,19 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showOpenIdCred ? "text" : "password"}
 									multiline={true}
 									rows={2}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									placeholder="The OpenID client secret - DONT use this if dealing with implicit auth / PKCE"
-									value={openidClientSecret}
+									value={showOpenIdCred ? openidClientSecret : openidClientSecret?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setOpenidClientSecret(e.target.value);
-									}}
+										}}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
@@ -485,17 +504,19 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showOpenIdCred ? "text" : "password"}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									multiline={true}
 									rows={2}
 									placeholder="The OpenID authorization URL (usually ends with /authorize)"
-									value={openidAuthorization}
+									value={showOpenIdCred ? openidAuthorization : openidAuthorization?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setOpenidAuthorization(e.target.value)
-									}}
+										}}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
@@ -523,17 +544,19 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showOpenIdCred ? "text" : "password"}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									multiline={true}
 									rows={2}
 									placeholder="The OpenID token URL (usually ends with /token)"
-									value={openidToken}
+									value={showOpenIdCred ? openidToken : openidToken?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setOpenidToken(e.target.value)
-									}}
+										}}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
@@ -557,7 +580,27 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					<Typography variant="h4" style={{ textAlign: "left", color: "rgba(241, 241, 241, 1)", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 600, }}>SAML SSO (v1.1)</Typography>
 					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: "rgba(241, 241, 241, 1)", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 16, fontWeight: 400, color: "rgba(158, 158, 158, 1)" }} color="textSecondary">
 						IdP URL for Shuffle SAML/SSO: <Link to={`${globalUrl}/api/v1/login_sso`} target="_blank" style={{ color: "rgba(241, 241, 241, 1)", textDecoration: "none" }}>{`${globalUrl}/api/v1/login_sso`}</Link>
-					</Typography>
+						</Typography>
+						<div style={{ display: 'flex', marginTop: 10, }}>
+							<Typography
+								style={{
+									textAlign: "left",
+									fontSize: 16,
+									marginTop: 8,
+									color: "rgba(158, 158, 158, 1)",
+									fontWeight: 400,
+								}}
+							>
+								Show SAML Credentials
+							</Typography>
+							<Checkbox
+								checked={showSamlCred}
+								onChange={(e) => setShowSamlCred(e.target.checked)}
+								name="showSamlCred"
+								color="primary"
+								style={{ color: "rgba(255, 255, 255, 1)", }}
+							/>
+						</div>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
@@ -571,17 +614,19 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showSamlCred ? "text" : "password"}
 									multiline={true}
 									rows={2}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									placeholder="The entrypoint URL from your provider"
-									value={ssoEntrypoint}
+									value={showSamlCred ? ssoEntrypoint : ssoEntrypoint?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setSsoEntrypoint(e.target.value);
-									}}
+										}}
+										onFocus={(e) => setShowSamlCred(true)}
+										onBlur={(e) => setShowSamlCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
@@ -609,14 +654,16 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showSamlCred ? "text" : "password"}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									multiline={true}
 									rows={2}
 									placeholder="The X509 certificate to use"
-									value={ssoCertificate}
+										value={showSamlCred ? ssoCertificate : ssoCertificate?.length > 0 ? "•".repeat(50) : ""}
+										onFocus={(e) => setShowSamlCred(true)}
+										onBlur={(e) => setShowSamlCred(false)}
 									onChange={(e) => {
 										setSsoCertificate(e.target.value);
 									}}
