@@ -3041,9 +3041,16 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	time.Sleep(2 * time.Second)
-	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
 
+	if shouldRerun {
+		log.Printf("[DEBUG] Returning single action execution ID for rerun: %s", workflowExecution.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
+
+	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
+	time.Sleep(2 * time.Second)
 	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
 	returnBytes, err := json.Marshal(returnBody)
 	if err != nil {

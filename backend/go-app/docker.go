@@ -647,7 +647,15 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
 	}
 
-	log.Printf("[INFO] Trying to download image: %s. Alt: %s", version.Name, alternativeName)
+	if len(version.Name) == 0 {
+		log.Printf("[ERROR] No image name provided for download: %s", version.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "No image name"}`)))
+		return
+	
+	}
+
+	log.Printf("[INFO] Trying to download image: '%s'. Alt name: %#v", version.Name, alternativeName)
 
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
