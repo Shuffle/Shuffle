@@ -35,9 +35,13 @@ jobs:
       - name: Set versions
         run: |
           if [[ ${{ github.event_name }} == 'release' ]]; then
-            VERSION="${{ github.event.release.tag_name }}"
+            TAG_NAME="${{ github.event.release.tag_name }}"
+
+            # Remove the v prefix
+            VERSION=${TAG_NAME#v}
+
             APP_VERSION="${VERSION}"
-            CHART_VERSION="${VERSION#v}" # Remove the v prefix
+            CHART_VERSION="${VERSION}"
           else
             APP_VERSION="nightly"
             CHART_VERSION="0.0.0-nightly-untagged-latest"
