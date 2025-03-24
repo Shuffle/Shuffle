@@ -1088,14 +1088,13 @@ const AppExplorer = (props) => {
       setNewWorkflowTags(newWorkflowTags);
     }
 
-    // This is annoying (:
-    var securitySchemes = data.components.securityDefinitions;
+    var securitySchemes = data?.components?.securityDefinitions;
     if (securitySchemes === undefined) {
-      securitySchemes = data.securitySchemes;
+      securitySchemes = data?.securitySchemes;
     }
 
     if (securitySchemes === undefined) {
-      securitySchemes = data.components.securitySchemes;
+      securitySchemes = data?.components?.securitySchemes;
     }
 
     const allowedfunctions = [
@@ -1681,7 +1680,7 @@ const AppExplorer = (props) => {
           setExecutionResult({
             valid: false,
             result:
-              "Couldn't finish execution (2). Please fill all the required fields, and validate the execution.",
+              "Couldn't finish execution OR no result was returned (2). Please fill all the required fields, and validate the execution.",
           });
         }
 

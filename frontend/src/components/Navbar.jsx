@@ -1363,6 +1363,7 @@ const Navbar = (props) => {
         sx={buttonStyles}
         onClick={() => {
           if(isCloud) {
+            // navigate("/new-pricing");
             navigate("/pricing");
             ReactGA.event({
               category: "navbar",
@@ -1370,7 +1371,7 @@ const Navbar = (props) => {
               label: "go_to_pricing",
             })
           } else {
-            window.open("https://shuffler.io/pricing", '_blank');
+            window.open("https://shuffler.io/pricing?env=Self-hosted", '_blank');
             return;
           }
         }}

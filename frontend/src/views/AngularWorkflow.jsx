@@ -652,6 +652,31 @@ const AngularWorkflow = (defaultprops) => {
 					],
 					"multiselect": true,
 				},
+				{
+					"name": "memory",
+					"value": "",
+					"required": true,
+					"description": "Whether to store the conversation in memory",
+					"options": [
+						"Nothing",
+						"Shuffle Datastore",
+					],
+					"multiselect": false,
+					"disabled": true,
+				},
+				{
+					"name": "knowledge",
+					"value": "",
+					"required": true,
+					"description": "The knowledge we should inject into the context window",
+					"options": [
+						"Nothing",
+						"Shuffle Files",
+					],
+					"multiselect": false,
+					"disabled": true,
+				},
+
 			]
 		}],
 		large_image: theme.palette.singulBlackWhite,
@@ -772,7 +797,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [loadedApps, setLoadedApps] = React.useState([])
 
-  const loadAppConfig = (appId, select) => {
+  const loadAppConfig = (appId, select, skipAppLoad) => {
     if (appId === undefined || appId === null || appId.length === 0) {
       console.log("No appId to load")
       return
@@ -868,7 +893,7 @@ const AngularWorkflow = (defaultprops) => {
               setSelectedApp(foundapp)
             }
 
-            if (apps === undefined || apps === null || apps.length === 0) {
+            if ((apps === undefined || apps === null || apps.length === 0) && skipAppLoad !== true) {
 				console.log("No apps to update :(")
   			  	getApps() 
 				return 
@@ -2785,6 +2810,94 @@ const AngularWorkflow = (defaultprops) => {
     return true;
   };
 
+  const runFromHere = (curAction) => {
+	if (curAction.app_id === undefined || curAction.app_id === null || curAction.app_id.length === 0) {
+		toast.error("No app id found for action. Please contact support@shuffler.io if this persists")
+		return
+	}
+
+	if (workflow.id !== undefined && workflow.id !== null && workflow.id.length > 0) {
+		curAction.source_workflow = workflow.id
+	}
+
+	// Based on the previous execution id 
+	console.log("WORKFLOW EXEC: ", workflowExecutions)
+	// Look for the "execution_id" parameter
+    const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+    const execFound = new URLSearchParams(cursearch).get("execution_id");
+	if (execFound !== undefined && execFound !== null && execFound.length > 0) {
+		toast.info("Rerunning based on previously watched execution id")
+		curAction.source_execution = execFound
+	} else if (workflowExecutions !== undefined && workflowExecutions !== null && workflowExecutions.length > 0) {
+		curAction.source_execution = workflowExecutions[0].execution_id
+	} else {
+		toast.error("No previous execution found. Please run the workflow first.")
+		return
+	}
+
+	setExecutionRunning(true)
+	setExecutionRequestStarted(true)
+	var headers = {
+		'Content-Type': 'application/json',
+		'Accept': 'application/json',
+	}
+
+    if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+      headers["Org-Id"] = workflow.org_id
+    }
+
+	// Rerun makes it return execution_id + authorization
+	const appRunUrl = `${globalUrl}/api/v1/apps/${curAction.app_id}/run?rerun=true`
+	fetch(appRunUrl, {
+		method: 'POST',
+		headers: headers, 
+		body: JSON.stringify(curAction),
+		credentials: "include",
+	})
+	.then((response) => {
+		setExecutionRunning(false)
+		setExecutionRequestStarted(false)
+
+		if (response.status !== 200) {
+			console.log("Status not 200 for stream results :O!")
+		}
+
+		return response.json()
+	})
+	.then((responseJson) => {
+		setExecutionRequestStarted(false)
+
+		if (responseJson?.success === false) {
+			setExecutionRunning(false)
+
+			if (responseJson?.reason !== undefined && responseJson?.reason !== null && responseJson?.reason.length > 0) {
+				toast.error(responseJson.reason)
+			} else {
+				toast.error("Failed to run the action. Please try again or contact support@shuffler.io")
+			}
+
+			return
+		} else if (responseJson?.success === true && responseJson?.execution_id !== undefined && responseJson?.execution_id !== null && responseJson?.execution_id.length > 0) {
+			navigate(`?execution_id=${responseJson.execution_id}`)
+			setExecutionRequest({
+				execution_id: responseJson.execution_id,
+				authorization: responseJson.authorization,
+			})
+
+			setExecutionData({})
+			setExecutionModalOpen(true)
+			setExecutionModalView(1)
+			start()
+		}
+	})
+	.catch((error) => {
+		toast.error("Failed to run the action. "+error.toString())
+
+		setExecutionRunning(false)
+		setExecutionRequestStarted(false)
+	})
+  }
+
   const executeWorkflow = (executionArgument, startNode, hasSaved, skip_popup) => {
 
     if (hasSaved === false) {
@@ -3202,6 +3315,13 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson.success === false) {
           return
         }
+
+		for (var key in responseJson) {
+			const curapp = responseJson[key]
+			if (curapp?.actions === undefined || curapp?.actions === null || curapp?.actions?.length === 0 || curapp?.actions?.length === 1) {
+        		loadAppConfig(curapp?.id, false, true)
+			}
+		}
 
 		// Find app with ID "794e51c3c1a8b24b89ccc573a3defc47" (gmail) to force-break it,
 		// Find app with ID "3e2bdf9d5069fe3f4746c29d68785a6a" (shuffle tools) to force-break it,
@@ -13580,14 +13700,18 @@ const AngularWorkflow = (defaultprops) => {
       setSourceValue({
         ...sourceValue,
         value: value
-      });
+      })
+
+	  setUpdate(Math.random())
     } else if (fieldType === "destination") {
       setDestinationValue({
         ...destinationValue,
         value: value
-      });
-      }
-    };
+      })
+
+	  setUpdate(Math.random())
+    }
+  }
 
 
   const conditionsModal = (
@@ -14763,6 +14887,7 @@ const AngularWorkflow = (defaultprops) => {
   ]
 
   const handleSubflowParamChange = (triggerId, triggerField, newData) => {
+	var updateFail = "" 
 
     if (workflow !== undefined && workflow !== null) {  
         // Find the trigger with matching id 
@@ -14778,9 +14903,20 @@ const AngularWorkflow = (defaultprops) => {
           setWorkflow(workflow);
           setSelectedTriggerValue(newData)
           setLastSaved(false);
-        }
-      }
-    }
+		  setUpdate(Math.random())
+        } else {
+			updateFail = "Parameter is undefined or null"
+		}
+	  } else {
+		  updateFail = "Trigger is undefined or null"
+	  }
+	} else {
+		updateFail = "Workflow is undefined or null"
+	}
+
+	if (updateFail !== "") {
+		toast.error(updateFail + " - Failed to update subflow parameter value. Please try again.")
+	}
   }
 
   const SubflowSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null :
@@ -20801,9 +20937,9 @@ const AngularWorkflow = (defaultprops) => {
       onClose={() => {
         setExecutionModalOpen(false)
 
-        const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-        const newitem = removeParam("execution_id", cursearch);
-        navigate(curpath + newitem)
+        //const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+        //const newitem = removeParam("execution_id", cursearch);
+        //navigate(curpath + newitem)
       }}
       style={{
         resize: "both",
@@ -21256,7 +21392,11 @@ const AngularWorkflow = (defaultprops) => {
             <h2>Details</h2>
             <Tooltip
               color="primary"
-              title="Rerun workflow (uses same startnode as the original)"
+              title={
+				  <Typography variant="body1">
+					Rerun workflow. Uses same startnode as the original. Runs from scratch.
+				  </Typography>
+			  }
               placement="top"
               style={{ zIndex: 50000 }}
             >
@@ -21558,7 +21698,7 @@ const AngularWorkflow = (defaultprops) => {
             </div>
             : null}
 
-          {userdata.support === true && executionData.workflow !== undefined && executionData.workflow !== null && executionData.status !== "EXECUTING" ?
+          {userdata.support === true && executionData.workflow !== undefined && executionData.workflow !== null && executionData.status !== "EXECUTING" && executionData.status !== "ABORTED" ?
             <div style={{ marginTop: 5, marginBottom: 5, }}>
               <WorkflowValidationTimeline
                 originalWorkflow={workflow}
@@ -22857,6 +22997,7 @@ const AngularWorkflow = (defaultprops) => {
 
 		  		suborgWorkflows={suborgWorkflows}
 		  		originalWorkflow={originalWorkflow}
+  				runFromHere={runFromHere} 
               />
             </div>
           </Fade>
@@ -24731,6 +24872,8 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const handleActionParamChange = (actionId, fieldName, newData) => {
+	var updateFail = ""
+
     if (workflow !== undefined) {
       // Find the action with matching id
       const actionIndex = workflow?.actions.findIndex(action => action.id === actionId);
@@ -24745,9 +24888,20 @@ const AngularWorkflow = (defaultprops) => {
           // Update workflow state to trigger re-render
           setWorkflow({...workflow});
           setLastSaved(false);
-        }
-      }
-    }
+		  setUpdate(Math.random())
+        } else {
+			updateFail = "Parameter is undefined or null"
+		}
+	  } else {
+		  updateFail = "Trigger is undefined or null"
+	  }
+	} else {
+		updateFail = "Workflow is undefined or null"
+	}
+
+	if (updateFail !== "") {
+		toast.error(updateFail + " - Failed to update subflow parameter value. Please try again.")
+	}
   }
   /*
   var foundusecase = {}

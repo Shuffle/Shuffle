@@ -46,6 +46,7 @@ import {
 	DragIndicator as DragIndicatorIcon,
 	RestartAlt as RestartAltIcon,
 	ArrowForward as ArrowForwardIcon,
+	KeyboardReturn as KeyboardReturnIcon, 
 } from '@mui/icons-material';
 
 
@@ -94,9 +95,12 @@ const pythonFilters = [
 	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
 	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
 
-	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
-	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
-	{ "name": "Run a Singul AI Action", "value": `response = singul.create_ticket(app="jira/iris/ticketingsystem", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": true, },
+	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_key(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_key(key)[\"value\"]\nprint(self.get_key(key))`, "example": `` },
+
+	{ "name": "Run a Subflow", "value": `response = shuffle.run_workflow(workflow_id="", start_command="Runtime arg here!", wait=True)\nprint(response)`, "example": ``, "disabled": false, },
+	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": false, },
+	{ "name": "Run a Singul AI Action", "value": `response = singul.cases.create_ticket(app="jira", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": false, },
+
 
 ]
 
@@ -299,8 +303,19 @@ const CodeEditor = (props) => {
 		setMainVariables(tmpVariables)
 	}
 
+    const handleKeyDown = (event) => {
+  		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+  	  		event.preventDefault()
+			const tryItButton = document.getElementById("try-it-button")
+			if (tryItButton !== undefined && tryItButton !== null) {
+				tryItButton.click()
+			}
+		}
+	}
+
 	// Remove the original useEffect for actionlist since we'll update on action/trigger changes
 	useEffect(() => {
+    	document.addEventListener("keydown", handleKeyDown)
 		updateAvailableVariables(actionlist)
 	}, [])
 
@@ -1721,13 +1736,13 @@ const CodeEditor = (props) => {
 												color="secondary"
 												style={{
 													textTransform: "none",
-													width: 120,
+													width: 145,
 												}}
 												onClick={(event) => {
 													setAnchorEl3(event.currentTarget);
 												}}
 											>
-												Python Code
+												Python Examples 
 											</Button>
 											<Button
 												id="basic-button"
@@ -1762,7 +1777,12 @@ const CodeEditor = (props) => {
 											>
 												{pythonFilters.map((item, index) => {
 													return (
-														<MenuItem key={index} onClick={() => {
+														<MenuItem 
+															style={{
+																borderTop: item.name === "Use files" || (item.name.toLowerCase().includes("run") && item.name.toLowerCase().includes("subflow")) ? "2px solid rgba(255,255,255,0.3)" : "none",
+
+															}}
+															key={index} onClick={() => {
 															if (item.disabled) {
 																toast.error("This feature may not work in your environment until you update your Shuffle Tools app.", { autoClose: 10000 })
 															}
@@ -2270,6 +2290,7 @@ const CodeEditor = (props) => {
 							<div style={{}}>
 								<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
 									<Button
+										id="try-it-button"
 										variant="outlined"
 										disabled={executing}
 										color="primary"
@@ -2283,11 +2304,13 @@ const CodeEditor = (props) => {
 											zIndex: 1200,
 											fontWeight: 500,
 											fontSize: 14,
+											textTransform: "none",
 											backgroundColor: "rgba(33, 33, 33, 0.95)",
 											backdropFilter: "blur(8px)",
 											boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
 											transition: "all 0.2s ease",
-											borderRadius: "4px",
+											paddingRight: 20, 
+											borderRadius: theme.palette?.borderRadius,
 											"&:hover": {
 												backgroundColor: "rgba(45, 45, 45, 0.95)",
 												transform: "translateY(-1px)",
@@ -2304,7 +2327,23 @@ const CodeEditor = (props) => {
 										{executing ?
 											<CircularProgress style={{ height: 18, width: 18, }} />
 											:
-											<span>{selectedAction === undefined ? "Try it" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} /> </span>
+											<span>
+
+												<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} />
+											{selectedAction === undefined ? "Try it" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"} 
+                        						<span
+                        						  style={{
+                        						    color: "#C8C8C8",
+                        						    fontSize: "12px",
+                        						    whiteSpace: "nowrap",
+													marginLeft: 5,
+														  marginRight: 10, 
+                        						  }}
+                        						>
+                        						  <kbd>Ctrl</kbd> + <kbd><KeyboardReturnIcon style={{width: 13, position: "absolute", marginLeft: 3, top: 5, }}/></kbd>
+                        						</span>
+
+											</span>
 										}
 									</Button>
 								</Tooltip>

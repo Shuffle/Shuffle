@@ -527,6 +527,8 @@ const Settings = (props) => {
   };
 
   const generateApikey = () => {
+	toast.info("Generating new API key. This may take a bit.");
+
     fetch(globalUrl + "/api/v1/generateapikey", {
       method: "GET",
       headers: {
@@ -538,7 +540,7 @@ const Settings = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
-        }
+		}
 
         return response.json();
       })
@@ -836,7 +838,12 @@ const Settings = (props) => {
         variant="outlined"
       />
         <Button
-          style={{ width: "100%", height: "40px", marginTop: "10px" }}
+          style={{ 
+			width: "100%", 
+			height: "40px", 
+			marginTop: "10px",
+			textTransform: "none",
+		  }}
           variant="outlined"
           color="primary"
           onClick={() => generateApikey()}

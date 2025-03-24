@@ -343,9 +343,14 @@ const Docs = (defaultprops) => {
 			return
 		}
 
+		console.log("PROPKEY: ", propkey)
 		if (location.pathname.includes("/docs/")) {
 			if (propkey === "cookie_policy" || propkey === "compliance" || propkey === "privacy_policy" || propkey === "terms_of_service") {
 				navigate(`/legal/${propkey}`)
+			}
+
+			if (propkey === "app_creation") {
+				navigate('/docs/apps#app-creation-introduction')
 			}
 		}
     }, [location]);
@@ -932,7 +937,7 @@ const Docs = (defaultprops) => {
                     }
 
                     if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found") && !isArticlePage) {
-                        navigate("/docs")
+                        //navigate("/docs")
                         return
                     }
 

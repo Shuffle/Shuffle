@@ -545,6 +545,8 @@ const EditWorkflow = (props) => {
 											}}
 										>
 											<FormControlLabel value="test" control={<Radio />} label="Test" />
+											<FormControlLabel value="staging" control={<Radio />} label="Staging" />
+											<FormControlLabel value="preprod" control={<Radio />} label="Pre-production" />
 											<FormControlLabel value="production" control={<Radio />} label="Production" />
 
 										</RadioGroup>
