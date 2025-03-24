@@ -984,11 +984,4 @@ func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) 
 
 	log.Printf("[INFO] User %s (%s) is activating %s. Public: %t, Shared: %t", user.Username, user.Id, app.Name, app.Public, app.Sharing)
 	buildSwaggerApp(resp, []byte(openApiApp.Body), user, true)
-
-	//app.Active = true
-	//app.Generated = true
-	//app, err := shuffle.SetApp(ctx, app)
-
-	//resp.WriteHeader(200)
-	//resp.Write([]byte(`{"success": true}`))
 }

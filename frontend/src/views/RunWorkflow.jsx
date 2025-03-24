@@ -77,6 +77,24 @@ const RunWorkflow = (defaultprops) => {
   const [boxWidth, setBoxWidth] = React.useState(500)
   const [inputQuestions, setInputQuestions] = React.useState([])
 
+
+  useEffect(() => {
+	  if (workflow === undefined || workflow === null || Object.keys(workflow).length === 0) {
+		  return
+	  }
+
+	  if (workflow.input_questions === undefined || workflow.input_questions === null) {
+		  return
+	  }
+
+	  // Checks if it's a user input-node based or not 
+	  if ((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) { 
+	  } else {
+		  setInputQuestions(workflow.input_questions)
+		  setUpdate(Math.random())
+	  }
+  }, [workflow])
+
 	const IframeWrapper = (props) => {
 		var propsCopy = JSON.parse(JSON.stringify(props))
 		propsCopy.width = 400 
@@ -1179,6 +1197,7 @@ const RunWorkflow = (defaultprops) => {
       				<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "25px 0px 15px 0px",}}>
 						{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? null : 
 						<div>
+							{/*
 							<img
 								alt={workflow.name}
 								src={image}
@@ -1193,6 +1212,7 @@ const RunWorkflow = (defaultprops) => {
 									left: 200,
 								}}
 							/>
+							*/}
 
 							<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
 								{organization}

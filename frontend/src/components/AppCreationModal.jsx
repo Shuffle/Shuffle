@@ -22,7 +22,6 @@ import CreateIcon from '@mui/icons-material/Create'
 import { toast } from 'react-toastify'
 import YAML from "yaml";
 
-
 const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
     const [openApiModal, setOpenApiModal] = useState(false)
     const [generateAppModal, setGenerateAppModal] = useState(false)
@@ -59,6 +58,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     : "1px solid rgba(255,255,255,0.3)",
             borderImage: makeFancy ? "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1" : "none",
             transition: 'all 0.2s ease-in-out',
+			paddingBottom: isCloud ? 0 : 175, 
         }
 
         return (
@@ -256,26 +256,27 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
             body: openApidata,
             credentials: "include",
         })
-            .then((response) => {
+		.then((response) => {
 
-                setValidation(false);
-                return response.json();
-            })
-            .then((responseJson) => {
-                if (responseJson.success) {
-                    setAppValidation(responseJson.id);
-                } else {
-                    if (responseJson.reason !== undefined) {
-                        setOpenApiError(responseJson.reason);
-                    }
-                    toast("An error occurred in the response");
-                }
-            })
-            .catch((error) => {
-                setValidation(false);
-                toast(error.toString());
-                setOpenApiError(error.toString());
-            });
+			setValidation(false);
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success === true) {
+				setAppValidation(responseJson?.id)
+				navigate(`/apps/new?id=${responseJson?.id}`)
+			} else {
+				if (responseJson.reason !== undefined) {
+					setOpenApiError(responseJson.reason)
+				}
+				toast("An error occurred in the response");
+			}
+		})
+		.catch((error) => {
+			setValidation(false);
+			toast(error.toString());
+			setOpenApiError(error.toString());
+		});
     };
 
     const redirectOpenApi = () => {
@@ -416,7 +417,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 3 }}>
-                    <div style={{ display: "flex", gap: '16px' }}>
+                    <div style={{ display: "flex", gap: 16, }}>
                         <AppCreateButton
                             text="Upload OpenAPI or Swagger"
                             func={() => {

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "shuffle.frontend.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.frontend.labels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.frontend.containerPorts.http }}
+      targetPort: http
+      protocol: TCP
+    {{- if .Values.frontend.containerPorts.https }}
+    - name: https
+      port: {{ .Values.frontend.containerPorts.https }}
+      targetPort: https
+      protocol: TCP
+    {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.frontend.podLabels .Values.commonLabels) "context" .) }}
+  selector: {{- include "shuffle.frontend.matchLabels" (dict "customLabels" $podLabels "context" $) | nindent 4 }}

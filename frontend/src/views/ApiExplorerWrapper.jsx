@@ -663,7 +663,7 @@ const ApiExplorerWrapper = (props) => {
 							}
 						}
 					} else if (validate.result.status === 404) {
-						toast.error("Page not found. Please try a different URL.")
+						//toast.error("Page not found. Please try a different URL.")
 					} else if (validate.result.error !== undefined && validate.result.error !== null && validate.result.error.length > 0) {
 						if (validate.result.error.toLowerCase().includes("max retries")) {
 							toast.error("Are you sure the URL is correct? It seems like the server is not responding.")

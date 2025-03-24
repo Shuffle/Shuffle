@@ -89,7 +89,6 @@ const Files = memo((props) => {
       console.log('escape pressed')
       setRenderTextBox(false);  
     }
-
   }
 
 	const changeDistribution = (id, selectedSubOrg) => {	
@@ -1051,6 +1050,7 @@ const Files = memo((props) => {
 						</Dialog>
 					</FormControl>
 				) : null}
+
 				<div style={{display: "inline-flex", position:"relative", top: 8}}>
 				{renderTextBox ? 
 					<Tooltip title={"Close"} style={{}} aria-label={""}>
@@ -1263,7 +1263,7 @@ const Files = memo((props) => {
 								}
 								const isDistributed = file?.suborg_distribution?.length > 0 ? true : false;
 								const filenamesplit = file.filename.split(".")
-								const iseditable = file.filesize < 2000000 && file.status === "active" && allowedFileTypes.includes(filenamesplit[filenamesplit.length-1])
+								const iseditable = file.filesize < 2000000 && file.status === "active" && (allowedFileTypes.includes(filenamesplit[filenamesplit.length-1]) || !file?.filename.includes("."))
 								return (
 									<ListItem
 										key={index}

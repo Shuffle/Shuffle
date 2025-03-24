@@ -25,6 +25,7 @@ import AdminSetup from "./views/AdminSetup.jsx";
 import Admin from "./views/Admin.jsx";
 import Docs from "./views/Docs.jsx";
 import Usecases2 from "./views/Usecases2.jsx";
+import DashboardViews from "./views/DashboardViews.jsx";
 //import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication.jsx";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO.jsx";
@@ -33,9 +34,10 @@ import RunWorkflow from "./views/RunWorkflow.jsx";
 import Admin2 from "./views/Admin2.jsx";
 
 import LoginPage from "./views/LoginPage.jsx";
+import LoginPageOld from "./views/LoginPageOld.jsx";
+
 import SettingsPage from "./views/SettingsPage.jsx";
 import KeepAlive from "./views/KeepAlive.jsx";
-
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -58,6 +60,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Drift from "react-driftjs";
 
 import { AppContext } from './context/ContextApi.jsx';
+import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
 
@@ -186,6 +189,7 @@ const App = (message, props) => {
           color: "rgba(255, 255, 255, 0.65)",
           minHeight: "100vh",
         }}
+		className='parent-component'
       >
         <ScrollToTop
           getUserNotifications={getUserNotifications}
@@ -211,7 +215,20 @@ const App = (message, props) => {
 		
 					{ window?.location?.pathname === "/"  || window?.location?.pathname === "/training" || !(isLoggedIn && isLoaded) ? (
 						<div style={{ minHeight: 68, maxHeight: 68 }}>
-						<Header
+						{/* <Header
+						notifications={notifications}
+						setNotifications={setNotifications}
+						userdata={userdata}
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						globalUrl={globalUrl}
+						setIsLoggedIn={setIsLoggedIn}
+						isLoggedIn={isLoggedIn}
+						curpath={curpath}
+						{...props}
+						/> */}
+						<Navbar
 						notifications={notifications}
 						setNotifications={setNotifications}
 						userdata={userdata}
@@ -235,6 +252,7 @@ const App = (message, props) => {
         <div style={{ height: 60 }} />
 				*/}
 				<Routes>
+
         	<Route
         	  exact
         	  path="/login"
@@ -242,7 +260,8 @@ const App = (message, props) => {
         	    <LoginPage
         	      isLoggedIn={isLoggedIn}
         	      setIsLoggedIn={setIsLoggedIn}
-        	      register={true}
+        	      register={false}
+        	      inregister={false}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
@@ -252,6 +271,63 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
+        	<Route
+        	  exact
+        	  path="/login2"
+        	  element={
+        	    <LoginPageOld
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={false}
+        	      inregister={false}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
+        	<Route
+        	  exact
+        	  path="/loginsetup"
+        	  element={
+        	    <LoginPageOld
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={false}
+        	      inregister={false}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
+        	<Route
+        	  exact
+        	  path="/register"
+        	  element={
+        	    <LoginPage
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      inregister={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+
         	<Route
         	  exact
         	  path="/admin2"
@@ -296,6 +372,7 @@ const App = (message, props) => {
         	  element={
         	    <Admin
         	      isLoggedIn={isLoggedIn}
+				  userdata={userdata}
         	      setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}
@@ -353,6 +430,7 @@ const App = (message, props) => {
         	    }
         	  />
         	) : null}
+
         	<Route
         	  exact
         	  path="/AdminSetup"
@@ -365,6 +443,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
         	<Route
         	  exact
         	  path="/detectionframework"
@@ -559,6 +638,32 @@ const App = (message, props) => {
 
         	<Route
         	  exact
+        	  path="/legal/:key"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/legal"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+				  isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
         	  path="/docs/:key"
         	  element={
         	    <Docs
@@ -574,7 +679,6 @@ const App = (message, props) => {
         	  exact
         	  path="/docs"
         	  element={
-							//navigate(`/docs/about`)
         	    <Docs
         	      isMobile={isMobile}
         	      isLoaded={isLoaded}
@@ -648,18 +752,58 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-        	<Route
-        	  exact
-        	  path="/dashboards"
-        	  element={
-        	    <DashboardView
-        	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
-        	      globalUrl={globalUrl}
-        	      {...props}
-        	    />
-        	  }
-        	/>
+			<Route
+				exact
+				path="/dashboard"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboards"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboard/:key"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/dashboards/:key"
+				element={
+					<DashboardViews
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						wut={userdata}
+					/>
+				}
+			/>
 			<Route
 				exact
 				path="/welcome"

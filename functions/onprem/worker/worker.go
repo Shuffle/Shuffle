@@ -57,11 +57,10 @@ var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
-var baseimagename = "frikky/shuffle"
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var executionCount int64
 
-// var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
 // var baseimagename = "registry.hub.docker.com/frikky/shuffle"
 var registryName = "registry.hub.docker.com"
@@ -105,11 +104,9 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
-	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
-	"http:1.3.0":            "frikky/shuffle:http_1.3.0",
-	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
-	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"http:1.4.0":               "frikky/shuffle:http_1.4.0",
+	"shuffle-tools:1.2.0":      "frikky/shuffle:shuffle-tools_1.2.0",
+	"shuffle-subflow:1.1.0":    "frikky/shuffle:shuffle-subflow_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -392,8 +389,6 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	}
 }
 
-func int32Ptr(i int32) *int32 { return &i }
-
 // ** STARTREMOVE ***/
 func deployk8sApp(image string, identifier string, env []string) error {
 	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 {
@@ -588,7 +583,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(replicaNumberInt32),
+			Replicas: &replicaNumberInt32,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: matchLabels,
 			},
@@ -932,6 +927,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Image: image,
 		Env:   env,
 	}
+
+	//log.Printf("[DEBUG] Deploying image with env: %#v", env)
 
 	// Checking as late as possible, just in case.
 	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
@@ -1472,6 +1469,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 		}
 
 		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -3085,6 +3083,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 	}
 
 	overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -3533,6 +3532,7 @@ func baseDeploy() {
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
 		}
 
 		if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
@@ -3733,7 +3733,7 @@ func main() {
 	}
 
 	if baseimagename == "" {
-		log.Printf("[DEBUG] Setting baseimagename")
+		log.Printf("[DEBUG] Setting baseimagename to frikky/shuffle")
 		baseimagename = "frikky/shuffle" // Dockerhub
 		//baseimagename = "shuffle"        // Github 		(ghcr.io)
 	}

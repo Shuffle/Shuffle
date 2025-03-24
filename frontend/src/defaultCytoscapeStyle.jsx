@@ -158,6 +158,38 @@ const data = [
     },
   },
   {
+    selector: `node[app_id="shuffle_agent"]`,
+    css: {
+		"height": "74px",
+      	"width": "222px",
+	  	"background-image": "data(large_image)",
+      	"label": function(element) {
+		  var elementname = element.data("label")
+		  if (elementname === null || elementname === undefined) {
+			  return ""
+		  } 
+
+		  if (elementname.length > 15) {
+			  elementname = elementname.substring(0, 15) + ".."
+		  }
+
+		  return elementname
+		},
+		"background-width": "65px",
+		"background-height": "65px",
+		"background-position-x": "20px", 
+		//"background-position-x": "center",  // Crashes
+		"background-repeat": "no-repeat",
+
+		"font-size": "14px",
+		"text-halign": "center",
+		"text-valign": "center",
+      	"text-margin-x": "-140px",
+      	"text-margin-y": "0px",
+		
+    },
+  },
+  {
     selector: `node[app_name="Testing"]`,
     css: {
       width: "30px",

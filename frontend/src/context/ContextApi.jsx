@@ -1,14 +1,16 @@
-import { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 export const Context = createContext();
 
-export const AppContext =(props) => {
+export const AppContext = (props) => {
+	const { serverside } = props
 
-	const currentLocation = window?.location?.pathname;
+	const currentLocation = serverside === true ? "" : window?.location?.pathname;
 
     // Left side bar global states
     const [searchBarModalOpen, setSearchBarModalOpen] = useState(false);
+    const [isDocSearchModalOpen, setIsDocSearchModalOpen] = useState(false);
     const [leftSideBarOpenByClick, setLeftSideBarOpenByClick] = useState(currentLocation?.includes('/workflows/') ? false : true)
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const [windowWidth, setWindowWidth] = useState(serverside === true ? 100 : window.innerWidth);
 
     useEffect(() => {
 		if (currentLocation?.includes('/workflows/') && leftSideBarOpenByClick === true) {
@@ -18,6 +20,10 @@ export const AppContext =(props) => {
 
     //Calculate window width
     useEffect(() => {
+		if (serverside === true) {
+			return
+		}
+
         const handleResize = () => {
             setWindowWidth(window?.innerWidth);
         };
@@ -32,6 +38,8 @@ export const AppContext =(props) => {
 
     return (
         <Context.Provider value={{
+            isDocSearchModalOpen,
+            setIsDocSearchModalOpen,
             searchBarModalOpen,
             setSearchBarModalOpen,
             leftSideBarOpenByClick,

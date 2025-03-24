@@ -5,7 +5,7 @@ import theme from '../theme.jsx';
 import ReactJson from "react-json-view-ssr";
 import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import remarkGfm from 'remark-gfm'
 import { Context } from "../context/ContextApi.jsx";
@@ -23,16 +23,26 @@ import {
     List,
     Collapse,
     ListItemButton,
-    ListItemText
+    ListItemText,
+    Dialog,
+    DialogTitle,
+    Box,
+    DialogContent,
+    InputAdornment
 } from "@mui/material";
 import {
     Link as LinkIcon,
     Edit as EditIcon,
     KeyboardArrowRight as KeyboardArrowRightIcon,
     ExpandMore as ExpandMoreIcon,
-    FileCopy as FileCopyIcon
+    FileCopy as FileCopyIcon,
+    ChevronLeft,
+    ChevronRight,
+    Search as SearchIcon,
+    Close as CloseIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
+import SearchBox from "../components/SearchData.jsx";
 
 const Body = {
     //maxWidth: 1000,
@@ -51,6 +61,7 @@ const dividerColor = "rgb(225, 228, 232)";
 const hrefStyle = {
     color: "rgba(255, 255, 255, 0.8)",
     textDecoration: "none",
+    marginRight: window.location.pathname.includes("/articles/") ? "0.8em" : undefined,
 };
 
 
@@ -152,11 +163,34 @@ export const OuterLink = (props) => {
 }
 
 
+
 export const Img = (props) => {
 	// Find parent container and check width
-
+    const isArticlePage = window.location.pathname.includes("/articles/")
+    const isFormPage = window.location.pathname.includes("/forms/")
 	var height = "auto" 
-	var width = 750
+	var width = isArticlePage ? 1000 : isFormPage ? 400: 750
+
+    const docsImageStyle = {
+		border: isFormPage ? null : "1px solid rgba(255,255,255,0.3)", 
+        borderRadius: theme.palette?.borderRadius, 
+        width: width, 
+        maxWidth: width, 
+        margin: "auto", 
+        marginTop: 10, 
+        marginBottom: 10
+    }
+    
+    const articleImageStyle = {
+        borderRadius: theme.palette?.borderRadius,
+        minWidth: 350, 
+        maxWidth: "100%", 
+        textAlign: "center", 
+        margin: "auto", 
+        marginTop: 20, 
+        marginBottom: 20, 
+    }
+
 	if (props.height !== undefined && props.height !== null) {
 		height = props.height
 	}
@@ -166,11 +200,13 @@ export const Img = (props) => {
 	}
 
     return(
-	  <img 
-		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, width: width, maxWidth: width, margin: "auto", marginTop: 10, marginBottom: 10, }} 
-		alt={props.alt} 
-		src={props.src} 
-	  />
+	  <div style={{width: "100%", textAlign: "center", }}> 
+		  <img 
+			style={isArticlePage ? articleImageStyle : docsImageStyle} 
+			alt={props.alt} 
+			src={props.src} 
+		  />
+	  </div>
 	)
 }
 
@@ -251,8 +287,12 @@ export const CodeHandler = (props) => {
 }
 
 const Docs = (defaultprops) => {
-    const { globalUrl, selectedDoc, serverside, serverMobile, isLoggedIn, isLoaded } = defaultprops;
+    const { globalUrl, selectedDoc, serverside, serverMobile, isLoggedIn, isLoaded, userdata } = defaultprops;
+
+    const { searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen, setIsDocSearchModalOpen, leftSideBarOpenByClick } = useContext(Context);
+
     let navigate = useNavigate();
+    const location = useLocation();
     // Quickfix for react router 5 -> 6 
     const params = useParams();
     //var props = JSON.parse(JSON.stringify(defaultprops))
@@ -283,16 +323,40 @@ const Docs = (defaultprops) => {
         serverside === true ? "" : window.location.href
     );
     const [hashRendered, setHashRendered] = React.useState(false)
-
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [activeSubItem, setActiveSubItem] = useState(false);
     const headingElementsRef = useRef({})
+    var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
+    const searchFieldRef = useRef(null);
+
 
     useEffect(() => {
-        //if (params["key"] === undefined) {
-        //	navigate("/docs/about")
-        //	return
-        //}
-    }, [])
+        fetchDocList();
+        setSidebarOpen(false);
 
+		if (props.match.params === undefined || props.match.params === null) {
+			return
+		}
+
+		const propkey = props.match.params.key
+		if (propkey === undefined || propkey === null) {
+			return
+		}
+
+		if (location.pathname.includes("/docs/")) {
+			if (propkey === "cookie_policy" || propkey === "compliance" || propkey === "privacy_policy" || propkey === "terms_of_service") {
+				navigate(`/legal/${propkey}`)
+			}
+		}
+    }, [location]);
+
+    useEffect(() => {
+        return () => {
+            setIsDocSearchModalOpen(false);
+            setSearchBarModalOpen(false);
+        };
+    }, []); 
+    
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     }
@@ -422,6 +486,71 @@ const Docs = (defaultprops) => {
         return headings;
     };
 
+    const modalView = (
+        <Dialog
+          open={searchBarModalOpen && isDocSearchModalOpen}
+          onClose={() => {
+            setSearchBarModalOpen(false);
+            if (searchFieldRef.current) {
+                searchFieldRef.current.blur();
+            }
+          }}
+          PaperProps={{
+            style: {
+              color: "white",
+              minWidth: 750,
+              minHeight: "180px",
+              maxHeight: "85vh",
+              borderRadius: 16,
+              border: "1px solid var(--Container-Stroke, #494949)",
+              background: "var(--Container, #000000)",
+              boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+              position: "fixed",
+              top: "70px",
+              left: "50%",
+              transform: "translateX(-50%)",
+            },
+          }}
+          sx={{
+            zIndex: 50005,
+            '& .MuiBackdrop-root': {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2, pr: 3, pt: 2 }}>
+            <DialogTitle
+              sx={{ 
+                color: "var(--Paragraph-text, #C8C8C8)",
+                p: 0,
+                m: 0,
+                ml: 1.5,
+                fontFamily: theme.typography.fontFamily,
+              }}
+            >
+              Search for Documentation
+            </DialogTitle>
+            <IconButton 
+              onClick={() => setSearchBarModalOpen(false)}
+              sx={{ 
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <DialogContent>
+            <Box sx={{ pt: 3 }}>
+              <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
+            </Box>
+          </DialogContent>
+          <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}/>
+        </Dialog>
+      );
+
 
     // extract TOC from actual markdown
     const tocvalue = (markdown) => {
@@ -460,8 +589,13 @@ const Docs = (defaultprops) => {
     }
 
     const SidebarPaperStyle = {
-        backgroundColor: "rgb(26,26,26)",
+        backgroundColor: isArticlePage ? "transparent" : "rgb(26,26,26)",
+        border: isArticlePage ? "none" : undefined,
+        borderRadius: isArticlePage ? "none" : undefined,
+        boxShadow: isArticlePage ? "none" : undefined,
         backgroundImage: "none",
+        width: isArticlePage ? "100%" : undefined,
+        height: isArticlePage ? "100%" : undefined,
         overflowX: "hidden",
         position: "relative",
         paddingLeft: 15,
@@ -527,7 +661,7 @@ const Docs = (defaultprops) => {
                         backgroundColor: theme.palette.inputColor,
                         padding: 15,
                         borderRadius: theme.palette?.borderRadius,
-                        marginBottom: 25,
+                        marginBottom: isArticlePage ? 25 : 30,
                         display: "flex",
                     }}
                 >
@@ -620,7 +754,7 @@ const Docs = (defaultprops) => {
                         style={{
                             width: "90%",
                             marginTop: 60,
-							marginBottom: 20, 
+							marginBottom: isArticlePage ? 40 : 20, 
                             backgroundColor: theme.palette.inputColor,
                         }}
                     />
@@ -630,7 +764,21 @@ const Docs = (defaultprops) => {
                     marginBlock: "0.85em", alignItems: "center"
                 }}>
                     {element}
-                    <Link to={`#${id}`} style={{
+                    <Link to={`#${id}`}
+                     onClick={(e) => {
+                        e.preventDefault(); // Prevent default navigation
+                        document.getElementById(id)?.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+
+                        const url = `${window.location.origin}${window.location.pathname}#${id}`;
+                        navigator.clipboard.writeText(url);
+                        toast("Link copied to clipboard", {
+                            position: "bottom-center",
+                            autoClose: 2000,
+                        });
+                    }}
+                    style={{
                         textDecoration: "none", color: "white",
                         paddingLeft: "0.3em", rotate: "-30deg",
                         paddingTop: "0.9em", display: props.level === 1 ? "none" : "block",
@@ -638,8 +786,7 @@ const Docs = (defaultprops) => {
                         <LinkIcon />
                     </Link>
                 </div>
-
-                {extraInfo}
+                {isArticlePage ? (userdata?.support ? extraInfo : "") : extraInfo}
             </Typography>
         )
     }
@@ -647,21 +794,56 @@ const Docs = (defaultprops) => {
 
     const SideBar = {
         width: "17%",
+        borderRight: !isArticlePage ? "1px solid rgba(255,255,255,0.3)" : undefined,
+        minWidth: isArticlePage ? "250px" : "17%",
+        maxWidth: isArticlePage ? "250px" : "17%",
+        marginLeft: isArticlePage ? sidebarOpen ? 40 : 50 : undefined,
         position: "sticky",
-        top: 50,
-        paddingTop: "0.25em",
-        minHeight: "95vh",
-        maxHeight: "95vh",
+        top: isArticlePage ? 120 : 50,
+        paddingTop: isArticlePage ? "0.65em" : "0.25em",
+        paddingRight: isArticlePage ? "1em" : undefined,
+        minHeight: isArticlePage ? "80vh" : "95vh",
+        maxHeight: isArticlePage ? "80vh" : "95vh",
         overflowX: "hidden",
         overflowY: "auto",
         zIndex: 1000,
-        //borderRight: "1px solid rgba(255,255,255,0.3)",
+        backgroundColor: isArticlePage ? "#212121" : undefined,
+        borderRadius: isArticlePage ? theme.palette?.borderRadius : undefined,
+        transition: isArticlePage ? "width 0.3s ease, min-width 0.3s ease" : undefined,
+    };
+
+    const sideBarToggleButton = {
+        position: "absolute",
+        bottom: sidebarOpen ? 20 : "50%",
+        right: sidebarOpen ? 30 : 21,
+        zIndex: 1000,
+        backgroundColor: "#212121",
+        border: "1px solid rgba(255,255,255,0.3)",
+        borderRadius: "50%",
+        width: 40,
+        height: 40,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        transition: "transform 0.3s ease",
+        "&:hover": {
+            backgroundColor: "#2c2c2c",
+        }
+    };
+
+    const collapsedSideBar = {
+        ...SideBar,
+        width: "40px",
+        minWidth: "40px",
+        maxWidth: "40px",
+        overflow: "hidden",
     };
 
     const IndexBar = {
         alignSelf: "flex-start",
         position: "sticky",
-        top: 80,
+        top: 120,
         overflowY: "auto",
         minHeight: "93vh",
         maxHeight: "93vh",
@@ -670,8 +852,15 @@ const Docs = (defaultprops) => {
 		overflow: "hidden", 
     }
 
-    const fetchDocList = () => {
-        fetch(`${globalUrl}/api/v1/docs`, {
+    const fetchDocList = (resetCache = false) => {
+        var url = `${globalUrl}/api/v1/docs`
+		if (location.pathname.includes("/legal")) {
+			url = `${globalUrl}/api/v1/docs?folder=legal&resetCache=${resetCache}`
+		} else if (location.pathname.includes("/articles")) {
+			url = `${globalUrl}/api/v1/docs?folder=articles&resetCache=${resetCache}`
+		}
+
+        fetch(url, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -691,8 +880,19 @@ const Docs = (defaultprops) => {
             .catch((error) => { });
     };
 
-    const fetchDocs = (docId) => {
-        fetch(`${globalUrl}/api/v1/docs/${docId}`, {
+    const fetchDoc = (docId) => {
+		if (docId === undefined) {
+			return 
+		}
+
+        var url = `${globalUrl}/api/v1/docs/${docId}`
+		if (location.pathname.includes("/legal")) {
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=legal`
+		} else if (location.pathname.includes("/articles")) {
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=articles`
+		}
+
+        fetch(url, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -706,18 +906,32 @@ const Docs = (defaultprops) => {
                 }
 
                 if (responseJson.success && responseJson.reason !== undefined) {
+
+                    if(isArticlePage && window.location.pathname.includes("/articles/")) {
+                        if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {
+                            setData("# Error\nThis page doesn't exist.");
+                            toast("This page doesn't exist. Redirecting to the latest article...", {
+                                position: "bottom-center",
+                                autoClose: 2000,
+                            });
+                            setTimeout(() => {
+                                navigate(`/articles/2.0_release`)
+                            }, 2000)
+                            return
+                        }
+                    }
                     // Find <img> tags and translate them into ![]() format
                     const imgRegex = /<img.*?src="(.*?)"/g;
                     const tocRegex = /^## Table of contents[\s\S]*?(?=^## )|^## Table of contents[\s\S]*$/gm;
                     const newdata = responseJson.reason.replace(imgRegex, '![]($1)').replace(tocRegex, "");
                     setData(newdata);
                     if (docId === undefined) {
-                        document.title = "Shuffle automation documentation";
+                        document.title = isArticlePage ? "Shuffle Articles introduction" : "Shuffle documentation";
                     } else {
-                        document.title = "Shuffle " + docId.replace("_", " ") + " documentation";
+                        document.title = "Shuffle " + docId.replace("_", " ") + (isArticlePage ? " articles" : " documentation");
                     }
 
-                    if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {
+                    if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found") && !isArticlePage) {
                         navigate("/docs")
                         return
                     }
@@ -747,6 +961,11 @@ const Docs = (defaultprops) => {
             .catch((error) => { });
     };
 
+    const handleResetCache = () => {
+        fetchDocList(true);
+        toast("Cache has been reset");
+    }
+
     if (firstrequest) {
         setFirstrequest(false);
         if (!serverside) {
@@ -769,11 +988,29 @@ const Docs = (defaultprops) => {
                 //	return null
                 //}
                 //
-                if (props.match.params.key === undefined) {
-
+                if (props.match.params.key === undefined && isArticlePage) {
+                    fetch(`${globalUrl}/api/v1/articles`, {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
+                        },
+                    })
+                        .then((response) => response.json())
+                        .then((responseJson) => {
+                            if (responseJson.success && responseJson.list && responseJson.list.length > 0) {
+                                // Navigate to the latest article
+                                if (responseJson?.list[0]?.name) {
+                                    navigate(`/articles/${responseJson?.list[0].name}`);
+                                }
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error fetching articles:", error);
+                        });
                 } else {
                     console.log("DOCID: ", props.match.params.key)
-                    fetchDocs(props.match.params.key)
+                    fetchDoc(props.match.params.key)
                 }
             }
         }
@@ -782,7 +1019,7 @@ const Docs = (defaultprops) => {
     // Handles search-based changes that origin from outside this file
     if (serverside !== true && window.location.href !== baseUrl) {
         setBaseUrl(window.location.href);
-        fetchDocs(props.match.params.key);
+        fetchDoc(props.match.params.key);
     }
 
     const markdownStyle = {
@@ -793,7 +1030,7 @@ const Docs = (defaultprops) => {
         maxWidth: "100%",
         minWidth: "100%",
         overflow: "hidden",
-        fontSize: isMobile ? "1.3rem" : "1rem",
+        fontSize: isMobile ? "1.3rem" : "1.1rem",
     };
 
     const alertNote = {
@@ -940,20 +1177,92 @@ const Docs = (defaultprops) => {
     }
 
 
+    const activeHrefStyleToc2 = {
+        ...hrefStyleToc2,
+        color: "#f86a3e",
+    };
+
+    const activeListItemStyle = {
+        backgroundColor: "rgba(248, 106, 62, 0.08)", // Slight orange tint
+        marginRight: window.location.pathname.includes("/articles/") ? "0.8em" : undefined,
+        borderLeft: "3px solid #f86a3e",
+        paddingLeft: "13px", // Compensate for the border
+    };
+
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+    
+
 
     // PostDataBrowser Section
     const postDataBrowser =
         list === undefined || list === null ? null : (
             <div style={Body}>
-                <div style={SideBar}>
+                <div style={!isArticlePage ? SideBar : (sidebarOpen ? SideBar : collapsedSideBar)}>
                     <Paper style={SidebarPaperStyle}>
-                        <List style={{ listStyle: "none", paddingLeft: "0" }}>
+                        {modalView}
+                        {
+                            !isArticlePage && (
+                                <TextField
+                                    variant="outlined"
+                                    placeholder="Search Docs..."
+                                    size="small"
+                                    onClick={() => {
+                                        setIsDocSearchModalOpen(true)
+                                        setSearchBarModalOpen(true)
+                                    }}
+                                    inputRef={searchFieldRef}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <SearchIcon style={{ color: "white" }} />
+                                            </InputAdornment>
+                                        ),
+                                        style: {
+                                            backgroundColor: "#212121",
+                                            borderRadius: 4,
+                                            color: "white",
+                                        },
+                                    }}
+                                    style={{
+                                        marginTop: 10,
+                                        marginLeft: 10,
+                                        borderRadius: 4,
+                                        width: !isLoggedIn ? "14%" : !leftSideBarOpenByClick ?  "12%" : "11%",
+                                        maxWidth: "285px",
+                                        position: "fixed",
+                                        zIndex: 1100,
+                                    }}
+                                    inputProps={{
+                                        readOnly: true,
+                                    }}
+                                />
+                            )
+                        }
+                        <List style={{ 
+                            listStyle: "none", 
+                            paddingLeft: "0",
+                            paddingTop: !isArticlePage ? "60px" : undefined,
+                            paddingBottom: !isArticlePage ? "30px" : undefined,
+                            display: isArticlePage ? sidebarOpen ? "block" : "none" : undefined,
+                            opacity: isArticlePage ? sidebarOpen ? 1 : 0 : undefined,
+                            transition: isArticlePage ? "opacity 0.3s ease" : undefined,
+                            height: isArticlePage ? "90%" : undefined,  
+                            }}>
                             {list.map((data, index) => {
                                 const item = data.name;
                                 if (item === undefined) {
                                     return null;
                                 }
-                                const path = "/docs/" + item;
+
+                                var path = "/docs/" + item;
+								if (location.pathname.includes("/legal")) {
+									path = "/legal/" + item
+								} else if (location.pathname.includes("/articles")) {
+									path = "/articles/" + item
+								}
+
                                 const newname =
                                     item.charAt(0).toUpperCase() +
                                     item.substring(1).split("_").join(" ").split("-").join(" ");
@@ -965,23 +1274,62 @@ const Docs = (defaultprops) => {
                                         <ListItemButton
                                             component={Link}
                                             key={index}
-                                            style={hrefStyle}
+                                            style={{
+                                                ...hrefStyle,
+                                                ...(itemMatching ? activeListItemStyle : {}),
+                                            }}
                                             to={path}
                                         >
                                             <ListItemText
-                                                style={{ color: itemMatching ? "#f86a3e" : "inherit" }}
-                                                variant="body1"
-                                            >
-                                                {newname}
-                                            </ListItemText>
+                                                style={{ 
+                                                    color: itemMatching ? "#f86a3e" : "inherit",
+                                                    flex: 1,
+                                                }}
+                                                primary={
+                                                    <Typography
+                                                        variant="body1"
+                                                        style={{
+                                                            whiteSpace: "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                        }}
+                                                    >
+                                                        {newname}
+                                                    </Typography>
+                                                }
+                                            />
+                                            <KeyboardArrowRightIcon 
+                                                style={{ 
+                                                    color: itemMatching ? "#f86a3e" : "inherit",
+                                                    fontSize: "1.1rem",
+                                                    marginRight: "-6px",
+                                                }}
+                                            />
                                         </ListItemButton>
                                     </li>
                                 );
                             })}
                         </List>
+                        {
+                            isArticlePage && (
+                                <IconButton
+                                    onClick={toggleSidebar}
+                                    style={sideBarToggleButton}
+                                >
+                                    {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+                                </IconButton>
+                            )
+                        }
                     </Paper>
                 </div>
-                <div style={{ width: "60%", margin: "30px 0px 30px 30px", overflow: "hidden", paddingRight: 50, paddingLeft: 40 }}>
+                <div style={{
+                    width: isArticlePage ? sidebarOpen ? "60%" : "70%" : "60%", 
+                    margin: isArticlePage ? sidebarOpen ? "0 0px 30px 30px" : "0 0px 30px 60px" : "30px 0px 30px 30px", 
+                    overflow: "hidden", 
+                    paddingRight: 50, 
+                    paddingLeft: 40,
+                    transition: "width 0.3s ease, margin 0.3s ease",
+                }}>
                     {props.match.params.key === undefined ?
                         mainpageInfo
                         :
@@ -1003,12 +1351,26 @@ const Docs = (defaultprops) => {
                     }
                 </div>
                 <div style={IndexBar}>
+                     {userdata?.support && isArticlePage && (
+                        <Button 
+                            variant="contained" 
+                            color="secondary" 
+                            onClick={handleResetCache}
+                            style={{marginBottom: "15px"}}
+                        >
+                            Reset Cache
+                        </Button>
+                    )}
                     {tocLines.length > 0 ?
                         (
-                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table of Content</h4>
+                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table Of Content</h4>
 
                         ) : null}
-                    <nav>
+                    <div
+                    style={{
+                        overflowY: "auto",
+                        maxHeight: "90vh",
+                    }}>
                         {tocLines.map((data, index) => {
                             return (
                                 <div className="toc"
@@ -1019,12 +1381,15 @@ const Docs = (defaultprops) => {
                                         style={{
                                             fontSize: "14px",
                                             fontWeight: 400,
-											padding: "4px 8px 4px 8px",
+											padding: isArticlePage ? "4px 0" : "4px 8px 4px 8px",
+                                            paddingLeft: isArticlePage ? "0" : "8px",
+                                            paddingRight: isArticlePage ? "0" : "8px",
                                             lineHeight: "20px",
-                                            color: activeId === data.id ? "#f86a3e" : "rgba(255,255,255,0.6)", 
+                                            color: activeId === data.id ? "#f86a3e" : "inherit", 
                                         }}
                                         onClick={(e) => {
                                             handleCollapse(index)
+                                            setActiveId(data.id)
                                         }}
                                     >
                                         {data.title}
@@ -1041,8 +1406,12 @@ const Docs = (defaultprops) => {
                                                     return (
                                                         <ListItemButton
                                                             key={i}
-                                                            style={hrefStyleToc2}
+                                                            style={activeSubItem === d.id ? activeHrefStyleToc2 : hrefStyleToc2}
                                                             href={`#${d.id}`}
+                                                            onClick={(e) => {
+                                                                // e.preventDefault()
+                                                                setActiveSubItem(d.id)
+                                                            }}
                                                         >
                                                             {d.title}
                                                         </ListItemButton>
@@ -1055,7 +1424,7 @@ const Docs = (defaultprops) => {
 
                             )
                         })}
-                    </nav>
+                    </div>
                 </div >
 
             </div >
@@ -1083,7 +1452,7 @@ const Docs = (defaultprops) => {
                         color="primary"
                         onClick={handleClick}
                     >
-                        <div style={{ color: "white" }}>More docs</div>
+                        <div style={{ color: "white" }}>More {isArticlePage ? "articles" : "docs"}</div>
                     </Button>
                     <Menu
                         id="simple-menu"
@@ -1099,7 +1468,7 @@ const Docs = (defaultprops) => {
                                 return null;
                             }
 
-                            const path = "/docs/" + item;
+                            const path = isArticlePage ? "/articles/" + item : "/docs/" + item;
                             const newname =
                                 item.charAt(0).toUpperCase() +
                                 item.substring(1).split("_").join(" ").split("-").join(" ");
@@ -1108,7 +1477,8 @@ const Docs = (defaultprops) => {
                                     key={index}
                                     style={{ color: "white" }}
                                     onClick={() => {
-                                        window.location.pathname = path;
+                                        navigate(path)
+                                        handleClose()
                                     }}
                                 >
                                     {newname}
@@ -1140,8 +1510,22 @@ const Docs = (defaultprops) => {
                                 <MenuItem
                                     key={index}
                                     style={{ color: "white" }}
+                                    component={Link}
+                                    to={`#${data.id}`}
+                                    onClick={() => {
+                                        console.log(`Scrolling to: ${data.id}`);
+                                        setTimeout(() => {
+                                            const element = document.getElementById(data?.id);
+                                            if (element) {
+                                                element.scrollIntoView({ behavior: 'smooth' });
+                                            } else {
+                                                console.error(`Element with id ${data.id} not found.`);
+                                            }
+                                        }, 100); // Delay to ensure the content is loaded
+                                        handleCloseToc();
+                                    }}
                                 >
-                                    <a href={`#${data.id}`} style={hrefStyle}>{data.title}</a>
+                                    {data.title}
                                 </MenuItem>
                             )
                         })}
@@ -1178,7 +1562,7 @@ const Docs = (defaultprops) => {
                     color="primary"
                     onClick={handleClick}
                 >
-                    <div style={{ color: "white" }}>More docs</div>
+                    <div style={{ color: "white" }}>More {isArticlePage ? "articles" : "docs"}</div>
                 </Button>
             </div>
         );
@@ -1198,7 +1582,7 @@ export default Docs;
 
 const DocsContent = memo(({postDataBrowser, postDataMobile}) => {
     return(
-        <div>
+        <div style={{fontFamily: theme?.palette?.fontFamily}}>
             <BrowserView>{postDataBrowser}</BrowserView>
             <MobileView>{postDataMobile}</MobileView>
         </div>
@@ -1210,12 +1594,14 @@ const DocsWrapper = memo(({isLoggedIn, isLoaded, children })=>{
 
     return (
         <div style={{
+            marginTop: window.location.pathname.includes("/articles/") ? 50 : undefined, 
+            paddingBottom: 50,
             minHeight: 1000, zIndex: 1, 
             maxWidth: Math.min(!(isLoggedIn && isLoaded) ? 1920 : leftSideBarOpenByClick ? windowWidth - 300 : windowWidth - 200, 1920), 
             minWidth: isMobile ? null : (isLoggedIn && isLoaded) ? leftSideBarOpenByClick ? 800 : 900 : null, margin: "auto", 
             position: (isLoggedIn && isLoaded) && leftSideBarOpenByClick ? "relative" : "static", 
             left: (isLoggedIn && isLoaded) && leftSideBarOpenByClick ? 120 : (isLoggedIn && isLoaded) && !leftSideBarOpenByClick ? 80 : 0, 
-            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick && (isLoggedIn && isLoaded) ? 160 : (isLoggedIn && isLoaded) && !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
+            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick && (isLoggedIn && isLoaded) ? window.location.pathname.includes("/articles/") ? 0 : 90 : (isLoggedIn && isLoaded) && !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
             transition: "left 0.3s ease-in-out, min-width 0.3s ease-in-out, max-width 0.3s ease-in-out, position 0.3s ease-in-out, margin 0.3s ease-in-out, margin-left 0.3s ease"
             }}>
             {children}

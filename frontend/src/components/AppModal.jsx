@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import {
@@ -29,8 +29,15 @@ import theme from "../theme.jsx";
 import YAML from 'yaml';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
+import { InstantSearch, connectHits, connectSearchBox } from 'react-instantsearch-dom';
+import algoliasearch from "algoliasearch/lite";
 
-const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
+const searchClient = algoliasearch(
+  "JNSS5CFDZZ",
+  "db08e40265e2941b9a7d8f644b6e5240"
+);;
+
+const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
 
   const [frameworkData, setFrameworkData] = useState({})
   const [userdata, setUserdata] = useState({})
@@ -79,8 +86,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
       });
   }, [app]);
 
-
-  const getFramework = () => {
+    const getFramework = () => {
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
       method: "GET",
       headers: {
@@ -295,8 +301,6 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
       })
   }
 
-
-
   useEffect(() => {
     setUsecaseLoading(true)
     getAvailableWorkflows()
@@ -329,6 +333,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
               //delete apps from local storage
               localStorage.removeItem("apps");
               getApps();
+              onClose();
             }, 1000);
           } else {
             toast("Failed deleting app. Does it still exist?");
@@ -720,18 +725,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
             textAlign: "start",
             flex: 1,
           }}>
-            <Typography
-              variant="h6"
-              sx={{
-                fontFamily: theme?.typography?.fontFamily,
-                fontSize: '24px',
-                fontWeight: 600,
-                mb: 0.3,
-                color: '#fff'
-              }}
-            >
-              20
-            </Typography>
+            <WorkflowCard app={app}/>
             <Typography
               variant="body2"
               sx={{
@@ -930,3 +924,55 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps }) => {
 };
 
 export default AppModal;
+
+
+const WorkflowCard = memo(({ app }) => {
+  const [name, setName] = useState("");
+  const [relatedWorkflows, setRelatedWorkflows] = useState(0);
+
+  const WorkflowHits = ({ hits }) => {
+    useEffect(() => {
+      setRelatedWorkflows(hits?.length || 0);
+    }, [hits]);
+
+    return null;
+  };
+
+  const CustomWorkflowHits = connectHits(WorkflowHits);
+
+  const SearchBox = ({ refine, currentRefinement }) => {
+    useEffect(() => {
+      if (name.length > 0 && currentRefinement !== name) {
+        refine(name?.split(" ")[0]);
+      }
+    }, [name, refine, currentRefinement]);
+
+    return null;
+  };
+
+  const CustomSearchBox = connectSearchBox(SearchBox);
+
+  useEffect(() => {
+    if (app?.name && app.name.trim().length > 0 && name !== app.name) {
+      const formattedName = app.name
+        .charAt(0)
+        .toUpperCase() + app.name.substring(1)
+        .replaceAll("_", " ");
+      setName(formattedName);
+    }
+  }, [app?.name]);
+
+  return (
+    <Typography variant="h4">
+      {name.length > 0 ? (
+        <InstantSearch key={name} searchClient={searchClient} indexName="workflows">
+          <CustomSearchBox defaultRefinement={name?.split(" ")[0]}/>
+          <CustomWorkflowHits />
+          {relatedWorkflows}
+        </InstantSearch>
+      ) : (
+        relatedWorkflows
+      )}
+    </Typography>
+  );
+});

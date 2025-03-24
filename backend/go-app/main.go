@@ -31,12 +31,13 @@ import (
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
 
-	//"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
+	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
+	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -46,7 +47,8 @@ import (
 
 	// Web
 	"github.com/gorilla/mux"
-	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	//http2 "gopkg.in/src-d/go-git.v5/plumbing/transport/http"
+	//http2 "github.com/go-git/go-git/plumbing/transport/http"
 )
 
 // This is used to handle onprem vs offprem databases etc
@@ -3079,8 +3081,9 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			return
 		}
 
-		// FIXME: Check whether it's in use.
-		if user.Id != app.Owner && user.Role != "admin" {
+		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id)  {
+			log.Printf("[DEBUG] Editing app %s with user %s (%s) in org %s", test.Id, user.Username, user.Id, user.ActiveOrg.Id)
+		} else {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
 			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@shuffler.io if this persists."}`))
@@ -3154,7 +3157,18 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
-	api.Owner = user.Id
+	if api.Owner == "" {
+		api.Owner = user.Id
+	}
+
+	if len(api.ReferenceOrg) == 0 {
+		api.ReferenceOrg = user.ActiveOrg.Id
+	}
+
+	if len(test.Image) > 0 {
+		api.SmallImage = test.Image
+		api.LargeImage = test.Image
+	}
 
 	err = shuffle.DumpApi(basePath, api)
 	if err != nil {
@@ -3279,6 +3293,12 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		Body: string(body),
 	}
 
+	if !shuffle.ArrayContains(api.Contributors, user.Id) {
+		api.Contributors = append(api.Contributors, user.Id)
+	}
+
+	shuffle.SetAppRevision(ctx, api)
+
 	log.Printf("[INFO] API LENGTH FOR %s: %d, ID: %s", api.Name, len(parsed.Body), newmd5)
 	// FIXME: Might cause versioning issues if we re-use the same!!
 	// FIXME: Need a way to track different versions of the same app properly.
@@ -3349,10 +3369,26 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
+
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
+	}
+
+	org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org during image build (%s): %s", user.ActiveOrg.Id, err)
+	} else {
+		imagenames := []string{
+			fmt.Sprintf("%s_%s", api.Name, api.AppVersion),
+			fmt.Sprintf("%s_%s", api.Name, api.ID),
+		}
+
+		err = shuffle.DistributeAppToEnvironments(ctx, *org, imagenames)
+		if err != nil {
+			log.Printf("[ERROR] Failed distributing app to environments: %s", err)
+		}
 	}
 }
 
@@ -4343,15 +4379,15 @@ func runInitEs(ctx context.Context) {
 	}
 
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 30
-		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
+		healthcheckInterval := 60 
+		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats, and dashboard on /health. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter
 			resp := httptest.NewRecorder()
 
 			request := http.Request{}
 			// Add the "force=true" query to the fake request
-			request.URL, err = url.Parse("/api/v1/health/stats?force=true")
+			request.URL, err = url.Parse("/api/v1/health?force=true")
 			if err != nil {
 				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
 			}
@@ -4422,7 +4458,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
 	}
 
-	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s", org.Id, syncUrl)
 
 	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(
@@ -5184,6 +5220,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
+
+	// This structure is horrendous. Needs fixing after we got the prototype up
+	r.HandleFunc("/api/v1/detections", shuffle.HandleListDetectionCategories).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}", shuffle.HandleGetDetectionRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/selected_rules/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
 
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")

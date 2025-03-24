@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "shuffle.orborus.name" . }}-env
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.orborus.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+data:
+  ENVIRONMENT_NAME: "{{ .Values.shuffle.org }}"
+  ORG_ID: "{{ .Values.shuffle.org }}"
+  TZ: "{{ .Values.shuffle.timezone }}"
+  BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:5001"
+  KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
+  KUBERNETES_SERVICE_ACCOUNT: {{ include "shuffle.orborus.serviceAccount.name" . }}
+  SHUFFLE_WORKER_IMAGE: "{{ include "shuffle.worker.image" . }}"
+  REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
+  SHUFFLE_SWARM_CONFIG: run

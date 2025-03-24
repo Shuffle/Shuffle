@@ -4,10 +4,6 @@
 
 Shuffle Automation
 
-[![CodeQL](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml)
-[![Autobuild](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml)
-[![Deploy to AWS](https://d1.awsstatic.com/cloudformation-deploy-to-aws-button.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=Shuffle-Instance&templateURL=https://shuffle-public-amis.s3.eu-north-1.amazonaws.com/template.yaml)
-
 </h1><h4 align="center">
 
 [Shuffle](https://shuffler.io) is an open source automation platform, built for and by the security professionals. Security operations is complex, but it doesn't have to be. Built to work well with MSSP's and other service providers in mind.
@@ -29,7 +25,7 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
-* Cloud: Register at https://shuffler.io/register and get cooking (missing a lot of features)
+* Cloud: Register at https://shuffler.io/register and get cooking
 
 Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
 
