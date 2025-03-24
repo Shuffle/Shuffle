@@ -29,6 +29,7 @@ import {
   Fade,
   Portal,
   Collapse,
+  Tooltip,
 } from "@mui/material";
 import theme from "../theme.jsx";
 import RecentWorkflow from "../components/RecentWorkflow.jsx";
@@ -56,7 +57,7 @@ const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
-  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen} = useContext(Context);
+  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen, isDocSearchModalOpen} = useContext(Context);
 
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
@@ -86,21 +87,21 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
 
-//With this code it is opening search bar on google chrome search bar as well which is not required
-useEffect(() => {
-  const handleKeyDown = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
-      event.preventDefault();
-      setSearchBarModalOpen((prev)=> !prev);
-    }
-  };
+	//With this code it is opening search bar on google chrome search bar as well which is not required
+	useEffect(() => {
+	  const handleKeyDown = (event) => {
+		if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+		  event.preventDefault();
+		  setSearchBarModalOpen((prev)=> !prev);
+		}
+	  };
 
-  window.addEventListener("keydown", handleKeyDown);
+	  window.addEventListener("keydown", handleKeyDown);
 
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, [setSearchBarModalOpen]);
+	  return () => {
+		window.removeEventListener("keydown", handleKeyDown);
+	  };
+	}, [setSearchBarModalOpen]);
   
   const CustomPopper = (props) => {
     return (
@@ -154,6 +155,7 @@ useEffect(() => {
         >
           {props.children}
         </Box>
+
         <Link to="/admin?tab=tenants" style={hrefStyle}>
 			<Box
 				sx={{
@@ -524,7 +526,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0-rc6
+          Version: 2.0.1
         </Typography>
       </Menu>
     </span>
@@ -720,11 +722,7 @@ useEffect(() => {
           margin_left:
             org.creator_org !== undefined &&
             org.creator_org !== null &&
-            org.creator_org.length > 0
-              ? org.id === userdata.active_org.id
-                ? 0
-                : 20
-              : 0,
+            org.creator_org.length > 0 ? 20 : 0,
         };
       }) || []
     );
@@ -775,6 +773,9 @@ useEffect(() => {
 
   }, [window?.location?.pathname]);
 
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+
   return (
     <div
       style={{
@@ -787,12 +788,13 @@ useEffect(() => {
         transition: "width 0.3s ease",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" ,
         resize: 'both',
-
-		zoom: 0.8, 
+        zoom: isSafari ? undefined : 0.8,
+        transform: isSafari ? "scale(0.8)" : undefined,
+        transformOrigin: isSafari ? "top left" : undefined,
         height: "calc((100vh - 32px)*1.2)",
       }}
     >
-      {searchBarModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} /> : null}
+      {searchBarModalOpen && !isDocSearchModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} isDocSearchModalOpen={isDocSearchModalOpen} /> : null}
       <Box
         sx={{
           display: "flex",
@@ -812,14 +814,36 @@ useEffect(() => {
             setExpandLeftNav(false)
           }
         }}
-      >
-        <a href="/" style={{ textDecoration: "none" }}>
-          <img
-            src={ShuffleLogo}
-            alt="Shuffle Logo"
-            style={{ width: 24, height: 24 }}
-          />
-        </a>
+      >  
+        <Tooltip 
+          title="Go to Home" 
+          placement="top"
+          arrow  
+          componentsProps={{
+            tooltip: {
+              sx: {
+                backgroundColor: "rgba(33, 33, 33, 1)",
+                color: "rgba(241, 241, 241, 1)",
+                fontSize: 12,
+                border: "1px solid rgba(73, 73, 73, 1)",
+                fontFamily: theme?.typography?.fontFamily,
+              }
+            },
+            popper: {
+              sx: {
+                zIndex: 1000019,
+              }
+            }
+          }}
+        >
+          <Link to="/">
+            <img
+              src={ShuffleLogo}
+              alt="Shuffle Logo"
+              style={{ width: 24, height: 24 }}
+            />
+          </Link>
+        </Tooltip>
         <Box
           sx={{
             display: "flex",
@@ -1454,7 +1478,7 @@ useEffect(() => {
                               : "#C8C8C8"
                         }}
                       >
-	  					Shuffle Agent
+	  					Hybrid Locations
                       </span>
                     </Button>
                   </Link>
@@ -1586,6 +1610,18 @@ useEffect(() => {
           marginLeft: 5,
         }}
       >
+	  	
+	  	{expandLeftNav &&
+	  	<Button
+	  		variant="outlined"
+	  		style={{marginBottom: 15, borderWidth: 2, }}
+	  		onClick={() => {
+				window.open("https://shuffler.io/contact?category=book_a_demo", "_blank")
+			}}
+	  	>
+	  		Book a Demo
+	  	</Button>
+		}
         <Box ref={autocompleteRef}>
           <Autocomplete
             disablePortal
@@ -1879,13 +1915,11 @@ useEffect(() => {
 };
 
 export default LeftSideBar;
-
-
-const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata}) => {
+const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata, isDocSearchModalOpen}) => {
   return (
     (
       <Dialog
-        open={searchBarModalOpen}
+        open={searchBarModalOpen && !isDocSearchModalOpen}
         onClose={() => {
           setSearchBarModalOpen(false);
         }}

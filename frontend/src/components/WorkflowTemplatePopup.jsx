@@ -678,7 +678,7 @@ const WorkflowTemplatePopup = (props) => {
 						}
 						{img2 !== undefined && img2 !== "" && dstapp !== undefined && dstapp !== "" ?
 							<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<div style={{display: "flex", }}>
+								<div style={{display : dstapp === "NA" ? "none" : "flex" }}>
 									<TrendingFlatIcon style={{ marginTop: 7, }} />
 									<div style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
 										<img src={img2} style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleDefault : imagestyle} />

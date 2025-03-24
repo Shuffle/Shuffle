@@ -2906,7 +2906,7 @@ const AppExplorer = (props) => {
   const deduplicateByName = (array) => {
     const uniqueNames = {};
     return array.filter(item => {
-		if (!item.hasOwnProperty('name') || !item.name.length) {
+		if (!item?.hasOwnProperty('name') || !item?.name?.length) {
 		  return true
 		}
 		if (!uniqueNames[item.name]) {
@@ -3866,13 +3866,13 @@ const AppExplorer = (props) => {
         }
       }}
     >
-      <DialogTitle style={{ marginBottom: 0 }}>
+      <DialogTitle style={{ marginBottom: 0, padding: 50,  paddingBottom: 0, }}>
         <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
           Are you sure you want to PUBLISH this app?
         </div>
       </DialogTitle>
       <DialogContent
-        style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+        style={{ color: "rgba(255,255,255,0.65)", textAlign: "center", padding: 50, }}
       >
         <div>
           <Typography variant="body1" style={{ marginBottom: 20 }}>
@@ -4120,7 +4120,7 @@ const AppExplorer = (props) => {
             </Button>
           )}
 			{appType === 1 ? null : 
-				creatorProfile.self === true || userdata.support === true ? 
+  				userdata?.support || userdata?.id === app?.owner || (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org) || app?.contributors?.includes(userdata?.id) || creatorProfile?.self === true ?
 				<Tooltip title="Edit App" placement="top">
 					<Button
 						variant="outlined"
@@ -4167,9 +4167,9 @@ const AppExplorer = (props) => {
 					Explore API
 				  </Button>
 				</a>
-        {(appdata?.owner === userdata?.id) ? (
                 <Select
                   value={sharingConfiguration}
+			  	  disabled={!isCloud}
                   onChange={(event) => {
                     if ((appdata.owner !== userdata.id) && (!userdata.support)) {
                       toast("You're not the owner of this app. You can't update it.");
@@ -4222,7 +4222,6 @@ const AppExplorer = (props) => {
                     );
                   })}
                 </Select>
-        ): null }
 			</div>
           ) : (
             <a

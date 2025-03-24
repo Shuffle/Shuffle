@@ -1,0 +1,28 @@
+# This PVC is always enabled, regardless of .Values.persistence.enabled,
+# as app building does not work without it.
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: backend-apps-claim # Hardcoded by shuffle-app-builder
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.backend.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  annotations:
+    {{- if eq .Values.persistence.resourcePolicy "keep" }}
+    helm.sh/resource-policy: keep
+    {{- end }}
+    {{- if or .Values.persistence.appBuilder.annotations .Values.commonAnnotations }}
+    {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.persistence.appBuilder.annotations .Values.commonAnnotations ) "context" . ) }}
+    {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+  {{- range .Values.persistence.appBuilder.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.appBuilder.size }}
+  {{- if .Values.persistence.appBuilder.selector }}
+  selector: {{- include "common.tplvalues.render" (dict "value" .Values.persistence.appBuilder.selector "context" $) | nindent 2 }}
+  {{- end }}
+  {{- include "common.storage.class" ( dict "persistence" .Values.persistence.appBuilder "global" .Values.global ) | nindent 2 }}

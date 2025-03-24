@@ -421,7 +421,7 @@ const EnvironmentTab = memo((props) => {
         -e AUTH="${auth}" \\
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${environment.org_id}" \\
-        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:nightly" \\
+        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:latest" \\
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e SHUFFLE_LOGS_DISABLED=true \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
@@ -1064,17 +1064,26 @@ const EnvironmentTab = memo((props) => {
 				  }}
 				  style={{minWidth:120, display: "table-cell",}}
 				  primary={
-					<Tooltip title={environment.Type !== "cloud"
-					  ? environment.running_ip === undefined ||
-						environment.running_ip === null ||
-						environment.running_ip.length === 0
-						? 
-						"Not running. Click to get the start command that can be ran on your server."
-						: 
-						<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
-					  : 
-						"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
-					  } placement="top">
+					<Tooltip title={
+						<Typography variant="body1" style={{margin: 10, }}>
+						{environment.Type !== "cloud"
+						  ? environment.running_ip === undefined ||
+							environment.running_ip === null ||
+							environment.running_ip.length === 0
+							? 
+							"Not running. Click to get the start command that can be ran on your server."
+							: 
+							<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
+						  : 
+							"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
+						}
+
+						<br />
+						<br />
+
+						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"}
+						</Typography>
+					} placement="top">
 					  <Typography
 					  style={{
 						minWidth: 100,
@@ -1411,7 +1420,7 @@ const EnvironmentTab = memo((props) => {
           <Collapse in={listItemExpanded === index} timeout="auto" unmountOnExit>
           	<Grid container justifyContent="center" style={{minWidth: 850, maxWidth: 850, }}>
     			<Grid item xs={12} sm={8} md={6}>
-                    <div style={{minWidth: 700, maxWidth: 700, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
+                    <div style={{minWidth: 750, maxWidth: 750, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
                             Self-Hosted Orborus instance

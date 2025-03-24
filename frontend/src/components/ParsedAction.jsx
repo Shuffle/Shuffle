@@ -214,6 +214,20 @@ const ParsedAction = (props) => {
 		}
 	}, [expansionModalOpen])
 
+	/*
+	useEffect(() => {
+		// This will have the OLD selectedAction, not the new one huh?
+		// How do we map the fields correctly? 
+		if (selectedAction === undefined || selectedAction === null) {
+			console.log("Selected action is undefined")
+			return
+		}
+
+		console.log("Selected action: ", selectedAction?.name, selectedAction)
+
+	}, [selectedAction])
+	*/
+
 	useEffect(() => {
 		// Changes the order of params to show in order:
 		// auth, required, optional
@@ -347,7 +361,7 @@ const ParsedAction = (props) => {
 		}
 
 		if (keyorder.join(",") !== newkeyorder.join(",")) {
-			//toast("KEYORDER CHANGED!")
+			//console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
 
 			setSelectedActionParameters(newparams)
 			selectedAction.parameters = newparams
@@ -688,7 +702,7 @@ const ParsedAction = (props) => {
 		if (newActionList.find((item) => item.type === "Shuffle DB") === undefined) {
 			let cacheKey = {
 				type: "Shuffle DB",
-				name: "Shuffle DB",
+				name: "Shuffle Datastore",
 				value: "$shuffle_cache",
 				highlight: "shuffle_cache",
 				autocomplete: "shuffle_cache",
@@ -753,44 +767,78 @@ const ParsedAction = (props) => {
 			if (parents.length > 1) {
 				const labels = [];
 				for (let parentNode of parents) {
-					if (parentNode.label !== "Runtime Argument" && !labels.includes(parentNode.label)) {
-						labels.push(parentNode.label);
-						let exampleData = parentNode.example ?? "";
-						if (!exampleData && workflowExecutions.length > 0) {
-							for (let exec of workflowExecutions) {
-								const foundResult = exec.results?.find(result => result.action.id === parentNode.id);
-								if (foundResult) {
-									const valid = validateJson(foundResult.result);
-									if (valid.valid && valid.result.success !== false) {
-										exampleData = valid.result;
-										break;
-									}
+					if (parentNode.label === "Runtime Argument" || labels.includes(parentNode.label)) {
+						continue
+					}
+
+					labels.push(parentNode.label);
+					let exampleData = parentNode.example ?? "";
+					if (parentNode?.app_name === "http") {
+						exampleData = ""
+					}
+
+					if (workflowExecutions.length > 0) {
+						for (let exec of workflowExecutions) {
+							const foundResult = exec.results?.find(result => result?.action?.id === parentNode?.id);
+							if (foundResult) {
+								const valid = validateJson(foundResult.result);
+								if (valid.valid && valid.result.success !== false) {
+									exampleData = valid.result
+									break
 								}
 							}
 						}
-
-						if (parentNode.label === undefined) {
-							parentNode.label = ""
-						}
-
-						newActionList.push({
-							type: "action",
-							id: parentNode.id,
-							name: parentNode.label,
-							autocomplete: parentNode.label.split(" ").join("_"),
-							example: exampleData,
-						});
-
-						parentActionList.push({
-							type: "action",
-							id: parentNode.id,
-							name: parentNode.label,
-							autocomplete: parentNode.label.split(" ").join("_"),
-							example: exampleData,
-						});
-
-
 					}
+
+					if (exampleData === "" && apps !== undefined && apps !== null && apps?.length > 0) {
+						// Check apps if it exists, then if it
+						const foundApp = apps?.find(app => app?.id === parentNode?.app_id)
+						if (foundApp !== undefined && foundApp !== null) {
+							if (foundApp?.generated === true || foundApp?.name === "http") {
+								const validationData = validateJson(`{
+									"status": 200,
+									"body": {
+									  "example": "json",
+									  "values": "json"
+									},
+									"url": "https://example.com",
+									"headers": {
+									  "Content-Type": "application/json",
+									  "Example-Header": "two"
+									},
+									"cookies": {
+										"example": "session",
+										"__session": "sessionid"
+									},
+									"success": true
+								}`)
+
+								if (validationData.valid) {
+									exampleData = validationData.result
+								}
+							}
+						}
+					}
+
+					if (parentNode.label === undefined) {
+						parentNode.label = ""
+					}
+
+					newActionList.push({
+						type: "action",
+						id: parentNode.id,
+						name: parentNode.label,
+						autocomplete: parentNode.label.split(" ").join("_"),
+						example: exampleData,
+					});
+
+					parentActionList.push({
+						type: "action",
+						id: parentNode.id,
+						name: parentNode.label,
+						autocomplete: parentNode.label.split(" ").join("_"),
+						example: exampleData,
+					});
 				}
 			}
 		}
@@ -838,10 +886,10 @@ const ParsedAction = (props) => {
 				}
 			}
 			return { ...param, value: paramvalue, error: message }
-		});
+		})
 
-		setSelectedActionParameters(newParameters);
-		setActionlist(newActionList);
+		setSelectedActionParameters(newParameters)
+		setActionlist(newActionList)
 	}, [workflow.execution_variables, paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents, setNewSelectedAction]);
 
 	useEffect(() => {
@@ -1112,6 +1160,12 @@ const ParsedAction = (props) => {
 
 					selectedActionParameters[1].value = splitparsed[1]
 					selectedAction.parameters[1].value = splitparsed[1]
+
+					if (splitparsed.length > 2) {
+						toast.warn("Filter list only supports filtering at the first level. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.")
+					} else if (selectedAction.parameters[1].value.includes(".#")) {
+						toast.warn("This filter may not work due to using .# indexing. Please use the 'execute python' action and try the 'filter a list' function in the code editor.")
+					}
 				} else {
 					// Remove .# and after
 					const splitparsed = parsedvalue.split(".#")
@@ -2497,7 +2551,7 @@ const ParsedAction = (props) => {
 
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
 				<div style={{ marginTop: "20px" }}>
-					<Typography>Execution variable (optional)</Typography>
+					<Typography color="textSecondary">Runtime variable (optional)</Typography>
 					<Select
 						MenuProps={{
 							disableScrollLock: true,
@@ -2575,7 +2629,8 @@ const ParsedAction = (props) => {
 					</div>
 				*/}
 
-				{setNewSelectedAction !== undefined ? (
+				{isAgent ? null : 
+					setNewSelectedAction !== undefined ? (
 					<Autocomplete
 						id="action_search"
 						disabled={isAgent || (selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0)}
@@ -3609,6 +3664,20 @@ const ParsedAction = (props) => {
 										</Box>
 									);
 
+									if (selectedApp.name === "email") {
+										//hideBody = false
+										showButtonField = false
+										hideBodyButtonValue = null
+									}
+
+
+									if ((multiline === undefined || multiline === false) && ((data?.autocompleted === true || data?.field_active === true) || data.name.startsWith("${") && data.name.endsWith("}"))) {
+										multiline = true
+									}
+
+									if (data?.autocompleted === true || data?.field_active === true) { 
+										rows = "1"
+									}
 
 									var datafield = (
 										<Tooltip
@@ -3690,7 +3759,8 @@ const ParsedAction = (props) => {
 														setScrollConfig(scrollConfig)
 													}
 												}}
-												rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
+												minRows={rows}
+												maxRows={6}
 												color="primary"
 												// defaultValue={data.value}
 												value={
@@ -3999,7 +4069,8 @@ const ParsedAction = (props) => {
 												helperText={returnHelperText(data.name, data.value)}
 												fullWidth
 												multiline={multiline}
-												rows={"3"}
+												minRows={3}
+												maxRows={6}
 												color="primary"
 												defaultValue={data.value}
 												type={"text"}
@@ -4545,7 +4616,7 @@ const ParsedAction = (props) => {
 													data.field_active === true ?
 														<Tooltip
 															color="primary"
-															title={"This is an Simplified field to make the body easier to use. NOT required according to the API documentation. If this is filled, it will be overridden in the Advanced Body"}
+															title={"This is a Simplified Field to make the body easier to use. NOT required according to the API documentation. If this is filled, it will be overridden in the Advanced Body"}
 															placement="top"
 														>
 															<PriorityHighIcon

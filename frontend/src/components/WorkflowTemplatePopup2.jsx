@@ -50,12 +50,13 @@ const WorkflowTemplatePopup = (props) => {
 		setIsClicked,
 		inputWorkflowId,
 		inputWorkflow,
+		onClose,
 	} = props;
 
 	const [isActive, setIsActive] = useState(workflowBuilt === true || (workflowBuilt !== undefined && workflowBuilt !== null && workflowBuilt?.length > 0) || (inputWorkflow !== undefined && inputWorkflow !== null && inputWorkflow.id !== undefined && inputWorkflow.id !== null && inputWorkflow.id !== "") ? true : false)
 
 	const [isHovered, setIsHovered] = useState(false);
-	const [modalOpen, setModalOpen] = useState(isModalOpenDefault === true ? true : false)
+	const [modalOpen, setModalOpen] = useState(isModalOpenDefault === true);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [workflowLoading, setWorkflowLoading] = useState(false)
 	const [showLoginButton, setShowLoginButton] = useState(false);
@@ -172,6 +173,12 @@ const WorkflowTemplatePopup = (props) => {
 			*/
 		}
 	}, [configurationFinished, workflow])
+
+	useEffect(() => {
+		if (isModalOpenDefault === true) {
+			setModalOpen(true);
+		}
+	}, [isModalOpenDefault]);
 
 	const imageSize = 32
 	const defaultBorder = "1px solid rgba(255,255,255,0.6)"
@@ -516,6 +523,18 @@ const WorkflowTemplatePopup = (props) => {
 		return false
 	}
 	
+	const handleClose = () => {
+		setModalOpen(false);
+		
+		if (onClose) {
+			onClose();
+		}
+
+		if (setIsClicked !== undefined) {
+			setIsClicked(false);
+		}
+	}
+
 	const ModalView = () => {
 		if (modalOpen === false) {
 			return null
@@ -528,13 +547,7 @@ const WorkflowTemplatePopup = (props) => {
         	<Drawer
 				anchor={"right"}
         	    open={modalOpen}
-        	    onClose={() => {
-        	        setModalOpen(false);
-
-					if (setIsClicked !== undefined) {
-						setIsClicked(false)
-					}
-        	    }}
+        	    onClose={handleClose}
         	    PaperProps={{
         	        style: {
 						backgroundColor: "black",
@@ -550,17 +563,15 @@ const WorkflowTemplatePopup = (props) => {
 				  style={{
 					zIndex: 5000,
 					position: "absolute",
-					top: 14,
-					right: 14,
+					top: 110,
+					right: 110,
 					color: "white",
 				  }}
-				  onClick={() => {
-					setModalOpen(false);
-				  }}
+				  onClick={handleClose}
 				>
 				  <CloseIcon />
 				</IconButton>
-				<DialogContent style={{marginTop: 0, marginLeft: isHomePage ? null : isMobile ? null :  75, maxWidth: 470, }}>
+				<DialogContent style={{marginTop: 0, marginLeft: isHomePage ? null : isMobile ? null :  75, maxWidth: 470, marginTop: 20 }}>
 					<Typography variant="h4" style={{ fontSize: isMobile ? 20 : null}}>
 						<b>Configure Workflow</b>
 					</Typography> 

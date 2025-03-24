@@ -1335,7 +1335,7 @@ const UserManagmentTab = memo((props) => {
                 }}
             >
                 <ListItem style={{ width: "100%", padding: "10px 10px 10px 0px", verticalAlign: 'middle', borderBottom: "1px solid #494949", display: "table-row" }}>
-                    {["Username", "API Key", "Role", "Active", "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
+                    {["Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -1458,6 +1458,8 @@ const UserManagmentTab = memo((props) => {
                                 }}
                                 style={{display:'table-cell', verticalAlign: 'middle' }}
                                 />
+
+								{/*
                                 <ListItemText
                                     style={{
                                         textAlign: "center", 
@@ -1488,6 +1490,8 @@ const UserManagmentTab = memo((props) => {
                                         )
                                     }
                                 />
+								*/}
+
                                 <ListItemText
                                     primary={
                                         <Select
@@ -1552,10 +1556,14 @@ const UserManagmentTab = memo((props) => {
                                     }
                                     style={{ display:'table-cell', verticalAlign: 'middle' }}
                                 />
+
+								{/*
                                 <ListItemText
                                     primary={data.active ? "True" : "False"}
                                     style={{display:'table-cell',verticalAlign: 'middle' , padding: "8px", textAlign: "center", color: data.active ? "#02CB70" : "#F53434" }}
                                 />
+								*/}
+
                                 <ListItemText
                                     primary={
                                         data.login_type === undefined ||
@@ -1566,6 +1574,7 @@ const UserManagmentTab = memo((props) => {
                                     }
                                     style={{  display:'table-cell',verticalAlign: 'middle', padding: "8px",  }}
                                 />
+
                                 <ListItemText
                                     primary={
                                         data?.mfa_info !== undefined &&
@@ -1576,6 +1585,7 @@ const UserManagmentTab = memo((props) => {
                                     }
                                     style={{ display:'table-cell', verticalAlign: 'middle',padding: "8px", color: data.mfa_info.active ? "#02CB70" : "#F53434" }}
                                 />
+
                                 {selectedOrganization?.child_orgs !== undefined &&
                                     selectedOrganization?.child_orgs !== null &&
                                     selectedOrganization?.child_orgs?.length > 0 ? (

@@ -281,7 +281,7 @@ export const appCategories = [
 		"name": "AI",
 		"color": "#FFC107",
 		"icon": "AI",
-		"action_labels": ["Answer Question", "Run Action"],
+		"action_labels": ["Answer Question", "Run Action", "Run LLM",],
 	},
 	{
 		"name": "Other",
@@ -2657,12 +2657,12 @@ const AppCreator = (defaultprops) => {
           if (responseJson.reason !== undefined) {
             setErrorCode(responseJson.reason);
 
-			if (responseJson.extra === undefined && responseJson.extra === null) {
-            	toast("Failed to verify: " + responseJson.reason);
-			}
+			toast.error("Failed to build: " + responseJson.reason, {
+				autoClose: 10000
+			})
           }
         } else {
-          toast("Successfully uploaded openapi");
+          toast.success("Successfully built openapi app! Added job to rebuild it in your hybrid runtime locations (Orborus).");
           if (window.location.pathname.includes("/new")) {
             if (responseJson.id !== undefined && responseJson.id !== null) {
               window.location = `/apps/edit/${responseJson.id}`;

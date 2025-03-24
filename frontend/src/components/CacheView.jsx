@@ -24,11 +24,14 @@ import {
     Checkbox,
     MenuItem,
     DialogContent,
+	FormControl,
+	Select,
 } from "@mui/material";
 
 import {
 	Link as LinkIcon,
     AutoFixHigh as AutoFixHighIcon,
+    AutoFixNormal as AutoFixNormalIcon,
     Edit as EditIcon,
     FileCopy as FileCopyIcon,
     SelectAll as SelectAllIcon,
@@ -50,8 +53,8 @@ import {
     Business as BusinessIcon,
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
-    CheckBox,
-    Key,
+	Clear as ClearIcon,
+	Add as AddIcon,
 } from "@mui/icons-material";
 import { validateJson, } from "../views/Workflows.jsx";
 import { Context } from "../context/ContextApi.jsx";
@@ -91,15 +94,40 @@ const CacheView = memo((props) => {
     const [showDistributionPopup, setShowDistributionPopup] = useState(false);
     const [selectedSubOrg, setSelectedSubOrg] = useState([]);
     const [selectedCacheKey, setSelectedCacheKey] = useState("");
+
+	// Direct category migration from ../components/Files.jsx
+    const [selectAllChecked, setSelectAllChecked] = React.useState(false)
+  	const [renderTextBox, setRenderTextBox] = React.useState(false);
+  	const [fileCategories, setFileCategories] = React.useState(["default"]);
+	const [selectedCategory, setSelectedCategory] = React.useState("default");
+	const [selectedFileId, setSelectedFileId] = React.useState("");
+    const [updateToThisCategory, setUpdateToThisCategory] = useState("")
+	const [showFileCategoryPopup, setShowFileCategoryPopup] = React.useState(false);
+  	const [selectedFiles, setSelectedFiles] = useState([]);
+
     useEffect(() => {
-        if(orgId?.length >0){
-            listOrgCache(orgId);
+        if (orgId?.length > 0) {
+            listOrgCache(orgId, selectedCategory)
         }
-    }, [orgId]);
+    }, [orgId])
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        fileCategories.push(event.target.value);
+        setSelectedCategory(event.target.value);
+        setRenderTextBox(false);
+      }
+
+      if (event.key === 'Escape'){ // not working for some reasons
+        console.log('escape pressed')
+        setRenderTextBox(false);  
+      }
+    }
 
 
-    const listOrgCache = (orgId) => {
-        fetch(globalUrl + `/api/v1/orgs/${orgId}/list_cache`, {
+    const listOrgCache = (orgId, category) => {
+		const url = `${globalUrl}/api/v1/orgs/${orgId}/list_cache${category !== undefined ? `?category=${category.replaceAll(" ", "%20")}` : ""}`
+        fetch(url, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -119,6 +147,19 @@ const CacheView = memo((props) => {
 			if (responseJson.success === true) {
 				setListCache(responseJson.keys);
                 setCachedLoaded(true);
+
+				if (fileCategories.length === 1 && fileCategories[0] === "default") {
+					var newcategories = ["default"]
+					for (var key in responseJson.keys) {
+						if (responseJson.keys[key].category !== undefined && responseJson.keys[key].category !== null && responseJson.keys[key].category !== "" && !fileCategories.includes(responseJson.keys[key].category)) {
+							newcategories.push(responseJson.keys[key].category);
+						}
+					}
+
+					console.log("CATEGORIES: ", newcategories)
+
+					setFileCategories(newcategories)
+				}
 			}
 
 			if (responseJson.cursor !== undefined && responseJson.cursor !== null && responseJson.cursor !== "") {
@@ -132,15 +173,12 @@ const CacheView = memo((props) => {
 
 
     const deleteCache = (orgId, key) => {
-        //toast("Attempting to delete Cache");
-
-        // method: "DELETE",
 		const method = "POST"
-        //const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/${key}`
         const url = `${globalUrl}/api/v1/orgs/${orgId}/delete_cache`
 		const parsed = {
 			"org_id": orgId,
 			"key": key,
+			"category": selectedCategory === "" || selectedCategory === "default" ? "" : selectedCategory,
 		}
 
         fetch(url, {
@@ -155,7 +193,7 @@ const CacheView = memo((props) => {
                 if (response.status === 200) {
                     toast("Successfully deleted Cache");
                     setTimeout(() => {
-                        listOrgCache(orgId);
+                        listOrgCache(orgId, selectedCategory)
                     }, 1000);
                 } else {
                     toast("Failed deleting Cache. Does it still exist?");
@@ -167,7 +205,12 @@ const CacheView = memo((props) => {
     };
 
     const editOrgCache = (orgId) => {
-        const cache = { key: dataValue.key , value: value };
+        const cache = { 
+			key: dataValue.key, 
+			value: value,
+			category: selectedCategory, 
+		}
+
         setCacheInput([cache]);
 
         fetch(globalUrl + `/api/v1/orgs/${orgId}/set_cache`, {
@@ -191,7 +234,7 @@ const CacheView = memo((props) => {
             .then((responseJson) => {
                 setAddCache(responseJson);
                 toast("Cache Edited Successfully!");
-                listOrgCache(orgId);
+                listOrgCache(orgId, selectedCategory);
                 setModalOpen(false);
             })
             .catch((error) => {
@@ -200,9 +243,13 @@ const CacheView = memo((props) => {
     };
 
     const addOrgCache = (orgId) => {
-        const cache = { key: key, value: value };
+        const cache = { 
+			key: key, 
+			value: value,
+			category: selectedCategory, 
+		}
+
         setCacheInput([cache]);
-        console.log("cache input:", cacheInput)
 
         fetch(globalUrl + `/api/v1/orgs/${orgId}/set_cache`, {
 
@@ -224,8 +271,8 @@ const CacheView = memo((props) => {
             })
             .then((responseJson) => {
                 setAddCache(responseJson);
-                toast("New key Added Successfully!");
-                listOrgCache(orgId);
+                toast("New key added Successfully!");
+                listOrgCache(orgId, selectedCategory);
                 setModalOpen(false);
             })
             .catch((error) => {
@@ -243,7 +290,9 @@ const CacheView = memo((props) => {
 			setValue(JSON.stringify(parsedjson, null, 2))
 		} catch (e) {
 			console.log("Error parsing JSON: ", e)
-			//return JSON.stringify(inputvalue);
+			toast.info("Invalid JSON.", {
+				autoClose: 1500,
+			})
 		}
 	}
 
@@ -306,13 +355,14 @@ const CacheView = memo((props) => {
         >
             <DialogTitle>
                 <span style={{ color: "white" }}>
-                    { editCache ? "Edit Key" : "Add Key" }
+                    { editCache ? "Edit Key" : "Add Key"}{selectedCategory === "" || selectedCategory === "default" ? "" : ` in category '${selectedCategory}'`}
                 </span>
             </DialogTitle>
             <div style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: "#212121", }}>
                 Key
                 <TextField
                     color="primary"
+					disabled={editCache}
                     style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
                     autoFocus
                     InputProps={{
@@ -345,7 +395,7 @@ const CacheView = memo((props) => {
 								autoFixJson(value)
 							}}
 						>
-							<AutoFixHighIcon /> 
+							<AutoFixNormalIcon /> 
 						</IconButton>
 					</Tooltip>
 				</div>
@@ -436,46 +486,49 @@ const CacheView = memo((props) => {
 
     const changeDistribution = (id, selectedSubOrg) => {	
 
-		editFileConfig(id, [...new Set(selectedSubOrg)])
+		editFileConfig(id, [...new Set(selectedSubOrg)], selectedCategory)
 	}
 
-    const editFileConfig = (id, selectedSubOrg, cacheKey) => {
-                const data = {
-                    Key: id,
-                    action: "suborg_distribute",
-                    selected_suborgs: selectedSubOrg,
-                }
-                console.log("data: ", data);	
-                
-                const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/config`;
-    
-                fetch(url, {
-                    mode: "cors",
-                    method: "POST",
-                    body: JSON.stringify(data),
-                    credentials: "include",
-                    crossDomain: true,
-                    withCredentials: true,
-                    headers: {
-                        "Content-Type": "application/json; charset=utf-8",
-                    },
-                })
-                    .then((response) =>
-                        response.json().then((responseJson) => {
-                            if (responseJson["success"] === false) {
-                                toast("Failed overwriting datastore");
-                            } else {
-                                toast("Successfully updated datastore!");
-                                setTimeout(() => {
-                                    listOrgCache(orgId);
-                                    setShowDistributionPopup(false);
-                                }, 1000);
-                            }
-                        })
-                    )
-                    .catch((error) => {
-                        toast("Err: " + error.toString());
-                    });
+
+    const editFileConfig = (id, selectedSubOrg, category) => {
+		const data = {
+			Key: id,
+			action: "suborg_distribute",
+			selected_suborgs: selectedSubOrg,
+			category: category === undefined || category === "" || category === "default" ? "" : category,
+		}
+
+		console.log("data: ", data);	
+		
+		const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/config`;
+
+		fetch(url, {
+			mode: "cors",
+			method: "POST",
+			body: JSON.stringify(data),
+			credentials: "include",
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				"Content-Type": "application/json; charset=utf-8",
+			},
+		})
+			.then((response) =>
+				response.json().then((responseJson) => {
+					if (responseJson["success"] === false) {
+						toast("Failed overwriting datastore");
+					} else {
+						toast("Successfully updated datastore!");
+						setTimeout(() => {
+							listOrgCache(orgId, selectedCategory);
+							setShowDistributionPopup(false);
+						}, 1000);
+					}
+				})
+			)
+			.catch((error) => {
+				toast("Err: " + error.toString());
+			});
         };
 
 
@@ -579,7 +632,7 @@ const CacheView = memo((props) => {
             <div style={{height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
               <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'  }}>
               <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
-                <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore</h2>
+                <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore {selectedCategory === "" || selectedCategory === "default" ? "" : `- Category '${selectedCategory}'`}</h2>
                 <span style={{ marginLeft: isSelectedDataStore?null:25, color:isSelectedDataStore?"#9E9E9E":null}}>
                     Datastore is a permanent key-value database for storing data that can be used cross-workflow. <br/>You can store anything from lists of IPs to complex configurations.&nbsp;
                     <a
@@ -609,10 +662,175 @@ const CacheView = memo((props) => {
                 style={{ marginLeft: 16, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
                 color="primary"
-                onClick={() => listOrgCache(orgId)}
+                onClick={() => listOrgCache(orgId,selectedCategory)}
             >
                 <CachedIcon />
             </Button>
+
+			{fileCategories !== undefined &&
+				fileCategories !== null &&
+				fileCategories.length > 1 ? (
+					<FormControl style={{ minWidth: 150, maxWidth: 150 }}>
+						<Select
+							labelId="input-namespace-select-label"
+							id="input-namespace-select-id"
+							style={{
+								color: "white",
+								minWidth: 122,
+								maxWidth: 122,
+								height: 35,
+								float: "right",
+								position: 'relative',
+								top: 8
+							}}
+							value={selectedCategory}
+							onChange={(event) => {
+								//if (selectAllChecked || listCache.length > 0) {
+								if (selectAllChecked || selectedFiles.length > 0) {
+									setUpdateToThisCategory(event.target.value)
+									setShowFileCategoryPopup(true)
+									return
+								}
+
+								setSelectedCategory(event.target.value)
+								if (event.target.value === "all" || event.target.value === "default") {
+    								listOrgCache(orgId) 
+								} else {
+    								listOrgCache(orgId, event.target.value)
+								}
+									
+
+								// Add it to the url as a query
+								if (window.location.search.includes("category=")) {
+									const newurl = window.location.href.replace(/category=[^&]+/, `category=${event.target.value}`)
+									window.history.pushState({ path: newurl }, "", newurl)
+								} else {
+									window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${event.target.value}`)
+								}
+							}}
+						>
+							{fileCategories.map((data, index) => {
+								return (
+									<MenuItem
+										key={index}
+										value={data}
+										style={{ color: "white" }}
+									>
+										{data.replaceAll("_", " ")}
+									</MenuItem>
+								);
+							})}
+						</Select>
+						<Dialog 
+							PaperProps={{
+								sx: {
+									borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+									border: theme?.palette?.DialogStyle?.border,
+									fontFamily: theme?.typography?.fontFamily,
+									backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									zIndex: 1000,
+									'& .MuiDialogContent-root': {
+										backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									},
+									'& .MuiDialogTitle-root': {
+										backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									},
+									'& .MuiDialogActions-root': {
+										backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+									},
+								},
+							}} 
+							open={showFileCategoryPopup} 
+							onClose={() => {
+								setShowFileCategoryPopup(false)
+							}}
+						>
+							<DialogTitle>File Categories</DialogTitle>
+							<DialogContent>
+								Please note that your selected files ({selectedFileId?.length}) will be moved to the <kbd>{updateToThisCategory}</kbd> category.
+							</DialogContent>
+							<DialogActions>
+								<Button 
+									onClick={() => {
+										setShowFileCategoryPopup(false)
+									}} 
+									style={{fontSize: 16, textTransform: 'none'}}
+								>
+									Close
+								</Button>
+								<Button 
+									onClick={() => {
+										//handleUpdateFileCategory(updateToThisCategory)
+										toast.error("Not implemented.")
+									}} 
+									style={{fontSize: 16, textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544"}}
+								>
+									Update
+								</Button>
+							</DialogActions>
+						</Dialog>
+					</FormControl>
+				) : null}
+
+			<div style={{display: "inline-flex", position:"relative", top: 8}}>
+				{renderTextBox ? 
+					<Tooltip title={"Close"} style={{}} aria-label={""}>
+						<Button
+							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
+							color="primary"
+							onClick={() => {
+								setRenderTextBox(false);
+								console.log(" close clicked")
+								}}
+						>
+							<ClearIcon/>
+						</Button>
+					</Tooltip>
+					:
+					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
+						<Button
+							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
+							color="primary"
+							onClick={() => {
+								setRenderTextBox(true);
+								}}
+						>
+							<AddIcon/>
+							Category (beta)
+						</Button>
+					</Tooltip> 
+				}
+
+				{renderTextBox && <TextField
+					onKeyPress={(event)=>{
+						handleKeyDown(event);
+						if(event.key === 'Enter' && selectedFileId.length > 0){
+							//setShowFileCategoryPopup(true)
+							setUpdateToThisCategory(event.target.value)
+						}
+							
+					}}
+					style={{
+						height: 35,
+						width: 200,
+						marginTop: 0,
+					}}
+					InputProps={{
+						style: {
+							color: "white",
+							height: 35,
+							fontSize: 16,
+							borderRadius: 4,
+							paddingTop: 0,
+						},
+					}}
+					color="primary"
+					placeholder="Category name"
+					required
+					margin="dense"
+					defaultValue={""}
+					autoFocus
+				/>}</div>
             {isSelectedDataStore? null :<Divider
                 style={{
                     marginTop: 20,
@@ -704,6 +922,16 @@ const CacheView = memo((props) => {
                         </ListItem>
 
                     ): listCache?.map((data, index) => {
+						var category = selectedCategory 
+						if (selectedCategory === "default") { 
+							category = ""
+						}
+
+						if (data?.category === undefined && category === "") {
+						} else if (data?.category !== category) {
+							return null
+						}
+
                         var bgColor = isSelectedDataStore? "#212121":"#27292d";
                         if (index % 2 === 0) {
                             bgColor = isSelectedDataStore? "#1A1A1A":"#1f2023";

@@ -724,6 +724,8 @@ const Workflows2 = (props) => {
 
     const [apps, setApps] = React.useState([]);
 
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
     document.title = "Shuffle - Workflows";
 
     useEffect(() => {
@@ -1758,9 +1760,17 @@ const Workflows2 = (props) => {
         let exportFileDefaultName = data.name + ".json";
 
         data["owner"] = "";
+        data["updated_by"] = "";
         data["org"] = [];
         data["org_id"] = "";
         data["execution_org"] = {};
+        data["created"] = 0
+        data["due_date"] = 0
+        data["edited"] = 0
+
+        data["validation"] = {};
+        data["suborg_distribution"] = []
+        data["parentorg_workflow"] = ""
 
         // These are backwards.. True = saved before. Very confuse.
         data["previously_saved"] = false;
@@ -1935,6 +1945,10 @@ const Workflows2 = (props) => {
 
             var parsedworkflows = [];
             for (var key in newSubflows) {
+				if (key === data.id) {
+					continue
+				}
+
                 const foundWorkflow = workflows.find(
                     (workflow) => workflow.id === newSubflows[key]
                 );
@@ -2031,7 +2045,10 @@ const Workflows2 = (props) => {
             .then((response) => {
                 if (response.status !== 200) {
                     console.log("Status not 200 for setting workflows :O!");
-                    toast("Failed deleting workflow. Do you have access?");
+		  
+					if (bulk !== true) {
+                    	toast("Failed deleting workflow. Do you have access?");
+					}
                 } else {
                     if (bulk !== true) {
                         toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
@@ -2312,7 +2329,7 @@ const Workflows2 = (props) => {
                     key={"explore forms"}
                 >
                     <EditNoteIcon style={{ marginLeft: 0, marginRight: 8 }} />
-                    {"Create Form"}
+                    {"Edit Form"}
                 </MenuItem>
 
                 <Divider />
@@ -2362,7 +2379,6 @@ const Workflows2 = (props) => {
 
                 <MenuItem
                     style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-                    disabled={isDistributed}
                     onClick={() => {
                         setDeleteModalOpen(true);
                         setSelectedWorkflowId(data.id);
@@ -2810,7 +2826,7 @@ const Workflows2 = (props) => {
 
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
-                                <div style={{ position: "absolute", top: 45, right: 8, }}>
+                                <div style={{ position: "absolute", top: 50, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2827,8 +2843,8 @@ const Workflows2 = (props) => {
                         : null}
 
 						{(data?.validation?.validation_ran === true && data?.validation?.valid === false && data?.validation?.errors?.length > 0 ) ?                            
-							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} errors. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
-                                <div style={{ position: "absolute", top: 45, right: 8, }}>
+							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} notifications. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
+                                <div style={{ position: "absolute", top: 85, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2847,8 +2863,8 @@ const Workflows2 = (props) => {
                                     </IconButton>
                                 </div>
                             </Tooltip>
-
 						: null}
+
                     </Grid>
                 </Paper>
             </div>
@@ -3224,6 +3240,7 @@ const Workflows2 = (props) => {
                                             </span>
                                         </Tooltip>
                                     }
+
                                     <Tooltip
                                         color="primary"
                                         title="Amount of triggers"
@@ -4274,7 +4291,7 @@ const Workflows2 = (props) => {
                         display: "flex",
                         flexDirection: "column",
                         width: "100%",
-                        maxWidth: "70%",
+                        maxWidth: isSafari ? "100%" : "70%",
                         margin: "auto",
                     }}>
                         <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
@@ -4601,6 +4618,7 @@ const Workflows2 = (props) => {
                                     variant="contained"
                                     color="primary"
                                     onClick={handleCreateWorkflow}
+                                    id="create_workflow_button"
                                     style={{
                                         borderRadius: 4,
                                         flex: 0.8,
@@ -5045,8 +5063,9 @@ const Workflows2 = (props) => {
             </iframe>
         </Dialog>
 
+    //isLoaded && isLoggedIn && workflowDone ? (
     const loadedCheck =
-        isLoaded && isLoggedIn && workflowDone ? (
+        workflowDone ? (
             <div>
                 {/*
 				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>
@@ -5113,8 +5132,14 @@ const Workflows2 = (props) => {
             </div>
         );
 
+    const safariStyle = {
+        transform: 'scale(0.7)',
+        transformOrigin: 'top',
+        width: '100%',
+        height: '100%',
+    }
     // Maybe use gridview or something, idk
-    return <div style={{zoom: 0.7, }}>{loadedCheck}</div>;
+    return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
 };
 
 

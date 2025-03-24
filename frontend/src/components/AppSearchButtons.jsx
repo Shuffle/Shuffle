@@ -88,7 +88,7 @@ const AppSearchButtons = (props) => {
 
     const foundApp = findSpecificApp(appFramework, appType)
     if (foundApp === undefined || foundApp === null) {
-        console.log("AppSearchButtons: App not found in appFramework: " + appType)
+        //console.log("AppSearchButtons: App not found in appFramework: " + appType)
         return null
     }
 
@@ -179,7 +179,7 @@ const AppSearchButtons = (props) => {
       
 
     return (
-        <Grid item xs={xsValue} style={{ alignItems: "center", marginTop: 5, }}
+        <Grid item xs={xsValue} style={{ alignItems: "center", marginTop: 5, maxWidth: "50%", minWidth: "50%" }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
