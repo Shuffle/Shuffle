@@ -217,8 +217,7 @@ func skipCheckInCleanup(name string) bool {
 func cleanupExistingNodes(ctx context.Context) error {
 
 	if isKubernetes == "true" {
-		// of course, this doesn't clean up "nodes" but
-		// rather pods, services, roles etc.
+		// Cleanup all workers created by orborus and all apps created by workers.
 
 		if kubernetesNamespace == "" {
 			kubernetesNamespace = "default"
@@ -230,62 +229,38 @@ func cleanupExistingNodes(ctx context.Context) error {
 			return err
 		}
 
-		// Delete all pods
-		pods, err := clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Printf("[ERROR] Failed listing pods: %s", err)
-			return err
-		}
-
-		for _, pod := range pods.Items {
-			// check if pod.Name starts with:
-			// "backend-", "frontend-", "orborus-", "opensearch-" or "memcached-"
-			if skipCheckInCleanup(pod.Name) {
-				continue
-			}
-
-			err := clientset.CoreV1().Pods(kubernetesNamespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
-			if err != nil {
-				log.Printf("[ERROR] Failed deleting pod %s: %s", pod.Name, err)
-			}
-		}
-
 		// Delete all services
-		services, err := clientset.CoreV1().Services(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		services, err := clientset.CoreV1().Services(kubernetesNamespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/name in (shuffle-worker, shuffle-app),app.kubernetes.io/managed-by in (shuffle-orborus, shuffle-worker)",
+		})
 		if err != nil {
 			log.Printf("[ERROR] Failed listing services: %s", err)
 			return err
 		}
 
 		for _, service := range services.Items {
-			if skipCheckInCleanup(service.Name) {
-				continue
-			}
-
 			err := clientset.CoreV1().Services(kubernetesNamespace).Delete(context.Background(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting service %s: %s", service.Name, err)
 			}
 		}
 
-		deployments, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		deployments, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/name in (shuffle-worker, shuffle-app),app.kubernetes.io/managed-by in (shuffle-orborus, shuffle-worker)",
+		})
 		if err != nil {
 			log.Printf("[ERROR] Failed listing deployments: %s", err)
 			return err
 		}
 
 		for _, deployment := range deployments.Items {
-			if skipCheckInCleanup(deployment.Name) {
-				continue
-			}
-
 			err := clientset.AppsV1().Deployments(kubernetesNamespace).Delete(context.Background(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting deployment %s: %s", deployment.Name, err)
 			}
 		}
 
-		log.Printf("[INFO] Cleaned up all pods and services in namespace %s. Waiting 10 seconds for cleanup to reflect", kubernetesNamespace)
+		log.Printf("[INFO] Cleaned up all services and deployments in namespace %s. Waiting 10 seconds for cleanup to reflect", kubernetesNamespace)
 
 		time.Sleep(10 * time.Second)
 
@@ -1088,8 +1063,19 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		}
 	}
 
-	containerLabels := map[string]string{
+	labels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-worker",
+		"app.kubernetes.io/instance": identifier,
+		// "app.kubernetes.io/version":    "",
+		"app.kubernetes.io/part-of":    "shuffle",
+		"app.kubernetes.io/managed-by": "shuffle-orborus",
+		// Keep legacy labels for backward compatibility
 		"container": "shuffle-worker",
+	}
+
+	matchLabels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-worker",
+		"app.kubernetes.io/instance": identifier,
 	}
 
 	containerAttachment := corev1.Container{
@@ -1194,16 +1180,17 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: identifier,
+			Name:   identifier,
+			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicaNumberInt32,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: containerLabels,
+				MatchLabels: matchLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: containerLabels,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -1224,10 +1211,11 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	// kubectl expose deployment shuffle-workers --type=NodePort --port=33333 --target-port=33333
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: identifier,
+			Name:   identifier,
+			Labels: labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: containerLabels,
+			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
 					Protocol:   "TCP",
@@ -2248,7 +2236,7 @@ func main() {
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
 
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false 
+					tenzirDisabled = false
 
 					// Running NEW or editing pipelines
 					err := handlePipeline(incRequest)
@@ -2273,7 +2261,7 @@ func main() {
 
 				} else if incRequest.Type == "CATEGORY_UPDATE" {
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false 
+					tenzirDisabled = false
 
 					err = handleFileCategoryChange()
 					if err != nil {
@@ -2318,7 +2306,7 @@ func main() {
 
 					// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false 
+					tenzirDisabled = false
 
 					// Removed either way
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
@@ -2328,7 +2316,7 @@ func main() {
 						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
 							// Disabling until UI is updated
 							os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
-							tenzirDisabled = true 
+							tenzirDisabled = true
 
 							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
 							err = shuffle.CreateOrgNotification(
@@ -2647,7 +2635,7 @@ func deployTenzirNode() error {
 		// return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 		//log.Printf("[INFO] Pipelines are enabled by user")
 	} else {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES") 
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 	}
 
 	if isKubernetes == "true" {
@@ -2847,12 +2835,12 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		},
 	}
 
-	// FIXME: Is this necessary? Seems to screw up networking: 
+	// FIXME: Is this necessary? Seems to screw up networking:
 	// conflicting options: hostname and the network mode
 	/*
-	if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	}
+		if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+			hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		}
 	*/
 
 	resp, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
@@ -3060,7 +3048,6 @@ func createPipeline(command, identifier string) (string, error) {
 		return "", err
 	}
 
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading response body: %s", err)
@@ -3078,8 +3065,8 @@ func createPipeline(command, identifier string) (string, error) {
 	}
 
 	type PipelineResponse struct {
-		ID string `json:"id"`
-		Message string `json:"message"`
+		ID       string `json:"id"`
+		Message  string `json:"message"`
 		Severity string `json:"severity"`
 	}
 
@@ -3302,14 +3289,13 @@ func handleFileCategoryChange() error {
 		tenzirStorageFolder = "/tmp/"
 	}
 
-	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/") 
+	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
 	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
 	err = extractZIP("files.zip", sigmaPath)
 	if err != nil {
 		log.Printf("[ERROR] Failed to extract ZIP file: %s", err)
 		return err
 	}
-
 
 	log.Printf("[DEBUG] Detection files copied to '%s' successfully.", sigmaPath)
 
@@ -3399,7 +3385,7 @@ func removeFileCategory() error {
 		tenzirStorageFolder = "/tmp/"
 	}
 
-	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/") 
+	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
 
 	//sigmaPath := "/var/lib/tenzir/sigma_rules/*"
 	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
@@ -3564,9 +3550,8 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 			return 0
 		}
 
-		labelSelector := "app=shuffle-worker"
 		pods, podErr := clientset.CoreV1().Pods(kubernetesNamespace).List(ctx, metav1.ListOptions{
-			LabelSelector: labelSelector,
+			LabelSelector: "app.kubernetes.io/name=shuffle-worker",
 		})
 		if podErr != nil {
 			log.Printf("[ERROR] Failed getting running workers: %s", podErr)

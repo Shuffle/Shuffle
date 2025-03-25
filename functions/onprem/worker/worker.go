@@ -23,8 +23,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	dockerclient "github.com/docker/docker/client"
 
 	// This is for automatic removal of certain code :)
@@ -482,9 +482,24 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	//fix naming convention
 	// podUuid := uuid.NewV4().String()
-	// podName := fmt.Sprintf("%s-%s", value, podUuid)
+	// name := fmt.Sprintf("%s-%s", value, podUuid)
 	// replace identifier "_" with "-"
-	podName := strings.ReplaceAll(identifier, "_", "-")
+	name := strings.ReplaceAll(identifier, "_", "-")
+
+	labels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-app",
+		"app.kubernetes.io/instance": name,
+		// "app.kubernetes.io/version":    "",
+		"app.kubernetes.io/part-of":    "shuffle",
+		"app.kubernetes.io/managed-by": "shuffle-worker",
+		// Keep legacy labels for backward compatibility
+		"app": name,
+	}
+
+	matchLabels := map[string]string{
+		"app.kubernetes.io/name":     "shuffle-app",
+		"app.kubernetes.io/instance": name,
+	}
 
 	// pod := &corev1.Pod{
 	// 	ObjectMeta: metav1.ObjectMeta{
@@ -564,20 +579,17 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: podName,
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicaNumberInt32,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": podName,
-				},
+				MatchLabels: matchLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": podName,
-					},
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -601,12 +613,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// kubectl expose deployment {podName} --type=NodePort --port=80 --target-port=80
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: podName,
+			Name:   name,
+			Labels: labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"app": podName,
-			},
+			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
 					Protocol:   "TCP",
@@ -954,7 +965,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 func cleanupKubernetesExecution(clientset *kubernetes.Clientset, workflowExecution shuffle.WorkflowExecution, namespace string) error {
 	// workerName := fmt.Sprintf("worker-%s", workflowExecution.ExecutionId)
-	labelSelector := fmt.Sprintf("app=shuffle-app,executionId=%s", workflowExecution.ExecutionId)
+	// FIXME: The executionId label is currently not set
+	labelSelector := fmt.Sprintf("app.kubernetes.io/name=shuffle-app,executionId=%s", workflowExecution.ExecutionId)
 
 	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelSelector,
