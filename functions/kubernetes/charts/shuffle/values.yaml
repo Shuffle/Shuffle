@@ -260,18 +260,10 @@ backend:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param backend.daemonsetAnnotations Annotations for backend daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param backend.deploymentAnnotations Annotations for backend deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param backend.statefulsetAnnotations Annotations for backend statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param backend.podLabels Extra labels for backend pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -321,22 +313,11 @@ backend:
   ## ONLY FOR DEPLOYMENTS:
   ## @param backend.updateStrategy.type backend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param backend.updateStrategy.type backend statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param backend.podManagementPolicy Pod management policy for backend statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param backend.priorityClassName backend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -728,18 +709,10 @@ frontend:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param frontend.daemonsetAnnotations Annotations for frontend daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param frontend.deploymentAnnotations Annotations for frontend deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param frontend.statefulsetAnnotations Annotations for frontend statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param frontend.podLabels Extra labels for frontend pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -786,25 +759,13 @@ frontend:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param frontend.updateStrategy.type frontend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param frontend.updateStrategy.type frontend statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param frontend.podManagementPolicy Pod management policy for frontend statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param frontend.priorityClassName frontend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -1132,18 +1093,10 @@ orborus:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param orborus.daemonsetAnnotations Annotations for orborus daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param orborus.deploymentAnnotations Annotations for orborus deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param orborus.statefulsetAnnotations Annotations for orborus statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param orborus.podLabels Extra labels for orborus pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -1190,25 +1143,13 @@ orborus:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param orborus.updateStrategy.type orborus deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param orborus.updateStrategy.type orborus statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param orborus.podManagementPolicy Pod management policy for orborus statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param orborus.priorityClassName orborus pods' priorityClassName
   ##
   priorityClassName: ""
