@@ -260,18 +260,10 @@ backend:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param backend.daemonsetAnnotations Annotations for backend daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param backend.deploymentAnnotations Annotations for backend deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param backend.statefulsetAnnotations Annotations for backend statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param backend.podLabels Extra labels for backend pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -728,18 +720,10 @@ frontend:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param frontend.daemonsetAnnotations Annotations for frontend daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param frontend.deploymentAnnotations Annotations for frontend deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param frontend.statefulsetAnnotations Annotations for frontend statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param frontend.podLabels Extra labels for frontend pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -1132,18 +1116,10 @@ orborus:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param orborus.daemonsetAnnotations Annotations for orborus daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param orborus.deploymentAnnotations Annotations for orborus deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param orborus.statefulsetAnnotations Annotations for orborus statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param orborus.podLabels Extra labels for orborus pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##

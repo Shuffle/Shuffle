@@ -444,19 +444,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for backend daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for backend deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for backend statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -1133,19 +1123,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for frontend daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for frontend deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for frontend statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -1752,19 +1732,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for orborus daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for orborus deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for orborus statefulset",
                     "default": {}
                 },
                 "podLabels": {
