@@ -511,15 +511,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "backend statefulset strategy type",
+                            "description": "backend deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for backend statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -1190,15 +1185,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "frontend statefulset strategy type",
+                            "description": "frontend deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for frontend statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -1799,15 +1789,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "orborus statefulset strategy type",
+                            "description": "orborus deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for orborus statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",

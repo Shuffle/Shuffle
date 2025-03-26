@@ -313,22 +313,11 @@ backend:
   ## ONLY FOR DEPLOYMENTS:
   ## @param backend.updateStrategy.type backend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param backend.updateStrategy.type backend statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param backend.podManagementPolicy Pod management policy for backend statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param backend.priorityClassName backend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -770,25 +759,13 @@ frontend:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param frontend.updateStrategy.type frontend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param frontend.updateStrategy.type frontend statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param frontend.podManagementPolicy Pod management policy for frontend statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param frontend.priorityClassName frontend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -1166,25 +1143,13 @@ orborus:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param orborus.updateStrategy.type orborus deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param orborus.updateStrategy.type orborus statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param orborus.podManagementPolicy Pod management policy for orborus statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param orborus.priorityClassName orborus pods' priorityClassName
   ##
   priorityClassName: ""
