@@ -33,16 +33,21 @@ jobs:
           sudo apt-get install helm -y --no-install-recommends
 
       - name: Set versions
-        id: set_versions
         run: |
           if [[ ${{ github.event_name }} == 'release' ]]; then
-            CHART_VERSION="${{ github.event.release.tag_name }}"
-            APP_VERSION="${{ github.event.release.tag_name }}"
+            TAG_NAME="${{ github.event.release.tag_name }}"
+
+            # Remove the v prefix
+            VERSION=${TAG_NAME#v}
+
+            APP_VERSION="${VERSION}"
+            CHART_VERSION="${VERSION}"
           else
-            CHART_VERSION="0.0.0-nightly-untagged-latest"
             APP_VERSION="nightly"
+            CHART_VERSION="0.0.0-nightly-untagged-latest"
           fi
 
+          echo "APP_VERSION set to ${APP_VERSION}"
           echo "CHART_VERSION set to ${CHART_VERSION}. Validating..."
 
           # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
@@ -55,8 +60,8 @@ jobs:
             exit 1;
           fi
 
-          echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_OUTPUT
-          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_OUTPUT
+          echo "CHART_VERSION=${CHART_VERSION}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
 
       - name: Update helm dependencies
         run: helm dependency update ./functions/kubernetes/charts/shuffle
@@ -68,4 +73,4 @@ jobs:
         run: helm registry login ghcr.io --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push helm chart
-        run: helm push ./functions/kubernetes/charts/shuffle-*.tgz oci://ghcr.io/shuffle/shuffle/charts
+        run: helm push ./functions/kubernetes/charts/shuffle-*.tgz oci://ghcr.io/shuffle/charts
