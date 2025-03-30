@@ -119,14 +119,14 @@ app.kubernetes.io/name: shuffle-app
 Return the proper image name (for the init container volume-permissions image)
 */}}
 {{- define "shuffle.volumePermissions.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image "global" .Values.global ) -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image "global" .Values.global "chart" .Chart ) -}}
 {{- end -}}
 
 {{/*
 Return the proper Shuffle backend image name
 */}}
 {{- define "shuffle.backend.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.backend.image "global" .Values.global ) -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.backend.image "global" .Values.global "chart" .Chart ) -}}
 {{- end -}}
 
 {{/*
@@ -140,7 +140,7 @@ Return the proper Docker Image Registry Secret Names for the backend pod
 Return the proper Shuffle frontend image name
 */}}
 {{- define "shuffle.frontend.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global ) -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global "chart" .Chart ) -}}
 {{- end -}}
 
 {{/*
@@ -154,7 +154,7 @@ Return the proper Docker Image Registry Secret Names for the frontend pod
 Return the proper Shuffle orborus image name
 */}}
 {{- define "shuffle.orborus.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.orborus.image "global" .Values.global ) -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.orborus.image "global" .Values.global "chart" .Chart ) -}}
 {{- end -}}
 
 {{/*
@@ -168,7 +168,7 @@ Return the proper Docker Image Registry Secret Names for the orborus pod
 Return the proper Shuffle worker image name
 */}}
 {{- define "shuffle.worker.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.worker.image "global" .Values.global ) -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.worker.image "global" .Values.global "chart" .Chart ) -}}
 {{- end -}}
 
 {{/*
