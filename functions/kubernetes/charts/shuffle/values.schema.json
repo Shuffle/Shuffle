@@ -372,12 +372,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in backend container' Security Context",
-                            "default": 1000
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in backend container' Security Context",
-                            "default": 1000
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -1051,12 +1051,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in frontend container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in frontend container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -1660,12 +1660,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in orborus container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in orborus container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
