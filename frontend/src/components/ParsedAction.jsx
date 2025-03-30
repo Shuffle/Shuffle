@@ -682,11 +682,14 @@ const ParsedAction = (props) => {
 
 		// Process workflowExecutions
 		if (workflowExecutions.length > 0) {
+			var appended = false
+			var foundvalue = ""
 			for (let execution of workflowExecutions) {
 				const execArg = execution.execution_argument;
 				if (execArg && execArg.length > 0) {
 					const valid = validateJson(execArg);
 					if (valid.valid) {
+						appended = true 
 						newActionList.push({
 							type: "Runtime Argument",
 							name: "Runtime Argument",
@@ -697,8 +700,22 @@ const ParsedAction = (props) => {
 						})
 
 						break
+					} else {
+						foundvalue = execArg
 					}
 				}
+			}
+
+			if (!appended && foundvalue !== undefined && foundvalue !== "") {
+				newActionList.push({
+					type: "Runtime Argument",
+					name: "Runtime Argument",
+					highlight: "exec",
+					autocomplete: "exec",
+
+					value: foundvalue,
+					example: foundvalue,
+				})
 			}
 		}
 
@@ -788,6 +805,8 @@ const ParsedAction = (props) => {
 					}
 
 					labels.push(parentNode.label);
+
+					var secondaryExample = ""
 					let exampleData = parentNode.example ?? "";
 					if (parentNode?.app_name === "http") {
 						exampleData = ""
@@ -798,9 +817,13 @@ const ParsedAction = (props) => {
 							const foundResult = exec.results?.find(result => result?.action?.id === parentNode?.id);
 							if (foundResult) {
 								const valid = validateJson(foundResult.result);
-								if (valid.valid && valid.result.success !== false) {
-									exampleData = valid.result
-									break
+								if (valid.valid) {
+									if (valid.result.success !== false) {
+										exampleData = valid.result
+										break
+									}
+								} else {
+									secondaryExample = foundResult.result
 								}
 							}
 						}
@@ -834,6 +857,10 @@ const ParsedAction = (props) => {
 								}
 							}
 						}
+					} 
+
+					if (exampleData === "" && secondaryExample !== "") {
+						exampleData = secondaryExample
 					}
 
 					if (parentNode.label === undefined) {
@@ -1178,7 +1205,9 @@ const ParsedAction = (props) => {
 					selectedAction.parameters[1].value = splitparsed[1]
 
 					if (splitparsed.length > 2) {
-						toast.warn("Filter list only supports filtering at the first level. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.")
+						toast.warn("Filter list only supports filtering on the first list. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.", {
+							autoClose: 10000,
+						})
 					} else if (selectedAction.parameters[1].value.includes(".#")) {
 						toast.warn("This filter may not work due to using .# indexing. Please use the 'execute python' action and try the 'filter a list' function in the code editor.")
 					}
@@ -1830,28 +1859,37 @@ const ParsedAction = (props) => {
 									</Tooltip>
 								</IconButton>
 
-								<Button
-									color="secondary"
-									variant="outlined"
-									style={{
-										marginTop: "auto",
-										marginBottom: "auto",
-										height: 30,
-										marginLeft: 115,
-										textTransform: "none",
-									}}
-									disabled={autoCompleting}
-									onClick={() => {
-										if (runFromHere !== undefined) {
-											runFromHere(selectedAction)
-										} else {
-											toast.error("Function not available. Please contact support@shuffler.io")
-										}
-									}}
+								<Tooltip
+									title={
+										<Typography variant="body2" style={{margin: 3, }}>
+											Rerun this action with results from previous executions. Built for testing individual actions in the middle of workflows.
+										</Typography>
+									}
+									placement="top"
 								>
-									<PlayArrowIcon style={{marginRight: 5, }}/>
-									Rerun	
-								</Button>
+									<Button
+										color="secondary"
+										variant="outlined"
+										style={{
+											marginTop: "auto",
+											marginBottom: "auto",
+											height: 30,
+											marginLeft: 115,
+											textTransform: "none",
+										}}
+										disabled={autoCompleting}
+										onClick={() => {
+											if (runFromHere !== undefined) {
+												runFromHere(selectedAction)
+											} else {
+												toast.error("Function not available. Please contact support@shuffler.io")
+											}
+										}}
+									>
+										<PlayArrowIcon style={{marginRight: 5, }}/>
+										Rerun	
+									</Button>
+								</Tooltip>
 
 								{(selectedAction?.generated === true && selectedAction?.app_version === "1.0.0") || (selectedAction?.app_name === "Shuffle Tools" && selectedAction?.app_version !== "1.2.0")  ? 
 									<Button
@@ -4561,6 +4599,7 @@ const ParsedAction = (props) => {
 																minWidth: 250,
 																maxWidth: 250,
 																marginRight: 0,
+																paddingLeft: 12, 
 															}}
 															value={innerdata}
 															onMouseOver={() => handleMouseover()}

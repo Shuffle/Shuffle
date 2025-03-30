@@ -787,15 +787,19 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		newImages = append(newImages, curimage)
 
 		// Force remove the current image to avoid cached layers
-		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
-			Force: true,
-			PruneChildren: true,
-		})
+		if swarmConfig == "run" || swarmConfig == "swarm" {
+			_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
+				Force: true,
+				PruneChildren: true,
+			})
 
-		if err != nil {
-			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+			if err != nil {
+				log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+			} else {
+				log.Printf("[DEBUG] Removed image: %s", curimage)
+			}
 		} else {
-			log.Printf("[DEBUG] Removed image: %s", curimage)
+			log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
 		}
 
 		err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
@@ -2261,9 +2265,6 @@ func main() {
 					log.Printf("[INFO] Re-downloading new image(s): %#v", incRequest.ExecutionArgument)
 
 					if len(incRequest.ExecutionArgument) > 0 {
-						// FIXME: Wait X seconds before running this as the image build may not be done yet. This is shitty, but may be ok to do in Orborus. Easy fix for the future: Just let it run through jobs 5-10 times before actually picking it up
-
-						// Run after 25 seconds in the goroutine instead
 						go handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
 					} else {
 						log.Printf("[ERROR] No image name provided for download. Removing job from queue.")

@@ -76,6 +76,18 @@ const Admin2 = (props) => {
                             leads.push("tech partner");
                         }
 
+                        if (responseJson.lead_info.integration_partner) {
+                            leads.push("integration partner");
+                        }
+
+						if (responseJson.lead_info.distribution_partner) {
+							leads.push("distribution partner");
+						}
+
+						if (responseJson.lead_info.service_partner) {
+							leads.push("service partner");
+						}
+
                         if (responseJson.lead_info.creator) {
                             leads.push("creator");
                         }

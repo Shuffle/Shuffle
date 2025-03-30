@@ -54,7 +54,8 @@ const TenantsTab = memo((props) => {
     const [cloudSyncModalOpen, setCloudSyncModalOpen] = React.useState(false);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [parentOrg, setParentOrg] = React.useState(null);
-    const [parentOrgFlag, setParentOrgFlag] = React.useState(null);
+    const [parentOrgFlag, setParentOrgFlag] = React.useState("gb");
+    const [parentOrgRegionName, setParentOrgRegionName] = React.useState("UK");
     const [loadOrgs, setLoadOrgs] = React.useState(true);
     const [, forceUpdate] = React.useState();
     const itemColor = "black";
@@ -82,9 +83,10 @@ const TenantsTab = memo((props) => {
                     }
                 }
                 setParentOrgFlag(regionCode);
+                setParentOrgRegionName(regiontag);
         }
     }
-    }, [parentOrg]);
+    }, [parentOrg, parentOrgFlag]);
     
     var syncList = [
         {
@@ -164,7 +166,8 @@ const TenantsTab = memo((props) => {
 							regionCode = "ca";
                         }
                     }
-                    setParentOrgFlag(regionCode);
+                        setParentOrgFlag(regionCode);
+                        setParentOrgRegionName(regiontag);
                 }
                 }
             })
@@ -1026,7 +1029,7 @@ const TenantsTab = memo((props) => {
                                 src={`https://flagcdn.com/w20/${parentOrgFlag}.png`}
                                 style={{ width: "30px", height: "20px", marginRight: "5px" }}
                                 />
-                                <ListItemText primary={parentOrgFlag?.toUpperCase()} />
+                                <ListItemText primary={parentOrgRegionName?.toUpperCase()} />
                             </div>
                             }
                             style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}

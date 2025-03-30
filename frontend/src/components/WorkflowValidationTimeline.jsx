@@ -608,8 +608,6 @@ const WorkflowValidationTimeline = (props) => {
 				const ballsize = 8
 				const topMargin = 20
 
-				console.log("CHIP: ", index, chipColor, chipBackground)
-
 				const chipStyle = {
 					height: 40, 
 					minWidth: 125, 

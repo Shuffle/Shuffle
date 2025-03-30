@@ -248,6 +248,14 @@ const UserManagmentTab = memo((props) => {
             return;
         }
 
+		if (event.target.value.includes("ALL")) {
+			toast.info("Adding to available all sub-organizations. This may take a minute.")
+			event.target.value = selectedOrganization.child_orgs.map((org) => org.id)
+		} else if (event.target.value.includes("None")) { 
+			toast.info("Removing from all sub-organizations. This may take a minute")
+			event.target.value = []
+		}
+
         console.log("event: ", event.target.value);
         setMatchingOrganizations(event.target.value);
         // Workaround for empty orgs
@@ -286,6 +294,14 @@ const UserManagmentTab = memo((props) => {
                     }}
                     MenuProps={MenuProps}
                 >
+					<MenuItem key={-2} value={"None"}>
+						<Checkbox checked={false} />
+						<ListItemText primary={"None"} />
+					</MenuItem>
+					<MenuItem key={-1} value={"ALL"}>
+						<Checkbox checked={false} />
+						<ListItemText primary={"ALL"} />
+					</MenuItem>
                     {selectedOrganization.child_orgs.map((org, index) => (
                         <MenuItem key={index} value={org.id}>
                             <Checkbox checked={matchingOrganizations.indexOf(org.id) > -1} />

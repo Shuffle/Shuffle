@@ -538,7 +538,7 @@ const OrgHeaderexpandedNew = (props) => {
 													renderValue={(selected) => selected.join(', ')}
 													MenuProps={MenuProps}
 												>
-													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead"].map((name) => (
+													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "integration partner", "distribution partner", "service partner", "old customer", "old lead"].map((name) => (
 														<MenuItem key={name} value={name}>
 															<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 															<ListItemText primary={name} />

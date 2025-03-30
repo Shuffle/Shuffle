@@ -19,6 +19,7 @@ import RecentWorkflow from "../components/RecentWorkflow.jsx";
 
 import {
   	Tooltip,
+  	Fade,
 	Select,
 	IconButton,
 	CircularProgress, 
@@ -462,6 +463,8 @@ const RunWorkflow = (defaultprops) => {
 			} else {
 				console.log("Started execution")
 
+				start()
+				setExecutionRunning(true);
 				if (answer !== undefined && answer !== null) {
 					console.log("Skipping start")
 				} else {
@@ -1055,7 +1058,7 @@ const RunWorkflow = (defaultprops) => {
 
 				if (parsedresult.click_info !== undefined && parsedresult.click_info !== null) {
 					if (parsedresult.click_info.user !== undefined && parsedresult.click_info.user !== null && parsedresult.click_info.user.length > 0) {
-						setMessage("Already answered by " + parsedresult.click_info.user)
+						setMessage("Answered by " + parsedresult.click_info.user)
   
 					}
 				} else {
@@ -1325,7 +1328,8 @@ const RunWorkflow = (defaultprops) => {
 								})}
 							</div>
 						: 
-						answer !== undefined && answer !== null ? null :
+						(answer !== undefined && answer !== null) || message !== ""  ? null :
+						
 							<span>
 								Runtime Argument
 								<div style={{marginBottom: 5}}>
@@ -1334,7 +1338,13 @@ const RunWorkflow = (defaultprops) => {
 										style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
 										multiLine
 										maxRows={2}
+										type="text"
+										autoComplete="off"
 										InputProps={{
+											autocomplete: "off",
+											form: {
+												autocomplete: "off",
+											},
 											style:{
 												height: "50px", 
 												color: "white",
@@ -1375,9 +1385,11 @@ const RunWorkflow = (defaultprops) => {
 											{message}. You may close this window.
 										</Typography>
 									: 
-										<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-											{disabledButtons ? "Answered. You may close this window." : ""}
-										</Typography>
+										<Fade in={true} timeout={2500}>
+											<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
+												{disabledButtons ? "Answered. You may close this window." : ""}
+											</Typography>
+										</Fade>
 									}
 
 									{disabledButtons ? null :
@@ -1387,14 +1399,22 @@ const RunWorkflow = (defaultprops) => {
 									}
 
 									<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
-										<Button fullWidth id="continue_execution" variant="contained" disabled={!handleValidateForm(executionArgument) || disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
-											setButtonClicked("FINISHED")
-											setExecutionData({
-												status: "FINISHED",
-											})
+										<Button 
+											fullWidth 
+											id="continue_execution" 
+											variant="contained" 
+											disabled={!handleValidateForm(executionArgument) || disabledButtons} 
+											color="primary" 
+											style={{flex: 1,}} 
+											onClick={() => {
+												setButtonClicked("FINISHED")
+												setExecutionData({
+													status: "FINISHED",
+												})
 
-											onSubmit(null, execution_id, authorization, true) 
-										}}>Continue</Button>
+												onSubmit(null, execution_id, authorization, true) 
+											}}>
+											Continue</Button>
 										<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
 											&nbsp;or&nbsp;
 										</Typography>

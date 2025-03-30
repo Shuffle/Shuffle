@@ -661,7 +661,7 @@ const Workflows2 = (props) => {
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
-    const [view, setView] = useState("grid");
+    const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
     const classes = useStyles(theme)
     const imgSize = 60;
 
@@ -2074,55 +2074,6 @@ const Workflows2 = (props) => {
     };
 
     const hasWorkflows = workflows === undefined || workflows === null || workflows.length === 0
-    const NewWorkflowPaper = () => {
-        const [hover, setHover] = React.useState(false);
-
-        const innerColor = "rgba(255,255,255,0.3)"
-
-        const setupPaperStyle = {
-            minHeight: paperAppStyle.minHeight,
-            maxWidth: "100%",
-            minWidth: paperAppStyle.width,
-            color: innerColor,
-            padding: paperAppStyle.padding,
-            display: "flex",
-            boxSizing: "border-box",
-            position: "relative",
-            border: hasWorkflows ? `2px solid #f85a3e` : `2px solid ${innerColor}`,
-            cursor: "pointer",
-            backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
-            borderRadius: paperAppStyle.borderRadius,
-        }
-
-        return (
-            <Grid item xs={isMobile ? 12 : hasWorkflows ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
-                <Paper
-                    square
-                    style={setupPaperStyle}
-                    onClick={() => {
-                        setModalOpen(true)
-                        setIsEditing(false)
-                    }}
-                    onMouseOver={() => {
-                        setHover(true);
-                    }}
-                    onMouseOut={() => {
-                        setHover(false);
-                    }}
-                >
-                    <Tooltip title={`New Workflow`} placement="bottom">
-                        <span style={{ textAlign: "center", minWidth: 240, margin: "auto" }}>
-                            <AddCircleIcon style={{ height: 65, width: 65 }} />
-                            <Typography variant="h6" style={{ color: innerColor, margin: "auto" }}>
-                                New Workflow
-                            </Typography>
-                        </span>
-                    </Tooltip>
-                </Paper>
-            </Grid>
-        );
-    };
-
     const getWorkflowAppgroup = (data) => {
         if (currTab !== 2) {
             if (data.actions === undefined || data.actions === null) {
@@ -2517,6 +2468,7 @@ const Workflows2 = (props) => {
                             />
                         </Tooltip>
                         : null}
+
                     <Grid
                         item
                         style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme?.typography?.fontFamily }}
@@ -2612,8 +2564,7 @@ const Workflows2 = (props) => {
                                         to={
                                             type === "public" ? parsedUrl : data.workflow_as_code ? `/workflows/${data.id}/code` : `/workflows/${data.id}`
                                         }
-                                        style={{ textDecoration: "none", color: "inherit" }}
-                                    >
+                                        style={{ textDecoration: "none", color: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "90%", display: "block" }}                                    >
                                         {parsedName}
                                     </Link>
                                 </Typography>

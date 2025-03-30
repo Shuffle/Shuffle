@@ -774,8 +774,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
   }, [window?.location?.pathname]);
 
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-
+  const showPartnerLogo = userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.image !== undefined && userdata?.active_org?.image !== null && userdata?.active_org?.image.length > 0 
+	  	
   return (
     <div
       style={{
@@ -836,11 +836,13 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             }
           }}
         >
-          <Link to="/">
+          <Link to={isCloud && !showPartnerLogo ? "/" : "/workflows"}>
             <img
-              src={ShuffleLogo}
+              src={
+				  showPartnerLogo ? userdata?.active_org?.image : ShuffleLogo
+			  }
               alt="Shuffle Logo"
-              style={{ width: 24, height: 24 }}
+              style={{ width: showPartnerLogo ? 30 : 24, height: showPartnerLogo ? 30 : 24 }}
             />
           </Link>
         </Tooltip>
@@ -1611,7 +1613,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         }}
       >
 	  	
-	  	{expandLeftNav &&
+	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav &&
 	  	<Button
 	  		variant="outlined"
 	  		style={{marginBottom: 15, borderWidth: 2, }}

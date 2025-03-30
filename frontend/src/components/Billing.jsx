@@ -891,7 +891,7 @@ const Billing = memo((props) => {
 					</span>
 				: null}
 
-				{showSupport ?
+				{/* {showSupport ?
 					<Button variant="outlined" color="primary" style={{ marginTop: 20, marginBottom: 10, }} onClick={() => {
 						if (window.drift !== undefined) {
 							//window.drift.api.startInteraction({ interactionId: 340045 })
@@ -902,7 +902,7 @@ const Billing = memo((props) => {
 					}}>
 						Get Support
 					</Button>
-					: null}
+					: null} */}
 			</div>
 		)
 	}
@@ -2021,7 +2021,7 @@ const Billing = memo((props) => {
 
 			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : "100%", marginTop: 20}} >
 				<div style={{ display: "flex", flexDirection: "column", width: "100%",  }}>
-				{isCloud &&
+				{/* {isCloud &&
 					selectedOrganization.subscriptions !== undefined &&
 					selectedOrganization.subscriptions !== null &&
 					selectedOrganization.subscriptions.length > 0 &&
@@ -2043,7 +2043,7 @@ const Billing = memo((props) => {
 								/>
 							)
 						})
-					: null}
+					: null} */}
 				
 				<div style={{ display: "flex", flexDirection: "row", width: "100%", marginTop: 20, marginBottom: 20, maxWidth: 860, }}>
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
