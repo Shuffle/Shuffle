@@ -235,8 +235,8 @@ backend:
   containerSecurityContext:
     enabled: true
     seLinuxOptions: {}
-    runAsUser: 1000
-    runAsGroup: 1000
+    runAsUser: 1001
+    runAsGroup: 1001
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
@@ -664,11 +664,12 @@ frontend:
   ## @param frontend.podSecurityContext.fsGroup Set fsGroup in frontend pods' Security Context
   ##
   podSecurityContext:
-    enabled: false
+    enabled: false # The default shuffle frontend image does not support running as non-root, because /etc/nginx/nginx.conf is written on startup
     fsGroupChangePolicy: Always
     sysctls: []
     supplementalGroups: []
     fsGroup: 1001
+
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
   ## @param frontend.containerSecurityContext.enabled Enabled frontend container' Security Context
@@ -683,10 +684,10 @@ frontend:
   ## @param frontend.containerSecurityContext.seccompProfile.type Set seccomp profile in frontend container
   ##
   containerSecurityContext:
-    enabled: false
+    enabled: false # The default shuffle frontend image does not support running as non-root, because /etc/nginx/nginx.conf is written on startup
     seLinuxOptions: {}
-    runAsUser: 101
-    runAsGroup: 101
+    runAsUser: 1001
+    runAsGroup: 1001
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
@@ -1068,8 +1069,8 @@ orborus:
   containerSecurityContext:
     enabled: true
     seLinuxOptions: {}
-    runAsUser: 101
-    runAsGroup: 101
+    runAsUser: 1001
+    runAsGroup: 1001
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
