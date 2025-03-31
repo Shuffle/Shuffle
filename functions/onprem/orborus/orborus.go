@@ -75,9 +75,13 @@ var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
+var maxCPUPercent = 90
+
+// Kubernetes settings
 var isKubernetes = os.Getenv("IS_KUBERNETES")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
-var maxCPUPercent = 90
+var workerServiceAccountName = os.Getenv("SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME")
+var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -989,6 +993,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY")))
 	}
 
+	if len(appServiceAccountName) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_SERVICE_ACCOUNT_NAME=%s", appServiceAccountName))
+	}
+
 	clientset, _, err := shuffle.GetKubernetesClient()
 	if err != nil {
 		log.Printf("[ERROR] Error getting kubernetes client:", err)
@@ -996,18 +1004,6 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
-
-	// FIXME: When a service account is used, the account is also mounted in the pod
-	// The volume mount location is:
-	// /var/run/secrets/kubernetes.io/serviceaccount
-
-	// Look for if there is a default service account in use
-	if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
-		log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
-		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
-
-		// use k8s downward API to find it if we are in a pod
-	}
 
 	// Check if namespace exist as variable. If so, make it
 	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
@@ -1200,7 +1196,8 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					Containers: []corev1.Container{
 						containerAttachment,
 					},
-					DNSPolicy: corev1.DNSClusterFirst,
+					DNSPolicy:          corev1.DNSClusterFirst,
+					ServiceAccountName: workerServiceAccountName,
 				},
 			},
 		},

@@ -56,6 +56,7 @@ var logsDisabled = os.Getenv("SHUFFLE_LOGS_DISABLED")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
+var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var executionCount int64
@@ -599,6 +600,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 							Env:   buildEnvVars(envMap),
 						},
 					},
+					DNSPolicy:          corev1.DNSClusterFirst,
+					ServiceAccountName: appServiceAccountName,
 				},
 			},
 		},
