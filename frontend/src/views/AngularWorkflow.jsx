@@ -1156,7 +1156,8 @@ const AngularWorkflow = (defaultprops) => {
                 !el.data("isButton") &&
                 !el.data("isDescriptor") &&
                 !el.data("isSuggestion") &&
-                el.data("type") !== "COMMENT") {
+                el.data("type") !== "COMMENT" &&
+                el.data("type") !== "RESIZE-HANDLE") {
                 return true
               }
 
@@ -2324,6 +2325,7 @@ const AngularWorkflow = (defaultprops) => {
     var newBranches = [];
     var newVBranches = [];
     var newComments = [];
+    var newResizes = [];
     for (let cyelementsKey in cyelements) {
       if (cyelements[cyelementsKey].data === undefined) {
         continue;
@@ -2508,7 +2510,40 @@ const AngularWorkflow = (defaultprops) => {
           //console.log(curworkflowComment)
 
           newComments.push(curworkflowComment);
-        } else {
+        } else if (type === "RESIZE-HANDLE") {
+          if (useworkflow.resizes === undefined || useworkflow.resizes === null) {
+            useworkflow.resizes = [];
+          }
+
+          var curworkflowResize = useworkflow.resizes.find(
+            (a) => a.id === cyelements[cyelementsKey].data()["id"]
+          );
+
+          if (curworkflowResize === undefined) {
+            curworkflowResize = cyelements[cyelementsKey].data();
+          }
+
+          // Ensure width and height are properly parsed
+          const parsedHeight = parseInt(curworkflowResize["height"]);
+          if (!isNaN(parsedHeight)) {
+            curworkflowResize.height = parsedHeight;
+          } else {
+            curworkflowResize.height = 150; // Default value if parsing fails
+          }
+
+          const parsedWidth = parseInt(curworkflowResize["width"]);
+          if (!isNaN(parsedWidth)) {
+            curworkflowResize.width = parsedWidth;
+          } else {
+            curworkflowResize.width = 200; // Default value if parsing fails
+          }
+
+          // Update position from Cytoscape
+          curworkflowResize.position = cyelements[cyelementsKey].position();
+
+          newResizes.push(curworkflowResize);
+        }
+        else {
           toast("No handler for type: " + type);
         }
       }
@@ -6675,6 +6710,21 @@ const AngularWorkflow = (defaultprops) => {
 		}
 
         setSelectedComment(data);
+      } else if (data.type === "RESIZE-HANDLE") {
+
+        const parentNode = cy.getElementById(data.attachedTo);
+        if (parentNode) {
+          console.log("Resizing parent node:", parentNode);
+
+          // Get the parent node's data
+          const parentData = parentNode.data();
+          if (parentData?.type === "COMMENT") {
+
+            // Set the parent node's data as the selected comment
+            setSelectedComment(parentData);
+          }
+        }
+        return; // Exit after handling the resize handle
       } else {
         toast("Can't handle node type " + data.type);
         return;
@@ -9777,7 +9827,8 @@ const AngularWorkflow = (defaultprops) => {
             !el.data("isButton") &&
             !el.data("isDescriptor") &&
             !el.data("isSuggestion") &&
-            el.data("type") !== "COMMENT") {
+            el.data("type") !== "COMMENT" &&
+            el.data("type") !== "RESIZE-HANDLE") {
             return true
           }
 
@@ -9858,6 +9909,27 @@ const AngularWorkflow = (defaultprops) => {
     cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
     cy.on("mouseover", "node", (e) => onNodeHover(e));
     cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+
+    cy.on("mouseover", "node[type='RESIZE-HANDLE']", (e) => {
+      const nodeId = e.target.id();
+      
+      // Check the node ID to determine the cursor style based on position
+      if (nodeId.includes("bottom-right")) {
+        cy.container().style.cursor = "nwse-resize"; // Bottom-right resize cursor
+      } else if (nodeId.includes("top-right")) {
+        cy.container().style.cursor = "nesw-resize"; // Top-right resize cursor
+      } else if (nodeId.includes("top-left")) {
+        cy.container().style.cursor = "nwse-resize"; // Top-left resize cursor
+      } else if (nodeId.includes("bottom-left")) {
+        cy.container().style.cursor = "nesw-resize"; // Bottom-left resize cursor
+      } else {
+        cy.container().style.cursor = "default"; // Default cursor for other cases
+      }
+    });
+
+    cy.on("mouseout", "node[type='RESIZE-HANDLE']", (e) => {
+      cy.container().style.cursor = "";
+    });
 
     // Handles dragging
     cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
@@ -15855,6 +15927,79 @@ const AngularWorkflow = (defaultprops) => {
             }}
           />
           <div style={{ display: "flex", marginTop: 10 }}>
+            <div style={{
+              width: "50%"
+            }}>
+              <div>Justify</div>
+              <Select
+                style={{ backgroundColor: theme.palette.inputColor }}
+                fullWidth
+                defaultValue="center"
+                value={selectedComment.textHalign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textHalign === "left" ? "right" : "left" : "center"}
+                onChange={(event) => {
+                  const alignment = event.target.value;
+                  const width = selectedComment.width || 250; // Default width if undefined
+
+                  // Compute new values
+                  let textHalign = alignment !== "center" ? alignment === "left" ? "right" : "left" : "center";
+                  let textMarginX = "0px"; // Default for center alignment
+
+                  if (alignment === "left") {
+                    textMarginX = `-${width}px`;
+                  } else if (alignment === "right") {
+                    textMarginX = `${width}px`;
+                  }
+                  selectedComment.textHalign = textHalign;
+                  selectedComment.textMarginX = textMarginX;
+                  // Update state properly
+                  setSelectedComment((prev) => ({
+                    ...prev,
+                    textHalign,
+                    textMarginX,
+                  }));
+
+                  // Use useEffect or separate logging to confirm state changes
+                }}
+              >
+                <MenuItem value="left">Left</MenuItem>
+                <MenuItem value="center">Center</MenuItem>
+                <MenuItem value="right">Right</MenuItem>
+              </Select>
+            </div>
+            <div style={{ marginLeft: 5, width: "50%" }}>
+              <div>Align</div>
+              <Select
+                fullWidth
+                style={{ backgroundColor: theme.palette.inputColor }}
+                defaultValue="center"
+                value={selectedComment.textValign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textValign === "top" ? "bottom" : "top" : "center" || "center"}
+                onChange={(event) => {
+                  const height = selectedComment.height || 150; // Default width if undefined
+
+                  let textValign = event.target.value === "center" ? "center" : event.target.value === "top" ? "bottom" : "top";
+                  let textMarginY = "0px"; // Default for center alignment
+
+                  if (textValign === "top") {
+                    textMarginY = `${height}px`;
+                  } else if (textValign === "bottom") {
+                    textMarginY = `-${height}px`;
+                  }
+                  selectedComment.textValign = textValign;
+                  selectedComment.textMarginY = textMarginY;
+                  setSelectedComment((prev) => ({
+                    ...prev,
+                    textValign,
+                    textMarginY
+                  }));
+                }}
+              >
+                <MenuItem value="top">Top</MenuItem>
+                <MenuItem value="center">Center</MenuItem>
+                <MenuItem value="bottom">Bottom</MenuItem>
+              </Select>
+            </div>
+          </div>
+          <div style={{ display: "flex", marginTop: 10 }}>
             <div>
               <div>Height</div>
               <TextField
@@ -15958,7 +16103,6 @@ const AngularWorkflow = (defaultprops) => {
             defaultValue={selectedComment["backgroundimage"]}
             onChange={(event) => {
               selectedComment.backgroundimage = event.target.value;
-              console.log("Comment: ", selectedComment)
               setSelectedComment(selectedComment);
             }}
           />
@@ -19872,12 +20016,115 @@ const AngularWorkflow = (defaultprops) => {
     );
   };
 
+  const setupResizeHandlers = (cy, nodeId) => {
+    let height;
+    let width;
+    let resizeTimeout;
+
+    cy.on("drag", ".resize-handle", (event) => {
+      if (resizeTimeout) return;
+
+      resizeTimeout = setTimeout(() => {
+        resizeTimeout = null;
+        const handle = event.target;
+        const parent = cy.$(`#${nodeId}`); // Fetch the main node directly
+
+        // Check if the parent node exists
+        if (!parent || parent.empty()) {
+          console.warn(`Parent node (${nodeId}) not found.`);
+          return;
+        }
+
+        if (!handle?.position()) {
+          console.warn(`Handle position is undefined for ${handle.id()}`);
+          return;
+        }
+
+        const handlePos = handle.position();
+        const parentPos = parent.position();
+
+        if (!parentPos) {
+          console.warn(`Parent position is undefined for ${nodeId}`);
+          return;
+        }
+
+        // Calculate new width & height based on handle movement
+        const newWidth = Math.abs(handlePos.x - parentPos.x) * 2;
+        const newHeight = Math.abs(handlePos.y - parentPos.y) * 2;
+
+        // Apply min/max constraints
+        const constrainedWidth = Math.max(100, Math.min(newWidth, 500));
+        const constrainedHeight = Math.max(50, Math.min(newHeight, 300));
+
+        // Update node size
+        parent.style({
+          width: constrainedWidth,
+          height: constrainedHeight,
+        });
+
+        // Store dimensions for state update on drag end
+        height = Math.floor(constrainedHeight);
+        width = Math.floor(constrainedWidth);
+
+        // Update handle positions
+        cy.$(".resize-handle").forEach((corner) => {
+          if (!corner?.id() || !corner.position()) return;
+
+          const { x, y } = parent.position();
+          const offsetX = corner.id().includes("left") ? -constrainedWidth / 2 : constrainedWidth / 2;
+          const offsetY = corner.id().includes("top") ? -constrainedHeight / 2 : constrainedHeight / 2;
+
+          corner.position({ x: x + offsetX, y: y + offsetY });
+        });
+      }, 16); // Throttle to ~60 FPS
+    });
+
+    // Update state when resizing ends
+    cy.on("free", ".resize-handle", (event) => {
+      const data = event.target.data();
+      const parentNode = cy.getElementById(data.attachedTo);
+
+      if (parentNode) {
+
+        parentNode.data({
+          ...parentNode.data(),
+          width: Math.floor(width),
+          height: Math.floor(height),
+        });
+        setSelectedComment((prev) => ({
+          ...prev,
+          width: Math.floor(width),
+          height: Math.floor(height),
+        }));
+      }
+    });
+
+  };
+
+
+  const setupNodeDragHandler = (cy, nodeId) => {
+    cy.on("drag", `#${nodeId}`, (event) => {
+      const node = event.target;
+      const { x, y } = node.position();
+      const width = parseFloat(node.style("width"));
+      const height = parseFloat(node.style("height"));
+
+      // Move resize handles with the node
+      cy.$(".resize-handle").forEach((corner) => {
+        const offsetX = corner.id().includes("left") ? -width / 2 : width / 2;
+        const offsetY = corner.id().includes("top") ? -height / 2 : height / 2;
+
+        corner.position({ x: x + offsetX, y: y + offsetY });
+      });
+    });
+  };
+
   const addCommentNode = () => {
     const newId = uuidv4();
-    const position = {
-      x: 300,
-      y: 300,
-    };
+    const position = { x: 300, y: 300 };
+    const width = 250;
+    const height = 150;
+    const handleOffset = 10; // Move handles outside the node
 
     cy.add({
       group: "nodes",
@@ -19887,20 +20134,51 @@ const AngularWorkflow = (defaultprops) => {
         type: "COMMENT",
         is_valid: true,
         decorator: true,
-        width: 250,
-        height: 150,
-        position: position,
+        width,
+        height,
+        position,
         backgroundcolor: "#1f2023",
         color: "#ffffff",
+        textHalign: "center",
+        textValign: "center",
+        textMarginX: "0px",
+        textMarginY: "0px",
       },
-      position: position,
+      position,
     });
+
+    // Define corner positions relative to the main node
+    const corners = [
+      { id: `${newId}-top-left`, dx: -width / 2 - handleOffset, dy: -height / 2 - handleOffset },
+      { id: `${newId}-top-right`, dx: width / 2 + handleOffset, dy: -height / 2 - handleOffset },
+      { id: `${newId}-bottom-left`, dx: -width / 2 - handleOffset, dy: height / 2 + handleOffset },
+      { id: `${newId}-bottom-right`, dx: width / 2 + handleOffset, dy: height / 2 + handleOffset },
+    ];
+
+    // Add resize handles **without** the parent property
+    corners.forEach((corner) => {
+      cy.add({
+        group: "nodes",
+        data: {
+          id: corner.id,
+          type: "RESIZE-HANDLE",
+          is_valid: true,
+          attachedTo: newId,
+          decorator: true,
+        }, // No parent to avoid edges
+        position: { x: position.x + corner.dx, y: position.y + corner.dy },
+        classes: "resize-handle",
+      });
+    });
+
+    setupResizeHandlers(cy, newId);
+    setupNodeDragHandler(cy, newId);
   };
 
   const RightSideBar = (props) => {
 
     var defaultReturn = null
-    if (Object.getOwnPropertyNames(selectedComment).length > 0) {
+    if (Object.getOwnPropertyNames(selectedComment).length > 0 && selectedComment.hasOwnProperty('id')) {
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
       if (selectedTrigger.trigger_type === undefined) {
