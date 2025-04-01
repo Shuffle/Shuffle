@@ -30,6 +30,8 @@ import {
     Apps as AppsIcon,
     Business as BusinessIcon,
     Flag,
+	ArrowDropDown as ArrowDropDownIcon,
+
   } from "@mui/icons-material";
 
 import { toast } from 'react-toastify';
@@ -58,6 +60,8 @@ const TenantsTab = memo((props) => {
     const [parentOrgRegionName, setParentOrgRegionName] = React.useState("UK");
     const [loadOrgs, setLoadOrgs] = React.useState(true);
     const [, forceUpdate] = React.useState();
+    const [suborglistOpen, setSuborglistOpen] = React.useState(false);
+    const [allTenantsOpen, setAllTenantsOpen] = React.useState(false);
     const itemColor = "black";
 
     useEffect(() => {
@@ -482,8 +486,8 @@ const TenantsTab = memo((props) => {
 
     const createSubOrg = (currentOrgId, name) => {
         const data = { name: name, org_id: currentOrgId };
-        console.log(data);
         const url = globalUrl + `/api/v1/orgs/${currentOrgId}/create_sub_org`;
+		setSuborglistOpen(true)
 
         fetch(url, {
             mode: "cors",
@@ -791,7 +795,7 @@ const TenantsTab = memo((props) => {
                         Create, manage and change to sub-organizations (tenants)! {" "}
                         {isCloud
                             ? "You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact support@shuffler.io to try it out."
-                            : ''}
+                            : ''}&nbsp;
                         <a
                             href="/docs/organizations"
                             target="_blank"
@@ -1150,168 +1154,212 @@ const TenantsTab = memo((props) => {
                                 overflowX: "auto", 
                                 paddingBottom: 0,
                             }}>
-                            <ListItem 
-                                style={{
-                                    width: "100%",
-                                    display: "table-row",
-                                    padding: "0px 8px 8px 8px",
-                                    whiteSpace: "nowrap",
-                                    textOverflow: "ellipsis",
-                                    verticalAlign: "middle",
-                                }}>
-                                <ListItemText 
-                                    primary="Logo" 
-                                    style={{
-                                        width: 100,
-                                        minWidth: 100,
-                                        maxWidth: 100,
-                                        paddingLeft: 20,
-                                        display: "table-cell",
-                                        padding: "0px 8px 8px 8px",
-                                        textAlign: "center",
-                                        borderBottom: "1px solid #494949",
-                                        verticalAlign: "middle",
-                                    }} />
-                                <ListItemText 
-                                        primary="Name" 
-                                        style={{
-                                            minWidth: 100,
-                                            maxWidth: 300,
-                                            display: "table-cell",
-                                            padding: "0px 8px 8px 8px",
-                                            whiteSpace: "nowrap",
-                                            textOverflow: "ellipsis",
-                                            borderBottom: "1px solid #494949",
-                                            verticalAlign: "middle",
-                                            textAlign: "center",
-                                        }} />
-                                    {isCloud && (
-                                        <ListItemText
-                                        primary="Region"
-                                        style={{
-                                            minWidth: 100,
-                                            maxWidth: 100,
-                                            display: "table-cell",
-                                            borderBottom: "1px solid #494949",
-                                            padding: "0px 8px 8px 8px",
-                                        }}
-                                        />
-                                    )}
-                                <ListItemText
-                                    primary="id"
-                                    style={{
-                                    minWidth: 400,
-                                    maxWidth: 400,
-                                    display: "table-cell",
-                                    padding: "0px 8px 8px 8px",
-                                    whiteSpace: "nowrap",
-                                    textOverflow: "ellipsis",
-                                    borderBottom: "1px solid #494949",
-                                    verticalAlign: "middle",
-                                    }}
-                                />
-                                <ListItemText
-                                    primary="Action"
-                                    style={{
-                                    minWidth: 400,
-                                    maxWidth: 400,
-                                    display: "table-cell",
-                                    padding: "0px 8px 8px 8px",
-                                    whiteSpace: "nowrap",
-                                    textOverflow: "ellipsis",
-                                    borderBottom: "1px solid #494949",
-                                    verticalAlign: "middle",
-                                    }}
-                                />
-                            </ListItem>
-                            {subOrgs.map((data, index) => {
-								let regiontag = "UK";
-								let regionCode = "gb";
+							{!suborglistOpen ?
+								<ListItem
+									style={{
+										width: "100%",
+										display: "table-row",
+										padding: "0px 8px 8px 8px",
+										whiteSpace: "nowrap",
+										textOverflow: "ellipsis",
+										verticalAlign: "middle",
+										itemAlign: "center",
 
-								if (data.region_url?.length > 0) {
-									const regionsplit = data.region_url.split(".");
-									if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-										const namesplit = regionsplit[0].split("/");
-										regiontag = namesplit[namesplit.length - 1];
-										if (regiontag === "california") {
-											regiontag = "US";
-											regionCode = "us";
-										} else if (regiontag === "frankfurt") {
-											regiontag = "EU-2";
-											regionCode = "eu";
-										} else if (regiontag === "ca") {
-											regiontag = "CA";
-											regionCode = "ca";
+									}}
+								>
+									<ListItemText 
+										primary={
+											<Button 
+												fullWidth 
+												variant="secondary" 
+												style={{
+													textTransform: 'none',
+												}} 
+												onClick={() => setSuborglistOpen(true)}
+											>
+												Show Sub-Organizations <ArrowDropDownIcon />
+											</Button>
+										}
+										style={{
+											width: 100,
+											minWidth: 100,
+											maxWidth: 100,
+											paddingLeft: 20,
+											display: "table-cell",
+											padding: "0px 8px 8px 8px",
+											textAlign: "center",
+											borderBottom: "1px solid #494949",
+											verticalAlign: "middle",
+										}} 
+									/>
+								</ListItem>
+							: 
+							<span>
+                            	<ListItem 
+                            	    style={{
+                            	        width: "100%",
+                            	        display: "table-row",
+                            	        padding: "0px 8px 8px 8px",
+                            	        whiteSpace: "nowrap",
+                            	        textOverflow: "ellipsis",
+                            	        verticalAlign: "middle",
+                            	    }}>
+                            	    <ListItemText 
+                            	        primary="Logo" 
+                            	        style={{
+                            	            width: 100,
+                            	            minWidth: 100,
+                            	            maxWidth: 100,
+                            	            paddingLeft: 20,
+                            	            display: "table-cell",
+                            	            padding: "0px 8px 8px 8px",
+                            	            textAlign: "center",
+                            	            borderBottom: "1px solid #494949",
+                            	            verticalAlign: "middle",
+                            	        }} />
+                            	    <ListItemText 
+                            	            primary="Name" 
+                            	            style={{
+                            	                minWidth: 100,
+                            	                maxWidth: 300,
+                            	                display: "table-cell",
+                            	                padding: "0px 8px 8px 8px",
+                            	                whiteSpace: "nowrap",
+                            	                textOverflow: "ellipsis",
+                            	                borderBottom: "1px solid #494949",
+                            	                verticalAlign: "middle",
+                            	                textAlign: "center",
+                            	            }} />
+                            	        {isCloud && (
+                            	            <ListItemText
+                            	            primary="Region"
+                            	            style={{
+                            	                minWidth: 100,
+                            	                maxWidth: 100,
+                            	                display: "table-cell",
+                            	                borderBottom: "1px solid #494949",
+                            	                padding: "0px 8px 8px 8px",
+                            	            }}
+                            	            />
+                            	        )}
+                            	    <ListItemText
+                            	        primary="id"
+                            	        style={{
+                            	        minWidth: 400,
+                            	        maxWidth: 400,
+                            	        display: "table-cell",
+                            	        padding: "0px 8px 8px 8px",
+                            	        whiteSpace: "nowrap",
+                            	        textOverflow: "ellipsis",
+                            	        borderBottom: "1px solid #494949",
+                            	        verticalAlign: "middle",
+                            	        }}
+                            	    />
+                            	    <ListItemText
+                            	        primary="Action"
+                            	        style={{
+                            	        minWidth: 400,
+                            	        maxWidth: 400,
+                            	        display: "table-cell",
+                            	        padding: "0px 8px 8px 8px",
+                            	        whiteSpace: "nowrap",
+                            	        textOverflow: "ellipsis",
+                            	        borderBottom: "1px solid #494949",
+                            	        verticalAlign: "middle",
+                            	        }}
+                            	    />
+                            	</ListItem>
+                            	{subOrgs.map((data, index) => {
+									let regiontag = "UK";
+									let regionCode = "gb";
+
+									if (data.region_url?.length > 0) {
+										const regionsplit = data.region_url.split(".");
+										if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+											const namesplit = regionsplit[0].split("/");
+											regiontag = namesplit[namesplit.length - 1];
+											if (regiontag === "california") {
+												regiontag = "US";
+												regionCode = "us";
+											} else if (regiontag === "frankfurt") {
+												regiontag = "EU-2";
+												regionCode = "eu";
+											} else if (regiontag === "ca") {
+												regiontag = "CA";
+												regionCode = "ca";
+											}
 										}
 									}
-								}
 
-								return (
-                                <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? '#1A1A1A' : '#212121', width: "100%", borderBottomLeftRadius: 8, display:'table-row', borderBottomRightRadius: 8 }}>
-                                    <ListItemText primary={<img alt={data?.name} src={data.image || theme.palette.defaultImage} style={imageStyle} />} style={{ width: 100,
-                                minWidth: 100,
-                                maxWidth: 100,
-                                display: "table-cell",
-                                padding: "8px 8px 8px 20px",
-                                textAlign: "center", }} />
-                                    <ListItemText primary={data.name} style={{ minWidth: 100,
-                                maxWidth: 300,
-                                overflow: "hidden",
-                                whiteSpace: "nowrap",
-                                textOverflow: "ellipsis",
-                                display: "table-cell",
-                                padding: 8,
-                                verticalAlign: "middle",
-                                textAlign: "center", }} />
+									return (
+                            	    <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? '#1A1A1A' : '#212121', width: "100%", borderBottomLeftRadius: 8, display:'table-row', borderBottomRightRadius: 8 }}>
+                            	        <ListItemText primary={<img alt={data?.name} src={data.image || theme.palette.defaultImage} style={imageStyle} />} style={{ width: 100,
+                            	    minWidth: 100,
+                            	    maxWidth: 100,
+                            	    display: "table-cell",
+                            	    padding: "8px 8px 8px 20px",
+                            	    textAlign: "center", }} />
+                            	        <ListItemText primary={data.name} style={{ minWidth: 100,
+                            	    maxWidth: 300,
+                            	    overflow: "hidden",
+                            	    whiteSpace: "nowrap",
+                            	    textOverflow: "ellipsis",
+                            	    display: "table-cell",
+                            	    padding: 8,
+                            	    verticalAlign: "middle",
+                            	    textAlign: "center", }} />
 
-                                {isCloud && (
-                                    <ListItemText
-                                        primary={
-                                        <div style={{ display: "flex", alignItems: "center" }}>
-                                            <img
-                                            alt={regiontag}
-                                            src={`https://flagcdn.com/w20/${regionCode}.png`}
-                                            style={{ width: "30px", height: "20px", marginRight: "5px" }}
-                                            />
-                                            <ListItemText primary={regiontag?.toUpperCase()} />
-                                        </div>
-                                        }
-                                        style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}
-                                    />
-                                    )}
-                                    <ListItemText primary={data.id} style={{ minWidth: 300,
-										maxWidth: 300,
-										display: "table-cell",
-										padding: 8,
-										verticalAlign: "middle", }} />
+                            	    {isCloud && (
+                            	        <ListItemText
+                            	            primary={
+                            	            <div style={{ display: "flex", alignItems: "center" }}>
+                            	                <img
+                            	                alt={regiontag}
+                            	                src={`https://flagcdn.com/w20/${regionCode}.png`}
+                            	                style={{ width: "30px", height: "20px", marginRight: "5px" }}
+                            	                />
+                            	                <ListItemText primary={regiontag?.toUpperCase()} />
+                            	            </div>
+                            	            }
+                            	            style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}
+                            	        />
+                            	        )}
+                            	        <ListItemText primary={data.id} style={{ minWidth: 300,
+											maxWidth: 300,
+											display: "table-cell",
+											padding: 8,
+											verticalAlign: "middle", }} />
 
-                                    <ListItemText
-                            		primary={
-                                		<Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
-                                        <Button
-                                            color="primary"
-                                            variant='outlined'
-                                            disabled={data.id === userdata?.active_org?.id}
-                                            onClick={() => {
-                                                handleClickChangeOrg(data.id);
-                                            }}
-                                            sx={{ 
-                                                boxShadow:"none", textTransform:"capitalize", 
-                                                fontSize:16, 
-                                                '&.Mui-disabled': {
-                                                backgroundColor: 'rgba(200, 200, 200, 0.5)',
-                                                color: '#A9A9A9',
-                                                },
-                                            }}
-                                        >
-                                            Change Active Org
-                                        </Button>
-                                    </Tooltip>
-                            }
-                            style={{ display: "table-cell", verticalAlign: "middle" }}
-                            />
-                                </ListItem>
-                            )})}
+                            	        <ListItemText
+                            			primary={
+                            	    		<Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
+                            	            <Button
+                            	                color="primary"
+                            	                variant='outlined'
+                            	                disabled={data.id === userdata?.active_org?.id}
+                            	                onClick={() => {
+                            	                    handleClickChangeOrg(data.id);
+                            	                }}
+                            	                sx={{ 
+                            	                    boxShadow:"none", textTransform:"capitalize", 
+                            	                    fontSize:16, 
+                            	                    '&.Mui-disabled': {
+                            	                    backgroundColor: 'rgba(200, 200, 200, 0.5)',
+                            	                    color: '#A9A9A9',
+                            	                    },
+                            	                }}
+                            	            >
+                            	                Change Active Org
+                            	            </Button>
+                            	        </Tooltip>
+                            	}
+                            	style={{ display: "table-cell", verticalAlign: "middle" }}
+                            	/>
+                            	    </ListItem>
+                            	)})}
+
+							</span>}
+
                         </List>
                         </div>
                     </div>
@@ -1366,247 +1414,289 @@ const TenantsTab = memo((props) => {
                     paddingBottom: 0,
                     }}
                 >
-                    <ListItem
-                    style={{
-                        width: "100%",
-                        display: "table-row",
-                        padding: "0px 8px 8px 8px",
-                        whiteSpace: "nowrap",
-                        textOverflow: "ellipsis",
-                        verticalAlign: "middle",
-                    }}
-                    >
-                    <ListItemText
-                        primary="Logo"
-                        style={{
-                        width: 100,
-                        minWidth: 100,
-                        maxWidth: 100,
-                        paddingLeft: 20,
-                        display: "table-cell",
-                        padding: "0px 8px 8px 8px",
-                        textAlign: "center",
-                        borderBottom: "1px solid #494949",
-                        verticalAlign: "middle",
-                        }}
-                    />
-                    <ListItemText
-                        primary="Name"
-                        style={{
-                        minWidth: 100,
-                        maxWidth: 300,
-                        display: "table-cell",
-                        padding: "0px 8px 8px 8px",
-                        whiteSpace: "nowrap",
-                        textOverflow: "ellipsis",
-                        borderBottom: "1px solid #494949",
-                        verticalAlign: "middle",
-                        textAlign: "center",
-                        }}
-                    />
-                    {isCloud && (
-                        <ListItemText
-                        primary="Region"
-                        style={{
-                            minWidth: 100,
-                            maxWidth: 100,
-                            display: "table-cell",
-                            borderBottom: "1px solid #494949",
-                            padding: "0px 8px 8px 8px",
-                        }}
-                        />
-                    )}
-                    <ListItemText
-                        primary="id"
-                        style={{
-                        minWidth: 400,
-                        maxWidth: 400,
-                        display: "table-cell",
-                        padding: "0px 8px 8px 8px",
-                        whiteSpace: "nowrap",
-                        textOverflow: "ellipsis",
-                        borderBottom: "1px solid #494949",
-                        verticalAlign: "middle",
-                        }}
-                    />
-                    <ListItemText
-                        primary="Action"
-                        style={{
-                        minWidth: 400,
-                        maxWidth: 400,
-                        display: "table-cell",
-                        padding: "0px 8px 8px 8px",
-                        whiteSpace: "nowrap",
-                        textOverflow: "ellipsis",
-                        borderBottom: "1px solid #494949",
-                        verticalAlign: "middle",
-                        }}
-                    />
-                    </ListItem>
+					{!allTenantsOpen ?
+						<ListItem
+							style={{
+								width: "100%",
+								display: "table-row",
+								padding: "0px 8px 8px 8px",
+								whiteSpace: "nowrap",
+								textOverflow: "ellipsis",
+								verticalAlign: "middle",
+								itemAlign: "center",
 
-                    {userdata?.orgs?.length <= 0 ? (
-                    [...Array(6)].map((_, rowIndex) => (
-                        <ListItem
-                        key={rowIndex}
-                        style={{
-                            display: "table-row",
-                            backgroundColor: "#212121",
-                        }}
-                        >
-                        {Array(7)
-                            .fill()
-                            .map((_, colIndex) => (
-                            <ListItemText
-                                key={colIndex}
-                                style={{
-                                display: "table-cell",
-                                padding: "8px",
-                                }}
-                            >
-                                <Skeleton
-                                variant="text"
-                                animation="wave"
-                                sx={{
-                                    backgroundColor: "#1a1a1a",
-                                    height: "20px",
-                                    borderRadius: "4px",
-                                }}
-                                />
-                            </ListItemText>
-                            ))}
-                        </ListItem>
-                    ))
-                    ) : (
-                    userdata?.orgs?.length > 0 &&
-                    userdata.orgs.map((data, index) => {
-                        let regiontag = "UK";
-                        let regionCode = "gb";
-
-                        if (data.region_url?.length > 0) {
-							const regionsplit = data.region_url.split(".");
-							if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-								const namesplit = regionsplit[0].split("/");
-								regiontag = namesplit[namesplit.length - 1];
-
-								if (regiontag === "california") {
-								regiontag = "US";
-								regionCode = "us";
-								} else if (regiontag === "frankfurt") {
-								regiontag = "EU-2";
-								regionCode = "eu";
-								} else if (regiontag === "ca") {
-								regiontag = "CA";
-								regionCode = "ca";
+							}}
+						>
+							<ListItemText 
+								primary={
+									<Button 
+										fullWidth 
+										variant="secondary" 
+										style={{
+											textTransform: 'none',
+										}} 
+										onClick={() => setAllTenantsOpen(true)}
+									>
+										Show ALL your tenants <ArrowDropDownIcon />
+									</Button>
 								}
-							}
-                        }
+								style={{
+									width: 100,
+									minWidth: 100,
+									maxWidth: 100,
+									paddingLeft: 20,
+									display: "table-cell",
+									padding: "0px 8px 8px 8px",
+									textAlign: "center",
+									borderBottom: "1px solid #494949",
+									verticalAlign: "middle",
+								}} 
+							/>
+						</ListItem>
+					: 
+					<span>
+                    	<ListItem
+                    	style={{
+                    	    width: "100%",
+                    	    display: "table-row",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    verticalAlign: "middle",
+                    	}}
+                    	>
+                    	<ListItemText
+                    	    primary="Logo"
+                    	    style={{
+                    	    width: 100,
+                    	    minWidth: 100,
+                    	    maxWidth: 100,
+                    	    paddingLeft: 20,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    textAlign: "center",
+                    	    borderBottom: "1px solid #494949",
+                    	    verticalAlign: "middle",
+                    	    }}
+                    	/>
+                    	<ListItemText
+                    	    primary="Name"
+                    	    style={{
+                    	    minWidth: 100,
+                    	    maxWidth: 300,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    borderBottom: "1px solid #494949",
+                    	    verticalAlign: "middle",
+                    	    textAlign: "center",
+                    	    }}
+                    	/>
+                    	{isCloud && (
+                    	    <ListItemText
+                    	    primary="Region"
+                    	    style={{
+                    	        minWidth: 100,
+                    	        maxWidth: 100,
+                    	        display: "table-cell",
+                    	        borderBottom: "1px solid #494949",
+                    	        padding: "0px 8px 8px 8px",
+                    	    }}
+                    	    />
+                    	)}
+                    	<ListItemText
+                    	    primary="id"
+                    	    style={{
+                    	    minWidth: 400,
+                    	    maxWidth: 400,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    borderBottom: "1px solid #494949",
+                    	    verticalAlign: "middle",
+                    	    }}
+                    	/>
+                    	<ListItemText
+                    	    primary="Action"
+                    	    style={{
+                    	    minWidth: 400,
+                    	    maxWidth: 400,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    borderBottom: "1px solid #494949",
+                    	    verticalAlign: "middle",
+                    	    }}
+                    	/>
+                    	</ListItem>
 
-                        return (
-                        <ListItem
-                            key={index}
-                            style={{
-                            display: "table-row",
-                            verticalAlign: "middle",
-                            padding: 8,
-                            backgroundColor: index % 2 === 0 ? "#1A1A1A" : "#212121",
-                            borderBottomLeftRadius:
-                                userdata?.orgs?.length - 1 === index ? 8 : 0,
-                            borderBottomRightRadius:
-                                userdata?.orgs?.length - 1 === index ? 8 : 0,
-                            }}
-                        >
-                            <ListItemText
-                            primary={
-                                <img
-                                alt={data.name}
-                                src={data.image || theme.palette.defaultImage}
-                                style={imageStyle}
-                                />
-                            }
-                            style={{
-                                width: 100,
-                                minWidth: 100,
-                                maxWidth: 100,
-                                display: "table-cell",
-                                padding: "8px 8px 8px 20px",
-                                textAlign: "center",
-                            }}
-                            />
-                            <ListItemText
-                            primary={data?.name}
-                            style={{
-                                minWidth: 100,
-                                maxWidth: 300,
-                                overflow: "hidden",
-                                whiteSpace: "nowrap",
-                                textOverflow: "ellipsis",
-                                display: "table-cell",
-                                padding: 8,
-                                verticalAlign: "middle",
-                                textAlign: "center",
-                            }}
-                            ></ListItemText>
-                            {isCloud ? (
-                            <ListItemText
-                                primary={
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    <img
-                                    alt={regiontag}
-                                    src={`https://flagcdn.com/w20/${regionCode}.png`}
-                                    style={{
-                                        display: "table-cell",
-                                        padding: 8,
-                                        verticalAlign: "middle",
-                                    }}
-                                    />
+                    	{userdata?.orgs?.length <= 0 ? (
+                    	[...Array(6)].map((_, rowIndex) => (
+                    	    <ListItem
+                    	    key={rowIndex}
+                    	    style={{
+                    	        display: "table-row",
+                    	        backgroundColor: "#212121",
+                    	    }}
+                    	    >
+                    	    {Array(7)
+                    	        .fill()
+                    	        .map((_, colIndex) => (
+                    	        <ListItemText
+                    	            key={colIndex}
+                    	            style={{
+                    	            display: "table-cell",
+                    	            padding: "8px",
+                    	            }}
+                    	        >
+                    	            <Skeleton
+                    	            variant="text"
+                    	            animation="wave"
+                    	            sx={{
+                    	                backgroundColor: "#1a1a1a",
+                    	                height: "20px",
+                    	                borderRadius: "4px",
+                    	            }}
+                    	            />
+                    	        </ListItemText>
+                    	        ))}
+                    	    </ListItem>
+                    	))
+                    	) : (
+                    	userdata?.orgs?.length > 0 &&
+                    	userdata.orgs.map((data, index) => {
+                    	    let regiontag = "UK";
+                    	    let regionCode = "gb";
 
-                                    <ListItemText primary={regiontag} />
-                                </div>
-                                }
-                                style={{
-                                display: "table-cell",
-                                padding: 8,
-                                verticalAlign: "middle",
-                                }}
-                            ></ListItemText>
-                            ) : null}
-                            <ListItemText
-                            primary={data.id}
-                            style={{
-                                minWidth: 300,
-                                maxWidth: 300,
-                                display: "table-cell",
-                                padding: 8,
-                                verticalAlign: "middle",
-                            }}
-                            />
-                            <ListItemText
-                            primary={
-                                <Button
-                                variant="outlined"
-                                style={{
-                                    whiteSpace: "nowrap",
-                                    textTransform: "none",
-                                    fontSize: 16,
-                                }}
-                                disabled={data?.id === userdata?.active_org?.id}
-                                onClick={() => {
-                                    handleClickChangeOrg(data?.id);
-                                }}
-                                >
-                                Change Active Org
-                                </Button>
-                            }
-                            style={{
-                                display: "table-cell",
-                                padding: 8,
-                                verticalAlign: "middle",
-                            }}
-                            ></ListItemText>
-                        </ListItem>
-                        );
-                    })
-                    )}
+                    	    if (data.region_url?.length > 0) {
+								const regionsplit = data.region_url.split(".");
+								if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+									const namesplit = regionsplit[0].split("/");
+									regiontag = namesplit[namesplit.length - 1];
+
+									if (regiontag === "california") {
+									regiontag = "US";
+									regionCode = "us";
+									} else if (regiontag === "frankfurt") {
+									regiontag = "EU-2";
+									regionCode = "eu";
+									} else if (regiontag === "ca") {
+									regiontag = "CA";
+									regionCode = "ca";
+									}
+								}
+                    	    }
+
+                    	    return (
+                    	    <ListItem
+                    	        key={index}
+                    	        style={{
+                    	        display: "table-row",
+                    	        verticalAlign: "middle",
+                    	        padding: 8,
+                    	        backgroundColor: index % 2 === 0 ? "#1A1A1A" : "#212121",
+                    	        borderBottomLeftRadius:
+                    	            userdata?.orgs?.length - 1 === index ? 8 : 0,
+                    	        borderBottomRightRadius:
+                    	            userdata?.orgs?.length - 1 === index ? 8 : 0,
+                    	        }}
+                    	    >
+                    	        <ListItemText
+                    	        primary={
+                    	            <img
+                    	            alt={data.name}
+                    	            src={data.image || theme.palette.defaultImage}
+                    	            style={imageStyle}
+                    	            />
+                    	        }
+                    	        style={{
+                    	            width: 100,
+                    	            minWidth: 100,
+                    	            maxWidth: 100,
+                    	            display: "table-cell",
+                    	            padding: "8px 8px 8px 20px",
+                    	            textAlign: "center",
+                    	        }}
+                    	        />
+                    	        <ListItemText
+                    	        primary={data?.name}
+                    	        style={{
+                    	            minWidth: 100,
+                    	            maxWidth: 300,
+                    	            overflow: "hidden",
+                    	            whiteSpace: "nowrap",
+                    	            textOverflow: "ellipsis",
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	            textAlign: "center",
+                    	        }}
+                    	        ></ListItemText>
+                    	        {isCloud ? (
+                    	        <ListItemText
+                    	            primary={
+                    	            <div style={{ display: "flex", alignItems: "center" }}>
+                    	                <img
+                    	                alt={regiontag}
+                    	                src={`https://flagcdn.com/w20/${regionCode}.png`}
+                    	                style={{
+                    	                    display: "table-cell",
+                    	                    padding: 8,
+                    	                    verticalAlign: "middle",
+                    	                }}
+                    	                />
+
+                    	                <ListItemText primary={regiontag} />
+                    	            </div>
+                    	            }
+                    	            style={{
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	            }}
+                    	        ></ListItemText>
+                    	        ) : null}
+                    	        <ListItemText
+                    	        primary={data.id}
+                    	        style={{
+                    	            minWidth: 300,
+                    	            maxWidth: 300,
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	        }}
+                    	        />
+                    	        <ListItemText
+                    	        primary={
+                    	            <Button
+                    	            variant="outlined"
+                    	            style={{
+                    	                whiteSpace: "nowrap",
+                    	                textTransform: "none",
+                    	                fontSize: 16,
+                    	            }}
+                    	            disabled={data?.id === userdata?.active_org?.id}
+                    	            onClick={() => {
+                    	                handleClickChangeOrg(data?.id);
+                    	            }}
+                    	            >
+                    	            Change Active Org
+                    	            </Button>
+                    	        }
+                    	        style={{
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	        }}
+                    	        ></ListItemText>
+                    	    </ListItem>
+                    	    );
+                    	})
+                    	)}
+					</span>}
                 </List>
                 </div>
                 </div>

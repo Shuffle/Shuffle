@@ -902,6 +902,8 @@ const CodeEditor = (props) => {
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
 		if (found !== null && found !== undefined) {
+
+			//console.log("FOUND: ", found)
 			try {
 				for (var i = 0; i < found.length; i++) {
 					try {
@@ -936,28 +938,72 @@ const CodeEditor = (props) => {
 								}
 							}
 						}
+
+						// Find the location to ensure replacements happen correctly
+						var foundlocation = -1
+						for (var j = 0; j < input.length; j++) {
+							const foundStringSize = fixedVariable.length
+							const foundslice = input.slice(j, j + foundStringSize)
+							//console.log("FOUNDSLICE: ", foundslice)
+							if (fixedVariable !== foundslice) {
+								continue
+							}
+
+							// Check if it matches EXACTLY or not, as there may be more AFTER the found[i]
+							const nextchar = input.slice(j + foundStringSize, j + foundStringSize + 1)
+							if (nextchar === ".") {
+								continue
+							}
+
+							foundlocation = j
+							break
+						}
 	
+						// FIXME: There is something wrong here with: 
+						// $variable.#
+						// vs
+						// $variable.#.subvalue
+						// if you put both of those lines in the same editor, then it will replace both (somehow). Make sure $variable.#.subvalue exists while testing.
+						console.log("FOUNDLOC: ", fixedVariable, foundlocation)
 						for (var j = 0; j < actionlist.length; j++) {
 							if (fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()) {
 								continue
 							}
 
+							// Look for the location of found[i] in the input, as to make sure to skip parts of the input in the replace. Find ALL spots for it
 							valuefound = true
+							var newvalue = ""
 							try {
-								if (typeof actionlist[j].example === "object") {
 
-									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+								if (typeof actionlist[j].example === "object") {
+									newvalue = JSON.stringify(actionlist[j].example)
 
 								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
-									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+
+									newvalue = JSON.stringify(actionlist[j].example)
 								} else {
 									const newExample = fixStringInput(actionlist[j].example)
-									input = input.replace(found[i], newExample, -1)
+
+									newvalue = newExample
 								}
 							} catch (e) {
-								input = input.replace(found[i], actionlist[j].example, -1)
+								newvalue = actionlist[j].example
 							}
 
+							try {
+								console.log("REPLACE: ", foundlocation, fixedVariable, newvalue)
+								if (newvalue !== "") {
+									if (foundlocation === -1) {
+										input = input.replace(fixedVariable, newvalue, 1)
+									} else {
+										// Ensures we don't just randomly replace the first value we find
+										const replacedSlice = input.slice(foundlocation, input.length).replace(fixedVariable, newvalue, 1)
+										input = input.slice(0, foundlocation) + replacedSlice
+									}
+								} 
+							} catch (e) {
+								console.log("Replace error: ", e)
+							}
 						}
 
 						if (!valuefound) {

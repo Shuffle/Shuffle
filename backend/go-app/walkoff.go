@@ -3041,6 +3041,11 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	shouldRerun := false
+	rerun, rerunOk := query["rerun"]
+	if rerunOk && len(rerun) > 0 && rerun[0] == "true" {
+		shouldRerun = true
+	}
 
 	if shouldRerun {
 		log.Printf("[DEBUG] Returning single action execution ID for rerun: %s", workflowExecution.ExecutionId)

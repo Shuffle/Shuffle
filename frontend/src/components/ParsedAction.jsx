@@ -818,9 +818,18 @@ const ParsedAction = (props) => {
 							if (foundResult) {
 								const valid = validateJson(foundResult.result);
 								if (valid.valid) {
-									if (valid.result.success !== false) {
-										exampleData = valid.result
-										break
+
+									// Check if array, and if first item is object + success
+									if (Array.isArray(valid.result) && valid.result.length > 0 && typeof valid.result[0] === "object") {
+										if (valid.result[0].success !== false) {
+											exampleData = valid.result[0]
+											break
+										}
+									} else {
+										if (valid.result.success !== false) {
+											exampleData = valid.result
+											break
+										}
 									}
 								} else {
 									secondaryExample = foundResult.result

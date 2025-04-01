@@ -61,7 +61,7 @@ const menuData = {
       description:
         "Connect and run actions seamlessly between different platforms.",
       icon: "/images/logos/singul.svg",
-      path: "https://singul.io/",
+      path: "https://singul-docs.gitbook.io/singul/getting-started",
       gaData: {
         category: "navbar",
         action: "products_click",

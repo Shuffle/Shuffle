@@ -4316,9 +4316,15 @@ const AngularWorkflow = (defaultprops) => {
             var sessionToken = new URLSearchParams(cursearch).get("session_token");
             if (execFound === null && sessionToken === null) {
 
-              toast.error(`You don't have access to this workflow or loading failed. Redirecting to workflows in a few seconds. If you recently deleted this workflow, speak with support@shuffler.io to recover it from a revision.`, {
-				  autoClose: 10000,
-			  })
+			  if (isCloud) {
+				  toast.error(`You don't have access to this workflow or loading failed. Redirecting to workflows in a few seconds. If you recently deleted this workflow, speak with support@shuffler.io to recover it from a revision.`, {
+					  autoClose: 10000,
+				  })
+			  } else { 
+				  toast.error(`You don't have access to this workflow or loading failed. Redirecting to workflows in a few seconds. Contact support@shuffler.io if this is unexpected.`, {
+					  autoClose: 10000,
+				  })
+			  }
 
               setTimeout(() => {
                 window.location.pathname = "/workflows";
@@ -7659,7 +7665,6 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const handlePaste = (event) => {
-	console.log("PASTE EVENT: ", event)
     if (event.path !== undefined && event.path !== null && event.path.length > 0) {
       if (event.path[0].localName !== "body") {
 		  console.log("Skipping paste because body is not targeted")
@@ -7667,15 +7672,13 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-	console.log("Paste target: ", event?.target)
-	/*
     if (event.target !== undefined && event.target !== null) {
-      if (event.target.localName !== "body") {
-		console.log("Skipping paste because body is not targeted (2). Target: ", event?.target?.localName)
-        return;
-      }
+	  // If it's an input area, skip paste
+	  if (event.target.localName === "input" || event.target.localName === "textarea") {
+		  console.log("Skipping paste because body is not targeted (1). Target: ", event?.target?.localName)
+		  return;
+	  }
     }
-	*/
 
 	// Does this stop things?
     //event.preventDefault()

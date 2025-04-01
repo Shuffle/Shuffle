@@ -812,9 +812,10 @@ const Workflows2 = (props) => {
 
     }
 
-    const isCloud =
-        window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io";
+    //const isCloud =
+    //    window.location.host === "localhost:3002" ||
+    //    window.location.host === "shuffler.io";
+	const isCloud = false
 
     const findWorkflow = (filters) => {
         console.log("Using filters: ", filters)
@@ -2474,16 +2475,18 @@ const Workflows2 = (props) => {
                         style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme?.typography?.fontFamily }}
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
-                            <Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
-                                <div
-                                    styl={{ cursor: "pointer" }}
-                                    onClick={() => {
-                                        navigate("/admin")
-                                    }}
-                                >
-                                    {image}
-                                </div>
-                            </Tooltip>
+							{currTab === 2 ? null : 
+								<Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
+									<div
+										styl={{ cursor: "pointer" }}
+										onClick={() => {
+											navigate("/admin")
+										}}
+									>
+										{image}
+									</div>
+								</Tooltip>
+							}
                             <Tooltip arrow
                                 onMouseEnter={() => {
                                     /*
@@ -2562,9 +2565,19 @@ const Workflows2 = (props) => {
                                 >
                                     <Link
                                         to={
-                                            type === "public" ? parsedUrl : data.workflow_as_code ? `/workflows/${data.id}/code` : `/workflows/${data.id}`
+                                            currTab === 2 ? `https://shuffler.io${parsedUrl}` : type === "public" ? parsedUrl : data.workflow_as_code ? `/workflows/${data.id}/code` : `/workflows/${data.id}`
                                         }
-                                        style={{ textDecoration: "none", color: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "90%", display: "block" }}                                    >
+                                        style={{ 
+											textDecoration: "none", 
+											color: "inherit", 
+											overflow: "hidden", 
+											textOverflow: "ellipsis", 
+											whiteSpace: "nowrap", 
+											maxWidth: "90%", 
+											display: "block" 
+										}}
+										target={currTab === 2 ? "_blank" : "_self"}
+									>
                                         {parsedName}
                                     </Link>
                                 </Typography>
@@ -4261,7 +4274,7 @@ const Workflows2 = (props) => {
                                 TabIndicatorProps={{ style: { display: 'none' } }}
                             >
                                 <Tab
-                                    label="Organization Workflows"
+                                    label="Org Workflows"
                                     style={{
                                         ...tabStyle,
                                         ...(currTab === 0 ? tabActive : {})
@@ -4280,6 +4293,19 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
                                         ...(currTab === 2 ? tabActive : {})
+                                    }}
+                                />
+
+                                <Tab
+                                    label="Org Forms"
+									onClick={() => {
+										navigate("/forms")
+									}}
+                                    style={{
+                                        ...tabStyle,
+                                        marginRight: 0,
+										marginLeft: 25, 
+                                        ...(currTab === 3 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>
