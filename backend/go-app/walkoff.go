@@ -974,7 +974,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			log.Printf("[ERROR] Failed to list child workflows: %s", err)
 		} else { 
-			log.Printf("\n\n[DEBUG] Found %d child workflows for workflow %s\n\n", len(childWorkflows), workflow.ID)
+			//log.Printf("\n\n[DEBUG] Found %d child workflows for workflow %s\n\n", len(childWorkflows), workflow.ID)
 
 			// Find cookies and append them to request.Header to replicate current request as closely as possible
 			for _, childWorkflow := range childWorkflows {

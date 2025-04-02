@@ -742,7 +742,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 	// Remove the image
 	handled := []string{}
-	log.Printf("[DEBUG] Removing existing image (s): %s. Waiting 30 seconds before starting to ensure backend has the latest images built and ready to distribute.", images)
+	//log.Printf("[DEBUG] Removing existing image (s): %s", images)
 	newImages := []string{}
 	for _, curimage := range strings.Split(images, ",") {
 		curimage = strings.TrimSpace(curimage)
@@ -770,7 +770,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 				log.Printf("[DEBUG] Removed image: %s", curimage)
 			}
 		} else {
-			log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
+			//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
 		}
 
 		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
