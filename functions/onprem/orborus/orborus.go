@@ -1,12 +1,8 @@
 package main
 
 /*
-	Orborus exists to listen for new jobs which are deployed as workers.
+	Orborus exists to listen for new jobs from Shuffle. This is to run workflows, pipelines, and other tasks.
 */
-
-//  Potential issues:
-// Default network could be same as on the host
-// Ingress network may not exist (default)
 
 import (
 	"archive/zip"
@@ -88,7 +84,6 @@ var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 // var baseimagename = "shuffle/shuffle"
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
-
 //var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
 // Used for cloud with auth
@@ -781,7 +776,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 			log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
 		}
 
-		err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
+		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
 			log.Printf("[ERROR] Failed downloading image: %s", err)
 		} else {
@@ -1340,11 +1335,11 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			)
 
 			if err != nil {
-				log.Printf("[ERROR] Container create error(2): %s", err)
+				log.Printf("[ERROR][%s] Container create error(2): %s", executionRequest.ExecutionId, err)
 				return err
 			}
 		} else {
-			log.Printf("[ERROR] Container create error: %s", err)
+			log.Printf("[ERROR][%s] Container create error: %s", executionRequest.ExecutionId, err)
 			return err
 		}
 	}
@@ -1369,19 +1364,19 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				identifier+"-2",
 			)
 			if err != nil {
-				log.Printf("[ERROR] Failed to CREATE container (2): %s", err)
+				log.Printf("[ERROR][%s] Failed to CREATE container (2): %s", executionRequest.ExecutionId, err)
 			}
 
 			err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 			if err != nil {
-				log.Printf("[ERROR] Failed to start container (2): %s", err)
+				log.Printf("[ERROR][%s] Failed to start container (2): %s", executionRequest.ExecutionId, err)
 			}
 		} else {
-			log.Printf("[ERROR] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", err)
+			log.Printf("[ERROR][%s] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", executionRequest.ExecutionId, err)
 		}
 
 		if err != nil {
-			log.Printf("[ERROR] Failed to start worker container in environment '%s': %s", environment, err)
+			log.Printf("[ERROR][%s] Failed to start worker container in environment '%s': %s", executionRequest.ExecutionId, environment, err)
 			return err
 		} else {
 			log.Printf("[INFO][%s] Worker Container created (2). Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
@@ -1389,13 +1384,13 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 		stats, err := dockercli.ContainerInspect(ctx, cont.ID)
 		if err != nil {
-			log.Printf("[WARNING] Failed checking worker '%s': %s", cont.ID, err)
+			log.Printf("[WARNING][%s] Failed checking worker '%s': %s", executionRequest.ExecutionId, cont.ID, err)
 			return nil 
 		}
 
 		containerStatus := stats.ContainerJSONBase.State.Status
 		if containerStatus != "running" {
-			log.Printf("[ERROR] Status of %s is %s. Should be running. Contact support@shuffler.io if this persists.", cont.ID, containerStatus)
+			log.Printf("[ERROR][%s] Status of %s is %s. Should be running. Contact support@shuffler.io if this persists.", executionRequest.ExecutionId, cont.ID, containerStatus)
 		}
 			/*
 			err = stopWorker(containerName)
@@ -1459,17 +1454,30 @@ func initializeImages() {
 	if baseimageregistry == "" {
 		baseimageregistry = "docker.io" // Dockerhub
 		baseimageregistry = "ghcr.io"   // Github
-		log.Printf("[DEBUG] Setting baseimageregistry to %#v", baseimageregistry)
+
+		if len(os.Getenv("REGISTRY_URL")) > 0 {
+			baseimageregistry = os.Getenv("REGISTRY_URL")
+		} else {
+			os.Setenv("REGISTRY_URL", baseimageregistry)
+		}
+
+		os.Setenv("SHUFFLE_BASE_IMAGE_REGISTRY", baseimageregistry)
+		
+		log.Printf("[WARNING] Setting baseimageregistry to %#v", baseimageregistry)
 	}
 
 	if baseimagename == "" {
+		// FIXME: This is probably the problem for image names tbh
 		baseimagename = "frikky/shuffle" // Dockerhub
 		baseimagename = "shuffle"        // Github 		(ghcr.io)
-		log.Printf("[DEBUG] Setting baseimagename to %#v", baseimagename)
+
+		os.Setenv("SHUFFLE_BASE_IMAGE_NAME", baseimagename)
+		log.Printf("[WARNING] Setting baseimagename to %#v", baseimagename)
 	}
 
 	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
 
+	// FIXME: Shuffle Worker vs Apps != same
 	newWorker := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 	if len(newWorkerImage) > 0 {
 		newWorker = newWorkerImage
@@ -2412,11 +2420,11 @@ func main() {
 			}
 
 			if execution.Status == "ABORT" || execution.Status == "FAILED" {
-				log.Printf("[INFO] Executionstatus issue: ", execution.Status)
+				log.Printf("[INFO][%s] Executionstatus issue: ", execution.ExecutionId, execution.Status)
 			}
 
 			if shuffle.ArrayContains(executionIds, execution.ExecutionId) {
-				log.Printf("[INFO] Execution already handled (rerun of old executions?): %s", execution.ExecutionId)
+				log.Printf("[INFO][%s] Execution already handled (rerunning old execution)", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 
 				// Should check when last this was ran, and if it's more than 10 minutes ago and it's not finished, we should run it again?
@@ -2506,7 +2514,7 @@ func main() {
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 				executionIds = append(executionIds, execution.ExecutionId)
 			} else {
-				log.Printf("[WARNING] Execution ID '%s' failed to deploy: %s", execution.ExecutionId, err)
+				log.Printf("[WARNING][%s] Failed to deploy: %s", execution.ExecutionId, err)
 				if strings.Contains(err.Error(), "already exists") {
 					toBeRemoved.Data = append(toBeRemoved.Data, execution)
 					executionIds = append(executionIds, execution.ExecutionId)
@@ -3638,15 +3646,12 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 		All: true,
 	})
 
-	//log.Printf("Len: %d", len(containers))
-
 	if err != nil {
 		log.Printf("[ERROR] Failed creating Containerlist: %s", err)
 		return err
 	}
 
 	containerNames := map[string]string{}
-
 	stopContainers := []string{}
 	removeContainers := []string{}
 	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))

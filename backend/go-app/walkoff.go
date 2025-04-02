@@ -207,8 +207,10 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	log.Printf("Queue confirm: %#v. Queue: %#v", removeExecutionRequests.Data, id)
+
 	// remove items from DB
-	parsedId := fmt.Sprintf("workflowqueue-%s", id)
+	parsedId := strings.ReplaceAll(fmt.Sprintf("workflowqueue-%s", id), " ", "-")
 	ids := []string{}
 	for _, execution := range removeExecutionRequests.Data {
 		ids = append(ids, execution.ExecutionId)

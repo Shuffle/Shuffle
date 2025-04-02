@@ -1247,7 +1247,7 @@ const Navbar = (props) => {
                     letterSpacing: '0.5px',
                   }}
                 >
-                  Coming Soon
+                  Beta: Coming Soon
                 </Typography>
               )}
             </Box>
