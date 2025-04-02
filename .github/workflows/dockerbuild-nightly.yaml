@@ -1,4 +1,4 @@
-name: dockerbuild
+name: nightly-dockerbuild
 
 on:
   workflow_dispatch:
