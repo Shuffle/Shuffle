@@ -114,8 +114,22 @@ const data = [
       "background-opacity": "0.5",
       "text-wrap": "wrap",
       "text-max-width": "data(width)",
-      "text-halign": "data(textHalign)",
-      "text-valign": "data(textValign)"
+      "text-halign": function(element) {
+		  const align = element?.data("textHalign")
+		  if (align === null || align === undefined || align === "") {
+			  return "center"
+		  }
+
+		  return align
+	  },
+      "text-valign": function(element) {
+		  const align = element?.data("textValign")
+		  if (align === null || align === undefined || align === "") {
+			  return "center"
+		  }
+		  
+		  return align
+	  }
     },
   },
   {
