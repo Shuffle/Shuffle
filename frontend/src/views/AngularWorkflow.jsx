@@ -21288,20 +21288,18 @@ const AngularWorkflow = (defaultprops) => {
               </a>
             </Tooltip>
           </div>
-          <Tooltip title="Refresh runs (Ctrl + ;)" arrow>
-            <Button
-              style={{ borderRadius: theme.palette?.borderRadius, }}
-              variant="outlined"
-              fullWidth
-              onClick={() => {
-          	    getWorkflowExecution(workflow.id, "", executionFilter, workflow.org_id)
-              }}
-              color="secondary"
-            >
-              <CachedIcon style={{ marginRight: 10 }} />
-              Refresh Runs
-            </Button>
-          </Tooltip>
+		  <Button
+		    style={{ borderRadius: theme.palette?.borderRadius, }}
+		    variant="outlined"
+		    fullWidth
+		    onClick={() => {
+		  	getWorkflowExecution(workflow.id, "", executionFilter, workflow.org_id)
+		    }}
+		    color="secondary"
+		  >
+		    <CachedIcon style={{ marginRight: 10 }} />
+		    Refresh Runs
+		  </Button>
           <ButtonGroup
             fullWidth
             style={{ marginTop: 5, maxHeight: 50, overflow: "hidden", }}>
@@ -21641,7 +21639,6 @@ const AngularWorkflow = (defaultprops) => {
               >
                 <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
               </IconButton>
-              <Tooltip title="See more runs (Ctrl + Shift)" arrow>
                 <h2
                   style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
                   onClick={() => {
@@ -21651,9 +21648,8 @@ const AngularWorkflow = (defaultprops) => {
                     stop()
                   }}
                 >
-                  See more runs
+                  Back to all runs
                 </h2>
-              </Tooltip>
             </span>
           </Breadcrumbs>
           <Divider

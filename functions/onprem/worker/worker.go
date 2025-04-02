@@ -105,9 +105,9 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
-	"http:1.4.0":               "frikky/shuffle:http_1.4.0",
-	"shuffle-tools:1.2.0":      "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.1.0":    "frikky/shuffle:shuffle-subflow_1.1.0",
+	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
+	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
+	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -299,7 +299,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	}
 
 	// Might not be necessary because of cleanupEnv hostconfig autoremoval
-	if cleanupEnv == "true" && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
+	if strings.ToLower(cleanupEnv) == "true" && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
 		/*
 			ctx := context.Background()
 			dockercli, err := dockerclient.NewEnvClient()
@@ -884,7 +884,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	// Removing because log extraction should happen first
-	if cleanupEnv == "true" {
+	if strings.ToLower(cleanupEnv) == "true" {
 		hostConfig.AutoRemove = true
 	}
 
@@ -1247,6 +1247,7 @@ func getWorkerURLs() ([]string, error) {
 }
 
 func askOtherWorkersToDownloadImage(image string) {
+	// Why wouldn't it happen on swarm? Hmm
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 		return
 	}
@@ -1489,10 +1490,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
 		}
 
-		// Fixes issue:
-		// standard_go init_linux.go:185: exec user process caused "argument list too long"
-		// https://devblogs.microsoft.com/oldnewthing/20100203-00/?p=15083
-
 		// FIXME: Ensure to NEVER do this anymore
 		// This potentially breaks too much stuff. Better to have the app poll the data.
 		_ = executionData
@@ -1516,9 +1513,11 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion),
 		}
 
-		// If cleanup is set, it should run for efficiency
+		// This is the weirdest shit ever looking back at
+		// Needs optimization lol
+
 		pullOptions := image.PullOptions{}
-		if cleanupEnv == "true" {
+		if strings.ToLower(cleanupEnv) == "true" {
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {

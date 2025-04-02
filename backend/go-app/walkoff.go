@@ -22,9 +22,6 @@ import (
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/api/types/image"
-
-	//gyaml "github.com/ghodss/yaml"
-
 	"github.com/h2non/filetype"
 	uuid "github.com/satori/go.uuid"
 
@@ -36,14 +33,6 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/go-git/go-git/v5/plumbing"
 	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
-	//http2 "gopkg.in/src-d/go-git.v5/plumbing/transport/http"
-	//http2 "github.com/go-git/go-git/plumbing/transport/http"
-
-	//"github.com/gorilla/websocket"
-	//"google.golang.org/appengine"
-	//"google.golang.org/appengine/memcache"
-	//"cloud.google.com/go/firestore"
-	// "google.golang.org/api/option"
 	gyaml "github.com/ghodss/yaml"
 )
 
@@ -206,8 +195,6 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Queue removal error"}`)))
 		return
 	}
-
-	log.Printf("Queue confirm: %#v. Queue: %#v", removeExecutionRequests.Data, id)
 
 	// remove items from DB
 	parsedId := strings.ReplaceAll(fmt.Sprintf("workflowqueue-%s", id), " ", "-")

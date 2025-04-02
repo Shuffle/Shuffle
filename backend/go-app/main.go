@@ -3543,7 +3543,8 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 				return err
 			}
 
-			redirectDomain := "localhost:5001"
+			backendPort := os.Getenv("BACKEND_PORT")
+			redirectDomain := fmt.Sprintf("localhost:%s", backendPort)
 			redirectUrl := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
 			outlookClient, _, err := shuffle.GetOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
 			if err != nil {
@@ -4199,12 +4200,13 @@ func runInitEs(ctx context.Context) {
 			return func() {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
 
+				backendPort := os.Getenv("BACKEND_PORT")
 				for _, environment := range environments {
 					// Allowed without PROXY management as it's localhost
 					// client := shuffle.GetExternalClient(syncUrl)
 
 					httpClient := &http.Client{}
-					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
+					url := fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/stop", backendPort, environment)
 					req, err := http.NewRequest(
 						"GET",
 						url,
@@ -4231,7 +4233,7 @@ func runInitEs(ctx context.Context) {
 					}
 					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
 
-					url = fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/rerun", environment)
+					url = fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/rerun", backendPort, environment)
 					req, err = http.NewRequest(
 						"GET",
 						url,
@@ -4256,7 +4258,7 @@ func runInitEs(ctx context.Context) {
 						log.Printf("[ERROR] Failed setting respbody %s", err)
 						continue
 					}
-					log.Printf("[DEBUG] Successfully ran workflow RERUN request for %s. Body: %s", environment, string(respBody))
+					log.Printf("[DEBUG] Ran workflow RERUN request for %s with the response. Body: %s", environment, string(respBody))
 				}
 			}
 		}
@@ -5373,6 +5375,7 @@ func main() {
 	if innerPort == "" {
 		log.Printf("[DEBUG] Running on %s:5001", hostname)
 		log.Fatal(http.ListenAndServe(":5001", nil))
+		os.Setenv("BACKEND_PORT", "5001")
 	} else {
 		log.Printf("[DEBUG] Running on %s:%s", hostname, innerPort)
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", innerPort), nil))
