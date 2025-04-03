@@ -74,6 +74,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
             frikky/shuffle-${{ matrix.app }}:${{ matrix.version }}
             frikky/shuffle:${{ matrix.app }}
