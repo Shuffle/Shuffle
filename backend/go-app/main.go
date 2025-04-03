@@ -4202,7 +4202,7 @@ func runInitEs(ctx context.Context) {
 
 		cleanupJob := func() func() {
 			return func() {
-				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
+				//log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
 
 				backendPort := os.Getenv("BACKEND_PORT")
 				if backendPort == "" {
@@ -4221,6 +4221,7 @@ func runInitEs(ctx context.Context) {
 						nil,
 					)
 
+					// FIXME: This will stop working of the user rotates their key lol
 					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
 					if err != nil {
 						log.Printf("[ERROR] Failed CREATING environment request for %s: %s", environment, err)
@@ -4266,7 +4267,8 @@ func runInitEs(ctx context.Context) {
 						log.Printf("[ERROR] Failed setting respbody %s", err)
 						continue
 					}
-					log.Printf("[DEBUG] Ran workflow RERUN request for %s with the response. Body: %s", environment, string(respBody))
+
+					//log.Printf("[DEBUG] Ran workflow RERUN request for %s with the response. Body: %s", environment, string(respBody))
 				}
 			}
 		}
