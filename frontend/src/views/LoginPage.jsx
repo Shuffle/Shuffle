@@ -323,9 +323,17 @@ const LoginPage = props => {
 
 	if (document !== undefined) {
 		if (register) {
-			document.title = "Login to Shuffle SaaS"
+			if (isCloud) { 
+				document.title = "Login to Shuffle SaaS"
+			} else {
+				document.title = "Login to Shuffle"
+			}
 		} else {
-			document.title = "Register to Shuffle SaaS"
+			if (isCloud) {
+				document.title = "Register to Shuffle SaaS"
+			} else {
+				document.title = "Register to Shuffle"
+			}
 		}
   }
   

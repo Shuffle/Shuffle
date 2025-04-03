@@ -1260,18 +1260,17 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		Resources: container.Resources{},
 	}
 
-	certPath := "/certs"
 
 	// This is just to test the mounting locally so
 	// I can control from what source I'm mounting
 	// the certs to. Default behaviour is:
 	// /certs:/certs.
+	certPath := "/certs"
 	if os.Getenv("SHUFFLE_CERT_PATH") != "" {
 		certPath = os.Getenv("SHUFFLE_CERT_PATH")
 	}
 
 	_, err := os.ReadDir(certPath)
-
 	if certPath != "" && err == nil {
 		certVol := mount.Mount{
 			Type:   mount.TypeBind,
@@ -2477,7 +2476,7 @@ func main() {
 
 			// Look for volume binds
 			if len(os.Getenv("SHUFFLE_VOLUME_BINDS")) > 0 {
-				log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("SHUFFLE_VOLUME_BINDS"))
+				//log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("SHUFFLE_VOLUME_BINDS"))
 				env = append(env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
 			}
 

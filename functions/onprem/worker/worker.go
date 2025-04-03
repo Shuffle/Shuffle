@@ -906,7 +906,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	if len(volumeBinds) > 0 {
 		log.Printf("[DEBUG] Setting up binds for container. Got %d volume binds.", len(volumeBinds))
 
-		hostConfig.Binds = volumeBinds
+		//hostConfig.Binds = volumeBinds
+
+		// Only use mounts, not direct binds 
+		hostConfig.Binds = []string{}
 		hostConfig.Mounts = []mount.Mount{}
 		for _, bind := range volumeBinds {
 			if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
