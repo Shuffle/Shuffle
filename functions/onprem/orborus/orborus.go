@@ -744,6 +744,8 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	handled := []string{}
 	//log.Printf("[DEBUG] Removing existing image (s): %s", images)
 	newImages := []string{}
+
+	successful := []string{} 
 	for _, curimage := range strings.Split(images, ",") {
 		curimage = strings.TrimSpace(curimage)
 		if shuffle.ArrayContains(handled, curimage) {
@@ -775,10 +777,17 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
-			log.Printf("[ERROR] Failed downloading image: %s", err)
+			//log.Printf("[ERROR] Failed downloading image: %s", err)
 		} else {
-			log.Printf("[DEBUG] Downloaded image: %s", curimage)
+			//log.Printf("[DEBUG] Downloaded image: %s", curimage)
+			successful = append(successful, curimage)
 		}
+	}
+
+	if len(successful) == 0 {
+		log.Printf("[ERROR] Failed downloading image copies: %s. This means the app may not have been updated.", strings.Join(handled, ", "))
+	} else {
+		log.Printf("[DEBUG] Successfully downloaded image copies: %s", strings.Join(successful, ", "))
 	}
 
 	if swarmConfig == "run" || swarmConfig == "swarm" {
@@ -1919,7 +1928,7 @@ func main() {
 	}
 
 	// Handle Cleanup - made it cleanup by default
-	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" {
+	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" && os.Getenv("CLEANUP") == "" {
 		cleanupEnv = "true"
 	}
 

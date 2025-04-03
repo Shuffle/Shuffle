@@ -894,19 +894,27 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	if len(volumeBindString) > 0 {
 		volumeBindSplit := strings.Split(volumeBindString, ",")
 		for _, volumeBind := range volumeBindSplit {
-			if strings.Contains(volumeBind, ":") {
-				volumeBinds = append(volumeBinds, volumeBind)
-			} else {
-				log.Printf("[ERROR] Volume bind '%s' is invalid.", volumeBind)
+			if volumeBind == "srcfolder=dstfolder" || volumeBind == "srcfolder:dstfolder" || volumeBind == "/srcfolder:/dstfolder" {
+				log.Printf("[DEBUG] Volume bind '%s' is invalid and is used for visualization.", volumeBind)
+				continue
 			}
+
+			if !strings.HasPrefix(volumeBind, "/") {
+				log.Printf("[ERROR] Volume bind '%s' is invalid. Use absolute paths.", volumeBind)
+				continue
+			}
+
+			if !strings.Contains(volumeBind, ":") {
+				log.Printf("[ERROR] Volume bind '%s' is invalid. Use absolute paths with colon inbetween them (/srcpath:dstpath/", volumeBind)
+				continue
+			}
+
+			volumeBinds = append(volumeBinds, volumeBind)
 		}
 	}
 
 	// Add more volume binds if possible
 	if len(volumeBinds) > 0 {
-		log.Printf("[DEBUG] Setting up binds for container. Got %d volume binds.", len(volumeBinds))
-
-		//hostConfig.Binds = volumeBinds
 
 		// Only use mounts, not direct binds 
 		hostConfig.Binds = []string{}
@@ -917,15 +925,27 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				continue
 			}
 
-			log.Printf("[DEBUG] Appending bind %s to app container", bind)
+			log.Printf("[DEBUG] Appending bind %s to App container", bind)
 			bindSplit := strings.Split(bind, ":")
 			sourceFolder := bindSplit[0]
 			destinationFolder := bindSplit[1]
-			hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+
+			readOnly := false 
+			if len(bindSplit) > 2 {
+				mode := bindSplit[2]
+				if mode == "ro" {
+					readOnly = true
+				}
+			}
+
+			builtMount := mount.Mount{
 				Type:   mount.TypeBind,
 				Source: sourceFolder,
 				Target: destinationFolder,
-			})
+				ReadOnly: readOnly,
+			}
+
+			hostConfig.Mounts = append(hostConfig.Mounts, builtMount)
 		}
 	}
 
@@ -1053,17 +1073,24 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 	err = cli.ContainerStart(ctx, cont.ID, container.StartOptions{})
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
+			// Remove the "CREATED" one from the previous:
+			removeErr := cli.ContainerRemove(ctx, cont.ID, container.RemoveOptions{})
+			if removeErr != nil {
+				log.Printf("[ERROR] Failed to remove container %s: %s", cont.ID, removeErr)
+			}
+
+			log.Printf("[WARNING] Failed deploying App on first attempt: %s. Removing some HostConfig configs.", err)
 			parsedUuid := uuid.NewV4()
 			identifier = fmt.Sprintf("%s-%s-nonetwork", identifier, parsedUuid)
-			hostConfig = &container.HostConfig{
-				LogConfig: container.LogConfig{
-					Type: "json-file",
-					Config: map[string]string{
-						"max-size": "10m",
-					},
+
+			hostConfig.NetworkMode = container.NetworkMode("")
+			hostConfig.LogConfig = container.LogConfig{
+				Type: "json-file",
+				Config: map[string]string{
+					"max-size": "10m",
 				},
-				Resources: container.Resources{},
 			}
+			hostConfig.Resources = container.Resources{}
 
 			cont, err = cli.ContainerCreate(
 				context.Background(),
@@ -1085,12 +1112,12 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 				return err
 			}
 
-			log.Printf("[DEBUG] Running secondary check without network with worker")
+			//log.Printf("[DEBUG] Running secondary check without network with worker")
 			err = cli.ContainerStart(ctx, cont.ID, container.StartOptions{})
 		}
 
 		if err != nil {
-			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+			log.Printf("[ERROR] Failed to start container (2) in runtime location %s: %s", environment, err)
 
 			cacheErr := shuffle.DeleteCache(ctx, actionExecId)
 			if cacheErr != nil {

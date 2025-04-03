@@ -3544,6 +3544,10 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 			}
 
 			backendPort := os.Getenv("BACKEND_PORT")
+			if backendPort == "" {
+				backendPort = "5001"
+			}
+
 			redirectDomain := fmt.Sprintf("localhost:%s", backendPort)
 			redirectUrl := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
 			outlookClient, _, err := shuffle.GetOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
@@ -4201,6 +4205,10 @@ func runInitEs(ctx context.Context) {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
 
 				backendPort := os.Getenv("BACKEND_PORT")
+				if backendPort == "" {
+					backendPort = "5001"
+				}
+
 				for _, environment := range environments {
 					// Allowed without PROXY management as it's localhost
 					// client := shuffle.GetExternalClient(syncUrl)

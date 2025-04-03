@@ -2037,7 +2037,7 @@ const AppCreator = (defaultprops) => {
     for (let actionkey in actions) {
       var item = JSON.parse(JSON.stringify(actions[actionkey]))
       if (item.errors.length > 0) {
-        toast("Saving with error in action " + item.name);
+        //toast("Saving with error in action " + item.name);
       }
 
       if (item.name === undefined && item.description !== undefined) {
@@ -3858,7 +3858,7 @@ const AppCreator = (defaultprops) => {
 					  if (currentAction.url === "" && actions !== undefined && actions !== null && actions.length > 0) { 
 					    for (var i = 0; i < actions.length; i++) {
 						  if (actions[i].name.toLowerCase() === e.target.value.toLowerCase()) {
-						    toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
+						    //toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
 						    break
 						  }
 					    }
