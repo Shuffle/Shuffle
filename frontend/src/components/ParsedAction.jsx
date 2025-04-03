@@ -179,6 +179,7 @@ const ParsedAction = (props) => {
 
 		suborgWorkflows,
 		originalWorkflow,
+		runFromHere,
 	} = props;
 
 	let navigate = useNavigate()
@@ -233,11 +234,16 @@ const ParsedAction = (props) => {
 		// auth, required, optional
 		var changed = false
 		if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
+			console.log("Returning because no params")
 			return
 		}
 
 		if (selectedApp !== undefined && selectedApp !== null && selectedApp.generated !== true) {
-			return
+
+			if (isAgent || isIntegration) {
+			} else {
+				return
+			}
 		}
 
 		// Fixing required fields with a shitty structure :)
@@ -346,12 +352,22 @@ const ParsedAction = (props) => {
 		// 3. generated fields & all else
 
 
-		const newparams = auth
+		var newparams = auth
 			.concat(bodyfield)
 			.concat(required)
 			.concat(generated_optional)
 			.concat(special_optional)
 			.concat(optional)
+
+		const dedupedParams = []
+		for (var paramKey in newparams) {
+			const param = newparams[paramKey]
+			if (dedupedParams.find(item => item.name === param.name) === undefined) {
+				dedupedParams.push(param)
+			}
+		}
+
+		newparams = dedupedParams
 
 		var newkeyorder = []
 		for (let paramkey in newparams) {
@@ -666,11 +682,14 @@ const ParsedAction = (props) => {
 
 		// Process workflowExecutions
 		if (workflowExecutions.length > 0) {
+			var appended = false
+			var foundvalue = ""
 			for (let execution of workflowExecutions) {
 				const execArg = execution.execution_argument;
 				if (execArg && execArg.length > 0) {
 					const valid = validateJson(execArg);
 					if (valid.valid) {
+						appended = true 
 						newActionList.push({
 							type: "Runtime Argument",
 							name: "Runtime Argument",
@@ -681,8 +700,22 @@ const ParsedAction = (props) => {
 						})
 
 						break
+					} else {
+						foundvalue = execArg
 					}
 				}
+			}
+
+			if (!appended && foundvalue !== undefined && foundvalue !== "") {
+				newActionList.push({
+					type: "Runtime Argument",
+					name: "Runtime Argument",
+					highlight: "exec",
+					autocomplete: "exec",
+
+					value: foundvalue,
+					example: foundvalue,
+				})
 			}
 		}
 
@@ -772,6 +805,8 @@ const ParsedAction = (props) => {
 					}
 
 					labels.push(parentNode.label);
+
+					var secondaryExample = ""
 					let exampleData = parentNode.example ?? "";
 					if (parentNode?.app_name === "http") {
 						exampleData = ""
@@ -782,9 +817,22 @@ const ParsedAction = (props) => {
 							const foundResult = exec.results?.find(result => result?.action?.id === parentNode?.id);
 							if (foundResult) {
 								const valid = validateJson(foundResult.result);
-								if (valid.valid && valid.result.success !== false) {
-									exampleData = valid.result
-									break
+								if (valid.valid) {
+
+									// Check if array, and if first item is object + success
+									if (Array.isArray(valid.result) && valid.result.length > 0 && typeof valid.result[0] === "object") {
+										if (valid.result[0].success !== false) {
+											exampleData = valid.result[0]
+											break
+										}
+									} else {
+										if (valid.result.success !== false) {
+											exampleData = valid.result
+											break
+										}
+									}
+								} else {
+									secondaryExample = foundResult.result
 								}
 							}
 						}
@@ -818,6 +866,10 @@ const ParsedAction = (props) => {
 								}
 							}
 						}
+					} 
+
+					if (exampleData === "" && secondaryExample !== "") {
+						exampleData = secondaryExample
 					}
 
 					if (parentNode.label === undefined) {
@@ -1162,7 +1214,9 @@ const ParsedAction = (props) => {
 					selectedAction.parameters[1].value = splitparsed[1]
 
 					if (splitparsed.length > 2) {
-						toast.warn("Filter list only supports filtering at the first level. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.")
+						toast.warn("Filter list only supports filtering on the first list. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.", {
+							autoClose: 10000,
+						})
 					} else if (selectedAction.parameters[1].value.includes(".#")) {
 						toast.warn("This filter may not work due to using .# indexing. Please use the 'execute python' action and try the 'filter a list' function in the code editor.")
 					}
@@ -1814,6 +1868,38 @@ const ParsedAction = (props) => {
 									</Tooltip>
 								</IconButton>
 
+								<Tooltip
+									title={
+										<Typography variant="body2" style={{margin: 3, }}>
+											Rerun this action with results from previous executions. Built for testing individual actions in the middle of workflows.
+										</Typography>
+									}
+									placement="top"
+								>
+									<Button
+										color="secondary"
+										variant="outlined"
+										style={{
+											marginTop: "auto",
+											marginBottom: "auto",
+											height: 30,
+											marginLeft: 115,
+											textTransform: "none",
+										}}
+										disabled={autoCompleting}
+										onClick={() => {
+											if (runFromHere !== undefined) {
+												runFromHere(selectedAction)
+											} else {
+												toast.error("Function not available. Please contact support@shuffler.io")
+											}
+										}}
+									>
+										<PlayArrowIcon style={{marginRight: 5, }}/>
+										Rerun	
+									</Button>
+								</Tooltip>
+
 								{(selectedAction?.generated === true && selectedAction?.app_version === "1.0.0") || (selectedAction?.app_name === "Shuffle Tools" && selectedAction?.app_version !== "1.2.0")  ? 
 									<Button
 										variant="contained"
@@ -1875,12 +1961,12 @@ const ParsedAction = (props) => {
 										toast.success("Changed version of all nodes to " + event.target.value)
 									}}
 									style={{
-										marginTop: 10,
+										position: "absolute", 
+										top: 10, right: 10, 
 										backgroundColor: theme.palette.surfaceColor,
 										backgroundColor: theme.palette.inputColor,
 										color: "white",
 										height: 35,
-										marginleft: 10,
 										borderRadius: theme.palette?.borderRadius,
 									}}
 									SelectDisplayProps={{
@@ -4120,15 +4206,12 @@ const ParsedAction = (props) => {
 												fullWidth
 												id={"rightside_field_" + count}
 												onChange={(e) => {
-													console.log("MULTI SELECT: ", multi, e.target.value)
-
 													changeActionParameter(e, count, data);
 													setUpdate(Math.random());
 												}}
 												style={{
-													backgroundColor: theme.palette.surfaceColor,
-													color: "white",
-													height: "50px",
+													backgroundColor: theme.palette.platformColor,
+													height: 40,
 													borderRadius: theme.palette?.borderRadius,
 												}}
 											>
@@ -4525,6 +4608,7 @@ const ParsedAction = (props) => {
 																minWidth: 250,
 																maxWidth: 250,
 																marginRight: 0,
+																paddingLeft: 12, 
 															}}
 															value={innerdata}
 															onMouseOver={() => handleMouseover()}
@@ -4685,8 +4769,9 @@ const ParsedAction = (props) => {
 													</Tooltip>
 												: null}
 
-												<Tooltip title="Expand editor window" placement="top">
 
+												{((data.options !== undefined && data.options !== null && data.options.length > 0) || (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0)) ? null : 
+												<Tooltip title="Expand editor window" placement="top">
 													<OpenInFullIcon
 														style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
 														onMouseOver={(event) => {
@@ -4728,6 +4813,7 @@ const ParsedAction = (props) => {
 														}}
 													/>
 												</Tooltip>
+											}
 
 
 											</div>
@@ -4737,6 +4823,7 @@ const ParsedAction = (props) => {
 												showDropdownNumber === count &&
 												data.variant === "STATIC_VALUE" &&
 												jsonList.length > 0 ? (
+
 												<FormControl fullWidth style={{ marginTop: 0 }}>
 													<InputLabel
 														id="action-autocompleter"

@@ -343,9 +343,14 @@ const Docs = (defaultprops) => {
 			return
 		}
 
+		console.log("PROPKEY: ", propkey)
 		if (location.pathname.includes("/docs/")) {
 			if (propkey === "cookie_policy" || propkey === "compliance" || propkey === "privacy_policy" || propkey === "terms_of_service") {
 				navigate(`/legal/${propkey}`)
+			}
+
+			if (propkey === "app_creation") {
+				navigate('/docs/apps#app-creation-introduction')
 			}
 		}
     }, [location]);
@@ -932,7 +937,7 @@ const Docs = (defaultprops) => {
                     }
 
                     if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found") && !isArticlePage) {
-                        navigate("/docs")
+                        //navigate("/docs")
                         return
                     }
 
@@ -1109,6 +1114,7 @@ const Docs = (defaultprops) => {
         marginTop: 25,
     }
 
+  	const showPartnerLogo = userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.image !== undefined && userdata?.active_org?.image !== null && userdata?.active_org?.image.length > 0 
     const mainpageInfo =
         <div style={{
             color: "rgba(255, 255, 255, 0.65)",
@@ -1124,10 +1130,12 @@ const Docs = (defaultprops) => {
             <Typography variant="h4" style={{ textAlign: "center", marginTop: 20 }}>
                 Documentation
             </Typography>
-            <div style={{ display: "flex", marginTop: 25, }}>
-                <CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> />
-                <CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
-            </div>
+			{showPartnerLogo === true ? null : 
+				<div style={{ display: "flex", marginTop: 25, }}>
+					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> />
+					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
+				</div>
+			}
 
             <div style={{ textAlign: "left" }}>
                 <Typography variant="h6" style={headerStyle} >Tutorial</Typography>

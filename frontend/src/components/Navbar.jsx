@@ -61,7 +61,7 @@ const menuData = {
       description:
         "Connect and run actions seamlessly between different platforms.",
       icon: "/images/logos/singul.svg",
-      path: "https://singul.io/",
+      path: "https://singul-docs.gitbook.io/singul/getting-started",
       gaData: {
         category: "navbar",
         action: "products_click",
@@ -1247,7 +1247,7 @@ const Navbar = (props) => {
                     letterSpacing: '0.5px',
                   }}
                 >
-                  Coming Soon
+                  Beta: Coming Soon
                 </Typography>
               )}
             </Box>
@@ -1370,7 +1370,7 @@ const Navbar = (props) => {
               label: "go_to_pricing",
             })
           } else {
-            window.open("https://shuffler.io/pricing", '_blank');
+            window.open("https://shuffler.io/pricing?env=Self-Hosted", '_blank');
             return;
           }
         }}

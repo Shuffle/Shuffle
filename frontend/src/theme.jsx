@@ -27,7 +27,7 @@ const theme = createTheme(adaptV4Theme({
 	distributionColor: "#40E0D0",
 
     green: "#5cc879",
-    borderRadius: 10,
+    borderRadius: 8,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
 
 	//jsonTheme: "brewer",
@@ -112,39 +112,39 @@ const theme = createTheme(adaptV4Theme({
       MuiCssBaseline: {
         styleOverrides: `
           @font-face {
-            font-family: 'Roboto';
+            font-family: 'Inter';
             font-style: normal;
             font-display: swap;
             font-weight: 300;
-            src: local('Roboto Light'), local('Roboto-Light');
+            src: local('Inter Light'), local('Inter-Light');
           }
           @font-face {
-            font-family: 'Roboto';
+            font-family: 'Inter';
             font-style: normal;
             font-display: swap;
             font-weight: 400;
-            src: local('Roboto'), local('Roboto-Regular');
+            src: local('Inter Regular'), local('Inter-Regular');
           }
           @font-face {
-            font-family: 'Roboto';
+            font-family: 'Inter';
             font-style: normal;
             font-display: swap;
             font-weight: 500;
-            src: local('Roboto Medium'), local('Roboto-Medium');
+            src: local('Inter Medium'), local('Inter-Medium');
           }
           @font-face {
-            font-family: 'Roboto';
+            font-family: 'Inter';
             font-style: normal;
             font-display: swap;
             font-weight: 600;
-            src: local('Roboto SemiBold'), local('Roboto-SemiBold');
+            src: local('Inter SemiBold'), local('Inter-SemiBold');
           }
           @font-face {
-            font-family: 'Roboto';
+            font-family: 'Inter';
             font-style: normal;
             font-display: swap;
             font-weight: 700;
-            src: local('Roboto Bold'), local('Roboto-Bold');
+            src: local('Inter Bold'), local('Inter-Bold');
           }
         `,
       },

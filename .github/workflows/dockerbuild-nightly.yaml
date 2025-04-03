@@ -1,0 +1,82 @@
+name: nightly-dockerbuild
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - nightly
+    paths:
+      - "**"
+      - "!.github/**"
+      - "!**.md"
+      - "!docker-compose.yml"
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: frontend
+            path: frontend
+            version: nightly
+            experimental: true
+          - app: backend
+            path: backend
+            version: nightly
+            experimental: true
+          - app: orborus
+            path: functions/onprem/orborus
+            version: nightly
+            experimental: true
+          - app: worker
+            path: functions/onprem/worker
+            version: nightly
+            experimental: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: "amd64,arm64,arm"
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ghcr Build and push
+        id: docker_build
+        uses: docker/build-push-action@v4
+        env:
+          BUILDX_NO_DEFAULT_LOAD: true
+        with:
+          logout: false
+          context: ${{ matrix.path }}/
+          file: ${{ matrix.path }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          tags: |
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
+            frikky/shuffle-${{ matrix.app }}:${{ matrix.version }}
+            frikky/shuffle:${{ matrix.app }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}

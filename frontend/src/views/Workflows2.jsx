@@ -661,7 +661,7 @@ const Workflows2 = (props) => {
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
-    const [view, setView] = useState("grid");
+    const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
     const classes = useStyles(theme)
     const imgSize = 60;
 
@@ -812,9 +812,10 @@ const Workflows2 = (props) => {
 
     }
 
-    const isCloud =
-        window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io";
+    //const isCloud =
+    //    window.location.host === "localhost:3002" ||
+    //    window.location.host === "shuffler.io";
+	const isCloud = false
 
     const findWorkflow = (filters) => {
         console.log("Using filters: ", filters)
@@ -2074,55 +2075,6 @@ const Workflows2 = (props) => {
     };
 
     const hasWorkflows = workflows === undefined || workflows === null || workflows.length === 0
-    const NewWorkflowPaper = () => {
-        const [hover, setHover] = React.useState(false);
-
-        const innerColor = "rgba(255,255,255,0.3)"
-
-        const setupPaperStyle = {
-            minHeight: paperAppStyle.minHeight,
-            maxWidth: "100%",
-            minWidth: paperAppStyle.width,
-            color: innerColor,
-            padding: paperAppStyle.padding,
-            display: "flex",
-            boxSizing: "border-box",
-            position: "relative",
-            border: hasWorkflows ? `2px solid #f85a3e` : `2px solid ${innerColor}`,
-            cursor: "pointer",
-            backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
-            borderRadius: paperAppStyle.borderRadius,
-        }
-
-        return (
-            <Grid item xs={isMobile ? 12 : hasWorkflows ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
-                <Paper
-                    square
-                    style={setupPaperStyle}
-                    onClick={() => {
-                        setModalOpen(true)
-                        setIsEditing(false)
-                    }}
-                    onMouseOver={() => {
-                        setHover(true);
-                    }}
-                    onMouseOut={() => {
-                        setHover(false);
-                    }}
-                >
-                    <Tooltip title={`New Workflow`} placement="bottom">
-                        <span style={{ textAlign: "center", minWidth: 240, margin: "auto" }}>
-                            <AddCircleIcon style={{ height: 65, width: 65 }} />
-                            <Typography variant="h6" style={{ color: innerColor, margin: "auto" }}>
-                                New Workflow
-                            </Typography>
-                        </span>
-                    </Tooltip>
-                </Paper>
-            </Grid>
-        );
-    };
-
     const getWorkflowAppgroup = (data) => {
         if (currTab !== 2) {
             if (data.actions === undefined || data.actions === null) {
@@ -2517,21 +2469,24 @@ const Workflows2 = (props) => {
                             />
                         </Tooltip>
                         : null}
+
                     <Grid
                         item
                         style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme?.typography?.fontFamily }}
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
-                            <Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
-                                <div
-                                    styl={{ cursor: "pointer" }}
-                                    onClick={() => {
-                                        navigate("/admin")
-                                    }}
-                                >
-                                    {image}
-                                </div>
-                            </Tooltip>
+							{currTab === 2 ? null : 
+								<Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
+									<div
+										styl={{ cursor: "pointer" }}
+										onClick={() => {
+											navigate("/admin")
+										}}
+									>
+										{image}
+									</div>
+								</Tooltip>
+							}
                             <Tooltip arrow
                                 onMouseEnter={() => {
                                     /*
@@ -2610,10 +2565,19 @@ const Workflows2 = (props) => {
                                 >
                                     <Link
                                         to={
-                                            type === "public" ? parsedUrl : data.workflow_as_code ? `/workflows/${data.id}/code` : `/workflows/${data.id}`
+                                            currTab === 2 ? `https://shuffler.io${parsedUrl}` : type === "public" ? parsedUrl : data.workflow_as_code ? `/workflows/${data.id}/code` : `/workflows/${data.id}`
                                         }
-                                        style={{ textDecoration: "none", color: "inherit" }}
-                                    >
+                                        style={{ 
+											textDecoration: "none", 
+											color: "inherit", 
+											overflow: "hidden", 
+											textOverflow: "ellipsis", 
+											whiteSpace: "nowrap", 
+											maxWidth: "90%", 
+											display: "block" 
+										}}
+										target={currTab === 2 ? "_blank" : "_self"}
+									>
                                         {parsedName}
                                     </Link>
                                 </Typography>
@@ -4310,7 +4274,7 @@ const Workflows2 = (props) => {
                                 TabIndicatorProps={{ style: { display: 'none' } }}
                             >
                                 <Tab
-                                    label="Organization Workflows"
+                                    label="Org Workflows"
                                     style={{
                                         ...tabStyle,
                                         ...(currTab === 0 ? tabActive : {})
@@ -4329,6 +4293,19 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
                                         ...(currTab === 2 ? tabActive : {})
+                                    }}
+                                />
+
+                                <Tab
+                                    label="Org Forms"
+									onClick={() => {
+										navigate("/forms")
+									}}
+                                    style={{
+                                        ...tabStyle,
+                                        marginRight: 0,
+										marginLeft: 25, 
+                                        ...(currTab === 3 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>

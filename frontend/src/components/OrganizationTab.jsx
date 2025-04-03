@@ -120,7 +120,7 @@ const OrganizationTab = (props) => {
                         isLoaded={isLoaded}
                     />
                 );
-            case 'branding(beta)':
+            case 'branding':
                 return <Branding
                     isCloud={isCloud}
                     userdata={userdata}
@@ -140,7 +140,7 @@ const OrganizationTab = (props) => {
     return (
         <div style={{ height: "100%", width: "100%", color: '#FFFFFF', backgroundColor: '#212121', borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-around', width: "100%", borderBottom: '1px solid #494949' ,boxSizing: 'border-box' }}>
-                {['Org Configuration', "sso", "Notifications", 'Billing & Stats', 'Branding (Beta)'].map((tabName, index) => (
+                {['Org Configuration', "sso", "Notifications", 'Billing & Stats', 'Branding'].map((tabName, index) => (
                     <Tooltip
                         key={index}
                         title={

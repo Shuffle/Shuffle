@@ -95,23 +95,56 @@ const data = [
   {
     selector: `node[type="COMMENT"]`,
     css: {
-      label: function(element) {
-		  return element.data("label")
-	  },
+      label: function (element) {
+        return element.data("label")
+      },
       shape: "roundrectangle",
       color: "data(color)",
       width: "data(width)",
       height: "data(height)",
-      padding: "0px",
+      padding: "5px",
       margin: "0px",
       "background-color": "data(backgroundcolor)",
       "background-image": "data(backgroundimage)",
       "border-color": "#ffffff",
-      "text-margin-x": "0px",
+      "text-margin-x": "data(textMarginX)",
+      "text-margin-y": "data(textMarginY)",
       "z-index": 4999,
       "border-radius": "5px",
       "background-opacity": "0.5",
-	  "text-wrap": "wrap",
+      "text-wrap": "wrap",
+      "text-max-width": "data(width)",
+      "text-halign": function(element) {
+		  const align = element?.data("textHalign")
+		  if (align === null || align === undefined || align === "") {
+			  return "center"
+		  }
+
+		  return align
+	  },
+      "text-valign": function(element) {
+		  const align = element?.data("textValign")
+		  if (align === null || align === undefined || align === "") {
+			  return "center"
+		  }
+		  
+		  return align
+	  }
+    },
+  },
+  {
+    selector: `node[type="RESIZE-HANDLE"]`,
+    css: {
+      shape: "ellipse",
+      width: "8px",
+      height: "8px",
+      "border-width": 1,
+      "border-color": "white",
+      "z-index": 5002, 
+      "overlay-opacity": 0, 
+      "cursor": "nwse-resize",
+      "opacity": 0, 
+      "pointer-events": "auto", 
     },
   },
   {

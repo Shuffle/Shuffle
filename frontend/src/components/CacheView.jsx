@@ -151,12 +151,15 @@ const CacheView = memo((props) => {
 				if (fileCategories.length === 1 && fileCategories[0] === "default") {
 					var newcategories = ["default"]
 					for (var key in responseJson.keys) {
-						if (responseJson.keys[key].category !== undefined && responseJson.keys[key].category !== null && responseJson.keys[key].category !== "" && !fileCategories.includes(responseJson.keys[key].category)) {
-							newcategories.push(responseJson.keys[key].category);
+						var category = responseJson.keys[key].category
+						if (category !== undefined && category !== null && category !== ""){
+							category = category.replaceAll(" ", "_")
+
+							if (!newcategories.includes(category)) {
+								newcategories.push(category)
+							}
 						}
 					}
-
-					console.log("CATEGORIES: ", newcategories)
 
 					setFileCategories(newcategories)
 				}
@@ -357,6 +360,7 @@ const CacheView = memo((props) => {
                 <span style={{ color: "white" }}>
                     { editCache ? "Edit Key" : "Add Key"}{selectedCategory === "" || selectedCategory === "default" ? "" : ` in category '${selectedCategory}'`}
                 </span>
+
             </DialogTitle>
             <div style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: "#212121", }}>
                 Key
@@ -1041,13 +1045,13 @@ const CacheView = memo((props) => {
                                             </span>
                                         </Tooltip>
                                         <Tooltip
-                                            title={data?.org_id !== selectedOrganization.id ? "You can not delete this key as it is controlled by parent organization." : "Delete this key" }
+                                            title={selectedOrganization?.id !== undefined && data?.org_id !== selectedOrganization.id ? "You can not delete this key as it is controlled by parent organization." : "Delete this key" }
                                             aria-label={"Delete"}
                                         >
                                             <span>
                                                 <IconButton
                                                     style={{ padding: "6px" }}
-                                                    disabled={data.org_id !== selectedOrganization.id ? true : false}
+                                                    disabled={selectedOrganization?.id === undefined ? false : data.org_id !== selectedOrganization.id ? true : false}
                                                     onClick={() => {
                                                         deleteCache(orgId, data.key);
                                                         //deleteFile(orgId);

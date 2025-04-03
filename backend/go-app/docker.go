@@ -604,11 +604,27 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
-		return
+	var err error
+	body := []byte{}
+	//log.Printf("IMAGE REQUEST BODY: %#v", request.Body)
+	if request.Body == nil || request.Body == http.NoBody {
+		// Check for the image query, otherwise we skip everything
+		imageQuery := request.URL.Query().Get("image")
+		if len(imageQuery) == 0 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "No image query found"}`))
+			return
+		}
+
+		body = []byte(fmt.Sprintf(`{"name": "%s"}`, imageQuery))
+
+	} else {
+		body, err = ioutil.ReadAll(request.Body)
+		if err != nil {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+			return
+		}
 	}
 
 	// This has to be done in a weird way because Datastore doesn't
@@ -630,28 +646,48 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	img := image.Summary{}
+	img2 := image.Summary{}
+	tagFound := ""
+	tagFound2 := ""
+
+	// Old way of doing it
+	//alternativeNameSplit := strings.Split(version.Name, "/")
+	//alternativeName := version.Name
+	//if len(alternativeNameSplit) == 3 {
+	//	alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
+	//}
+
+	appname, baseAppname, appnameSplit2, err := shuffle.GetAppNameSplit(version)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting appname split: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't get the right docker image name"}`)))
+		return
+	}
+
+	if len(version.Name) == 0 {
+		log.Printf("[ERROR] No image name provided for download: %s", version.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "No image name"}`)))
+		return
+	
+	}
+
+	log.Printf("[INFO] Trying to download image: '%s'. Appname: '%s'. BaseAppname: '%s', Split2: %s", version.Name, appname, baseAppname, appnameSplit2)
+
+	alternativeName := appname
 	ctx := context.Background()
 	images, err := dockercli.ImageList(ctx, image.ListOptions{
 		All: true,
 	})
 
-	img := image.Summary{}
-	tagFound := ""
-
-	img2 := image.Summary{}
-	tagFound2 := ""
-
-	alternativeNameSplit := strings.Split(version.Name, "/")
-	alternativeName := version.Name
-	if len(alternativeNameSplit) == 3 {
-		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
-	}
-
-	log.Printf("[INFO] Trying to download image: %s. Alt: %s", version.Name, alternativeName)
-
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			//log.Printf("[DEBUG] Tag: %s", tag)
+			if strings.Contains(tag, "<none>") {
+				continue
+			}
+
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
 				tagFound = tag

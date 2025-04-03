@@ -943,8 +943,8 @@ const AppCreator = (defaultprops) => {
 			if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 				//const regex = /_shuffle_replace_\d/i;
 				const regex = /_shuffle_replace_\d+/i
-				
-				newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+				const newurl = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+				newaction.url = newurl
 			}
 
           // Finding category
@@ -956,7 +956,6 @@ const AppCreator = (defaultprops) => {
 				if (pathsplit[splitkey].includes("_shuffle_replace_")) {
 					//const regex = /_shuffle_replace_\d/i;
 					const regex = /_shuffle_replace_\d+/i
-					//console.log("NEW: ", 
 					pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
 				}
 
@@ -2037,7 +2036,7 @@ const AppCreator = (defaultprops) => {
     for (let actionkey in actions) {
       var item = JSON.parse(JSON.stringify(actions[actionkey]))
       if (item.errors.length > 0) {
-        toast("Saving with error in action " + item.name);
+        //toast("Saving with error in action " + item.name);
       }
 
       if (item.name === undefined && item.description !== undefined) {
@@ -3858,7 +3857,7 @@ const AppCreator = (defaultprops) => {
 					  if (currentAction.url === "" && actions !== undefined && actions !== null && actions.length > 0) { 
 					    for (var i = 0; i < actions.length; i++) {
 						  if (actions[i].name.toLowerCase() === e.target.value.toLowerCase()) {
-						    toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
+						    //toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
 						    break
 						  }
 					    }

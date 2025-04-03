@@ -96,7 +96,7 @@ backend:
   ## backend image
   ## @param backend.image.registry backend image registry
   ## @param backend.image.repository backend image repository
-  ## @skip backend.image.tag backend image tag (immutable tags are recommended)
+  ## @param backend.image.tag backend image tag (immutable tags are recommended, defaults to appVersion)
   ## @param backend.image.digest backend image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)
   ## @param backend.image.pullPolicy backend image pull policy
   ## @param backend.image.pullSecrets backend image pull secrets
@@ -104,7 +104,7 @@ backend:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-backend
-    tag: nightly
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -235,8 +235,8 @@ backend:
   containerSecurityContext:
     enabled: true
     seLinuxOptions: {}
-    runAsUser: 1000
-    runAsGroup: 1000
+    runAsUser: 1001
+    runAsGroup: 1001
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
@@ -260,18 +260,10 @@ backend:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param backend.daemonsetAnnotations Annotations for backend daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param backend.deploymentAnnotations Annotations for backend deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param backend.statefulsetAnnotations Annotations for backend statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param backend.podLabels Extra labels for backend pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -321,22 +313,11 @@ backend:
   ## ONLY FOR DEPLOYMENTS:
   ## @param backend.updateStrategy.type backend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param backend.updateStrategy.type backend statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param backend.podManagementPolicy Pod management policy for backend statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param backend.priorityClassName backend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -565,7 +546,7 @@ frontend:
   ## frontend image
   ## @param frontend.image.registry frontend image registry
   ## @param frontend.image.repository frontend image repository
-  ## @skip frontend.image.tag frontend image tag (immutable tags are recommended)
+  ## @param frontend.image.tag frontend image tag (immutable tags are recommended, defaults to appVersion)
   ## @param frontend.image.digest frontend image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)
   ## @param frontend.image.pullPolicy frontend image pull policy
   ## @param frontend.image.pullSecrets frontend image pull secrets
@@ -573,7 +554,7 @@ frontend:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-frontend
-    tag: nightly
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -683,11 +664,12 @@ frontend:
   ## @param frontend.podSecurityContext.fsGroup Set fsGroup in frontend pods' Security Context
   ##
   podSecurityContext:
-    enabled: false
+    enabled: false # The default shuffle frontend image does not support running as non-root, because /etc/nginx/nginx.conf is written on startup
     fsGroupChangePolicy: Always
     sysctls: []
     supplementalGroups: []
     fsGroup: 1001
+
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
   ## @param frontend.containerSecurityContext.enabled Enabled frontend container' Security Context
@@ -702,10 +684,10 @@ frontend:
   ## @param frontend.containerSecurityContext.seccompProfile.type Set seccomp profile in frontend container
   ##
   containerSecurityContext:
-    enabled: false
+    enabled: false # The default shuffle frontend image does not support running as non-root, because /etc/nginx/nginx.conf is written on startup
     seLinuxOptions: {}
-    runAsUser: 101
-    runAsGroup: 101
+    runAsUser: 1001
+    runAsGroup: 1001
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
@@ -728,18 +710,10 @@ frontend:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param frontend.daemonsetAnnotations Annotations for frontend daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param frontend.deploymentAnnotations Annotations for frontend deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param frontend.statefulsetAnnotations Annotations for frontend statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param frontend.podLabels Extra labels for frontend pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -786,25 +760,13 @@ frontend:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param frontend.updateStrategy.type frontend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param frontend.updateStrategy.type frontend statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param frontend.podManagementPolicy Pod management policy for frontend statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param frontend.priorityClassName frontend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -970,7 +932,7 @@ orborus:
   ## orborus image
   ## @param orborus.image.registry orborus image registry
   ## @param orborus.image.repository orborus image repository
-  ## @skip orborus.image.tag orborus image tag (immutable tags are recommended)
+  ## @param orborus.image.tag orborus image tag (immutable tags are recommended, defaults to appVersion)
   ## @param orborus.image.digest orborus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)
   ## @param orborus.image.pullPolicy orborus image pull policy
   ## @param orborus.image.pullSecrets orborus image pull secrets
@@ -978,7 +940,7 @@ orborus:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-orborus
-    tag: nightly
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1107,8 +1069,8 @@ orborus:
   containerSecurityContext:
     enabled: true
     seLinuxOptions: {}
-    runAsUser: 101
-    runAsGroup: 101
+    runAsUser: 1001
+    runAsGroup: 1001
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
@@ -1132,18 +1094,10 @@ orborus:
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param orborus.daemonsetAnnotations Annotations for orborus daemonset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  daemonsetAnnotations: {}
   ## @param orborus.deploymentAnnotations Annotations for orborus deployment
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param orborus.statefulsetAnnotations Annotations for orborus statefulset
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  statefulsetAnnotations: {}
   ## @param orborus.podLabels Extra labels for orborus pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
@@ -1190,25 +1144,13 @@ orborus:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param orborus.updateStrategy.type orborus deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ## ONLY FOR STATEFULSETS:
-  ## @param orborus.updateStrategy.type orborus statefulset strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
   updateStrategy:
-    ## ONLY FOR DEPLOYMENTS:
     ## Can be set to RollingUpdate or Recreate
-    ## ONLY FOR STATEFULSETS:
-    ## Can be set to RollingUpdate or OnDelete
     ##
     type: RollingUpdate
-  ## ONLY FOR STATEFULSETS:
-  ## @param orborus.podManagementPolicy Pod management policy for orborus statefulset
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-  ##
-  podManagementPolicy: OrderedReady
   ## @param orborus.priorityClassName orborus pods' priorityClassName
   ##
   priorityClassName: ""
@@ -1377,13 +1319,13 @@ worker:
   ## worker image
   ## @param worker.image.registry worker image registry
   ## @param worker.image.repository worker image repository
-  ## @skip worker.image.tag worker image tag (immutable tags are recommended)
+  ## @param worker.image.tag worker image tag (immutable tags are recommended, defaults to appVersion)
   ## @param worker.image.digest worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)
   ##
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-worker
-    tag: nightly
+    tag: ""
     digest: ""
 
   ## ServiceAccount configuration
@@ -1748,7 +1690,7 @@ volumePermissions:
   ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
   ## @param volumePermissions.image.registry OS Shell + Utility image registry
   ## @param volumePermissions.image.repository OS Shell + Utility image repository
-  ## @skip volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
   ## @param volumePermissions.image.pullPolicy OS Shell + Utility image pull policy
   ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
   ##

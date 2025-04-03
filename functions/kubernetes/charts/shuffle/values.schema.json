@@ -155,6 +155,11 @@
                             "description": "backend image repository",
                             "default": "shuffle/shuffle-backend"
                         },
+                        "tag": {
+                            "type": "string",
+                            "description": "backend image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
+                        },
                         "digest": {
                             "type": "string",
                             "description": "backend image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
@@ -367,12 +372,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in backend container' Security Context",
-                            "default": 1000
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in backend container' Security Context",
-                            "default": 1000
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -444,19 +449,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for backend daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for backend deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for backend statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -521,15 +516,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "backend statefulset strategy type",
+                            "description": "backend deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for backend statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -839,6 +829,11 @@
                             "description": "frontend image repository",
                             "default": "shuffle/shuffle-frontend"
                         },
+                        "tag": {
+                            "type": "string",
+                            "description": "frontend image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
+                        },
                         "digest": {
                             "type": "string",
                             "description": "frontend image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
@@ -1056,12 +1051,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in frontend container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in frontend container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -1133,19 +1128,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for frontend daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for frontend deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for frontend statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -1210,15 +1195,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "frontend statefulset strategy type",
+                            "description": "frontend deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for frontend statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -1463,6 +1443,11 @@
                             "description": "orborus image repository",
                             "default": "shuffle/shuffle-orborus"
                         },
+                        "tag": {
+                            "type": "string",
+                            "description": "orborus image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
+                        },
                         "digest": {
                             "type": "string",
                             "description": "orborus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
@@ -1675,12 +1660,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in orborus container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in orborus container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -1752,19 +1737,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for orborus daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for orborus deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for orborus statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -1829,15 +1804,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "orborus statefulset strategy type",
+                            "description": "orborus deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for orborus statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -2091,6 +2061,11 @@
                             "type": "string",
                             "description": "worker image repository",
                             "default": "shuffle/shuffle-worker"
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "worker image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
                         },
                         "digest": {
                             "type": "string",
@@ -2590,6 +2565,11 @@
                             "type": "string",
                             "description": "OS Shell + Utility image repository",
                             "default": "bitnami/os-shell"
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "OS Shell + Utility image tag (immutable tags are recommended)",
+                            "default": "12-debian-12-r30"
                         },
                         "pullPolicy": {
                             "type": "string",

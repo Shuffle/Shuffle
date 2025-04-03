@@ -33,6 +33,9 @@ const AdminNavBar = (props) => {
 
     const navigate = useNavigate();
 
+	//const leadinfo = selectedOrganization.lead_info === undefined || selectedOrganization.lead_info === null || selectedOrganization.lead_info === "" ? "" : JSON.stringify(selectedOrganization.lead_info)
+	//const isPartner = leadinfo.includes("partner")
+
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         const tabName = queryParams.get('tab');
