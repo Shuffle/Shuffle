@@ -943,8 +943,8 @@ const AppCreator = (defaultprops) => {
 			if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 				//const regex = /_shuffle_replace_\d/i;
 				const regex = /_shuffle_replace_\d+/i
-				
-				newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+				const newurl = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+				newaction.url = newurl
 			}
 
           // Finding category
@@ -956,7 +956,6 @@ const AppCreator = (defaultprops) => {
 				if (pathsplit[splitkey].includes("_shuffle_replace_")) {
 					//const regex = /_shuffle_replace_\d/i;
 					const regex = /_shuffle_replace_\d+/i
-					//console.log("NEW: ", 
 					pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
 				}
 

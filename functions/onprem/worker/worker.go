@@ -895,7 +895,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		volumeBindSplit := strings.Split(volumeBindString, ",")
 		for _, volumeBind := range volumeBindSplit {
 			if volumeBind == "srcfolder=dstfolder" || volumeBind == "srcfolder:dstfolder" || volumeBind == "/srcfolder:/dstfolder" {
-				log.Printf("[DEBUG] Volume bind '%s' is invalid and is used for visualization.", volumeBind)
+				log.Printf("[DEBUG] Volume bind '%s' is invalid.", volumeBind)
 				continue
 			}
 

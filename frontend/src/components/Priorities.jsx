@@ -837,12 +837,13 @@ const NotificationItem = memo((props) => {
 	  color="secondary"
 	  style={{
 		  height: 50, 
+		  textTransform: "none",
 	  }}
       onClick={() => {
         dismissNotification(data.id);
       }}
     >
-     	Mark Read 
+     	Mark as Read 
     </Button>
   ) : null}
 

@@ -21552,7 +21552,7 @@ const AngularWorkflow = (defaultprops) => {
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  window.open(`/admin?admin_tab=notifications&workflow=${data.workflow.id}&execution_id=${data.execution_id}`, "_blank")
+                                  window.open(`/admin?org_id=${workflow.org_id}&admin_tab=notifications&workflow=${data.workflow.id}&execution_id=${data.execution_id}`, "_blank")
                                 }}
                               />
                             </Tooltip>

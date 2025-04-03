@@ -2256,7 +2256,7 @@ func main() {
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
-					log.Printf("[INFO] Re-downloading new image(s): %#v", incRequest.ExecutionArgument)
+					log.Printf("[INFO] Re-downloading new image(s) due to backend request: %#v", incRequest.ExecutionArgument)
 
 					if len(incRequest.ExecutionArgument) > 0 {
 						go handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
