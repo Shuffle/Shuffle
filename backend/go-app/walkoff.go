@@ -1449,6 +1449,20 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		resp.WriteHeader(200)
+
+		// Check for "wait" query if it's true
+		wait, waitok := request.URL.Query()["wait"]
+		if waitok && wait[0] == "true" {
+			returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+			returnBytes, err := json.Marshal(returnBody)
+			if err != nil {
+				log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
+			}
+
+			resp.Write(returnBytes)
+			return
+		}
+
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 		return
 	}
