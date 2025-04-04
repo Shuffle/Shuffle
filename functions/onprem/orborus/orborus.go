@@ -1478,6 +1478,18 @@ func initializeImages() {
 		log.Printf("[WARNING] Setting baseimagename to %#v", baseimagename)
 	}
 
+	// Old sane default overrides:
+	if baseimageregistry == "ghcr.io" && baseimagename == "shuffle" {
+		baseimageregistry = "docker.io"
+		baseimagename = "frikky/shuffle"
+
+		os.Setenv("REGISTRY_URL", baseimageregistry)
+		os.Setenv("SHUFFLE_BASE_IMAGE_REGISTRY", baseimageregistry)
+		os.Setenv("SHUFFLE_BASE_IMAGE_NAME", baseimagename)
+
+		log.Printf("[WARNING] Overriding bad defaults of ghcr.io/shuffle")
+	}
+
 	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
 
 	// This is now always static
