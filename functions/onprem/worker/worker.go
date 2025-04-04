@@ -157,7 +157,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 			log.Printf("[ERROR] Failed marshalling shutdowndata during set: %s", err)
 		}
 
-		log.Printf("[DEBUG][%s] Sending result (set)", workflowExecution.ExecutionId)
+		log.Printf("[DEBUG][%s] Sending result (set). Status: %s, Actions: %d, Results: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), len(workflowExecution.Results))
 		sendResult(workflowExecution, shutdownData)
 		return nil
 	}
@@ -1831,6 +1831,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 }
 
 func executionInit(workflowExecution shuffle.WorkflowExecution) error {
+	ctx := context.Background()
+
 	parents := map[string][]string{}
 	children := map[string][]string{}
 	nextActions := []string{}
@@ -1850,6 +1852,20 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 			extra += 1
 		}
 	}
+
+	// Validates RERUN of single actions 
+	// Identified by: 
+	// 1. Predefined result from previous exec
+	// 2. Only ONE action
+	// 3. Every predefined result having result.Action.Category == "rerun"
+	/*
+	if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
+		finished := shuffle.ValidateFinished(ctx, extra, workflowExecution) 
+		if finished {
+			return nil 
+		}
+	}
+	*/
 
 	nextActions = append(nextActions, startAction)
 	for _, branch := range workflowExecution.Workflow.Branches {
@@ -1938,7 +1954,6 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		//log.Printf("Successfully downloaded and built %s", image)
 	}
 
-	ctx := context.Background()
 
 	visited := []string{}
 	executed := []string{}
@@ -2628,7 +2643,7 @@ func sendSelfRequest(actionResult shuffle.ActionResult) {
 		if err != nil {
 			log.Printf("[ERROR][%s] Failed reading body: %s", actionResult.ExecutionId, err)
 		} else {
-			log.Printf("[DEBUG][%s] NEWRESP (from backend): %s", actionResult.ExecutionId, string(body))
+			log.Printf("[DEBUG][%s] NEWRESP (from backend - 2): %s", actionResult.ExecutionId, string(body))
 		}
 	}
 }
@@ -3822,10 +3837,10 @@ func checkStandaloneRun() {
 
 	log.Printf("[DEBUG][%s] Got %d results with status %s. Running full reset IF status is not executing.", workflowExecution.ExecutionId, len(workflowExecution.Results), workflowExecution.Status)
 
-	// Just continue as per usual
-	if workflowExecution.Status == "EXECUTING" {
-		return
-	}
+	// Just continue as per usual?
+	//if workflowExecution.Status == "EXECUTING" {
+	//	return
+	//}
 
 	workflowExecution.Status = "EXECUTING"
 
@@ -3847,6 +3862,7 @@ func checkStandaloneRun() {
 
 	workflowExecution.Results = newResults
 	workflowExecution.Status = "EXECUTING"
+	workflowExecution.CompletedAt = 0
 
 	marshalledResult, err := json.Marshal(workflowExecution)
 	if err != nil {

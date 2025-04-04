@@ -368,7 +368,7 @@ func deployServiceWorkers(image string) {
 	options := make(map[string]string)
 	options["com.docker.network.driver.mtu"] = fmt.Sprintf("%d", mtu)
 
-	ingressOptions := types.NetworkCreate{
+	ingressOptions := network.CreateOptions{
 		Driver:     "overlay",
 		Attachable: false,
 		Ingress:    true,
@@ -400,7 +400,7 @@ func deployServiceWorkers(image string) {
 		networkName = swarmNetworkName
 	}
 
-	networkCreateOptions := types.NetworkCreate{
+	networkCreateOptions := network.CreateOptions{
 		Driver:     "overlay",
 		Options:    options,
 		Attachable: true,
@@ -464,9 +464,11 @@ func deployServiceWorkers(image string) {
 
 	if len(os.Getenv("DOCKER_HOST")) > 0 {
 		log.Printf("[DEBUG] Deploying docker socket proxy to the network %s as the DOCKER_HOST variable is set", networkName)
-		containers, err := dockercli.ContainerList(ctx, container.ListOptions{
+
+		listOptions := container.ListOptions{
 			All: true,
-		})
+		}
+		containers, err := dockercli.ContainerList(ctx, listOptions)
 
 		if err == nil {
 			for _, container := range containers {
@@ -1624,7 +1626,8 @@ func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, co
 }
 
 func parseResourceUsage(body io.Reader) (float64, float64, error) {
-	var stats types.StatsJSON
+	//var stats types.StatsJSON
+	var stats container.Stats
 
 	// Decode the stream of stats as JSON
 	decoder := json.NewDecoder(body)
@@ -2929,7 +2932,8 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 }
 
 func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway string) error {
-	networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
+	listOptions := network.ListOptions{}
+	networks, err := dockercli.NetworkList(ctx, listOptions)
 	if err != nil {
 		return err
 	}
@@ -2950,7 +2954,7 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 		},
 	}
 
-	networkCreate := types.NetworkCreate{
+	networkCreate := network.CreateOptions{
 		//CheckDuplicate: true,
 		Driver: "bridge",
 		IPAM:   ipamConfig,

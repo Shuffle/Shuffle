@@ -784,7 +784,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
@@ -794,13 +793,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			log.Printf("[ERROR] Failed running of parsedexecution: %s. Data: %s", err, string(b))
 		}
 
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed updating execution"}`)))
 		return
 	}
 
 	_ = dbSave
-	//resultLength := len(workflowExecution.Results)
 	setExecution := true
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
