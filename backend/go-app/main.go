@@ -4367,35 +4367,6 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[DEBUG] Skipping download of default apps as %d were found", len(workflowapps))
 	}
 
-	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/shuffle/security-openapis"
-
-	// THis gets memory problems hahah
-	//apis := "https://github.com/APIs-guru/openapi-directory"
-	fs := memfs.New()
-	storer := memory.NewStorage()
-	cloneOptions := &git.CloneOptions{
-		URL: apis,
-	}
-
-	cloneOptions = checkGitProxy(cloneOptions)
-
-	_, err = git.Clone(storer, fs, cloneOptions)
-	if err != nil {
-		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
-	} else if err == nil && len(workflowapps) < 10 {
-		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-
-		iterateOpenApiGithub(fs, dir, "", "")
-		log.Printf("[INFO] Finished downloading extra API samples")
-	} else {
-		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
-	}
-
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
 		healthcheckInterval := 60 
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats, and dashboard on /health. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)

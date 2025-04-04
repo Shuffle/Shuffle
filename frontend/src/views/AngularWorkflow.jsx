@@ -19702,7 +19702,11 @@ const AngularWorkflow = (defaultprops) => {
             workflow.public
             || executionRequestStarted
           }
-          style={{ height: boxSize, width: boxSize + 5, backgroundColor: green, }}
+          style={{ 
+			  height: boxSize, 
+			  width: boxSize + 5, 
+			  backgroundColor: green, 
+		  }}
           color="primary"
           variant="contained"
           onClick={() => {
@@ -19733,7 +19737,7 @@ const AngularWorkflow = (defaultprops) => {
             style={{
               borderTop: "1px solid rgba(74, 74, 74, 1)",
               borderBottom: "1px solid rgba(74, 74, 74, 1)",
-              height: buttonHeights,
+              height: buttonHeights+2,
             }}
           >
             {executionButton}
@@ -19772,6 +19776,10 @@ const AngularWorkflow = (defaultprops) => {
                     height: buttonHeights + 2,
                     marginTop: -1,
                     border: "none",
+
+					// Remove left side borderRadius
+					borderTopLeftRadius: 0,
+					borderBottomLeftRadius: 0,
                   }
                 }}
                 disabled={workflow.public}
