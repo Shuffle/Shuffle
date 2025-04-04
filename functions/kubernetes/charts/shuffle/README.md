@@ -18,7 +18,7 @@ SPDX-License-Identifier: APACHE-2.0
 
 ```sh
 # Install shuffle via helm (the shuffle namespace is hardcoded into the shuffle source code)
-helm install shuffle oci://ghcr.io/shuffle/shuffle/charts/shuffle --namespace shuffle --create-namespace
+helm install shuffle oci://ghcr.io/shuffle/charts/shuffle --namespace shuffle --create-namespace
 ```
 
 Make sure that no other application is deployed to the shuffle namespace, as shuffle deletes kubernetes resources in this namespace.
