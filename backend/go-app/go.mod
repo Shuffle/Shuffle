@@ -6,7 +6,7 @@ toolchain go1.23.8
 
 //replace github.com/frikky/schemaless => ../../../schemaless
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 require (
 	cloud.google.com/go/datastore v1.20.0

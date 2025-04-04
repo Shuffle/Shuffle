@@ -548,7 +548,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
+func handleGetWorkflowExecutionResult(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
@@ -679,7 +679,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 }
 
-func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
+func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
@@ -698,19 +698,26 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("Actionresult unmarshal: %s", string(body))
-	//log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
+	// Allows override of existing executions.
+	// This is a way to set them back to 0 results and rerun the
+	// exact same. Primarily in use for Worker testing of specific workflows.
+	shouldReset := false
+	resetString, ok := request.URL.Query()["reset"]
+	if ok && len(resetString) > 0 {
+		if resetString[0] == "true" {
+			shouldReset = true
+		}
+	}
+
 	ctx := context.Background()
-	err = shuffle.ValidateNewWorkerExecution(ctx, body)
+	err = shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
 	if err == nil {
 		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated the execution"}`)))
 		return
 	} else {
 		//log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
-
-	//log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
@@ -720,8 +727,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		//return
 	}
-
-	//log.Printf("Received action: %#v", actionResult)
 
 	// 1. Get the WorkflowExecution(ExecutionId) from the database
 	// 2. if ActionResult.Authentication != WorkflowExecution.Authentication -> exit
@@ -3035,7 +3040,6 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	if rerunOk && len(rerun) > 0 && rerun[0] == "true" {
 		shouldRerun = true
 	}
-
 
 	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
 

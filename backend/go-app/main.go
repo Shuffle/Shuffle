@@ -4241,12 +4241,17 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					respBody, err := ioutil.ReadAll(newresp.Body)
-					if err != nil {
-						log.Printf("[ERROR] Failed setting respbody %s", err)
+					if newresp.StatusCode != 200 {
+						log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d", environment, newresp.StatusCode)
 						continue
 					}
-					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+
+					//respBody, err := ioutil.ReadAll(newresp.Body)
+					//if err != nil {
+					//	log.Printf("[ERROR] Failed setting respbody %s", err)
+					//	continue
+					//}
+					//log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
 
 					url = fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/rerun", backendPort, environment)
 					req, err = http.NewRequest(
@@ -4268,11 +4273,15 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					respBody, err = ioutil.ReadAll(newresp.Body)
-					if err != nil {
-						log.Printf("[ERROR] Failed setting respbody %s", err)
-						continue
+					if newresp.StatusCode != 200 {
+						log.Printf("[WARNING] Failed rerunning environment %s. Status code: %d", environment, newresp.StatusCode)
 					}
+
+					//respBody, err := ioutil.ReadAll(newresp.Body)
+					//if err != nil {
+					//	log.Printf("[ERROR] Failed setting respbody %s", err)
+					//	continue
+					//}
 
 					//log.Printf("[DEBUG] Ran workflow RERUN request for %s with the response. Body: %s", environment, string(respBody))
 				}
@@ -5117,8 +5126,8 @@ func initHandlers() {
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
 	// Used by frontend
-	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
-	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/streams", handleSetWorkflowExecution).Methods("POST")
+	r.HandleFunc("/api/v1/streams/results", handleGetWorkflowExecutionResult).Methods("POST", "OPTIONS")
 
 	// Used by orborus
 	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET", "POST")
