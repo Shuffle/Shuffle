@@ -11605,7 +11605,7 @@ const AngularWorkflow = (defaultprops) => {
 
       const positionInfo = document.activeElement.getBoundingClientRect()
       const outerlistitemStyle = {
-        width: "90%",
+        width: "80%",
         overflowX: "hidden",
         overflowY: "hidden",
         borderBottom: "1px solid rgba(255,255,255,0.4)",
@@ -11881,9 +11881,12 @@ const AngularWorkflow = (defaultprops) => {
             />
           )}
 
-          <Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginLeft: 5, }}>
-            Your Apps
-          </Typography>
+          {visibleApps.length > extraApps.length ? 
+			  <Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginLeft: 5, }}>
+				Your Apps
+			  </Typography>
+		  : null}
+
           {visibleApps.length > extraApps.length ? (
             <div style={appScrollStyle}>
               {visibleApps.map((app, index) => {
