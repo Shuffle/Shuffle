@@ -6,7 +6,7 @@ toolchain go1.23.8
 
 //replace github.com/frikky/schemaless => ../../../schemaless
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
-replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 require (
 	cloud.google.com/go/datastore v1.20.0
@@ -22,7 +22,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.8.36
+	github.com/shuffle/shuffle-shared v0.8.37
 	golang.org/x/crypto v0.36.0
 	google.golang.org/api v0.228.0
 	google.golang.org/grpc v1.71.1
