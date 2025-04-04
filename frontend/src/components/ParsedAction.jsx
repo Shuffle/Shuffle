@@ -1868,6 +1868,8 @@ const ParsedAction = (props) => {
 									</Tooltip>
 								</IconButton>
 
+								{/* Disabled onprem due to worker bug */}
+								{isCloud ? 
 								<Tooltip
 									title={
 										<Typography variant="body2" style={{margin: 3, }}>
@@ -1899,6 +1901,7 @@ const ParsedAction = (props) => {
 										Rerun	
 									</Button>
 								</Tooltip>
+								: null}
 
 								{(selectedAction?.generated === true && selectedAction?.app_version === "1.0.0") || (selectedAction?.app_name === "Shuffle Tools" && selectedAction?.app_version !== "1.2.0")  ? 
 									<Button
