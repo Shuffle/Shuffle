@@ -1024,6 +1024,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if parsedAdmin == "true" {
+		userInfo.Role = "admin"
+		userInfo.ActiveOrg.Role = "admin"
+	}
+
 	chatDisabled := false
 	if os.Getenv("SHUFFLE_CHAT_DISABLED") == "true" {
 		chatDisabled = true
@@ -1063,6 +1068,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	for _, app := range orgApps {
 		activatedAppIds = append(activatedAppIds, app.ID)
 	}
+
 
 	returnValue := shuffle.HandleInfo{
 		Success:   true,

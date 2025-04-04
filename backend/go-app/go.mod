@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.23.7
 
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-hared => ../../../shuffle-shared
 
 require (
 	cloud.google.com/go/datastore v1.15.0
