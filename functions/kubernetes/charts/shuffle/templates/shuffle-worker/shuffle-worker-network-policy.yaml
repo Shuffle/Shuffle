@@ -62,6 +62,12 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels: {{ include "shuffle.orborus.matchLabels" . | nindent 14 }}
+        # Allow traffic from apps
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.app.matchLabels" . | nindent 14 }}
       {{- end }}
     {{- if .Values.worker.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
