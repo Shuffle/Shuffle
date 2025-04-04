@@ -48,7 +48,7 @@ import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 import Billing from "./Billing.jsx";
 
 const LicencePopup = (props) => {
-    const { globalUrl, userdata, serverside, billingInfo, stripeKey, setModalOpen, isScale, isLoggedIn, isMobile, selectedOrganization, isCloud } = props;
+    const { globalUrl, userdata, serverside, billingInfo, stripeKey, setModalOpen, isScale, isLoggedIn, isMobile, selectedOrganization, isCloud, features, licensePopup = false } = props;
     //const alert = useAlert();
     let navigate = useNavigate();
     const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
@@ -148,21 +148,175 @@ const LicencePopup = (props) => {
         height: "100%"
     }
 
+    const userInScalePlan = userdata?.app_execution_limit > 10000
+    const appRuns = userInScalePlan ? (userdata?.app_execution_limit / 1000) + "K App Runs" : userdata?.app_execution_limit === 10000 ? "10,000 App Runs" : "2,000 App Runs"
+
+    // Add this function to format the limit value
+    const formatLimit = (limit) => {
+        if (limit === null || limit === undefined || limit === 0) return "Unlimited";
+        if (typeof limit === "string" && limit.toLowerCase() === "unlimited") return "Unlimited";
+        if (typeof limit === "number") return limit.toLocaleString();
+        return limit.toString();
+    };
+
+    // Add this function to format the feature text with proper unlimited handling
+    const formatFeatureText = (feature, limit) => {
+        if (!feature) return "";
+
+        // Dynamic features that use limits
+        const featureMapping = {
+            app_executions: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return `Includes ${formattedLimit} App Executions per month`;
+            },
+            multi_env: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Environments"
+                    : `${formattedLimit} Environment${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            multi_tenant: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Tenants"
+                    : `${formattedLimit} Tenant${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            multi_region: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Regions"
+                    : `${formattedLimit} Region${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            webhook: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Webhooks"
+                    : `${formattedLimit} Webhook${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            schedules: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Schedules"
+                    : `${formattedLimit} Schedule${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            user_input: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited User Inputs"
+                    : `${formattedLimit} User Input${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            send_mail: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Emails per month"
+                    : `${formattedLimit} Email${parseInt(formattedLimit) > 1 ? 's' : ''} per month`;
+            },
+            send_sms: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited SMS per month"
+                    : `${formattedLimit} SMS${parseInt(formattedLimit) > 1 ? 's' : ''} per month`;
+            },
+            email_trigger: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Email Triggers"
+                    : `${formattedLimit} Email Trigger${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            notifications: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Notifications"
+                    : `${formattedLimit} Notification${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            workflows: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Workflows"
+                    : `${formattedLimit} Workflow${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            autocomplete: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Autocomplete"
+                    : `${formattedLimit} Autocomplete${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            workflow_executions: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Workflow Executions"
+                    : `${formattedLimit} Workflow Execution${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            authentication: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Authentication"
+                    : `${formattedLimit} Authentication${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            shuffle_gpt: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Shuffle GPT"
+                    : `${formattedLimit} Shuffle GPT${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+        };
+
+        try {
+            // Check if we have a mapping for this feature
+            const formatter = featureMapping[feature];
+            if (formatter) {
+                return formatter(limit);
+            }
+            
+            // Default format for unknown features
+            const formattedLimit = formatLimit(limit);
+            return `${feature}: ${formattedLimit}`;
+        } catch (error) {
+            console.warn(`Error formatting feature ${feature}:`, error);
+            return `${feature}: ${formatLimit(limit)}`;
+        }
+    };
+
+    console.log("selectedOrganization: ", selectedOrganization)
+    // Update the subscription features section
     billingInfo.subscription = {
         "active": true,
-        "name": userdata?.app_execution_limit === 10000 ? "10,000 App Runs" : "2,000 App Runs",
-        "price": "Free",
-        "currency": "Free",
+        "name": appRuns,
+        "price": userInScalePlan ? "" : "Free",
+        "currency": userInScalePlan ? "" : "Free",
         "currency_text": "",
         "interval": "",
-        "description": "Pay as you go",
-        "features": [
-            "Community Support",
-            `Includes ${userdata?.app_execution_limit === 10000 ? "10,000" : "2,000"} app run/month for free. `,
-            "Get all 2500+ Apps and 10 Workflows",
-            "Invite up to 5 users"
+        "description": "",
+        "features": userInScalePlan ?  [
+            // Add static features first
+            ...(userInScalePlan ? ["Standard Email Support"] : []),
+            
+            // Then add dynamic features from the database
+            ...Object.entries(features || {})
+                .filter(([_, featureData]) => {
+                    return featureData && 
+                           typeof featureData === 'object' && 
+                           featureData.active === true;
+                })
+                .map(([featureName, featureData]) => {
+                    try {
+                        return formatFeatureText(featureName, featureData?.limit);
+                    } catch (error) {
+                        console.warn(`Error processing feature ${featureName}:`, error);
+                        return "";
+                    }
+                })
+                .filter(feature => 
+                    feature.length > 0 && 
+                    !feature.toLowerCase().includes('unlimited') // Add this filter to remove "unlimited" features
+                )
+        ] : [
+            userInScalePlan ? "Standard Email Support" : "Community Support",
+            userInScalePlan ? `Includes ${appRuns}. ` : `Includes ${appRuns} for free. `,
+            userInScalePlan ? "Multi-Tenant & Multi-Region" : "Get all 2500+ Apps and 10 Workflows",
+            userInScalePlan ? "All features included in the Scale plan" : "Invite up to 5 users"
         ],
-        "limit": userdata?.app_execution_limit === 10000 ? 10000 : 2000,
+        "limit": userInScalePlan ? userdata?.app_execution_limit : 10000,
     }
 
     const sendSignatureRequest = (subscription) => {
@@ -196,6 +350,15 @@ const LicencePopup = (props) => {
             })
     }
 
+    // Create a function to remove duplicates and merge features
+    const mergeUniqueFeatures = (existingFeatures, newFeatures) => {
+        // Convert arrays to Sets to remove duplicates
+        const uniqueFeatures = new Set([
+            ...(existingFeatures || []),
+            ...(newFeatures || [])
+        ]);
+        return Array.from(uniqueFeatures);
+    };
 
     const SubscriptionObject = (props) => {
         const { globalUrl, index, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, subscription, highlight, } = props;
@@ -204,7 +367,7 @@ const LicencePopup = (props) => {
         const [tosChecked, setTosChecked] = React.useState(subscription.eula_signed)
         const [hovered, setHovered] = React.useState(false)
         const [newBillingEmail, setNewBillingEmail] = useState('');
-        var top_text = "Starter Plan"
+        var top_text = userInScalePlan ? "Scale Plan" : "Starter Plan"
         // if (subscription.limit === undefined && subscription.level === undefined || subscription.level === null || subscription.level === 0) {
         //     subscription.name = "Enterprise"
         //     subscription.currency_text = "$"
@@ -317,12 +480,30 @@ const LicencePopup = (props) => {
                 });
         }
 
+        console.log("OrgSyncFeatures: ", selectedOrganization?.sync_features)
+
+        const extraFeatures = Object.entries(features || {})
+            .filter(([_, featureData]) => {
+                return featureData && 
+                typeof featureData === 'object' && 
+                featureData.active === true;
+            })
+            .map(([featureName, featureData]) => {
+                return formatFeatureText(featureName, featureData?.limit);
+            })
+            .filter(feature => 
+                feature.length > 0 && 
+                !feature.toLowerCase().includes('unlimited') // Add this filter to remove "unlimited" features
+            )
+
+        subscription.features = mergeUniqueFeatures(subscription.features, extraFeatures);
+
         return (
             <Tooltip
                 style={{ borderRadius: theme.palette?.borderRadius, }}
                 placement="bottom"
             >
-                <div style={{ backgroundColor: "#1e1e1e"}}>
+                <div style={{ backgroundColor: "#1e1e1e", border: "1.2px solid #ff8544", borderRadius: theme.palette?.borderRadius}}>
                     <Paper
                         style={newPaperstyle}
                     // onMouseEnter={() => setHovered(true)}
@@ -681,7 +862,7 @@ const LicencePopup = (props) => {
 							}}
 							onClick={() => {
                                 console.log("Subscription: ", subscription.name)
-                                if(!subscription.name.includes("App Run Units")) {
+                                if(!subscription.name.includes("App Run Units") && !userInScalePlan) {
                                     window.open("https://discord.gg/B2CBzUm", "_blank")
                                 } else {
                                     window.open("mailto:support@shuffler.io", "_blank")
@@ -702,7 +883,7 @@ const LicencePopup = (props) => {
                                 fontSize: 16,
                                 position: "relative", // Required for positioning tooltip
                             }}
-                            title="Click to book a call"
+                            title="Get more app runs"
                             onClick={() => {
                                 if (isCloud) {
                                 ReactGA.event({
@@ -710,7 +891,7 @@ const LicencePopup = (props) => {
                                     action: "bookcall_upgread_popup",
                                     label: "",
                                 })};
-                                window.open("https://drift.me/frikky/meeting", "_blank");
+                                navigate("/contact?category=contact")
                                 // if (isLoggedIn) {
                                 // isLoggedInHandler()
                                 // } else {
@@ -719,7 +900,7 @@ const LicencePopup = (props) => {
                             }}
                         >
 							<span>
-                            	Book a call
+                            	Get more app runs
 							</span>
                             <span
                                 style={{
@@ -1057,8 +1238,8 @@ const LicencePopup = (props) => {
       console.log("Selected Organization: ", selectedOrganization.subscriptions)
     return (
         <div>
-            <Grid container spacing={2} columns={16} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>
-                <Grid item xs={8}>
+            <Grid container spacing={2} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>
+                <Grid item maxWidth={licensePopup ? 400 : 450}>
                     {selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0 ?
                         <SubscriptionObject
                             index={0}
@@ -1161,7 +1342,9 @@ const LicencePopup = (props) => {
                             })
                         : null} */}
                 </Grid>
-                <Grid item xs={8} sx={{ height: "100%" }}>
+                {
+                licensePopup &&
+                (<Grid  item maxWidth={450}>
                     <Grid style={{}}>
                         {errorMessage.length > 0 ? <Typography variant="h4">Error: {errorMessage}</Typography> : null}
                         <Card style={{
@@ -1420,7 +1603,8 @@ const LicencePopup = (props) => {
             </DialogActions>
                         </Card>
                     </Grid>
-                </Grid>
+                </Grid>)
+                }
             </Grid> 
         </div>
     )

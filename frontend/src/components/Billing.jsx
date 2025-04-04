@@ -2059,6 +2059,7 @@ const Billing = memo((props) => {
 					userdata={userdata}
 					stripeKey={stripeKey}
 					isScale={isScale}
+					features={selectedOrganization?.sync_features}
 					{...props}
 					/>
 					: !isCloud ?
@@ -2093,6 +2094,7 @@ const Billing = memo((props) => {
 								billingInfo={billingInfo}
 								isCloud={isCloud}
 								userdata={userdata}
+								features={selectedOrganization?.sync_features}
 								stripeKey={stripeKey}
 								isScale={isScale}
 							/>	
