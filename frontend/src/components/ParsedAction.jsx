@@ -2916,7 +2916,10 @@ const ParsedAction = (props) => {
 										color="primary"
 										id="checkbox-search"
 										variant="body1"
-										style={theme.palette.textFieldStyle}
+										style={{
+											...theme.palette.textFieldStyle,
+											border: selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0 ? `1px dotted ${theme.palette.distributionColor}` : "inherit",
+										}}
 										label={isIntegration ? "Choose a category" : "Find Actions"}
 										variant="outlined"
 										name={`disable_autocomplete_${Math.random()}`}

@@ -105,6 +105,15 @@ SHUFFLE_DEFAULT_APIKEY: "72E41083-A6F6-4A1B-8538-B06B577F47F0" # Shuffle uses uu
 SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 ```
 
+## OpenSearch
+
+Shuffle uses OpenSearch as its database. This helm chart installs a single-node OpenSearch cluster using [the Bitnami Helm Chart](https://github.com/bitnami/charts/blob/main/bitnami/opensearch/values.yaml).
+You can customize the helm chart using the values of the Bitnami helm chart under the `opensearch` prefix (e.g. `opensearch.master.replicaCOunt`).
+
+Alternatively, you can disable the built-in OpenSearch installation using `opensearch.enabled=false`.
+Provide your own OpenSearch url and username with `backend.openSearch.url` and `backend.openSearch.username`.
+The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env variable to the backend.
+
 ## Parameters
 
 ### Global parameters
@@ -597,5 +606,4 @@ SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-
 

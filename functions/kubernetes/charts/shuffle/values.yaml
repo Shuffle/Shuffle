@@ -1744,9 +1744,24 @@ volumePermissions:
 ## OpenSearch chart configuration
 ## ref: https://github.com/bitnami/charts/blob/main/bitnami/opensearch/values.yaml
 ## @param opensearch.enabled Switch to enable or disable the opensearch helm chart
+## @skip opensearch.master
+## @skip opensearch.data
+## @skip opensearch.coordinating
+## @skip opensearch.ingest
+## @skip opensearch.dashboards
 ##
 opensearch:
   enabled: true
+  master:
+    replicaCount: 1
+  data:
+    replicaCount: 1
+  coordinating:
+    replicaCount: 1
+  ingest:
+    replicaCount: 1
+  dashboards:
+    enabled: true
 
 ## @section Vault Parameters
 ##

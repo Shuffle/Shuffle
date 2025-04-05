@@ -4241,12 +4241,17 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					respBody, err := ioutil.ReadAll(newresp.Body)
-					if err != nil {
-						log.Printf("[ERROR] Failed setting respbody %s", err)
+					if newresp.StatusCode != 200 {
+						log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d", environment, newresp.StatusCode)
 						continue
 					}
-					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+
+					//respBody, err := ioutil.ReadAll(newresp.Body)
+					//if err != nil {
+					//	log.Printf("[ERROR] Failed setting respbody %s", err)
+					//	continue
+					//}
+					//log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
 
 					url = fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/rerun", backendPort, environment)
 					req, err = http.NewRequest(
@@ -4268,11 +4273,15 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					respBody, err = ioutil.ReadAll(newresp.Body)
-					if err != nil {
-						log.Printf("[ERROR] Failed setting respbody %s", err)
-						continue
+					if newresp.StatusCode != 200 {
+						log.Printf("[WARNING] Failed rerunning environment %s. Status code: %d", environment, newresp.StatusCode)
 					}
+
+					//respBody, err := ioutil.ReadAll(newresp.Body)
+					//if err != nil {
+					//	log.Printf("[ERROR] Failed setting respbody %s", err)
+					//	continue
+					//}
 
 					//log.Printf("[DEBUG] Ran workflow RERUN request for %s with the response. Body: %s", environment, string(respBody))
 				}
@@ -4365,35 +4374,6 @@ func runInitEs(ctx context.Context) {
 		}
 	} else {
 		log.Printf("[DEBUG] Skipping download of default apps as %d were found", len(workflowapps))
-	}
-
-	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/shuffle/security-openapis"
-
-	// THis gets memory problems hahah
-	//apis := "https://github.com/APIs-guru/openapi-directory"
-	fs := memfs.New()
-	storer := memory.NewStorage()
-	cloneOptions := &git.CloneOptions{
-		URL: apis,
-	}
-
-	cloneOptions = checkGitProxy(cloneOptions)
-
-	_, err = git.Clone(storer, fs, cloneOptions)
-	if err != nil {
-		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
-	} else if err == nil && len(workflowapps) < 10 {
-		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-
-		iterateOpenApiGithub(fs, dir, "", "")
-		log.Printf("[INFO] Finished downloading extra API samples")
-	} else {
-		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
 	}
 
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
@@ -5146,8 +5126,8 @@ func initHandlers() {
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
 	// Used by frontend
-	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
-	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/streams", handleSetWorkflowExecution).Methods("POST")
+	r.HandleFunc("/api/v1/streams/results", handleGetWorkflowExecutionResult).Methods("POST", "OPTIONS")
 
 	// Used by orborus
 	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET", "POST")

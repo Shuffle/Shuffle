@@ -11605,7 +11605,7 @@ const AngularWorkflow = (defaultprops) => {
 
       const positionInfo = document.activeElement.getBoundingClientRect()
       const outerlistitemStyle = {
-        width: "90%",
+        width: "80%",
         overflowX: "hidden",
         overflowY: "hidden",
         borderBottom: "1px solid rgba(255,255,255,0.4)",
@@ -11881,9 +11881,12 @@ const AngularWorkflow = (defaultprops) => {
             />
           )}
 
-          <Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginLeft: 5, }}>
-            Your Apps
-          </Typography>
+          {visibleApps.length > extraApps.length ? 
+			  <Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginLeft: 5, }}>
+				Your Apps
+			  </Typography>
+		  : null}
+
           {visibleApps.length > extraApps.length ? (
             <div style={appScrollStyle}>
               {visibleApps.map((app, index) => {
@@ -19699,7 +19702,11 @@ const AngularWorkflow = (defaultprops) => {
             workflow.public
             || executionRequestStarted
           }
-          style={{ height: boxSize, width: boxSize + 5, backgroundColor: green, }}
+          style={{ 
+			  height: boxSize, 
+			  width: boxSize + 5, 
+			  backgroundColor: green, 
+		  }}
           color="primary"
           variant="contained"
           onClick={() => {
@@ -19730,7 +19737,7 @@ const AngularWorkflow = (defaultprops) => {
             style={{
               borderTop: "1px solid rgba(74, 74, 74, 1)",
               borderBottom: "1px solid rgba(74, 74, 74, 1)",
-              height: buttonHeights,
+              height: buttonHeights+2,
             }}
           >
             {executionButton}
@@ -19769,6 +19776,10 @@ const AngularWorkflow = (defaultprops) => {
                     height: buttonHeights + 2,
                     marginTop: -1,
                     border: "none",
+
+					// Remove left side borderRadius
+					borderTopLeftRadius: 0,
+					borderBottomLeftRadius: 0,
                   }
                 }}
                 disabled={workflow.public}

@@ -834,10 +834,12 @@ const Navbar = (props) => {
         globalUrl={globalUrl}
         selectedOrganization={selectedOrganization}
         billingInfo={billingInfo}
+        features={selectedOrganization?.sync_features}
         isCloud={isCloud}
         userdata={userdata}
         stripeKey={stripeKey}
         setModalOpen={setPricingModalOpen}
+        licensePopup={true}
         {...props}
       />
     </div>

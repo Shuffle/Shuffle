@@ -548,7 +548,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
+func handleGetWorkflowExecutionResult(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
@@ -679,7 +679,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 }
 
-func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
+func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
@@ -698,19 +698,26 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("Actionresult unmarshal: %s", string(body))
-	//log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
-	ctx := context.Background()
-	err = shuffle.ValidateNewWorkerExecution(ctx, body)
-	if err == nil {
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
-		return
-	} else {
-		log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
+	// Allows override of existing executions.
+	// This is a way to set them back to 0 results and rerun the
+	// exact same. Primarily in use for Worker testing of specific workflows.
+	shouldReset := false
+	resetString, ok := request.URL.Query()["reset"]
+	if ok && len(resetString) > 0 {
+		if resetString[0] == "true" {
+			shouldReset = true
+		}
 	}
 
-	//log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
+	ctx := context.Background()
+	err = shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
+	if err == nil {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated the execution"}`)))
+		return
+	} else {
+		//log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
+	}
 
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
@@ -720,8 +727,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		//return
 	}
-
-	//log.Printf("Received action: %#v", actionResult)
 
 	// 1. Get the WorkflowExecution(ExecutionId) from the database
 	// 2. if ActionResult.Authentication != WorkflowExecution.Authentication -> exit
@@ -779,7 +784,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
@@ -789,13 +793,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			log.Printf("[ERROR] Failed running of parsedexecution: %s. Data: %s", err, string(b))
 		}
 
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed updating execution"}`)))
 		return
 	}
 
 	_ = dbSave
-	//resultLength := len(workflowExecution.Results)
 	setExecution := true
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
@@ -1012,7 +1015,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("[DEBUG] Attempting to delete the workflow %s from the database...", fileId)
+	//log.Printf("[DEBUG] Attempting to delete the workflow %s from the database...", fileId)
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
 		log.Printf("[DEBUG] Failed deleting workflow key %s", fileId)
@@ -1026,7 +1029,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.Id))
 	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.ActiveOrg.Id))
 	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_%s", user.Username, fileId))
-	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
 	shuffle.DeleteCache(ctx, fmt.Sprintf("workflow_%s_childworkflows", workflow.ID))
 	if len(workflow.ParentWorkflowId) > 0 {
 		shuffle.DeleteCache(ctx, fmt.Sprintf("workflow_%s_childworkflows", workflow.ParentWorkflowId))
@@ -2941,19 +2943,63 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx := shuffle.GetContext(request)
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("[WARNING] Api authentication failed in execute SINGLE workflow - CONTINUING ANYWAY: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "You need to sign up to try it out}`))
-		return
-	}
+		// Look for org_id query as app may be private
+		// No validation is done here, as it's just running the app
+		// to find a user
+		orgId := request.URL.Query().Get("org_id")
+		if len(orgId) > 0 {
+			user.ActiveOrg.Id = orgId
+		} else {
+			executionId := request.URL.Query().Get("execution_id")
+			authorization := request.URL.Query().Get("authorization")
+			if len(executionId) == 0 || len(authorization) == 0 {
+				log.Printf("[WARNING] Bad execution id/auth in single action validate (1): %#v, %#v. Continuing with the 'public' org id", executionId, authorization)
+				err := shuffle.ValidateRequestOverload(resp, request)
+				if err != nil {
+					log.Printf("[INFO] Request overload for IP %s in single action execution", shuffle.GetRequestIp(request))
+					resp.WriteHeader(429)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Too many requests. Please try again in 30 seconds."}`)))
+					return
+				}
 
-	if user.Role == "org-reader" {
-		log.Printf("[WARNING] Org-reader doesn't have access to execute single action: %s (%s)", user.Username, user.Id)
-		resp.WriteHeader(403)
-		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
-		return
+				user.Username = shuffle.GetRequestIp(request)
+				user.ActiveOrg.Name = shuffle.GetRequestIp(request)
+				user.ActiveOrg.Id = "public"
+			} else {
+				// Find the execution
+				exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+				if err != nil {
+					log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
+					return
+				}
+
+				if exec.Authorization != authorization {
+					log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
+					resp.WriteHeader(403)
+					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
+					return
+				}
+
+				//log.Printf("[INFO] Found org_id from execution: %#v. Executionorg: %#v", exec.OrgId, exec.ExecutionOrg)
+				user.ActiveOrg.Id = exec.OrgId
+				if len(user.ActiveOrg.Id) == 0 {
+					user.ActiveOrg.Id = exec.ExecutionOrg
+				}
+
+				user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
+			}
+		}
+
+		if len(user.ActiveOrg.Id) == 0 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "No org_id found to map back to"}`))
+			return
+		}
 	}
 
 	location := strings.Split(request.URL.String(), "/")
@@ -2968,80 +3014,23 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
+	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
+	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, fileId)
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
+		log.Printf("[INFO] Failed single execution POST body read: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	ctx := context.Background()
-
+	// Look for the query parameter "validation=true" to find the correct action for the app to test
 	runValidationAction := false
 	query := request.URL.Query()
 	validation, ok := query["validation"]
-	if ok && validation[0] == "true" {
+	if ok && len(validation) > 0 && validation[0] == "true" {
 		runValidationAction = true
-	}
-
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
-	if err != nil {
-		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-	resp.Header().Add("X-Debug-Url", debugUrl)
-
-	workflowExecution.Priority = 11
-	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
-	environment := "Shuffle"
-	if len(environments) >= 1 {
-		// Find default one
-		environment = environments[0].Name
-
-		for _, env := range environments {
-			if env.Default {
-				environment = env.Name
-				break
-			}
-		}
-
-	} else {
-		log.Printf("[ERROR] No environments found for org %s. Exiting", user.ActiveOrg.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Enforcing same env for job + run to be default
-	// FIXME: Should use environment that is in the source workflow if it exists
-	for i, _ := range workflowExecution.Workflow.Actions {
-		workflowExecution.Workflow.Actions[i].Environment = environment
-		workflowExecution.Workflow.Actions[i].Label = "TMP"
-	}
-	shuffle.SetWorkflowExecution(ctx, workflowExecution, false)
-
-	log.Printf("[INFO] Execution (single action): %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
-
-	executionRequest := shuffle.ExecutionRequest{
-		ExecutionId:   workflowExecution.ExecutionId,
-		WorkflowId:    workflowExecution.Workflow.ID,
-		Authorization: workflowExecution.Authorization,
-		Environments:  []string{environment},
-		Priority:      11,
-	}
-
-	executionRequest.Priority = workflowExecution.Priority
-	err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
-	if err != nil {
-		log.Printf("[ERROR] Failed adding execution to db: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
 	}
 
 	shouldRerun := false
@@ -3050,23 +3039,81 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		shouldRerun = true
 	}
 
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
+
+	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	resp.Header().Add("X-Debug-Url", debugUrl)
+
+	if err != nil {
+		log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
+		returndata := shuffle.ResultChecker{
+			Success: false,
+			Reason:  fmt.Sprintf("%s", err),
+		}
+
+		resp.WriteHeader(400)
+		respBytes, err := json.Marshal(returndata)
+		if err != nil {
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		resp.Write(respBytes)
+		return
+	}
+
+	workflowExecution.ProjectId = "" 
+	workflowExecution.Locations = []string{""}
+
+	foundEnv := ""
+	params := []string{}
+	for _, action := range workflowExecution.Workflow.Actions {
+		for _, param := range action.Parameters {
+			params = append(params, param.Name)
+		}
+
+		if len(action.Environment) > 0 {
+			foundEnv = action.Environment
+			break
+		}
+	}
+
+	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
+	executionRequest := shuffle.ExecutionRequest{
+		ExecutionId:   workflowExecution.ExecutionId,
+		WorkflowId:    workflowExecution.Workflow.ID,
+		Authorization: workflowExecution.Authorization,
+		Environments:  []string{foundEnv},
+	}
+
+	parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-"))
+
+	log.Printf("[INFO] Adding new single-action job to env queue (4): %s", parsedEnv)
+	err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
+	if err != nil {
+		log.Printf("[WARNING] Failed adding %s to db (single action queue): %s", parsedEnv, err)
+	}
+
 	if shouldRerun {
-		log.Printf("[DEBUG] Returning single action execution ID for rerun: %s", workflowExecution.ExecutionId)
+		//log.Printf("[DEBUG] Returning single action execution ID for rerun: %s", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 		return
 	}
 
-	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
-	time.Sleep(2 * time.Second)
 	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
 	returnBytes, err := json.Marshal(returnBody)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
 	}
 
-	// Deleting as this is a single action and doesn't need to be stored
-	shuffle.DeleteKey(ctx, "workflowexecution", executionRequest.ExecutionId)
+	// Look for delete=true query, and if it exists, delete the execution
+	if request.URL.Query().Get("delete") == "true" {
+		err = shuffle.DeleteKey(ctx, "workflowexecution", workflowExecution.ExecutionId)
+		if err != nil {
+			log.Printf("[ERROR] Failed to delete execution: %s", err)
+		}
+	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnBytes))

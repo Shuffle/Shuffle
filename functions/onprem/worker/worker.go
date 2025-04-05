@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 
 	// This is for automatic removal of certain code :)
@@ -156,7 +157,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 			log.Printf("[ERROR] Failed marshalling shutdowndata during set: %s", err)
 		}
 
-		log.Printf("[DEBUG][%s] Sending result (set)", workflowExecution.ExecutionId)
+		log.Printf("[DEBUG][%s] Sending result (set). Status: %s, Actions: %d, Results: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), len(workflowExecution.Results))
 		sendResult(workflowExecution, shutdownData)
 		return nil
 	}
@@ -1073,11 +1074,8 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 	err = cli.ContainerStart(ctx, cont.ID, container.StartOptions{})
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
-			// Remove the "CREATED" one from the previous:
-			removeErr := cli.ContainerRemove(ctx, cont.ID, container.RemoveOptions{})
-			if removeErr != nil {
-				log.Printf("[ERROR] Failed to remove container %s: %s", cont.ID, removeErr)
-			}
+			// Remove the "CREATED" one from the previous if possible
+			go cli.ContainerRemove(ctx, cont.ID, container.RemoveOptions{})
 
 			log.Printf("[WARNING] Failed deploying App on first attempt: %s. Removing some HostConfig configs.", err)
 			parsedUuid := uuid.NewV4()
@@ -1833,6 +1831,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 }
 
 func executionInit(workflowExecution shuffle.WorkflowExecution) error {
+	ctx := context.Background()
+
 	parents := map[string][]string{}
 	children := map[string][]string{}
 	nextActions := []string{}
@@ -1852,6 +1852,20 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 			extra += 1
 		}
 	}
+
+	// Validates RERUN of single actions 
+	// Identified by: 
+	// 1. Predefined result from previous exec
+	// 2. Only ONE action
+	// 3. Every predefined result having result.Action.Category == "rerun"
+	/*
+	if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
+		finished := shuffle.ValidateFinished(ctx, extra, workflowExecution) 
+		if finished {
+			return nil 
+		}
+	}
+	*/
 
 	nextActions = append(nextActions, startAction)
 	for _, branch := range workflowExecution.Workflow.Branches {
@@ -1940,7 +1954,6 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		//log.Printf("Successfully downloaded and built %s", image)
 	}
 
-	ctx := context.Background()
 
 	visited := []string{}
 	executed := []string{}
@@ -2630,7 +2643,7 @@ func sendSelfRequest(actionResult shuffle.ActionResult) {
 		if err != nil {
 			log.Printf("[ERROR][%s] Failed reading body: %s", actionResult.ExecutionId, err)
 		} else {
-			log.Printf("[DEBUG][%s] NEWRESP (from backend): %s", actionResult.ExecutionId, string(body))
+			log.Printf("[DEBUG][%s] NEWRESP (from backend - 2): %s", actionResult.ExecutionId, string(body))
 		}
 	}
 }
@@ -3652,7 +3665,7 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 
 		// Checks if a subflow is child of the startnode, as sub-subflows aren't working properly yet
 		childNodes := shuffle.FindChildNodes(workflowExecution.Workflow, workflowExecution.Start, []string{}, []string{})
-		log.Printf("[DEBUG] Looking for subflow in %#v to check execution pattern as child of %s", childNodes, workflowExecution.Start)
+		//log.Printf("[DEBUG] Looking for subflow in %#v to check execution pattern as child of %s", childNodes, workflowExecution.Start)
 		subflowFound := false
 		for _, childNode := range childNodes {
 			for _, trigger := range workflowExecution.Workflow.Triggers {
@@ -3734,8 +3747,171 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 	return environments, nil
 }
 
+func checkStandaloneRun() {
+	// Check if the required argc/argv is set
+	//log.Printf("ARGS: %#v", os.Args)
+	if len(os.Args) < 4 {
+		return
+	}
+
+	if os.Args[1] != "standalone" {
+		log.Printf("[ERROR] First argument should be 'standalone' to run worker standalone")
+		return
+	}
+
+	if os.Args[2] == "" || len(os.Args[2]) != 36 {
+		log.Printf("[ERROR] Second argument should be the execution ID, with next being authorization")
+		return
+	}
+
+	if os.Args[3] == "" || len(os.Args[3]) < 10 {
+		log.Printf("[ERROR] Third argument should be the authorization key")
+		return
+	}
+
+	backendUrl := "https://shuffler.io"
+	if len(os.Args) > 4 {
+		backendUrl = os.Args[4]
+	}
+
+	if !strings.Contains(backendUrl, "http") {
+		log.Printf("[ERROR] Backend URL should start with http:// or https://")
+		return
+	
+	}
+
+	// Format:
+	// go run worker.go standalone <executionid> <authorization> <optional:url>
+	executionId := os.Args[2]
+	authorization := os.Args[3]
+
+	os.Setenv("EXECUTIONID", executionId)
+	os.Setenv("AUTHORIZATION", authorization)
+	os.Setenv("BASE_URL", backendUrl)
+
+	os.Setenv("STANDALONE_EXECUTION", "true")
+
+	log.Printf("\n\n\n[DEBUG] Running worker in standalone mode with execution ID %s and authorization %s. Backend URL (default): %s\nThis means we will first RESET the execution results, then rerun it\n\n", executionId, authorization, backendUrl)
+
+	// 1. Reset the execution after getting it
+	data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, executionId, authorization)
+	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", backendUrl)
+	client := shuffle.GetExternalClient(streamResultUrl)
+	req, err := http.NewRequest(
+		"POST",
+		streamResultUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] Failed making request builder for backend: %s", err)
+		os.Exit(1)
+	}
+
+	// Read the data and unmarshal it
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed standalone request in setup: %s", err)
+		os.Exit(1)
+	}
+
+	defer newresp.Body.Close()
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading body: %s", err)
+		os.Exit(1)
+	}
+
+	if newresp.StatusCode != 200 {
+		log.Printf("[ERROR] Failed resetting execution: %s. Body: %s", newresp.Status, string(body))
+		os.Exit(1)
+	}
+
+	// Map to shuffle.Workflowexecution struct
+	workflowExecution := shuffle.WorkflowExecution{}
+	err = json.Unmarshal(body, &workflowExecution)
+	if err != nil {
+		log.Printf("[ERROR] Failed unmarshalling body: %s", err)
+		os.Exit(1)
+	}
+
+	log.Printf("[DEBUG][%s] Got %d results with status %s. Running full reset IF status is not executing.", workflowExecution.ExecutionId, len(workflowExecution.Results), workflowExecution.Status)
+
+	// Just continue as per usual?
+	//if workflowExecution.Status == "EXECUTING" {
+	//	return
+	//}
+
+	workflowExecution.Status = "EXECUTING"
+
+	newResults := []shuffle.ActionResult{}
+	for _, result := range workflowExecution.Results {
+		if result.Status == "SKIPPED" {
+			newResults = append(newResults, result)
+			continue
+		}
+
+		// This is to handle reruns of SINGLE actions 
+		if result.Action.Category == "rerun" {
+			newResults = append(newResults, result)
+			continue
+		}
+
+		// Anything else here.
+	}
+
+	workflowExecution.Results = newResults
+	workflowExecution.Status = "EXECUTING"
+	workflowExecution.CompletedAt = 0
+
+	marshalledResult, err := json.Marshal(workflowExecution)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling body: %s", err)
+		os.Exit(1)
+	}
+
+	// Send a /api/v1/streams result back
+	// 1. Reset the execution after getting it
+	streamUrl := fmt.Sprintf("%s/api/v1/streams?reset=true", backendUrl)
+	req, err = http.NewRequest(
+		"POST",
+		streamUrl,
+		bytes.NewBuffer([]byte(marshalledResult)),
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] Failed making request builder (2) for backend: %s", err)
+		os.Exit(1)
+	}
+
+	// Read the data and unmarshal it
+	newresp, err = client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed standalone request in setup: %s", err)
+		os.Exit(1)
+	}
+
+	defer newresp.Body.Close()
+	body, err = ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading body (2): %s", err)
+		os.Exit(1)
+	}
+
+	if newresp.StatusCode != 200 {
+		log.Printf("[ERROR] Failed resetting execution (2): %s. Body: %s", newresp.Status, string(body))
+		os.Exit(1)
+	}
+
+	log.Printf("\n\n\n[DEBUG] Finished resetting execution %s. Body: %s. Starting execution.\n\n\n", newresp.Status, string(body))
+
+
+}
+
 // Initial loop etc
 func main() {
+	checkStandaloneRun()
+
 	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		logsDisabled = "true"
@@ -3756,7 +3932,7 @@ func main() {
 		}
 	}
 
-	log.Printf("[INFO] Setting up worker environment")
+	//log.Printf("[INFO] Setting up worker environment")
 	sleepTime = 5
 	client := shuffle.GetExternalClient(baseUrl)
 
@@ -3765,7 +3941,7 @@ func main() {
 	}
 
 	if baseimagename == "" {
-		log.Printf("[DEBUG] Setting baseimagename to frikky/shuffle")
+		log.Printf("[DEBUG] Setting baseimagename to frikky/shuffle as it's empty (docker.io)")
 		baseimagename = "frikky/shuffle" // Dockerhub
 		//baseimagename = "shuffle"        // Github 		(ghcr.io)
 	}
@@ -4291,9 +4467,10 @@ func getNetworkId(ctx context.Context, dockercli *dockerclient.Client) (string, 
 	networkFilter := filters.NewArgs()
 	networkFilter.Add("name", swarmNetworkName)
 
-	networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{
+	listOptions := network.ListOptions{
 		Filters: networkFilter,
-	})
+	}
+	networks, err := dockercli.NetworkList(ctx, listOptions)
 
 	if err != nil || len(networks) == 0 {
 		return "", err
@@ -4322,9 +4499,10 @@ func numberOfApps(ctx context.Context, dockercli *dockerclient.Client) int {
 	networkFilter := filters.NewArgs()
 	networkFilter.Add("name", swarmNetworkName)
 
-	networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{
+	listOptions := network.ListOptions{
 		Filters: networkFilter,
-	})
+	}
+	networks, err := dockercli.NetworkList(ctx, listOptions)
 
 	if err != nil || len(networks) == 0 {
 		return 0
