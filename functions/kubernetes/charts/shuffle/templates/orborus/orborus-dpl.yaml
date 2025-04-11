@@ -110,8 +110,6 @@ spec:
           resources: {{- include "common.resources.preset" (dict "type" .Values.orborus.resourcesPreset) | nindent 12 }}
           {{- end }}
           ports:
-            - name: http
-              containerPort: {{ .Values.orborus.containerPorts.http }}
             {{- if .Values.orborus.extraContainerPorts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraContainerPorts "context" $) | nindent 12 }}
             {{- end }}
@@ -120,25 +118,16 @@ spec:
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customLivenessProbe "context" $) | nindent 12 }}
           {{- else if .Values.orborus.livenessProbe.enabled }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.livenessProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: /
-              port: {{ .Values.orborus.containerPorts.http }}
           {{- end }}
           {{- if .Values.orborus.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customReadinessProbe "context" $) | nindent 12 }}
           {{- else if .Values.orborus.readinessProbe.enabled }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.readinessProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: /
-              port: {{ .Values.orborus.containerPorts.http }}
           {{- end }}
           {{- if .Values.orborus.customStartupProbe }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customStartupProbe "context" $) | nindent 12 }}
           {{- else if .Values.orborus.startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.startupProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: /
-              port: {{ .Values.orborus.containerPorts.http }}
           {{- end }}
           {{- end }}
           {{- if .Values.orborus.lifecycleHooks }}
