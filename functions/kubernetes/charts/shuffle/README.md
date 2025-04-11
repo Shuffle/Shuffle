@@ -381,7 +381,6 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `orborus.image.pullPolicy`                                  | orborus image pull policy                                                                                                                                                                                                          | `IfNotPresent`            |
 | `orborus.image.pullSecrets`                                 | orborus image pull secrets                                                                                                                                                                                                         | `[]`                      |
 | `orborus.replicaCount`                                      | Number of orborus replicas to deploy                                                                                                                                                                                               | `1`                       |
-| `orborus.containerPorts.http`                               | orborus HTTP container port                                                                                                                                                                                                        | `8080`                    |
 | `orborus.extraContainerPorts`                               | Optionally specify extra list of additional ports for orborus containers                                                                                                                                                           | `[]`                      |
 | `orborus.livenessProbe.enabled`                             | Enable livenessProbe on orborus containers                                                                                                                                                                                         | `false`                   |
 | `orborus.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                            | `0`                       |
@@ -606,4 +605,5 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
+
 

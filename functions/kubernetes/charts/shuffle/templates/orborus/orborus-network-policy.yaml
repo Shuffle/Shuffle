@@ -54,18 +54,6 @@ spec:
     {{- end }}
     {{- end }}
   ingress:
-    - ports:
-        - port: {{ .Values.orborus.containerPorts.http }}
-          protocol: TCP
-      {{- if not .Values.orborus.networkPolicy.allowExternal }}
-      from:
-        # Allow traffic from workers
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
-      {{- end }}
     {{- if .Values.orborus.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
     {{- end }}
