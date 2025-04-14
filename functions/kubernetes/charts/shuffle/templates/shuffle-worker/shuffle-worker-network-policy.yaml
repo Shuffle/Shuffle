@@ -29,16 +29,6 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
-    # Allow access to orborus
-    - ports:
-        - port: {{ .Values.orborus.containerPorts.http }}
-          protocol: TCP
-      to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels: {{ include "shuffle.orborus.matchLabels" . | nindent 14 }}
     # Allow arbitrary connections to apps. Apps will typically use port 80/TCP, but this is not enforced.
     - to:
         - namespaceSelector:

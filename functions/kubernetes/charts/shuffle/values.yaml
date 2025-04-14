@@ -958,10 +958,6 @@ orborus:
   ## @param orborus.replicaCount Number of orborus replicas to deploy
   ##
   replicaCount: 1
-  ## @param orborus.containerPorts.http orborus HTTP container port
-  ##
-  containerPorts:
-    http: 8080
   ## @param orborus.extraContainerPorts Optionally specify extra list of additional ports for orborus containers
   ## e.g:
   ## extraContainerPorts:
