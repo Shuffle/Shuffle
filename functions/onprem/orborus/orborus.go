@@ -747,7 +747,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	//log.Printf("[DEBUG] Removing existing image (s): %s", images)
 	newImages := []string{}
 
-	successful := []string{} 
+	successful := []string{}
 	for _, curimage := range strings.Split(images, ",") {
 		curimage = strings.TrimSpace(curimage)
 		if shuffle.ArrayContains(handled, curimage) {
@@ -1067,9 +1067,9 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "shuffle-worker",
-		"app.kubernetes.io/instance": identifier,
-		// "app.kubernetes.io/version":    "",
+		// Well-known Kubernetes labels
+		"app.kubernetes.io/name":       "shuffle-worker",
+		"app.kubernetes.io/instance":   identifier,
 		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-orborus",
 		// Keep legacy labels for backward compatibility
@@ -1212,7 +1212,6 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		return err
 	}
 
-	// kubectl expose deployment shuffle-workers --type=NodePort --port=33333 --target-port=33333
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   identifier,
@@ -1227,7 +1226,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					TargetPort: intstr.FromInt(33333),
 				},
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 
@@ -1270,7 +1269,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 		Resources: container.Resources{},
 	}
-
 
 	// This is just to test the mounting locally so
 	// I can control from what source I'm mounting
