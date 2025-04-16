@@ -3519,7 +3519,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
+		log.Printf("[DEBUG][%s] NEWRESP (from app %s with label %s): %s", workflowExecution.ExecutionId, action.AppName, action.Label, string(body))
 	}
 
 	return nil
