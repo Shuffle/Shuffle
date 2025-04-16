@@ -399,6 +399,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
+	if err != nil {
+		deployport = 80
+	}
+
 	envMap := make(map[string]string)
 	for _, envStr := range env {
 		parts := strings.SplitN(envStr, "=", 2)
@@ -408,9 +413,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	// add to env
-	// fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
-	// fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
-	envMap["SHUFFLE_APP_EXPOSED_PORT"] = "80"
+	envMap["SHUFFLE_APP_EXPOSED_PORT"] = strconv.Itoa(deployport)
 	envMap["SHUFFLE_SWARM_CONFIG"] = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	envMap["BASE_URL"] = "http://shuffle-workers:33333"
 
@@ -599,6 +602,12 @@ func deployk8sApp(image string, identifier string, env []string) error {
 							Name:  value,
 							Image: image,
 							Env:   buildEnvVars(envMap),
+							Ports: []corev1.ContainerPort{
+								{
+									Protocol:      "TCP",
+									ContainerPort: int32(deployport),
+								},
+							},
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
@@ -614,7 +623,6 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		return err
 	}
 
-	// kubectl expose deployment {podName} --type=NodePort --port=80 --target-port=80
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -626,7 +634,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 				{
 					Protocol:   "TCP",
 					Port:       80,
-					TargetPort: intstr.FromInt(80),
+					TargetPort: intstr.FromInt(deployport),
 				},
 			},
 			Type: corev1.ServiceTypeNodePort,
@@ -917,7 +925,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// Add more volume binds if possible
 	if len(volumeBinds) > 0 {
 
-		// Only use mounts, not direct binds 
+		// Only use mounts, not direct binds
 		hostConfig.Binds = []string{}
 		hostConfig.Mounts = []mount.Mount{}
 		for _, bind := range volumeBinds {
@@ -931,7 +939,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			sourceFolder := bindSplit[0]
 			destinationFolder := bindSplit[1]
 
-			readOnly := false 
+			readOnly := false
 			if len(bindSplit) > 2 {
 				mode := bindSplit[2]
 				if mode == "ro" {
@@ -940,9 +948,9 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			}
 
 			builtMount := mount.Mount{
-				Type:   mount.TypeBind,
-				Source: sourceFolder,
-				Target: destinationFolder,
+				Type:     mount.TypeBind,
+				Source:   sourceFolder,
+				Target:   destinationFolder,
 				ReadOnly: readOnly,
 			}
 
@@ -1853,18 +1861,18 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		}
 	}
 
-	// Validates RERUN of single actions 
-	// Identified by: 
+	// Validates RERUN of single actions
+	// Identified by:
 	// 1. Predefined result from previous exec
 	// 2. Only ONE action
 	// 3. Every predefined result having result.Action.Category == "rerun"
 	/*
-	if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
-		finished := shuffle.ValidateFinished(ctx, extra, workflowExecution) 
-		if finished {
-			return nil 
+		if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
+			finished := shuffle.ValidateFinished(ctx, extra, workflowExecution)
+			if finished {
+				return nil
+			}
 		}
-	}
 	*/
 
 	nextActions = append(nextActions, startAction)
@@ -1953,7 +1961,6 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		//_ = reader
 		//log.Printf("Successfully downloaded and built %s", image)
 	}
-
 
 	visited := []string{}
 	executed := []string{}
@@ -3777,7 +3784,7 @@ func checkStandaloneRun() {
 	if !strings.Contains(backendUrl, "http") {
 		log.Printf("[ERROR] Backend URL should start with http:// or https://")
 		return
-	
+
 	}
 
 	// Format:
@@ -3851,7 +3858,7 @@ func checkStandaloneRun() {
 			continue
 		}
 
-		// This is to handle reruns of SINGLE actions 
+		// This is to handle reruns of SINGLE actions
 		if result.Action.Category == "rerun" {
 			newResults = append(newResults, result)
 			continue
@@ -3904,7 +3911,6 @@ func checkStandaloneRun() {
 	}
 
 	log.Printf("\n\n\n[DEBUG] Finished resetting execution %s. Body: %s. Starting execution.\n\n\n", newresp.Status, string(body))
-
 
 }
 
