@@ -510,6 +510,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `app.networkPolicy.allowExternalEgress`           | Allow the pod to access any range of port and all destinations.                    | `true` |
 | `app.networkPolicy.extraIngress`                  | Add extra ingress rules to the NetworkPolicy                                       | `[]`   |
 | `app.networkPolicy.extraEgress`                   | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true) | `[]`   |
+| `app.exposedContainerPort`                        | The port that shuffle app containers will listen on for new requests.              | `80`   |
 
 ### Traffic Exposure Parameters
 
@@ -606,4 +607,5 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
+
 

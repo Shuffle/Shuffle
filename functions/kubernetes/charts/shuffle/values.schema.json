@@ -2224,6 +2224,11 @@
                             "items": {}
                         }
                     }
+                },
+                "exposedContainerPort": {
+                    "type": "number",
+                    "description": "The port that shuffle app containers will listen on for new requests. ",
+                    "default": 80
                 }
             }
         },
