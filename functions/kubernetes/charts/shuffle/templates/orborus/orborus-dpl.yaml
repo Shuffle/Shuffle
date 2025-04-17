@@ -88,8 +88,24 @@ spec:
               value: "true"
             - name: SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME
               value: {{ include "shuffle.worker.serviceAccount.name" . }}
+            {{- if .Values.worker.podSecurityContext.enabled }}
+            - name: SHUFFLE_WORKER_POD_SECURITY_CONTEXT
+              value: {{ omit .Values.worker.podSecurityContext "enabled" | mustToJson | quote }}
+            {{- end }}
+            {{- if .Values.worker.containerSecurityContext.enabled }}
+            - name: SHUFFLE_WORKER_CONTAINER_SECURITY_CONTEXT
+              value: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.worker.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+            {{- end }}
             - name: SHUFFLE_APP_SERVICE_ACCOUNT_NAME
               value: {{ include "shuffle.app.serviceAccount.name" . }}
+            {{- if .Values.app.podSecurityContext.enabled }}
+            - name: SHUFFLE_APP_POD_SECURITY_CONTEXT
+              value: {{ omit .Values.app.podSecurityContext "enabled" | mustToJson | quote }}
+            {{- end }}
+            {{- if .Values.app.containerSecurityContext.enabled }}
+            - name: SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT
+              value: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.app.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+            {{- end }}
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
