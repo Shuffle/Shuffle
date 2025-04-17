@@ -1449,6 +1449,10 @@ app:
     ##
     extraEgress: []
 
+  ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests. 
+  ##
+  exposedContainerPort: 80
+
 ## @section Traffic Exposure Parameters
 ##
 

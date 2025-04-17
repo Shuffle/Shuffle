@@ -747,7 +747,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	//log.Printf("[DEBUG] Removing existing image (s): %s", images)
 	newImages := []string{}
 
-	successful := []string{} 
+	successful := []string{}
 	for _, curimage := range strings.Split(images, ",") {
 		curimage = strings.TrimSpace(curimage)
 		if shuffle.ArrayContains(handled, curimage) {
@@ -994,6 +994,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	if len(os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY")) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY")))
+	}
+
+	if len(os.Getenv("SHUFFLE_APP_EXPOSED_PORT")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%s", os.Getenv("SHUFFLE_APP_EXPOSED_PORT")))
 	}
 
 	if len(appServiceAccountName) > 0 {
@@ -1270,7 +1274,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 		Resources: container.Resources{},
 	}
-
 
 	// This is just to test the mounting locally so
 	// I can control from what source I'm mounting
