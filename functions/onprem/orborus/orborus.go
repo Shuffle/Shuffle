@@ -76,7 +76,11 @@ var maxCPUPercent = 90
 var isKubernetes = os.Getenv("IS_KUBERNETES")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var workerServiceAccountName = os.Getenv("SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME")
+var workerPodSecurityContext = os.Getenv("SHUFFLE_WORKER_POD_SECURITY_CONTEXT")
+var workerContainerSecurityContext = os.Getenv("SHUFFLE_WORKER_CONTAINER_SECURITY_CONTEXT")
 var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
+var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
+var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -747,7 +751,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	//log.Printf("[DEBUG] Removing existing image (s): %s", images)
 	newImages := []string{}
 
-	successful := []string{} 
+	successful := []string{}
 	for _, curimage := range strings.Split(images, ",") {
 		curimage = strings.TrimSpace(curimage)
 		if shuffle.ArrayContains(handled, curimage) {
@@ -1000,6 +1004,14 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_SERVICE_ACCOUNT_NAME=%s", appServiceAccountName))
 	}
 
+	if len(appPodSecurityContext) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_POD_SECURITY_CONTEXT=%s", appPodSecurityContext))
+	}
+
+	if len(appContainerSecurityContext) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT=%s", appContainerSecurityContext))
+	}
+
 	clientset, _, err := shuffle.GetKubernetesClient()
 	if err != nil {
 		log.Printf("[ERROR] Error getting kubernetes client:", err)
@@ -1081,10 +1093,33 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		"app.kubernetes.io/instance": identifier,
 	}
 
+	// Parse security contexts from env
+	var podSecurityContext *corev1.PodSecurityContext
+	var containerSecurityContext *corev1.SecurityContext
+
+	if len(workerPodSecurityContext) > 0 {
+		podSecurityContext = &corev1.PodSecurityContext{}
+		err = json.Unmarshal([]byte(workerPodSecurityContext), podSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal worker pod security context: %v", err)
+			return fmt.Errorf("failed to unmarshal worker pod security context: %v", err)
+		}
+	}
+
+	if len(workerContainerSecurityContext) > 0 {
+		containerSecurityContext = &corev1.SecurityContext{}
+		err = json.Unmarshal([]byte(workerContainerSecurityContext), containerSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal worker container security context: %v", err)
+			return fmt.Errorf("failed to unmarshal worker container security context: %v", err)
+		}
+	}
+
 	containerAttachment := corev1.Container{
-		Name:  identifier,
-		Image: kubernetesImage,
-		Env:   buildEnvVars(envMap),
+		Name:            identifier,
+		Image:           kubernetesImage,
+		Env:             buildEnvVars(envMap),
+		SecurityContext: containerSecurityContext,
 
 		//ImagePullPolicy: "Never",
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1201,6 +1236,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
 					ServiceAccountName: workerServiceAccountName,
+					SecurityContext:    podSecurityContext,
 				},
 			},
 		},
@@ -1270,7 +1306,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 		Resources: container.Resources{},
 	}
-
 
 	// This is just to test the mounting locally so
 	// I can control from what source I'm mounting
