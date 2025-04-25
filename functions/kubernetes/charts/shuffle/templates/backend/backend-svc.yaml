@@ -15,5 +15,6 @@ spec:
       port: {{ .Values.backend.containerPorts.http }}
       targetPort: http
       protocol: TCP
+      appProtocol: http
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.backend.podLabels .Values.commonLabels) "context" .) }}
   selector: {{- include "shuffle.backend.matchLabels" (dict "customLabels" $podLabels "context" $) | nindent 4 }}
