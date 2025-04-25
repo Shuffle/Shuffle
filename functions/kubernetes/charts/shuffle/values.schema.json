@@ -683,6 +683,16 @@
                         }
                     }
                 },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for backend service",
+                            "default": {}
+                        }
+                    }
+                },
                 "serviceAccount": {
                     "type": "object",
                     "properties": {
@@ -1359,6 +1369,16 @@
                                     "default": ""
                                 }
                             }
+                        }
+                    }
+                },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for frontend service",
+                            "default": {}
                         }
                     }
                 },

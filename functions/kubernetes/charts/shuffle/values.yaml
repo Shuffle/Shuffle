@@ -421,6 +421,14 @@ backend:
       targetCPU: ""
       targetMemory: ""
 
+  ## Service configuration
+  ##
+  service:
+    ## @param backend.service.labels Extra labels for backend service
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    labels: {}
+
   ## ServiceAccount configuration
   ##
   serviceAccount:
@@ -869,6 +877,14 @@ frontend:
       maxReplicas: ""
       targetCPU: ""
       targetMemory: ""
+
+  ## Service configuration
+  ##
+  service:
+    ## @param frontend.service.labels Extra labels for frontend service
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    labels: {}
 
   ## ServiceAccount configuration
   ##

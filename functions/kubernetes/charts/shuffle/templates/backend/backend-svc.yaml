@@ -3,7 +3,8 @@ kind: Service
 metadata:
   name: {{ template "shuffle.backend.name" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "shuffle.backend.labels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- $serviceLabels := include "common.tplvalues.merge" (dict "values" (list .Values.backend.service.labels .Values.commonLabels) "context" .) }}
+  labels: {{- include "shuffle.backend.labels" (dict "customLabels" $serviceLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
