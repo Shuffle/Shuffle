@@ -4677,6 +4677,13 @@ const AngularWorkflow = (defaultprops) => {
         console.log("Get workflows error: ", error.toString());
       });
   };
+  const isModalOpenRef = useRef(false);
+    useEffect(() => {
+      isModalOpenRef.current =
+        authenticationModalOpen
+    }, [
+      authenticationModalOpen
+    ]);
 
   const onUnselect = (event) => {
     const nodedata = event.target.data();
@@ -4685,9 +4692,13 @@ const AngularWorkflow = (defaultprops) => {
     //	setLastSelected(nodedata)
     //}
     //
-
     // Wait for new node to possibly be selected
     //setTimeout(() => {
+
+    // use ref to check modal closure state better
+    if (isModalOpenRef.current) {
+      return;
+    }
     const typeIds = cy.elements('node:selected').jsons();
     for (var idkey in typeIds) {
       const item = typeIds[idkey]
@@ -24095,7 +24106,6 @@ const AngularWorkflow = (defaultprops) => {
         </div>
       </Dialog>
     ) : null;
-
   // This whole part is redundant. Made it part of Arguments instead.
   const authenticationModal = authenticationModalOpen ? (
     <Dialog
@@ -24103,7 +24113,6 @@ const AngularWorkflow = (defaultprops) => {
       aria-labelledby="draggable-dialog-title"
       hideBackdrop={true}
       disableEnforceFocus={true}
-      disableBackdropClick={true}
       style={{ pointerEvents: "none" }}
       open={authenticationModalOpen}
       onClose={() => {
