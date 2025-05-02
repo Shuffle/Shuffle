@@ -17780,8 +17780,8 @@ const AngularWorkflow = (defaultprops) => {
       </div>
 
     </div>
-  const defaultEnvironment = environments.find(
-    (env) => env.default && env.Name.toLowerCase() !== "cloud"
+  const defaultEnvironment = environments && environments?.find(
+    (env) => env?.default && env?.Name?.toLowerCase() !== "cloud"
   );
 
   if (selectedTrigger.trigger_type === "PIPELINE" && selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
