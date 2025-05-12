@@ -310,14 +310,14 @@ backend:
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## ONLY FOR DEPLOYMENTS:
   ## @param backend.updateStrategy.type backend deployment strategy type
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
   ##
   updateStrategy:
     ## Can be set to RollingUpdate or Recreate
+    ## Backend uses ReadWriteOnce volumes by default, which is incompatible with RollingUpdate
     ##
-    type: RollingUpdate
+    type: Recreate 
   ## @param backend.priorityClassName backend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -420,6 +420,14 @@ backend:
       maxReplicas: ""
       targetCPU: ""
       targetMemory: ""
+
+  ## Service configuration
+  ##
+  service:
+    ## @param backend.service.labels Extra labels for backend service
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    labels: {}
 
   ## ServiceAccount configuration
   ##
@@ -869,6 +877,14 @@ frontend:
       maxReplicas: ""
       targetCPU: ""
       targetMemory: ""
+
+  ## Service configuration
+  ##
+  service:
+    ## @param frontend.service.labels Extra labels for frontend service
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    labels: {}
 
   ## ServiceAccount configuration
   ##

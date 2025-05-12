@@ -517,7 +517,7 @@
                         "type": {
                             "type": "string",
                             "description": "backend deployment strategy type",
-                            "default": "RollingUpdate"
+                            "default": "Recreate"
                         }
                     }
                 },
@@ -680,6 +680,16 @@
                                     "default": ""
                                 }
                             }
+                        }
+                    }
+                },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for backend service",
+                            "default": {}
                         }
                     }
                 },
@@ -1359,6 +1369,16 @@
                                     "default": ""
                                 }
                             }
+                        }
+                    }
+                },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for frontend service",
+                            "default": {}
                         }
                     }
                 },
