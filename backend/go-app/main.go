@@ -5138,7 +5138,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories", shuffle.GetActiveCategories).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/deactivate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
