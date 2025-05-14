@@ -74,6 +74,7 @@ var appsInitialized = false
 
 var hostname string
 var maxReplicas = uint64(12)
+var debug bool
 
 /*
 var environments []string
@@ -2548,11 +2549,16 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		if debug { 
+			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		}
+
 		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
 		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
-			resp.WriteHeader(401)
+			log.Printf("[ERROR][%s] Failed setting execution: %s", workflowExecution.ExecutionId, err)
+
+			resp.WriteHeader(400)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
 			return
 		}
@@ -2561,7 +2567,10 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				if debug { 
+					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				}
+
 				handleExecutionResult(*workflowExecution)
 			} else {
 				shutdownData, err := json.Marshal(workflowExecution)
@@ -3519,7 +3528,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
+		if debug { 
+			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
+		}
 	}
 
 	return nil
@@ -3911,6 +3922,10 @@ func checkStandaloneRun() {
 // Initial loop etc
 func main() {
 	checkStandaloneRun()
+
+	if os.Getenv("DEBUG") == "true" {
+		debug = true
+	}
 
 	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
