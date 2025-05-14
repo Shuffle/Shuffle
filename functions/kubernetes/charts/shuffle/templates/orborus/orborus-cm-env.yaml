@@ -11,7 +11,7 @@ data:
   ENVIRONMENT_NAME: "{{ .Values.shuffle.org }}"
   ORG_ID: "{{ .Values.shuffle.org }}"
   TZ: "{{ .Values.shuffle.timezone }}"
-  BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:5001"
+  BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}"
   KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
   KUBERNETES_SERVICE_ACCOUNT: {{ include "shuffle.orborus.serviceAccount.name" . }}
   SHUFFLE_WORKER_IMAGE: "{{ include "shuffle.worker.image" . }}"

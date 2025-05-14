@@ -29,6 +29,16 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
+    # Allow access to backend
+    - ports:
+      - port: {{ .Values.backend.containerPorts.http }}
+        protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.backend.matchLabels" . | nindent 14 }}
     # Allow access to workers
     - ports:
         - port: 33333
