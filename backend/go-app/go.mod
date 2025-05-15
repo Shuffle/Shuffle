@@ -22,7 +22,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.8.46
+	github.com/shuffle/shuffle-shared v0.8.56
 	golang.org/x/crypto v0.36.0
 	google.golang.org/api v0.228.0
 	google.golang.org/grpc v1.71.1
@@ -114,7 +114,7 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/sashabaranov/go-openai v1.19.2 // indirect
+	github.com/sashabaranov/go-openai v1.40.0 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/sendgrid/sendgrid-go v3.14.0+incompatible // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
@@ -136,7 +136,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go4.org v0.0.0-20201209231011-d4a079459e60 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
