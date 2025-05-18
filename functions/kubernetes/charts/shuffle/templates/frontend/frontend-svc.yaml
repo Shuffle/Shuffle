@@ -3,7 +3,8 @@ kind: Service
 metadata:
   name: {{ template "shuffle.frontend.name" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "shuffle.frontend.labels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- $serviceLabels := include "common.tplvalues.merge" (dict "values" (list .Values.frontend.service.labels .Values.commonLabels) "context" .) }}
+  labels: {{- include "shuffle.frontend.labels" (dict "customLabels" $serviceLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
@@ -14,11 +15,13 @@ spec:
       port: {{ .Values.frontend.containerPorts.http }}
       targetPort: http
       protocol: TCP
+      appProtocol: http
     {{- if .Values.frontend.containerPorts.https }}
     - name: https
       port: {{ .Values.frontend.containerPorts.https }}
       targetPort: https
       protocol: TCP
+      appProtocol: https
     {{- end }}
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.frontend.podLabels .Values.commonLabels) "context" .) }}
   selector: {{- include "shuffle.frontend.matchLabels" (dict "customLabels" $podLabels "context" $) | nindent 4 }}

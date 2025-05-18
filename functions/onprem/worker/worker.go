@@ -57,9 +57,13 @@ var logsDisabled = os.Getenv("SHUFFLE_LOGS_DISABLED")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
-var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 
+// Kubernetes settings
+var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
+var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
+var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
 var executionCount int64
 
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
@@ -504,6 +508,28 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		"app.kubernetes.io/instance": name,
 	}
 
+	// Parse security contexts from env
+	var podSecurityContext *corev1.PodSecurityContext
+	var containerSecurityContext *corev1.SecurityContext
+
+	if len(appPodSecurityContext) > 0 {
+		podSecurityContext = &corev1.PodSecurityContext{}
+		err = json.Unmarshal([]byte(appPodSecurityContext), podSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal app pod security context: %v", err)
+			return fmt.Errorf("failed to unmarshal app pod security context: %v", err)
+		}
+	}
+
+	if len(appContainerSecurityContext) > 0 {
+		containerSecurityContext = &corev1.SecurityContext{}
+		err = json.Unmarshal([]byte(appContainerSecurityContext), containerSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal app container security context: %v", err)
+			return fmt.Errorf("failed to unmarshal app container security context: %v", err)
+		}
+	}
+
 	// pod := &corev1.Pod{
 	// 	ObjectMeta: metav1.ObjectMeta{
 	// 		Name: podName,
@@ -597,13 +623,15 @@ func deployk8sApp(image string, identifier string, env []string) error {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  value,
-							Image: image,
-							Env:   buildEnvVars(envMap),
+							Name:            value,
+							Image:           image,
+							Env:             buildEnvVars(envMap),
+							SecurityContext: containerSecurityContext,
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
 					ServiceAccountName: appServiceAccountName,
+					SecurityContext:    podSecurityContext,
 				},
 			},
 		},
@@ -918,7 +946,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// Add more volume binds if possible
 	if len(volumeBinds) > 0 {
 
-		// Only use mounts, not direct binds 
+		// Only use mounts, not direct binds
 		hostConfig.Binds = []string{}
 		hostConfig.Mounts = []mount.Mount{}
 		for _, bind := range volumeBinds {
@@ -932,7 +960,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			sourceFolder := bindSplit[0]
 			destinationFolder := bindSplit[1]
 
-			readOnly := false 
+			readOnly := false
 			if len(bindSplit) > 2 {
 				mode := bindSplit[2]
 				if mode == "ro" {
@@ -941,9 +969,9 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			}
 
 			builtMount := mount.Mount{
-				Type:   mount.TypeBind,
-				Source: sourceFolder,
-				Target: destinationFolder,
+				Type:     mount.TypeBind,
+				Source:   sourceFolder,
+				Target:   destinationFolder,
 				ReadOnly: readOnly,
 			}
 
@@ -1854,18 +1882,18 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		}
 	}
 
-	// Validates RERUN of single actions 
-	// Identified by: 
+	// Validates RERUN of single actions
+	// Identified by:
 	// 1. Predefined result from previous exec
 	// 2. Only ONE action
 	// 3. Every predefined result having result.Action.Category == "rerun"
 	/*
-	if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
-		finished := shuffle.ValidateFinished(ctx, extra, workflowExecution) 
-		if finished {
-			return nil 
+		if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
+			finished := shuffle.ValidateFinished(ctx, extra, workflowExecution)
+			if finished {
+				return nil
+			}
 		}
-	}
 	*/
 
 	nextActions = append(nextActions, startAction)
@@ -1954,7 +1982,6 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		//_ = reader
 		//log.Printf("Successfully downloaded and built %s", image)
 	}
-
 
 	visited := []string{}
 	executed := []string{}
@@ -3788,7 +3815,7 @@ func checkStandaloneRun() {
 	if !strings.Contains(backendUrl, "http") {
 		log.Printf("[ERROR] Backend URL should start with http:// or https://")
 		return
-	
+
 	}
 
 	// Format:
@@ -3862,7 +3889,7 @@ func checkStandaloneRun() {
 			continue
 		}
 
-		// This is to handle reruns of SINGLE actions 
+		// This is to handle reruns of SINGLE actions
 		if result.Action.Category == "rerun" {
 			newResults = append(newResults, result)
 			continue
@@ -3915,7 +3942,6 @@ func checkStandaloneRun() {
 	}
 
 	log.Printf("\n\n\n[DEBUG] Finished resetting execution %s. Body: %s. Starting execution.\n\n\n", newresp.Status, string(body))
-
 
 }
 

@@ -217,7 +217,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `backend.affinity`                                          | Affinity for backend pods assignment                                                                                                                                                                                               | `{}`                                         |
 | `backend.nodeSelector`                                      | Node labels for backend pods assignment                                                                                                                                                                                            | `{}`                                         |
 | `backend.tolerations`                                       | Tolerations for backend pods assignment                                                                                                                                                                                            | `[]`                                         |
-| `backend.updateStrategy.type`                               | backend deployment strategy type                                                                                                                                                                                                   | `RollingUpdate`                              |
+| `backend.updateStrategy.type`                               | backend deployment strategy type                                                                                                                                                                                                   | `Recreate`                                   |
 | `backend.priorityClassName`                                 | backend pods' priorityClassName                                                                                                                                                                                                    | `""`                                         |
 | `backend.topologySpreadConstraints`                         | Topology Spread Constraints for backend pod assignment spread across your cluster among failure-domains                                                                                                                            | `[]`                                         |
 | `backend.schedulerName`                                     | Name of the k8s scheduler (other than default) for backend pods                                                                                                                                                                    | `""`                                         |
@@ -244,6 +244,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `backend.autoscaling.hpa.maxReplicas`                       | Maximum number of replicas                                                                                                                                                                                                         | `""`                                         |
 | `backend.autoscaling.hpa.targetCPU`                         | Target CPU utilization percentage                                                                                                                                                                                                  | `""`                                         |
 | `backend.autoscaling.hpa.targetMemory`                      | Target Memory utilization percentage                                                                                                                                                                                               | `""`                                         |
+| `backend.service.labels`                                    | Extra labels for backend service                                                                                                                                                                                                   | `{}`                                         |
 | `backend.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                                                                                                                                                                               | `true`                                       |
 | `backend.serviceAccount.name`                               | The name of the ServiceAccount to use.                                                                                                                                                                                             | `""`                                         |
 | `backend.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                                                                                                                                                                   | `{}`                                         |
@@ -359,6 +360,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `frontend.autoscaling.hpa.maxReplicas`                       | Maximum number of replicas                                                                                                                                                                                                            | `""`                       |
 | `frontend.autoscaling.hpa.targetCPU`                         | Target CPU utilization percentage                                                                                                                                                                                                     | `""`                       |
 | `frontend.autoscaling.hpa.targetMemory`                      | Target Memory utilization percentage                                                                                                                                                                                                  | `""`                       |
+| `frontend.service.labels`                                    | Extra labels for frontend service                                                                                                                                                                                                     | `{}`                       |
 | `frontend.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                                                                                                                                                                                  | `true`                     |
 | `frontend.serviceAccount.name`                               | The name of the ServiceAccount to use.                                                                                                                                                                                                | `""`                       |
 | `frontend.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                                                                                                                                                                      | `{}`                       |
@@ -477,39 +479,69 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ### worker Parameters
 
-| Name                                                 | Description                                                                                                                                       | Value                    |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `worker.image.registry`                              | worker image registry                                                                                                                             | `ghcr.io`                |
-| `worker.image.repository`                            | worker image repository                                                                                                                           | `shuffle/shuffle-worker` |
-| `worker.image.tag`                                   | worker image tag (immutable tags are recommended, defaults to appVersion)                                                                         | `""`                     |
-| `worker.image.digest`                                | worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended) | `""`                     |
-| `worker.serviceAccount.create`                       | Specifies whether a ServiceAccount should be created                                                                                              | `true`                   |
-| `worker.serviceAccount.name`                         | The name of the ServiceAccount to use.                                                                                                            | `""`                     |
-| `worker.serviceAccount.annotations`                  | Additional Service Account annotations (evaluated as a template)                                                                                  | `{}`                     |
-| `worker.serviceAccount.automountServiceAccountToken` | Automount service account token for the worker service account                                                                                    | `true`                   |
-| `worker.serviceAccount.imagePullSecrets`             | Add image pull secrets to the worker service account                                                                                              | `[]`                     |
-| `worker.rbac.create`                                 | Specifies whether RBAC resources should be created                                                                                                | `true`                   |
-| `worker.networkPolicy.enabled`                       | Specifies whether a NetworkPolicy should be created                                                                                               | `true`                   |
-| `worker.networkPolicy.allowExternal`                 | Don't require server label for connections                                                                                                        | `true`                   |
-| `worker.networkPolicy.allowExternalEgress`           | Allow the pod to access any range of port and all destinations.                                                                                   | `true`                   |
-| `worker.networkPolicy.extraIngress`                  | Add extra ingress rules to the NetworkPolicy                                                                                                      | `[]`                     |
-| `worker.networkPolicy.extraEgress`                   | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                | `[]`                     |
+| Name                                                       | Description                                                                                                                                       | Value                    |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `worker.image.registry`                                    | worker image registry                                                                                                                             | `ghcr.io`                |
+| `worker.image.repository`                                  | worker image repository                                                                                                                           | `shuffle/shuffle-worker` |
+| `worker.image.tag`                                         | worker image tag (immutable tags are recommended, defaults to appVersion)                                                                         | `""`                     |
+| `worker.image.digest`                                      | worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended) | `""`                     |
+| `worker.podSecurityContext.enabled`                        | Enable worker pods' Security Context                                                                                                              | `true`                   |
+| `worker.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy for worker pods                                                                                                | `Always`                 |
+| `worker.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface for worker pods                                                                                    | `[]`                     |
+| `worker.podSecurityContext.supplementalGroups`             | Set filesystem extra groups for worker pods                                                                                                       | `[]`                     |
+| `worker.podSecurityContext.fsGroup`                        | Set fsGroup in worker pods' Security Context                                                                                                      | `1001`                   |
+| `worker.containerSecurityContext.enabled`                  | Enabled worker container' Security Context                                                                                                        | `true`                   |
+| `worker.containerSecurityContext.seLinuxOptions`           | Set SELinux options in worker container                                                                                                           | `{}`                     |
+| `worker.containerSecurityContext.runAsUser`                | Set runAsUser in worker container' Security Context                                                                                               | `1001`                   |
+| `worker.containerSecurityContext.runAsGroup`               | Set runAsGroup in worker container' Security Context                                                                                              | `1001`                   |
+| `worker.containerSecurityContext.runAsNonRoot`             | Set runAsNonRoot in worker container' Security Context                                                                                            | `true`                   |
+| `worker.containerSecurityContext.readOnlyRootFilesystem`   | Set readOnlyRootFilesystem in worker container' Security Context                                                                                  | `true`                   |
+| `worker.containerSecurityContext.privileged`               | Set privileged in worker container' Security Context                                                                                              | `false`                  |
+| `worker.containerSecurityContext.allowPrivilegeEscalation` | Set allowPrivilegeEscalation in worker container' Security Context                                                                                | `false`                  |
+| `worker.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped in worker container                                                                                            | `["ALL"]`                |
+| `worker.containerSecurityContext.seccompProfile.type`      | Set seccomp profile in worker container                                                                                                           | `RuntimeDefault`         |
+| `worker.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                                                                                              | `true`                   |
+| `worker.serviceAccount.name`                               | The name of the ServiceAccount to use.                                                                                                            | `""`                     |
+| `worker.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                                                                                  | `{}`                     |
+| `worker.serviceAccount.automountServiceAccountToken`       | Automount service account token for the worker service account                                                                                    | `true`                   |
+| `worker.serviceAccount.imagePullSecrets`                   | Add image pull secrets to the worker service account                                                                                              | `[]`                     |
+| `worker.rbac.create`                                       | Specifies whether RBAC resources should be created                                                                                                | `true`                   |
+| `worker.networkPolicy.enabled`                             | Specifies whether a NetworkPolicy should be created                                                                                               | `true`                   |
+| `worker.networkPolicy.allowExternal`                       | Don't require server label for connections                                                                                                        | `true`                   |
+| `worker.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                   | `true`                   |
+| `worker.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                      | `[]`                     |
+| `worker.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                | `[]`                     |
 
 ### app Parameters
 
-| Name                                              | Description                                                                        | Value  |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------- | ------ |
-| `app.serviceAccount.create`                       | Specifies whether a ServiceAccount should be created                               | `true` |
-| `app.serviceAccount.name`                         | The name of the ServiceAccount to use.                                             | `""`   |
-| `app.serviceAccount.annotations`                  | Additional Service Account annotations (evaluated as a template)                   | `{}`   |
-| `app.serviceAccount.automountServiceAccountToken` | Automount service account token for the app service account                        | `true` |
-| `app.serviceAccount.imagePullSecrets`             | Add image pull secrets to the app service account                                  | `[]`   |
-| `app.rbac.create`                                 | Specifies whether RBAC resources should be created                                 | `true` |
-| `app.networkPolicy.enabled`                       | Specifies whether a NetworkPolicy should be created                                | `true` |
-| `app.networkPolicy.allowExternal`                 | Don't require server label for connections                                         | `true` |
-| `app.networkPolicy.allowExternalEgress`           | Allow the pod to access any range of port and all destinations.                    | `true` |
-| `app.networkPolicy.extraIngress`                  | Add extra ingress rules to the NetworkPolicy                                       | `[]`   |
-| `app.networkPolicy.extraEgress`                   | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true) | `[]`   |
+| Name                                                    | Description                                                                        | Value            |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------- |
+| `app.podSecurityContext.enabled`                        | Enable app pods' Security Context                                                  | `true`           |
+| `app.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy for app pods                                    | `Always`         |
+| `app.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface for app pods                        | `[]`             |
+| `app.podSecurityContext.supplementalGroups`             | Set filesystem extra groups for app pods                                           | `[]`             |
+| `app.podSecurityContext.fsGroup`                        | Set fsGroup in app pods' Security Context                                          | `1001`           |
+| `app.containerSecurityContext.enabled`                  | Enabled app container' Security Context                                            | `true`           |
+| `app.containerSecurityContext.seLinuxOptions`           | Set SELinux options in app container                                               | `{}`             |
+| `app.containerSecurityContext.runAsUser`                | Set runAsUser in app container' Security Context                                   | `1001`           |
+| `app.containerSecurityContext.runAsGroup`               | Set runAsGroup in app container' Security Context                                  | `1001`           |
+| `app.containerSecurityContext.runAsNonRoot`             | Set runAsNonRoot in app container' Security Context                                | `true`           |
+| `app.containerSecurityContext.readOnlyRootFilesystem`   | Set readOnlyRootFilesystem in app container' Security Context                      | `true`           |
+| `app.containerSecurityContext.privileged`               | Set privileged in app container' Security Context                                  | `false`          |
+| `app.containerSecurityContext.allowPrivilegeEscalation` | Set allowPrivilegeEscalation in app container' Security Context                    | `false`          |
+| `app.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped in app container                                | `["ALL"]`        |
+| `app.containerSecurityContext.seccompProfile.type`      | Set seccomp profile in app container                                               | `RuntimeDefault` |
+| `app.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                               | `true`           |
+| `app.serviceAccount.name`                               | The name of the ServiceAccount to use.                                             | `""`             |
+| `app.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                   | `{}`             |
+| `app.serviceAccount.automountServiceAccountToken`       | Automount service account token for the app service account                        | `true`           |
+| `app.serviceAccount.imagePullSecrets`                   | Add image pull secrets to the app service account                                  | `[]`             |
+| `app.rbac.create`                                       | Specifies whether RBAC resources should be created                                 | `true`           |
+| `app.networkPolicy.enabled`                             | Specifies whether a NetworkPolicy should be created                                | `true`           |
+| `app.networkPolicy.allowExternal`                       | Don't require server label for connections                                         | `true`           |
+| `app.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                    | `true`           |
+| `app.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                       | `[]`             |
+| `app.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true) | `[]`             |
 
 ### Traffic Exposure Parameters
 
@@ -606,4 +638,6 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
+
+
 
