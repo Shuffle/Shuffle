@@ -18,6 +18,10 @@ import Apps2 from "./views/Apps2.jsx";
 import AppCreator from "./views/AppCreator.jsx";
 import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 
+// LLM related tests
+import ChatBot from "./components/ChatBot.jsx";
+import AgentUI from "./views/AgentUI.jsx";
+
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import DashboardView from "./views/DashboardViews.jsx";
@@ -796,7 +800,7 @@ const App = (message, props) => {
 				path="/chat"
 				element={
 					<ChatBot
-						serverside={serverside}
+						serverside={false}
 						cookies={cookies}
 						removeCookie={removeCookie}
 						isLoaded={isLoaded}
@@ -813,7 +817,7 @@ const App = (message, props) => {
 				path="/conversation"
 				element={
 					<ChatBot
-						serverside={serverside}
+						serverside={false}
 						cookies={cookies}
 						removeCookie={removeCookie}
 						isLoaded={isLoaded}
@@ -861,7 +865,7 @@ const App = (message, props) => {
 				path="/agents"
 				element={
 					<AgentUI
-						serverside={serverside}
+						serverside={false}
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
