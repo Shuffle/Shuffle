@@ -3039,7 +3039,13 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		shouldRerun = true
 	}
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
+	decisionId := ""
+	decision, decisionOk := query["decision_id"]
+	if decisionOk && len(decision) > 0 {
+		decisionId = decision[0]
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction, decisionId)
 
 	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 	resp.Header().Add("X-Debug-Url", debugUrl)
@@ -3101,7 +3107,12 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+	actionId := ""
+	if len(workflowExecution.Workflow.Actions) == 1 {
+		actionId = workflowExecution.Workflow.Actions[0].ID
+	}
+
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, actionId)
 	returnBytes, err := json.Marshal(returnBody)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)

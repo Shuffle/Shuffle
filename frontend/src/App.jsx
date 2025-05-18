@@ -793,6 +793,40 @@ const App = (message, props) => {
 			/>
 			<Route
 				exact
+				path="/chat"
+				element={
+					<ChatBot
+						serverside={serverside}
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						cookies={cookies}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/conversation"
+				element={
+					<ChatBot
+						serverside={serverside}
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						cookies={cookies}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+			/>
+			<Route
+				exact
 				path="/dashboards/:key"
 				element={
 					<DashboardViews
@@ -821,6 +855,22 @@ const App = (message, props) => {
 					/>
 				}
 			/>
+
+			<Route
+				exact
+				path="/agents"
+				element={
+					<AgentUI
+						serverside={serverside}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+				/>
+
         	<Route
         	  exact
         	  path="/"

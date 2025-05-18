@@ -57,9 +57,13 @@ var logsDisabled = os.Getenv("SHUFFLE_LOGS_DISABLED")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
-var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 
+// Kubernetes settings
+var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
+var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
+var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
 var executionCount int64
 
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
@@ -74,6 +78,7 @@ var appsInitialized = false
 
 var hostname string
 var maxReplicas = uint64(12)
+var debug bool
 
 /*
 var environments []string
@@ -506,6 +511,28 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		"app.kubernetes.io/instance": name,
 	}
 
+	// Parse security contexts from env
+	var podSecurityContext *corev1.PodSecurityContext
+	var containerSecurityContext *corev1.SecurityContext
+
+	if len(appPodSecurityContext) > 0 {
+		podSecurityContext = &corev1.PodSecurityContext{}
+		err = json.Unmarshal([]byte(appPodSecurityContext), podSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal app pod security context: %v", err)
+			return fmt.Errorf("failed to unmarshal app pod security context: %v", err)
+		}
+	}
+
+	if len(appContainerSecurityContext) > 0 {
+		containerSecurityContext = &corev1.SecurityContext{}
+		err = json.Unmarshal([]byte(appContainerSecurityContext), containerSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal app container security context: %v", err)
+			return fmt.Errorf("failed to unmarshal app container security context: %v", err)
+		}
+	}
+
 	// pod := &corev1.Pod{
 	// 	ObjectMeta: metav1.ObjectMeta{
 	// 		Name: podName,
@@ -608,10 +635,12 @@ func deployk8sApp(image string, identifier string, env []string) error {
 									ContainerPort: int32(deployport),
 								},
 							},
+							SecurityContext: containerSecurityContext,
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
 					ServiceAccountName: appServiceAccountName,
+					SecurityContext:    podSecurityContext,
 				},
 			},
 		},
@@ -2555,11 +2584,16 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		if debug { 
+			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		}
+
 		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
 		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
-			resp.WriteHeader(401)
+			log.Printf("[ERROR][%s] Failed setting execution: %s", workflowExecution.ExecutionId, err)
+
+			resp.WriteHeader(400)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
 			return
 		}
@@ -2568,7 +2602,10 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				if debug { 
+					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				}
+
 				handleExecutionResult(*workflowExecution)
 			} else {
 				shutdownData, err := json.Marshal(workflowExecution)
@@ -3526,7 +3563,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
+		if debug { 
+			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
+		}
 	}
 
 	return nil
@@ -3917,6 +3956,10 @@ func checkStandaloneRun() {
 // Initial loop etc
 func main() {
 	checkStandaloneRun()
+
+	if os.Getenv("DEBUG") == "true" {
+		debug = true
+	}
 
 	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
