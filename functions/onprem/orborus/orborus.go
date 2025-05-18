@@ -1083,9 +1083,9 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "shuffle-worker",
-		"app.kubernetes.io/instance": identifier,
-		// "app.kubernetes.io/version":    "",
+		// Well-known Kubernetes labels
+		"app.kubernetes.io/name":       "shuffle-worker",
+		"app.kubernetes.io/instance":   identifier,
 		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-orborus",
 		// Keep legacy labels for backward compatibility
@@ -1252,7 +1252,6 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		return err
 	}
 
-	// kubectl expose deployment shuffle-workers --type=NodePort --port=33333 --target-port=33333
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   identifier,
@@ -1267,7 +1266,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					TargetPort: intstr.FromInt(33333),
 				},
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 

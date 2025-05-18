@@ -497,13 +497,16 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	name := strings.ReplaceAll(identifier, "_", "-")
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "shuffle-app",
-		"app.kubernetes.io/instance": name,
-		// "app.kubernetes.io/version":    "",
+		// Well-known Kubernetes labels
+		"app.kubernetes.io/name":       "shuffle-app",
+		"app.kubernetes.io/instance":   name,
 		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-worker",
 		// Keep legacy labels for backward compatibility
 		"app": name,
+		// TODO: Add Shuffle specific labels
+		// "app.shuffler.io/name":    "APP_NAME",
+		// "app.shuffler.io/version": "APP_VERSION",
 	}
 
 	matchLabels := map[string]string{
@@ -666,7 +669,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 					TargetPort: intstr.FromInt(deployport),
 				},
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 
