@@ -404,6 +404,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
+	if err != nil {
+		deployport = 80
+	}
+
 	envMap := make(map[string]string)
 	for _, envStr := range env {
 		parts := strings.SplitN(envStr, "=", 2)
@@ -413,9 +418,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	// add to env
-	// fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
-	// fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
-	envMap["SHUFFLE_APP_EXPOSED_PORT"] = "80"
+	envMap["SHUFFLE_APP_EXPOSED_PORT"] = strconv.Itoa(deployport)
 	envMap["SHUFFLE_SWARM_CONFIG"] = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	envMap["BASE_URL"] = "http://shuffle-workers:33333"
 
@@ -623,9 +626,15 @@ func deployk8sApp(image string, identifier string, env []string) error {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            value,
-							Image:           image,
-							Env:             buildEnvVars(envMap),
+							Name:  value,
+							Image: image,
+							Env:   buildEnvVars(envMap),
+							Ports: []corev1.ContainerPort{
+								{
+									Protocol:      "TCP",
+									ContainerPort: int32(deployport),
+								},
+							},
 							SecurityContext: containerSecurityContext,
 						},
 					},
@@ -643,7 +652,6 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		return err
 	}
 
-	// kubectl expose deployment {podName} --type=NodePort --port=80 --target-port=80
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -655,7 +663,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 				{
 					Protocol:   "TCP",
 					Port:       80,
-					TargetPort: intstr.FromInt(80),
+					TargetPort: intstr.FromInt(deployport),
 				},
 			},
 			Type: corev1.ServiceTypeNodePort,

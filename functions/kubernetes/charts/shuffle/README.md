@@ -514,8 +514,20 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ### app Parameters
 
-| Name                                                    | Description                                                                        | Value            |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------- |
+| Name                                              | Description                                                                        | Value  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------- | ------ |
+| `app.serviceAccount.create`                       | Specifies whether a ServiceAccount should be created                               | `true` |
+| `app.serviceAccount.name`                         | The name of the ServiceAccount to use.                                             | `""`   |
+| `app.serviceAccount.annotations`                  | Additional Service Account annotations (evaluated as a template)                   | `{}`   |
+| `app.serviceAccount.automountServiceAccountToken` | Automount service account token for the app service account                        | `true` |
+| `app.serviceAccount.imagePullSecrets`             | Add image pull secrets to the app service account                                  | `[]`   |
+| `app.rbac.create`                                 | Specifies whether RBAC resources should be created                                 | `true` |
+| `app.networkPolicy.enabled`                       | Specifies whether a NetworkPolicy should be created                                | `true` |
+| `app.networkPolicy.allowExternal`                 | Don't require server label for connections                                         | `true` |
+| `app.networkPolicy.allowExternalEgress`           | Allow the pod to access any range of port and all destinations.                    | `true` |
+| `app.networkPolicy.extraIngress`                  | Add extra ingress rules to the NetworkPolicy                                       | `[]`   |
+| `app.networkPolicy.extraEgress`                   | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true) | `[]`   |
+| `app.exposedContainerPort`                        | The port that shuffle app containers will listen on for new requests.              | `80`   |
 | `app.podSecurityContext.enabled`                        | Enable app pods' Security Context                                                  | `true`           |
 | `app.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy for app pods                                    | `Always`         |
 | `app.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface for app pods                        | `[]`             |
@@ -638,6 +650,5 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-
 
 

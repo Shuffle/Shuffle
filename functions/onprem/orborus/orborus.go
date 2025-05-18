@@ -1000,6 +1000,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY")))
 	}
 
+	if len(os.Getenv("SHUFFLE_APP_EXPOSED_PORT")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%s", os.Getenv("SHUFFLE_APP_EXPOSED_PORT")))
+	}
+
 	if len(appServiceAccountName) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_SERVICE_ACCOUNT_NAME=%s", appServiceAccountName))
 	}

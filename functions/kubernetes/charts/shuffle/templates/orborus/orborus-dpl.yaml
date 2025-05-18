@@ -88,6 +88,8 @@ spec:
               value: "true"
             - name: SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME
               value: {{ include "shuffle.worker.serviceAccount.name" . }}
+            - name: SHUFFLE_APP_EXPOSED_PORT
+              value: {{ .Values.app.exposedContainerPort | quote }}
             {{- if .Values.worker.podSecurityContext.enabled }}
             - name: SHUFFLE_WORKER_POD_SECURITY_CONTEXT
               value: {{ omit .Values.worker.podSecurityContext "enabled" | mustToJson | quote }}
