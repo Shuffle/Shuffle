@@ -13,7 +13,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import Markdown from "react-markdown";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import { isMobile } from "react-device-detect"
@@ -88,7 +88,9 @@ const AppAuthTab = memo((props) => {
     const [searchQuery, setSearchQuery] = React.useState("");
     const [showAppModal, setShowAppModal] = useState(false)
     const [showAuthenticationLoader, setShowAuthenticationLoader] = useState(true)
-    const [showAppAuthGroupLoader, setShowAppAuthGroupLoader] = useState(true)
+  const [showAppAuthGroupLoader, setShowAppAuthGroupLoader] = useState(true)
+  const { themeMode, supportEmail, brandColor } = useContext(Context)
+  const theme = getTheme(themeMode, brandColor)
     const changeDistribution = (data) => {
         //changeDistributed(data, !isDistributed)
         editAuthenticationConfig(data.id, "suborg_distribute")
@@ -277,7 +279,7 @@ const AppAuthTab = memo((props) => {
             }}
         >
             <DialogTitle>
-                <span style={{ color: "white" }}>
+                <span style={{ color: theme.palette.textColor }}>
                     Edit authentication for {selectedAuthentication.app.name.replaceAll("_", " ")} (
                     {selectedAuthentication.label})
                 </span>
@@ -297,7 +299,7 @@ const AppAuthTab = memo((props) => {
                     InputProps={{
                         style: {
                             height: 50,
-                            color: "white",
+                            color: theme.palette.textColor,
                         },
                     }}
                     color="primary"
@@ -349,7 +351,7 @@ const AppAuthTab = memo((props) => {
                                 InputProps={{
                                     style: {
                                         height: 50,
-                                        color: "white",
+                                        color: theme.palette.textColor,
                                     },
                                 }}
                                 color="primary"
@@ -568,7 +570,7 @@ const AppAuthTab = memo((props) => {
           })
           .then((responseJson) => {
             if (responseJson.success === false) {
-                toast("Failed to create. Please try again, or contact support@shuffler.io")
+                toast(`Failed to create. Please try again, or contact ${supportEmail}`)
             } else {
                 // Close the modal
                 setAppAuthenticationGroupModalOpen(false)
@@ -660,7 +662,7 @@ const AppAuthTab = memo((props) => {
               }}
             >
               <DialogTitle>
-                <span style={{ color: "white" }}>App Authentication Groups</span>
+                <span style={{ color: theme.palette.textColor }}>App Authentication Groups</span>
               </DialogTitle>
     
               <DialogContent style={{marginLeft: 0, paddingLeft: 0, }}>
@@ -677,7 +679,7 @@ const AppAuthTab = memo((props) => {
                         InputProps={{
                           style: {
                             height: "50px",
-                            color: "white",
+                            color: theme.palette.textColor,
                             fontSize: "1em",
                           },
                         }}
@@ -853,22 +855,22 @@ const AppAuthTab = memo((props) => {
     ) : null;    
     
     return (
-        <div style={{width: "100%", minHeight: 1100, maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin',boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121',borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
+        <div style={{width: "100%", minHeight: 1100, maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin',boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
           {appModal}
-            <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
+            <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
             <div style={{ width: 'auto', display:'flex',}}>
                 <div style={{display: 'flex', flexDirection: 'column'}}>
-                  <h2 style={{ marginBottom: 8, marginTop: 0, color: "#FFFFFF" }}>App Authentication</h2>
-                   <div>
-                    <span style={{}}>
+                  <Typography variant='h5' style={{ marginBottom: 8, marginTop: 0, }}>App Authentication</Typography>
+              <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', }}>
+                    <Typography variant='body2' color="textSecondary">
                       Control the authentication options for individual apps.
-                      </span>
+                      </Typography>
                       &nbsp;
                       <a
                           target="_blank"
                           rel="noopener noreferrer"
                           href="/docs/organizations#app_authentication"
-                          style={{ color: "#FF8444" }}
+                          style={{ color: theme.palette.linkColor }}
                       >
                           Learn more about App Authentication
                       </a>
@@ -877,7 +879,7 @@ const AppAuthTab = memo((props) => {
 
 				{isCloud ? 
 					<Button
-						style={{ color: '#1a1a1a', textTransform: 'none', backgroundColor: "#FF8444", marginLeft:"auto", borderRadius: 4,fontSize: 16, minWidth: 162, height: 40, boxShadow:'none', }}
+						style={{ textTransform: 'none', marginLeft:"auto", borderRadius: 4,fontSize: 16, minWidth: 162, height: 40, boxShadow:'none', }}
 						variant="contained"
 						color="primary"
 						disabled={!isCloud}
@@ -899,7 +901,7 @@ const AppAuthTab = memo((props) => {
               style={{
               borderRadius: 4,
               marginTop: 24,
-              border: "1px solid #494949",
+              border: theme.palette.defaultBorder,
               width: "100%",
               overflowX: "auto", 
               paddingBottom: 0,
@@ -917,7 +919,7 @@ const AppAuthTab = memo((props) => {
             }}>
                 
                 
-                <ListItem style={{ width: "100%", paddingTop: 10, paddingBottom: 10, paddingRight: 10,  borderBottom: "1px solid #494949", display: 'table-row'}}>
+                <ListItem style={{ width: "100%", paddingTop: 10, paddingBottom: 10, paddingRight: 10,  borderBottom: theme.palette.defaultBorder, display: 'table-row'}}>
                     
                 {["Valid", "Label", "App Name", "Workflows", "Fields", "Edited", "Actions", "Distribution"].map((header, index) => (
                         <ListItemText
@@ -928,7 +930,7 @@ const AppAuthTab = memo((props) => {
                               padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                               whiteSpace: "nowrap",
                               textOverflow: "ellipsis",
-                              borderBottom: "1px solid #494949",
+                              borderBottom: theme.palette.defaultBorder,
                               position: "sticky",
                             }}
                         />
@@ -942,7 +944,7 @@ const AppAuthTab = memo((props) => {
                           key={rowIndex}
                           style={{
                               display: "table-row",
-                              backgroundColor: "#212121",
+                              backgroundColor: theme.palette.platformColor,
                           }}
                       >
                           {Array(8)
@@ -959,7 +961,7 @@ const AppAuthTab = memo((props) => {
                                           variant="text"
                                           animation="wave"
                                           sx={{
-                                              backgroundColor: "#1a1a1a",
+                                              backgroundColor: theme.palette.loaderColor,
                                               height: "20px",
                                               borderRadius: "4px",
                                           }}
@@ -970,14 +972,14 @@ const AppAuthTab = memo((props) => {
                   ))
                     : authentication?.length === 0 ? (
                         <div style={{ textAlign: 'center'}}>
-                          <Typography style={{ color: "#FFFFFF", textAlign: 'center', padding: 20}}>
+                          <Typography color="textPrimary" style={{ textAlign: 'center', padding: 20}}>
                           No authentication found. 
                       </Typography>
                         </div>
                     ):authentication.map((data, index) => {
-                      var bgColor = "#212121";
+                      var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
                       if (index % 2 === 0) {
-                          bgColor = "#1A1A1A";
+                          bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
                       }
 
                       //console.log("Auth data: ", data)
@@ -1059,7 +1061,7 @@ const AppAuthTab = memo((props) => {
                               <ListItemText
                                   primary={
 									  <Tooltip title={"Try the app in our API explorer"} placement="top">
-										  <a href={`/apis/${data.app.id}`} style={{ color: "#FF8444", textDecoration: "none", cursor: "pointer", }} target="_blank" rel="noopener noreferrer">
+										  <a href={`/apis/${data.app.id}`} style={{ color: theme.palette.linkColor, textDecoration: "none", cursor: "pointer", }} target="_blank" rel="noopener noreferrer">
 											  {data?.app?.name?.replaceAll("_", " ")}
 										  </a>
 									  </Tooltip>
@@ -1112,14 +1114,14 @@ const AppAuthTab = memo((props) => {
                                   style={{
                                       overflow: "hidden",
                                       display: "table-cell",
-                                      verticalAlign: 'middle'
+                              verticalAlign: 'middle',
                                   }}
                                   primaryTypographyProps={{
                                     style: {
                                       padding: 8
                                     }
                                   }}
-                                  primary={new Date(data.edited * 1000).toISOString()}
+                            primary={new Date(data.edited * 1000).toISOString()}
                               />
                               <ListItemText
                                 style={{
@@ -1129,13 +1131,24 @@ const AppAuthTab = memo((props) => {
                                 primaryTypographyProps={{ style: { display: "flex", flexDirection: 'row', padding: 8 } }}
                               >
                                 <IconButton
-                                  onClick={() => {
-                                    updateAppAuthentication(data);
-                                  }}
-                                  disabled={data.org_id !== selectedOrganization.id}
-                                >
-                                  <img src="/icons/editIcon.svg" alt="Edit icon" color="secondary" />
-                                </IconButton>
+                                    onClick={() => updateAppAuthentication(data)}
+                                    disabled={data.org_id !== selectedOrganization.id}
+                                  >
+                                    <svg
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M16.1038 4.66848C16.3158 4.45654 16.5674 4.28843 16.8443 4.17373C17.1212 4.05903 17.418 4 17.7177 4C18.0174 4 18.3142 4.05903 18.5911 4.17373C18.868 4.28843 19.1196 4.45654 19.3315 4.66848C19.5435 4.88041 19.7116 5.13201 19.8263 5.40891C19.941 5.68582 20 5.9826 20 6.28232C20 6.58204 19.941 6.87882 19.8263 7.15573C19.7116 7.43263 19.5435 7.68423 19.3315 7.89617L8.43807 18.7896L4 20L5.21038 15.5619L16.1038 4.66848Z"
+                                        stroke={themeMode=== "dark" ? "#F1F1F1" : "#333"}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  </IconButton>
                                 {data.defined ? (
                                   <Tooltip
                                     color="primary"
@@ -1151,7 +1164,7 @@ const AppAuthTab = memo((props) => {
                                         editAuthenticationConfig(data.id);
                                       }}
                                     >
-                                      <SelectAllIcon color="secondary" />
+                                      <SelectAllIcon color="textSecondary" />
                                     </IconButton>
                                   </Tooltip>
                                 ) : (
@@ -1439,6 +1452,9 @@ const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, se
     refine(searchQuery.trim());
   };
 
+  const { themeMode, supportEmail } = useContext(Context);
+  const theme = getTheme(themeMode);
+
   return (
     <form noValidate action="" role="search">
       <TextField
@@ -1452,7 +1468,7 @@ const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, se
         }}
         InputProps={{
           style: {
-            color: "white",
+            color: theme.palette.textFieldStyle.color,
             fontSize: "1em",
             height: 50,
             borderRadius: 4,
@@ -1468,7 +1484,7 @@ const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, se
               {searchQuery?.length > 0 && (
                 <ClearIcon
                   style={{
-                    color: "white",
+                    color: theme.palette.textColor,
                     cursor: "pointer",
                     marginRight: 10
                   }}
@@ -1485,7 +1501,7 @@ const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, se
                 style={{
                   backgroundImage:
                     "linear-gradient(to right, rgb(248, 106, 62), rgb(243, 64, 121))",
-                  color: "white",
+                  color: theme.palette.textColor,
                   border: "none",
                   padding: "10px 20px",
                   width: 100,
@@ -1523,8 +1539,6 @@ const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, se
 
 const Hits = ({
   hits,
-  insights,
-  setIsAnyAppActivated,
   searchQuery,
   isCloud,
   globalUrl,
@@ -1548,6 +1562,8 @@ const Hits = ({
     }
   )
   const navigate = useNavigate();
+  const { themeMode, supportEmail } = useContext(Context);
+  const theme = getTheme(themeMode);
 
   const normalizedString = (name) => {
     if (typeof name === 'string') {
@@ -1732,7 +1748,7 @@ const Hits = ({
     })
       .then((response) => {
         if (response.status !== 200) {
-          toast.error("Failed to get app data or App doesn't. Please contact support@shuffler.io");
+          toast.error(`Failed to get app data or App doesn't. Please contact ${supportEmail}`);
           return;
         }
         return response.json();
@@ -1950,7 +1966,7 @@ const Hits = ({
     return (
       <div>
         <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
-          <div style={{ color: "white" }}>
+          <div style={{ color: theme.palette.textColor }}>
             Authentication for {selectedApp.name.replaceAll("_", " ", -1)}
           </div>
         </DialogTitle>
@@ -2020,7 +2036,7 @@ const Hits = ({
                     }}
                     style={{
                       backgroundColor: theme.palette.surfaceColor,
-                      color: "white",
+                      color: theme.palette.textColor,
                       height: 50,
                     }}
                   >
@@ -2028,7 +2044,7 @@ const Hits = ({
                       key={"false"}
                       style={{
                         backgroundColor: theme.palette.inputColor,
-                        color: "white",
+                        color: theme.palette.textColor,
                       }}
                       value={"false"}
                     >
@@ -2038,7 +2054,7 @@ const Hits = ({
                       key={"true"}
                       style={{
                         backgroundColor: theme.palette.inputColor,
-                        color: "white",
+                        color: theme.palette.textColor,
                       }}
                       value={"true"}
                     >
@@ -2117,7 +2133,7 @@ const Hits = ({
       PaperProps={{
         style: {
           pointerEvents: "auto",
-          color: "white",
+          color: theme.palette.textColor,
           minWidth: 1100,
           minHeight: 700,
           maxHeight: 700,
@@ -2399,7 +2415,7 @@ const Hits = ({
                 href={selectedMeta.link}
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >
-                <Button style={{ color: "white", }} variant="outlined" color="secondary">
+                <Button style={{ color: theme.palette.textColor, }} variant="outlined" color="secondary">
                   <EditIcon /> &nbsp;&nbsp;Edit
                 </Button>
               </a>
@@ -2410,7 +2426,7 @@ const Hits = ({
               style={{
                 height: "100%",
                 width: 1,
-                backgroundColor: "white",
+                backgroundColor: theme.palette.textColor,
                 marginLeft: 50,
                 marginRight: 50,
               }}
@@ -2505,7 +2521,7 @@ const Hits = ({
               height: 480,
               overflowY: "auto",
               scrollbarWidth: "thin",
-              scrollbarColor: "#494949 #2f2f2f",
+              scrollbarColor: theme.palette.scrollbarColor,
               width: "100%",
             }}
           >
@@ -2536,7 +2552,7 @@ const Hits = ({
                         elevation={0}
                         style={{
                           ...paperStyle,
-                          backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "rgba(26, 26, 26, 1)",
+                          backgroundColor: mouseHoverIndex === index ? theme.palette.cardHoverColor : theme.palette.cardBackgroundColor,
                           width: "100%",
                         }}
                         onMouseEnter={() => setMouseHoverIndex(index)}
@@ -2595,7 +2611,7 @@ const Hits = ({
                                 gap: 8,
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
-                                color: "#F1F1F1",
+                                color: theme.palette.textColor,
                               }}
                             >
                               {normalizedString(data.name)}
@@ -2638,7 +2654,7 @@ const Hits = ({
                                     ))}
                                   </div>
                               </div>
-                              	<Button style={{position: 'relative', borderRadius: 6, bottom: 10, marginRight: 10, fontSize: 16, backgroundColor: '#ff8544', color: "#1a1a1a", textTransform:'none', marginLeft: 'auto'}} onClick={(e)=> {e.preventDefault();e.stopPropagation();handleAppAuthenticationNew(data)()}}>
+                              	<Button variant='contained' color='primary' style={{position: 'relative', borderRadius: 6, bottom: 10, marginRight: 10, fontSize: 16, textTransform:'none', marginLeft: 'auto'}} onClick={(e)=> {e.preventDefault();e.stopPropagation();handleAppAuthenticationNew(data)()}}>
 				  					Authenticate app
 				  				</Button>
                             </div>

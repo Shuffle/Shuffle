@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import SearchBox from "../components/SearchData.jsx";
 
@@ -46,7 +46,8 @@ const chipStyle = {
 
 const SearchField = props => {
 	const { serverside, userdata, isMobile, isLoaded, globalUrl, isHeader, isLoggedIn, small, rounded } = props
-
+	const {themeMode} = useContext(Context);
+	const theme = getTheme(themeMode);
 	const {searchBarModalOpen, setSearchBarModalOpen} = useContext(Context);
 
 	let navigate = useNavigate();
@@ -87,7 +88,7 @@ const SearchField = props => {
 					height: 785,
 					borderRadius: 16,
 					border: "1px solid var(--Container-Stroke, #494949)",
-					background: "var(--Container, #000000)",
+					background: theme.palette.DialogStyle.backgroundColor,
 					boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
 					zIndex: 13000,
 				},

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { toast } from 'react-toastify';
-
+import { getTheme } from "../theme.jsx";
 import ReactGA from 'react-ga4';
-import theme from "../theme.jsx";
 import { useNavigate, Link } from "react-router-dom";
 import { findSpecificApp } from "../components/AppFramework.jsx"
+import { Context } from "../context/ContextApi.jsx";
 import {
 	Paper,
   Typography,
@@ -23,7 +23,8 @@ import {
 
 const Priority = (props) => {
   	const { globalUrl, clickedFromOrgTab,userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, appFramework, } = props;
-
+	const { themeMode, supportEmail } = useContext(Context);
+	const theme = getTheme(themeMode);
   	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
 	let navigate = useNavigate();
 
@@ -113,7 +114,7 @@ const Priority = (props) => {
     	    }
     	  })
     	  .catch((error) => {
-    	    toast("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
+    	    toast(`Failed dismissing alert. Please contact ${supportEmail} if this persists.`);
     	  });
 	}
 
@@ -121,10 +122,10 @@ const Priority = (props) => {
 	const srcSize = realignedSrc ? 35 : 30 
 	const dstSize = realignedDst ? 35 : 30
 	return (
-		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" :  clickedFromOrgTab ?null:"1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, marginTop: 10, marginBottom: 10, padding:  clickedFromOrgTab ? 24:15, textAlign: "center", minHeight: isCloud ? 70 : 100, maxHeight: isCloud ? 70 : 100, textAlign: "left", backgroundColor: clickedFromOrgTab ?  "#1A1A1A": theme.palette.surfaceColor, display: "flex", }}>
+		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" :  clickedFromOrgTab ?null:"1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, marginTop: 10, marginBottom: 10, padding:  clickedFromOrgTab ? 24:15, textAlign: "center", minHeight: isCloud ? 70 : 100, maxHeight: isCloud ? 70 : 100, textAlign: "left", backgroundColor: clickedFromOrgTab ?  theme.palette.backgroundColor : theme.palette.surfaceColor, display: "flex", }}>
 			<div style={{flex: 2, overflow: "hidden",}}>
 				<span style={{display: "flex", }}>
-					{priority.type === "usecase" || priority.type == "apps" ? <AutoFixHighIcon style={{height: 19, width: 19, marginLeft: 3, marginRight: 10, }}/> : null} 
+					{priority.type === "usecase" || priority.type == "apps" ? <AutoFixHighIcon style={{height: 19, width: 19, marginLeft: 3, marginRight: 10, color: theme.palette.text.primary}}/> : null} 
 					<Typography variant="body1" >
 						{priority.name}
 					</Typography>
@@ -138,7 +139,7 @@ const Priority = (props) => {
 
 						{newdescription.split("&").length > 3 ?
 							<span style={{display: "flex", }}>
-								<ArrowForwardIcon style={{marginLeft: 15, marginRight: 15, }}/>
+								<ArrowForwardIcon style={{marginLeft: 15, marginRight: 15,  color: theme.palette.text.primary }}/>
 								<img src={newdescription.split("&")[3]} alt={priority.name+"2"} style={{height: dstSize, width: dstSize, marginRight: realignedDst ? -5 : 10,	borderRadius: theme.palette?.borderRadius-3, marginTop: realignedDst ? 5 : 0 }} />
 								<Typography variant="body2" color="textSecondary" style={{marginTop: 3}}>
 									{newdescription.split("&")[2]} 
@@ -154,7 +155,7 @@ const Priority = (props) => {
 				}
 			</div>
 			<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-				<Button style={{height: 50, borderRadius: 4, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, marginTop: 8, width: 175, marginRight: 10, color: priority.active === false ? "white" :clickedFromOrgTab ?"#ff8544": "black", backgroundColor: priority.active === false ? theme.palette.inputColor :clickedFromOrgTab?"transparent":"rgba(255,255,255,0.8)", border: "1px solid #ff8544"}} variant="contained" color="secondary" onClick={() => {
+				<Button style={{height: 50, borderRadius: 4, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, marginTop: 8, width: 175, marginRight: 10, }} variant="outlined" color="primary" onClick={() => {
 
 					if (isCloud) {
 						ReactGA.event({
@@ -180,10 +181,9 @@ const Priority = (props) => {
 					Explore		
 				</Button>
 				{priority.active === true ?
-					<Button style={{borderRadius: 25, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, width: 100, height: 50, marginTop: 8, }} variant="text" color="secondary" onClick={() => {
+					<Button style={{borderRadius: 4, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, width: 100, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
 						// dismiss -> get envs
 						changeRecommendation(priority, "dismiss")
-
 						// Check window location if it's /workflows
 						if (window.location.pathname === "/workflows") {
 							// Set local storage to hide priorities for now

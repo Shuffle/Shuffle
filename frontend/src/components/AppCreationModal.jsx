@@ -42,9 +42,8 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
 
         const parsedStyle = {
             flex: 1,
-            padding: 20,
+            padding: "30px 20px 20px",
             margin: 12,
-            paddingTop: 30,
             backgroundColor: hover && !makeFancy ? theme.palette.surfaceColor : "transparent",
             cursor: hover ? "pointer" : "default",
             textAlign: "center",
@@ -346,23 +345,23 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
     // Common dialog styles
     const dialogStyle = {
         borderRadius: 2,
-        border: "1px solid #494949",
+        border: theme.palette.DialogStyle.border,
         minWidth: '500px',
         fontFamily: theme?.typography?.fontFamily,
-        backgroundColor: "#1A1A1A",
+        backgroundColor: theme.palette.DialogStyle.backgroundColor,
         zIndex: 1000,
         '& .MuiDialogContent-root': {
-            backgroundColor: "#1A1A1A",
+            backgroundColor: theme.palette.DialogStyle.backgroundColor,
             padding: '24px',
             fontFamily: theme?.typography?.fontFamily,
         },
         '& .MuiDialogTitle-root': {
-            backgroundColor: "#1A1A1A",
+            backgroundColor: theme.palette.DialogStyle.backgroundColor,
             padding: '24px',
             fontFamily: theme?.typography?.fontFamily,
         },
         '& .MuiDialogActions-root': {
-            backgroundColor: "#1A1A1A",
+            backgroundColor: theme.palette.DialogStyle.backgroundColor,
             padding: '16px 24px',
             fontFamily: theme?.typography?.fontFamily,
         },
@@ -397,7 +396,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     pl: 4,
                     pr: 3,
                 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 500, color: "#F1F1F1" }}>
+                    <Typography variant="h5"color="textPrimary" sx={{ fontWeight: 500, }}>
                         Create New App
                     </Typography>
                     <IconButton
@@ -409,8 +408,8 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             onClose()
                         }}
                         sx={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
+                            color: theme.palette.text.primary,
+                            '&:hover': { bgcolor: theme.palette.hoverColor },
                         }}
                     >
                         <CloseIcon />
@@ -477,7 +476,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     px: 4,
                 }}>
                     <Typography variant="h6" sx={{
-                        color: '#F1F1F1',
+                        color: theme.palette.text.primary,
                         fontWeight: 500,
                         fontFamily: theme?.typography?.fontFamily
                     }}>
@@ -502,7 +501,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                 </DialogTitle>
                 <DialogContent sx={{ px: 4, py: 3 }}>
                     <div style={{ display: "flex", fontSize: '14px', gap: '5px', alignItems: 'center', marginBottom: '10px', fontFamily: theme?.typography?.fontFamily, marginTop: '15px' }}>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '16px' }}>
+                        <Typography sx={{ color: theme.palette.text.primary, fontSize: '16px' }}>
                             Paste in the URI for the OpenAPI or find out
                         </Typography>
                         <Link style={{
@@ -583,6 +582,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             py: 1,
                             '&:hover': {
                                 borderColor: '#FF8544',
+                                color: '#FF8544',
                                 bgcolor: 'rgba(255,133,68,0.1)'
                             },
                             textTransform: 'none',
@@ -665,7 +665,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     px: 4,
                 }}>
                     <Typography variant="h6" sx={{
-                        color: '#F1F1F1',
+                        color: theme.palette.text.primary,
                         fontWeight: 500,
                         fontFamily: theme?.typography?.fontFamily,
                     }}>
@@ -681,8 +681,8 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             setValidation(false)
                         }}
                         sx={{
-                            color: 'rgba(255,255,255,0.7)',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                            color: theme.palette.text.primary,
+                            '&:hover': { bgcolor: theme.palette.hoverColor }
                         }}
                     >
                         <CloseIcon />
@@ -690,7 +690,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                 </DialogTitle>
                 <DialogContent sx={{ px: 4, py: 3, pt: 0 }}>
                     <Typography sx={{
-                        color: 'rgba(255,255,255,0.85)',
+                        color: theme.palette.text.primary,
                         mb: 2,
                         fontSize: '14px',
                         mt: 2,
@@ -706,10 +706,10 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                             variant="outlined"
                             placeholder="API Documentation URL"
                             sx={{
-                                bgcolor: theme.palette.platformColor,
+                                bgcolor: theme.palette.textFieldStyle.backgroundColor,
                                 '& .MuiOutlinedInput-root': {
                                     height: '40px',
-                                    color: 'white',
+                                    color: theme.palette.text.primary,
                                     '& fieldset': {
                                         borderWidth: '1px',
                                         borderImage: "linear-gradient(to right, #ff8544 0%, #ec517c 50%, #9c5af2 100%) 1",
@@ -757,7 +757,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     {circularLoader}
                     {
                         !validation &&
-                        <Typography sx={{ color: '#c5c5c5', fontSize: '14px', fontFamily: theme?.typography?.fontFamily, }}>
+                        <Typography color="textSecondary" sx={{ fontSize: '14px', fontFamily: theme?.typography?.fontFamily, }}>
                             This may take multiple minutes based on the size of the documentation.
                         </Typography>
                     }

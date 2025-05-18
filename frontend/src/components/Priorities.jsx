@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext, memo } from "react";
-
 import { toast } from "react-toastify";
-import theme from "../theme.jsx";
+import { getTheme } from "../theme.jsx";
 import { v4 as uuidv4, v5 as uuidv5, validate as isUUID, } from "uuid";
 import {
 	Paper,
@@ -18,6 +17,7 @@ import {
 	TextField,
 	MenuItem,
 	IconButton,
+	Box,
 } from "@mui/material";
 
 import {
@@ -41,7 +41,8 @@ const useStyles = makeStyles({
 
 const Priorities = memo((props) => {
   const { globalUrl, userdata,clickedFromOrgTab,selectedOrganization, handleEditOrg, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, notifications, setNotifications, } = props;
-  
+  const { themeMode, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
   const [appFramework, setAppFramework] = React.useState({});
@@ -62,7 +63,7 @@ const Priorities = memo((props) => {
 	);
   
   let navigate = useNavigate();
-  const classes = useStyles();
+	const classes = useStyles();
 
 	useEffect(() => {
 		getFramework()
@@ -353,13 +354,13 @@ const Priorities = memo((props) => {
 	}
 
 	return (
-		<div style={{width: "100%", height: "100%", boxSizing: 'border-box', transition: 'width 0.3s ease', padding: clickedFromOrgTab ? "27px 10px 19px 27px":null, height: clickedFromOrgTab ? "auto":null, minHeight: 843, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
-		  <div style={{ maxHeight: 1700,  overflowY: "auto", width: '100%', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
+		<div style={{width: "100%", height: "100%", boxSizing: 'border-box', transition: 'width 0.3s ease', padding: clickedFromOrgTab ? "27px 10px 19px 27px":null, height: clickedFromOrgTab ? "auto":null, minHeight: 843, backgroundColor: clickedFromOrgTab ? theme.palette.platformColor :null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
+		  <div style={{ maxHeight: 1700,  overflowY: "auto", width: '100%', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
 			<div style={{maxWidth: "calc(100% - 20px)"}}>
-		  	<Typography variant="h5" style={{ color: "rgba(241, 241, 241, 1)",  fontSize: 24, fontWeight: 600, textAlign: "left" }}>
+		  	<Typography variant="h5" style={{  fontSize: 24, fontWeight: 500, textAlign: "left" }}>
 			  Notification Workflow
 			</Typography>
-			<Typography style={{ color: "rgba(158, 158, 158, 1)", fontSize: 16, fontWeight: 400, marginTop: 5,  }}>
+			<Typography color="textSecondary" style={{ fontSize: 16, fontWeight: 400, marginTop: 5,  }}>
 				The notification workflow triggers when an error occurs in one of your workflows. Each individual one will only start a workflow once every 2 minutes. <b>You can point child org notifications into the parent org notification by choosing it in the list.</b>
 			</Typography>
 	
@@ -382,8 +383,9 @@ const Priorities = memo((props) => {
 					classes={{ inputRoot: classes.inputRoot }}
 					ListboxProps={{
 						style: {
-							backgroundColor: "#212121",
-							color: "white",
+							backgroundColor: theme.palette.surfaceColor,
+							color: theme.palette.text.primary,
+							borderRadius: theme.palette.borderRadius,
 						},
 					}}
 					getOptionLabel={(option) => {
@@ -404,8 +406,9 @@ const Priorities = memo((props) => {
 					options={workflows}
 					fullWidth
 					style={{
-						backgroundColor:  "#212121",
-						borderRadius: theme.palette?.borderRadius,
+						backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+						borderRadius: theme.palette.textFieldStyle.borderRadius,
+						color: theme.palette.textFieldStyle.color,
 						height: 35,
 						marginBottom: 40,
 					}}
@@ -449,8 +452,8 @@ const Priorities = memo((props) => {
 								<MenuItem
 									{...props}
 									style={{
-										// backgroundColor: theme.palette.inputColor,
-										color: data.id === workflow.id ? "red" : "white",
+										backgroundColor: theme.palette.surfaceColor,
+										color: data.id === workflow.id ? "red" : theme.palette.text.primary,
 										borderBottom: data.id === "parent" ? "2px solid rgba(255,255,255,0.5)" : null
 									}}
 									value={data}
@@ -470,8 +473,9 @@ const Priorities = memo((props) => {
 							<TextField
 								{...params}
 								style={{
-									backgroundColor: "rgba(33, 33, 33, 1)",
-									borderRadius: 4,
+									backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+									color: theme.palette.textFieldStyle.color,
+									borderRadius: theme.palette.textFieldStyle.borderRadius,
 									height: 35,
 									fontSize: 16,
 									marginTop: "16px"
@@ -523,7 +527,8 @@ const Priorities = memo((props) => {
 						}
 					}}
 					style={{
-						backgroundColor: "rgba(33, 33, 33, 1)",
+						backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+						color: theme.palette.textFieldStyle.color,
 						borderRadius: 4,
 						height: 35,
 						fontSize: 16,
@@ -548,7 +553,7 @@ const Priorities = memo((props) => {
 
 		{notificationWorkflow === undefined || notificationWorkflow === null || notificationWorkflow.length === 0 ? null :
 			<div>
-				<Button variant="outlined" color="secondary" style={{marginTop: 5, textTransform: "none", }} onClick={() => {
+				<Button disableElevation variant="outlined" color="secondary" style={{marginTop: 5, textTransform: "none", }} onClick={() => {
 					if (notificationWorkflow === "parent") {
 						toast.error("Can't send test notifications to the parent org's notification workflow.")
 						return
@@ -599,21 +604,21 @@ const Priorities = memo((props) => {
 			</div>
 		}
 
-		  <Typography style={{marginTop: 50, fontSize: 24, fontWeight: 'bold', display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications ({
+		  <Typography variant="h5" style={{marginTop: 50, fontSize: 24, display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, }}>Notifications ({
 				notifications?.filter((notification) => showRead === true || notification.read === false).length
 				})</Typography>
 
-			<span style={{ fontSize: 16,  marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
+			<Typography variant="body2" color="textSecondary" style={{ fontSize: 16,  marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
 				Notifications help you find potential problems with your workflows and apps.&nbsp;
 				<a
 					target="_blank"
 					rel="noopener noreferrer"
 					href="/docs/organizations#notifications"
-					style={{ textDecoration: clickedFromOrgTab?null:"none", color: clickedFromOrgTab?"#FF8444":"#f85a3e" }}
+					style={{ textDecoration: clickedFromOrgTab?null:"none", color: theme.palette.linkColor  }}
 				>
 					Learn more
 				</a>
-			</span>
+			</Typography>
 			<div/>
 			<div style={{display: "flex", marginTop: 10, marginBottom: 10, }}>
 				<Switch
@@ -621,7 +626,7 @@ const Priorities = memo((props) => {
 					onChange={() => {
 						setShowRead(!showRead);
 					}}
-				/><span style={{marginTop: 5, }}>&nbsp; Show read </span>
+				/><Typography style={{marginTop: 5, }}>&nbsp; Show read </Typography>
 				  {notifications !== undefined && notifications !== null && notifications.length > 1 ? (
 					<Button
 					  color="primary"
@@ -641,18 +646,18 @@ const Priorities = memo((props) => {
 
 			{clickedFromOrgTab? null : <Divider style={{marginTop: 50, marginBottom: 50, }} />}
 
-			<h2 style={{ display: clickedFromOrgTab ? null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ? 60 : null, color: clickedFromOrgTab ? "#ffffff" : null }}>Suggestions</h2>
-			<span style={{ fontSize: 16, color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25,  }}>
+			<Typography variant="h5" style={{ display: clickedFromOrgTab ? null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ? 60 : null, }}>Suggestions</Typography>
+			<Typography variant="body2" color="texSecondary" style={{ fontSize: 16, marginLeft: clickedFromOrgTab ?null:25,  }}>
 				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. <br/>These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;
 				<a
 					target="_blank"
 					rel="noopener noreferrer"
 					href="/docs/organizations#priorities"
-					style={{ textDecoration: clickedFromOrgTab ?null:"none", color: clickedFromOrgTab ?"#FF8444":"#f85a3e" }}
+					style={{ textDecoration: clickedFromOrgTab ?null:"none", color: clickedFromOrgTab ? theme.palette.linkColor :"#f85a3e" }}
 				>
 					Learn more
 				</a>
-			</span>
+			</Typography>
 			<div style={{marginTop: 10, }}/>
 			<Switch
 				checked={showDismissed}
@@ -699,7 +704,8 @@ const NotificationItem = memo((props) => {
 	var image = "";
 	var orgName = "";
 	var orgId = "";
-
+	const { themeMode, brandColor } = useContext(Context);
+  	const theme = getTheme(themeMode, brandColor);
 	
 	var highlighted = selectedExecutionId === "" && selectedWorkflow === "" ? false : data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
 
@@ -755,16 +761,21 @@ const NotificationItem = memo((props) => {
 	}
 
 	return (
-	  <Paper
-		style={{
-		  backgroundColor: theme.palette.inputColor.backgroundColor,
-		  width: clickedFromOrgTab ? null :notificationWidth,
-		  padding: 30,
-		  borderBottom: "1px solid rgba(255,255,255,0.4)",
-		  marginBottom: 20, 
-		  border: highlighted ? "2px solid #f85a3e" : null,
-		  borderRadius: theme.palette?.borderRadius,
-		}}
+		<Box
+			style={{
+				backgroundColor: theme.palette.cardBackgroundColor,
+				width: clickedFromOrgTab ? null : notificationWidth,
+				padding: 30,
+				borderBottom: theme.palette.defaultBorder,
+				marginBottom: 20,
+				border: highlighted ? "2px solid #f85a3e" : null,
+				borderRadius: theme.palette?.borderRadius,
+			}}
+			sx={{
+				"&:hover": {
+					backgroundColor: theme.palette.cardHoverColor,
+				},
+			}}
 	  >
 		<div style={{display: "flex", }}>
 			{data.amount === 1 && data.read === false ? 
@@ -786,8 +797,6 @@ const NotificationItem = memo((props) => {
 			{data.read === false ?
 				<Chip
 					label={"Unread"}
-					variant="contained"
-					color="secondary"
 					style={{marginRight: 15, height: 25, }}
 				  />
 			: 
@@ -813,23 +822,23 @@ const NotificationItem = memo((props) => {
 		</Typography >
 		<div style={{ display: "flex" }}>
 		<ButtonGroup style={{marginTop: 15, minHeight: 50, maxHeight: 50, }}>
-  <Button
-    style={{
-      textTransform: "none",
-      border: "1px solid #ff8544",
-      color: "#ff8544",
-      opacity: data.reference_url ? 1 : 0.5,
-      cursor: data.reference_url ? "pointer" : "not-allowed",
-    }}
-    disabled={
-      !data.reference_url || data.reference_url.length === 0
-    }
-    onClick={() => {
-      window.open(data.reference_url, "_blank");
-    }}
-  >
-    Explore
-  </Button>
+	<Button
+		variant="outlined"
+		color="primary"
+		style={{
+		textTransform: "none",
+		opacity: data.reference_url ? 1 : 0.5,
+		cursor: data.reference_url ? "pointer" : "not-allowed",
+		}}
+		disabled={
+		!data.reference_url || data.reference_url.length === 0
+		}
+		onClick={() => {
+		window.open(data.reference_url, "_blank");
+		}}
+	>
+		Explore
+	</Button>
 
   {data.read === false ? (
     <Button
@@ -922,7 +931,7 @@ const NotificationItem = memo((props) => {
   </Typography>
 </div>
 
-	  </Paper>
+	  </Box>
 	);
 })
 

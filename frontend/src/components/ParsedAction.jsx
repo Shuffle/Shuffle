@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
@@ -11,7 +11,7 @@ import { NestedMenuItem } from "mui-nested-menu";
 import { parsedDatatypeImages } from "../components/AppFramework.jsx";
 import { green, yellow, red } from "../views/AngularWorkflow.jsx"
 //import { useAlert 
-
+import { Context } from "../context/ContextApi.jsx";
 import {
 	Chip,
 	ButtonGroup,
@@ -214,6 +214,9 @@ const ParsedAction = (props) => {
 			setLastSaved(false)
 		}
 	}, [expansionModalOpen])
+
+	const {themeMode, supportEmail} = useContext(Context)
+	const theme = getTheme(themeMode)
 
 	/*
 	useEffect(() => {
@@ -1626,7 +1629,7 @@ const ParsedAction = (props) => {
 					padding: 8,
 					paddingLeft: 14,
 					paddingBottom: 4,
-					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+					backgroundColor: hover ? theme.palette.hoverColor : theme.palette.textFieldStyle.backgroundColor,
 				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
 					onClick={(event) => {
 						// event.preventDefault()
@@ -1664,7 +1667,7 @@ const ParsedAction = (props) => {
 						<span style={{ marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
 					</div>
 					{extraDescription.length > 0 ?
-						<Typography variant="body2" color="textSecondary" style={{ marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block", }}>
+						<Typography variant="body2" style={{ marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block", color: theme.palette.textPrimary}}>
 							{extraDescription}
 						</Typography>
 						: null}
@@ -1738,14 +1741,14 @@ const ParsedAction = (props) => {
 								}}
 							>
 								<Tooltip title={"App: " + selectedAction.app_name + ". Click to open in new tab"} placement="top">
-									<a href={"/apps/" + selectedAction?.app_id} target="_blank" style={{ textDecoration: "none", color: "white", }}>
+									<a href={"/apps/" + selectedAction?.app_id} target="_blank" style={{ textDecoration: "none", color: theme.palette.textPrimary, }}>
 										<img src={selectedAppIcon} style={{
 											width: 30,
 											height: 30,
 											marginRight: 10,
 											borderRadius: 5,
 											marginTop: 13,
-											border: "2px solid rgba(255,255,255,0.3)",
+											border: themeMode === "dark" ? "2px solid rgba(255,255,255,0.3)" : "2px solid rgba(0, 0, 0, 0.1)",
 										}} />
 									</a>
 								</Tooltip>
@@ -1809,7 +1812,7 @@ const ParsedAction = (props) => {
 										title="See previous results for this action"
 										placement="top"
 									>
-										<ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+										<ArrowLeftIcon style={{ color: theme.palette.textPrimary }} />
 									</Tooltip>
 								</IconButton>
 								<IconButton
@@ -1829,7 +1832,7 @@ const ParsedAction = (props) => {
 										title="Find app documentation"
 										placement="top"
 									>
-										<DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+										<DescriptionIcon style={{ color: theme.palette.textPrimary }} />
 									</Tooltip>
 								</IconButton>
 
@@ -1863,7 +1866,7 @@ const ParsedAction = (props) => {
 										{autoCompleting ?
 											<CircularProgress style={{ height: 20, width: 20, }} />
 											:
-											<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+											<AutoFixHighIcon style={{ color: theme.palette.textPrimary, height: 24, }} />
 										}
 									</Tooltip>
 								</IconButton>
@@ -1883,7 +1886,7 @@ const ParsedAction = (props) => {
 											marginTop: "auto",
 											marginBottom: "auto",
 											height: 30,
-											marginLeft: 115,
+											marginLeft: 98,
 											textTransform: "none",
 										}}
 										disabled={autoCompleting}
@@ -1891,7 +1894,7 @@ const ParsedAction = (props) => {
 											if (runFromHere !== undefined) {
 												runFromHere(selectedAction)
 											} else {
-												toast.error("Function not available. Please contact support@shuffler.io")
+												toast.error(`Function not available. Please contact ${supportEmail}`)
 											}
 										}}
 									>
@@ -1939,6 +1942,12 @@ const ParsedAction = (props) => {
 								<Select
 									MenuProps={{
 										disableScrollLock: true,
+										PaperProps: {
+											sx: {
+												"&. MuiList-root": {
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+												}
+											}}
 									}}
 									value={selectedAction.app_version}
 									onChange={(event) => {
@@ -1963,9 +1972,8 @@ const ParsedAction = (props) => {
 									style={{
 										position: "absolute", 
 										top: 10, right: 10, 
-										backgroundColor: theme.palette.surfaceColor,
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
 										height: 35,
 										borderRadius: theme.palette?.borderRadius,
 									}}
@@ -1978,9 +1986,12 @@ const ParsedAction = (props) => {
 										return (
 											<MenuItem
 												key={index}
-												style={{
-													backgroundColor: theme.palette.inputColor,
-													color: "white",
+												sx={{
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													color: theme.palette.textFieldStyle.color,
+													"&:hover": {
+														backgroundColor: theme.palette.hoverColor,
+													},
 												}}
 												value={data.version}
 											>
@@ -1994,12 +2005,16 @@ const ParsedAction = (props) => {
 					</div>
 					<div style={{ display: "flex" }}>
 						<div style={{ flex: 5 }}>
-							<Typography style={{ color: "rgba(255,255,255,0.7)" }}>Name</Typography>
+							<Typography style={{ color: theme.palette.textPrimary,}}>Name</Typography>
 							<TextField
 								style={theme.palette.textFieldStyle}
 								InputProps={{
-									style: theme.palette.innerTextfieldStyle,
 									disableUnderline: true,
+									style: {
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
+										height: 40,
+									},
 								}}
 								fullWidth
 								color="primary"
@@ -2218,10 +2233,10 @@ const ParsedAction = (props) => {
 								placement="top"
 							>
 								<span>
-									<Typography style={{ color: "rgba(255,255,255,0.7)" }}>Delay</Typography>
+									<Typography style={{ color: theme.palette.textPrimary }}>Delay</Typography>
 									<TextField
 										InputProps={{
-											style: theme.palette.innerTextfieldStyle,
+											style: theme.palette.textFieldStyle,
 											disableUnderline: true,
 										}}
 										disabled={selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0}
@@ -2280,7 +2295,7 @@ const ParsedAction = (props) => {
 
 				<div style={{ marginTop: 15, position: "relative", }}>
 					<div style={{display: "flex", }}>
-						<Typography style={{ color: "rgba(255,255,255,0.7)", flex: 10, }}>
+						<Typography style={{ color: theme.palette.textPrimary, flex: 10, }}>
 							Authentication
 						</Typography>
 
@@ -2333,7 +2348,7 @@ const ParsedAction = (props) => {
 						title={
 						workflow?.suborg_distribution?.length > 0 && Object.getOwnPropertyNames(selectedAction?.selectedAuthentication).length !== 0 ? (
 							<React.Fragment>
-								<div style={{padding: 10, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0)"}}>
+								<div style={{padding: 10, backgroundColor: theme.palette.textFieldStyle.backgroundColor, borderRadius: theme.palette.borderRadius, border: theme.palette.defaultBorder}}>
 									<FormControlLabel
 										control={
 											<Checkbox
@@ -2351,10 +2366,18 @@ const ParsedAction = (props) => {
 							</React.Fragment>
 						) : null
 					} placement="left">
-						<div style={{ display: "flex" }}>
+						<div style={{ display: "flex", }}>
 							<Select
 								MenuProps={{
 									disableScrollLock: true,
+									PaperProps: {
+										sx: {
+											'& .MuiList-root': {
+											  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											  color: theme.palette.textFieldStyle.color,
+											},
+										},
+									},
 								}}
 								labelId="select-app-auth"
 								value={
@@ -2436,17 +2459,20 @@ const ParsedAction = (props) => {
 									}
 								}}
 								style={{
-									backgroundColor: theme.palette.inputColor,
-									color: "white",
+									backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+									color: theme.palette.textFieldStyle.color,
 									height: 35,
 									maxWidth: rightsidebarStyle.maxWidth - 80,
 									borderRadius: theme.palette?.borderRadius,
 								}}
 							>
 								<MenuItem
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
+									sx={{ 
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
+										'&:hover': {
+											backgroundColor: theme.palette.textFieldStyle.hoverBackgroundColor, // you define this in your theme
+										  },
 									}}
 									value="No selection"
 								>
@@ -2460,11 +2486,14 @@ const ParsedAction = (props) => {
 									return (
 										<MenuItem
 											key={data.id}
-											style={{
-												backgroundColor: theme.palette.inputColor,
-												color: "white",
+											sx={{
+												backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+												color: theme.palette.textFieldStyle.color,
 												maxWidth: 500,
 												overflowX: "auto",
+												'&:hover': {
+													backgroundColor: theme.palette.hoverColor 
+												},
 											}}
 											value={data}
 										>
@@ -2472,7 +2501,7 @@ const ParsedAction = (props) => {
 											{data?.validation?.valid === true ?
 												<Tooltip title="Authentication has been validated" placement="top">
 													<Chip
-														style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, maxHeight: 25, }}
+														style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, maxHeight: 25, color: theme.palette.chipStyle.color, backgroundColor: theme.palette.chipStyle.backgroundColor }}
 														label={"Valid"}
 														variant="outlined"
 														color="secondary"
@@ -2481,7 +2510,7 @@ const ParsedAction = (props) => {
 												: null}
 											{data?.last_modified === true ?
 												<Chip
-													style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", maxHeight: 25, }}
+													style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", maxHeight: 25, color: theme.palette.chipStyle.color, backgroundColor: theme.palette.chipStyle.backgroundColor }}
 													label={"Latest"}
 													variant="outlined"
 													color="secondary"
@@ -2503,9 +2532,12 @@ const ParsedAction = (props) => {
 								<Divider style={{ marginTop: 10, marginBottom: 10, }} />
 
 								<MenuItem
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
+									sx={{
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textPrimary,
+										'&:hover': {
+											backgroundColor: theme.palette.hoverColor 
+										},
 									}}
 									value="authgroups"
 									disabled
@@ -2637,7 +2669,7 @@ const ParsedAction = (props) => {
 
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
 				<div style={{ marginTop: "20px" }}>
-					<Typography color="textSecondary">Runtime variable (optional)</Typography>
+					<Typography style={{color: theme.palette.textPrimary}}>Runtime variable (optional)</Typography>
 					<Select
 						MenuProps={{
 							disableScrollLock: true,
@@ -2742,8 +2774,8 @@ const ParsedAction = (props) => {
 						options={renderedActionOptions}
 						ListboxProps={{
 							style: {
-								backgroundColor: theme.palette.surfaceColor,
-								color: "white",
+								backgroundColor: theme.palette.platformColor,
+								color: theme.palette.textColor,
 							},
 						}}
 						filterOptions={(options, { inputValue }) => {
@@ -2774,7 +2806,7 @@ const ParsedAction = (props) => {
 						}}
 
 						style={{
-							backgroundColor: theme.palette.backgroundColor,
+							backgroundColor: theme.palette.cardBackgroundColor,
 							height: 35,
 							borderRadius: theme.palette?.borderRadius,
 						}}
@@ -2890,7 +2922,8 @@ const ParsedAction = (props) => {
 							const actionDescription = null
 
 							return (
-								<Tooltip title={actionDescription}
+								<Tooltip 
+									title={actionDescription}
 									placement="right"
 									open={!hiddenDescription}
 									PopperProps={{
@@ -2913,12 +2946,17 @@ const ParsedAction = (props) => {
 										dataLPIgnore="true"
 										autoComplete="off"
 
-										color="primary"
+										
 										id="checkbox-search"
-										variant="body1"
 										style={{
 											...theme.palette.textFieldStyle,
 											border: selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0 ? `1px dotted ${theme.palette.distributionColor}` : "inherit",
+										}}
+										inputProps={{
+											...params.inputProps,
+											style: {
+												color: theme.palette.textFieldStyle.color,
+											},
 										}}
 										label={isIntegration ? "Choose a category" : "Find Actions"}
 										variant="outlined"
@@ -2933,12 +2971,12 @@ const ParsedAction = (props) => {
 
 				{selectedAction?.app_name === "Shuffle AI" && selectedAction?.name === "run_llm" ?
 					selectedAction?.environment === "Cloud" && isCloud ? (
-						<Typography color="textSecondary" variant="body2" style={{ paddingTop: 25, }}>
+						<Typography  variant="body2" style={{color: theme.palette.textPrimary, paddingTop: 25, }}>
 							Info: Cloud Inference processing runs with Shuffle's GPUs in EU, Netherlands, and may be unstable. Your data is NOT stored there.
 						</Typography> 
 					)
 					:
-					<Typography color="textSecondary" variant="body2" style={{ paddingTop: 25, color: red, }}>
+					<Typography variant="body2" style={{ paddingTop: 25, color: red, color: theme.palette.textPrimary}}>
 						This action is slow without GPU's. Use Shuffle's Cloud Runtime location for faster processing.
 					</Typography> 
 					:
@@ -2959,7 +2997,6 @@ const ParsedAction = (props) => {
 									apps !== undefined && apps !== null && apps.length > 0 ?
 										<div style={{ display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden", }}>
 											<div onClick={() => {
-
 												selectedAction.example = "noapp"
 												selectedAction.large_image = newimage
 												if (cy !== undefined && cy !== null) {
@@ -3029,7 +3066,13 @@ const ParsedAction = (props) => {
 
 												var found = false
 												for (var key in app.categories) {
-													if (app.categories[key].toLowerCase() !== newactionname) {
+
+													var localnewactionname = newactionname
+													if (newactionname == "comms") {
+														localnewactionname = "communication"
+													}
+
+													if (app.categories[key].toLowerCase() !== localnewactionname) {
 														continue
 													}
 
@@ -3042,6 +3085,9 @@ const ParsedAction = (props) => {
 												}
 
 												var isAppSelected = false
+
+												console.log("App found: ", app.name, app.categories, appIndex, newactionname)
+
 												const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
 												if (paramIndex > -1) {
 													// Check the actual value and if it's the same
@@ -3794,8 +3840,8 @@ const ParsedAction = (props) => {
 												id={clickedFieldId}
 												disabled={disabled}
 												style={{
-													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette?.borderRadius,
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													borderRadius: theme.palette?.textFieldStyle.borderRadius,
 													width: "100%",
 													maxHeight: multiline === true ? undefined : 40,
 													minHeight: 40,
@@ -3816,7 +3862,7 @@ const ParsedAction = (props) => {
 															<ButtonGroup color="secondary" orientation={multiline ? "vertical" : "horizontal"}>
 																<Tooltip title="Autocomplete text" placement="bottom">
 																	<AddCircleOutlineIcon
-																		style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, }}
+																		style={{ color: theme.palette.textPrimary, cursor: "pointer", margin: multiline ? 5 : 0, }}
 																		onClick={(event) => {
 																			event.preventDefault()
 
@@ -4132,15 +4178,15 @@ const ParsedAction = (props) => {
 										datafield = (
 											<TextField
 												style={{
-													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette?.borderRadius,
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													borderRadius: theme.palette?.textFieldStyle.borderRadius,
 												}}
 												InputProps={{
 													endAdornment: hideExtraTypes ? null : (
 														<InputAdornment position="end">
 															<Tooltip title="Autocomplete text" placement="top">
 																<AddCircleOutlineIcon
-																	style={{ cursor: "pointer" }}
+																	style={{ cursor: "pointer", color: theme.palette.textPrimary }}
 																	onClick={(event) => {
 																		setMenuPosition({
 																			top: event.pageY + 10,
@@ -4199,6 +4245,14 @@ const ParsedAction = (props) => {
 											<Select
 												MenuProps={{
 													disableScrollLock: true,
+													PaperProps: {
+														sx: {
+															'& .MuiList-root': {
+																backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+																color: theme.palette.textFieldStyle.color,
+															},
+														},
+													},
 												}}
 												SelectDisplayProps={{
 													style: {
@@ -4237,9 +4291,12 @@ const ParsedAction = (props) => {
 														return (
 															<MenuItem
 																key={data}
-																style={{
+																sx={{
 																	backgroundColor: selected ? theme.palette.backgroundColor : theme.palette.inputColor,
-																	color: "white",
+																	color: theme.palette.textFieldStyle.color,
+																	"&:hover": {
+																		backgroundColor: theme.palette.hoverColor 
+																	},
 																}}
 																value={data}
 															>
@@ -4690,7 +4747,7 @@ const ParsedAction = (props) => {
 																width: 24,
 																height: 24,
 																marginRight: 10,
-																color: "rgba(255,255,255,0.6)",
+																color: theme.palette.textPrimary,
 															}}
 															onClick={() => {
 																setAuthenticationModalOpen(true);
@@ -4708,7 +4765,7 @@ const ParsedAction = (props) => {
 														>
 															<PriorityHighIcon
 																style={{
-																	color: "rgba(255,255,255,0.5)",
+																	color: theme.palette.textPrimary,
 																	marginRight: 0,
 																}} />
 														</Tooltip>
@@ -4720,7 +4777,7 @@ const ParsedAction = (props) => {
 															placement="top"
 														>
 															<AutoFixHighIcon style={{
-																color: "rgba(255,255,255,0.7)",
+																color: theme.palette.textPrimary,
 																marginRight: 10,
 															}} />
 														</Tooltip>
@@ -4747,7 +4804,7 @@ const ParsedAction = (props) => {
 														flex: "10",
 														marginTop: "auto",
 														marginBottom: "auto",
-														color: "#C5C5C5",
+														color: theme.palette.textPrimary,
 													}}
 												>
 													{tmpitem} <span style={{ color: theme.palette.main }}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
@@ -4776,7 +4833,7 @@ const ParsedAction = (props) => {
 												{((data.options !== undefined && data.options !== null && data.options.length > 0) || (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0)) ? null : 
 												<Tooltip title="Expand editor window" placement="top">
 													<OpenInFullIcon
-														style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
+														style={{ color: theme.palette.textPrimary, cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
 														onMouseOver={(event) => {
 															const clickedField = document.getElementById(clickedFieldId)
 															if (clickedField !== null) {

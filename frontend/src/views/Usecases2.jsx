@@ -9,7 +9,7 @@ import { Context } from "../context/ContextApi.jsx"
 import { ToastContainer, toast } from "react-toastify" 
 import { makeStyles, } from "@mui/styles"
 import classNames from "classnames"
-import theme from '../theme.jsx'
+import {getTheme} from '../theme.jsx'
 
 import {
 	Autocomplete,
@@ -123,7 +123,8 @@ const ParseUsecaseDesc = (priority, appFramework) => {
 
 const UsecaseListComponent = (props) => {
 	const { keys, userdata, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows, getFramework, setFrameworkData, } = props
-
+	const { themeMode, brandName } = useContext(Context)
+	const theme = getTheme(themeMode)
 
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
@@ -199,8 +200,8 @@ const UsecaseListComponent = (props) => {
 	const LoadingSkeleton = () => (
 		<div style={{paddingTop: 75, minHeight: 1000, textAlign: "left"}}>
 			{/* Header skeleton */}
-			<Skeleton variant="text" width={200} height={40} sx={{ bgcolor: 'grey.800' }} />
-			<Skeleton variant="text" width="60%" height={24} sx={{ marginTop: 3, bgcolor: 'grey.800' }} />
+			<Skeleton variant="text" width={200} height={40}  />
+			<Skeleton variant="text" width="60%" height={24} sx={{ marginTop: 3,  }} />
 
 			{/* Apps selection skeleton */}
 			<Skeleton variant="text" width={150} height={24} sx={{ marginTop: 5, marginBottom: 10 }} />
@@ -220,7 +221,7 @@ const UsecaseListComponent = (props) => {
 							variant="circular"
 							width={40}
 							height={40}
-							sx={{ bgcolor: 'grey.800' }}
+							sx={{ bgcolor: theme.palette.loaderColor}}
 						/>
 					))}
 				</div>
@@ -232,7 +233,7 @@ const UsecaseListComponent = (props) => {
 					sx={{ 
 						marginTop: "10px",
 						borderRadius: 20,
-						bgcolor: 'grey.800'
+						bgcolor: theme.palette.loaderColor
 					}} 
 				/>
 			</Paper>
@@ -275,13 +276,13 @@ const UsecaseListComponent = (props) => {
 											variant="circular" 
 											width={30} 
 											height={30} 
-											sx={{ bgcolor: 'grey.800' }} 
+											sx={{ bgcolor: theme.palette.loaderColor}} 
 										/>
 										<Skeleton 
 											variant="circular" 
 											width={30} 
 											height={30} 
-											sx={{ bgcolor: 'grey.800' }} 
+											sx={{ bgcolor: theme.palette.loaderColor }} 
 										/>
 									</div>
 									{/* Usecase title */}
@@ -289,7 +290,7 @@ const UsecaseListComponent = (props) => {
 										variant="text" 
 										width="70%" 
 										height={24} 
-										sx={{ bgcolor: 'grey.800' }} 
+										sx={{ bgcolor: theme.palette.loaderColor}} 
 									/>
 								</Paper>
 							</Grid>
@@ -596,10 +597,10 @@ const UsecaseListComponent = (props) => {
 
 	return (
 		<div style={{paddingTop: 75, minHeight: 1000, textAlign: "left",}}>
-			<Typography variant="h4" style={{color: "white", }}>
-				<b>Usecases</b>
+			<Typography variant="h4" color="textPrimary" style={{fontWeight: "bold"}}>
+				Usecases
 			</Typography>
-			<Typography variant="body1" style={{marginTop: 25, }}>
+			<Typography variant="body1" color="textPrimary" style={{marginTop: 25, }}>
 				Choose a template tailored to your automation requirements, ready for immediate use.
 			</Typography>
 
@@ -887,6 +888,9 @@ const Usecases2 = (props) => {
 	const [keys, setKeys] = useState([])
 	const [treeKeys, setTreeKeys] = useState([])
 
+ const { themeMode, brandName } = useContext(Context)
+ const theme = getTheme(themeMode)
+
   const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("");
   const [selectedUsecases, setSelectedUsecases] = useState([]);
   const [usecases, setUsecases] = useState([])
@@ -987,7 +991,7 @@ const Usecases2 = (props) => {
 	}
 
 
-  document.title = "Shuffle - usecases";
+  document.title = brandName?.length > 0 ? `${brandName} - usecases` : "Shuffle - usecases";
   var dayGraphLabels = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
   var dayGraphData = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
 

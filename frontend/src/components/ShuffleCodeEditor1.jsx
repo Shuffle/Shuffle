@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect, } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect, useContext } from 'react';
 import { toast } from 'react-toastify';
 import '../codeeditor-index.css';
 import {
@@ -17,8 +17,8 @@ import {
 	ButtonGroup,
 	Collapse,
 } from '@mui/material';
-
-import theme from '../theme.jsx';
+import { Context } from '../context/ContextApi.jsx';
+import {getTheme} from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';
 import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
@@ -149,6 +149,8 @@ const CodeEditor = (props) => {
 	//	value: localcodedata,
 	//})
 	// const {codelang, setcodelang} = props
+	const {themeMode, supportEmail} = useContext(Context)
+	const theme = getTheme(themeMode)
 
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
@@ -1396,7 +1398,7 @@ const CodeEditor = (props) => {
 
 					  const usedposition = e.offsetY
 					  if (usedposition  === undefined || usedposition === null) {
-						  toast.info("Error: LayerY is undefined or null. Please contact support@shuffler.io")
+						  toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
 						  return
 					  }
 
@@ -1523,17 +1525,17 @@ const CodeEditor = (props) => {
 						setActiveDialog("codeeditor")
 					}
 				},
-				style: {
+				sx: {
 					// zIndex: 12501,
 					pointerEvents: "auto",
-					color: "white",
-					minWidth: isMobile ? "100%" : isFileEditor ? 650 : "80%",
-					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
+					color: theme.palette.DialogStyle.color,
+					minWidth: isMobile ? "100%" : isFileEditor ? "650px" : "80%",
+					maxWidth: isMobile ? "100%" : isFileEditor ? "650px" : "1100px",
 					minHeight: isMobile ? "100%" : "auto",
-					maxHeight: isMobile ? "100%" : 700,
+					maxHeight: isMobile ? "100%" : "700px",
 					border: "3px solid rgba(255,255,255,0.3)",
-					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					backgroundColor: "black",
+					padding: isMobile ? "25px 10px 25px 10px" : "25px",
+					backgroundColor: themeMode === "dark" ? "black" : theme.palette.DialogStyle.backgroundColor,
 				},
 			}}
 		>
@@ -1584,7 +1586,10 @@ const CodeEditor = (props) => {
 						color: "grey",
 					}}
 					onClick={() => {
-						navigate("")
+						if (isFileEditor !== true) {
+							navigate("")
+						}
+
 						setExpansionModalOpen(false)
 					}}
 				>
@@ -1728,6 +1733,7 @@ const CodeEditor = (props) => {
 													style={{
 														textTransform: "none",
 														width: 175,
+														textWrap: 'nowrap'
 													}}
 													onClick={(event) => {
 														setSourceDataOpen(!sourceDataOpen)
@@ -1747,6 +1753,7 @@ const CodeEditor = (props) => {
 												style={{
 													textTransform: "none",
 													width: 120,
+													textWrap: "nowrap"
 												}}
 												onClick={(event) => {
 													setAnchorEl(event.currentTarget);
@@ -1783,6 +1790,7 @@ const CodeEditor = (props) => {
 												style={{
 													textTransform: "none",
 													width: 145,
+													textWrap: "nowrap"
 												}}
 												onClick={(event) => {
 													setAnchorEl3(event.currentTarget);
@@ -1800,6 +1808,7 @@ const CodeEditor = (props) => {
 												style={{
 													textTransform: "none",
 													width: 130,
+													textWrap: "nowrap",
 												}}
 												onClick={(event) => {
 													setMenuPosition({
@@ -2266,7 +2275,9 @@ const CodeEditor = (props) => {
 										paddingLeft: 10,
 										paddingTop: 0,
 										display: "flex",
-										cursor: "move"
+										cursor: "move",
+										color: theme.palette.DialogStyle.color,
+										backgroundColor: "transparent",
 									}}
 								>
 									<div>
@@ -2294,7 +2305,7 @@ const CodeEditor = (props) => {
 													{
 														selectedEdge && Object.keys(selectedEdge).length > 0 ?
 														<ArrowForwardIcon style={{ 
-															color: "rgba(255,255,255,0.7)",
+															color: theme.palette.textPrimary,
 															fontSize: 18,
 															marginLeft: -5,
 															marginRight: -5,
@@ -2319,7 +2330,7 @@ const CodeEditor = (props) => {
 													}
 												</div>
 												: 
-												<span style={{ color: "white" }}>
+												<span style={{ color: theme.palette.text.primary }}>
 												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
 													"Code to run" : 
 													triggerId ? 
@@ -2337,9 +2348,7 @@ const CodeEditor = (props) => {
 								<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
 									<Button
 										id="try-it-button"
-										variant="outlined"
 										disabled={executing}
-										color="primary"
 										style={{
 											border: `1px solid rgba(255, 255, 255, 0.15)`,
 											position: "absolute",
@@ -2351,11 +2360,12 @@ const CodeEditor = (props) => {
 											fontWeight: 500,
 											fontSize: 14,
 											textTransform: "none",
-											backgroundColor: "rgba(33, 33, 33, 0.95)",
+											backgroundColor: theme.palette.platformColor,
 											backdropFilter: "blur(8px)",
 											boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
 											transition: "all 0.2s ease",
 											paddingRight: 20, 
+											color: "#FF8544",
 											borderRadius: theme.palette?.borderRadius,
 											"&:hover": {
 												backgroundColor: "rgba(45, 45, 45, 0.95)",
@@ -2376,7 +2386,7 @@ const CodeEditor = (props) => {
 											<span>
 
 												<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} />
-											{selectedAction === undefined ? "Try it" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"} 
+											{selectedAction === undefined ? <Typography style={{color: "inherit"}}>Try it</Typography> : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"} 
                         						<span
                         						  style={{
                         						    color: "#C8C8C8",

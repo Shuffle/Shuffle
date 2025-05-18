@@ -23,7 +23,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.8.50
-	golang.org/x/crypto v0.36.0
+	golang.org/x/crypto v0.37.0
 	google.golang.org/api v0.228.0
 	google.golang.org/grpc v1.71.1
 	gopkg.in/yaml.v3 v3.0.1

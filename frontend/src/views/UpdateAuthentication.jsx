@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 
 import ReactGA from "react-ga4";
 import { 
@@ -15,10 +15,11 @@ import { ToastContainer, toast } from "react-toastify"
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
 import { base64_decode, appCategories } from "../views/AppCreator.jsx";
+import { Context } from "../context/ContextApi.jsx";
 
 const SetAuthentication = (props) => {
   const { globalUrl, serverside } = props;
-
+  const { supportEmail } = useContext(Context);
   const [app, setApp] = useState({});
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [loadFail, setLoadFail] = useState("");
@@ -114,7 +115,7 @@ const SetAuthentication = (props) => {
 			setLoadFail(
 				<span>
 					<Typography variant="h4">
-						Failed to load the app. Please contact your provider or support@shuffler.io if this persists
+						Failed to load the app. Please contact your provider or {supportEmail} if this persists
 					</Typography>
 					<Button 
 						variant="contained"

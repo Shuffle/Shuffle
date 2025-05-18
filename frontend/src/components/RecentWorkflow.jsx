@@ -1,4 +1,4 @@
-import React from "react"
+import React, {useContext} from "react"
 
 import { Link } from "react-router-dom";
 import { 
@@ -10,13 +10,19 @@ import {
 } from "@mui/material"
 import { useNavigate } from "react-router";
 import theme from "../theme.jsx";
-
+import { getTheme } from "../theme.jsx";
 import {
 	Lock as LockIcon,
 } from '@mui/icons-material';
+import { Context } from "../context/ContextApi.jsx";
 
 // onclickHandler = function override from parent onclick
 const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflowId, }) => {
+
+	const { themeMode } = useContext(Context);
+	const theme = getTheme(themeMode);
+
+
 
     const navigate = useNavigate();
 
@@ -87,7 +93,7 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 				transition: "opacity 0.1s",
 
 				borderRadius: theme.palette?.borderRadius, 
-				backgroundColor: hovered || currentWorkflowId === workflow.id ? "#1f1f1f" : "transparent",
+				backgroundColor: hovered || currentWorkflowId === workflow.id ? theme.palette.hoverColor : "transparent",
 			  }}
 			  disableRipple
 			>
@@ -127,7 +133,6 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 				))}
 				<Typography
 				  style={{
-					color: "#CDCDCD",
 					fontSize: 16,
 					marginLeft: 8,
 					maxWidth: 180,

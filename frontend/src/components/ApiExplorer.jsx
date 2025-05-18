@@ -29,7 +29,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import throttle from "lodash/throttle";
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import { validateJson, collapseField, } from "../views/Workflows.jsx";
 
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -37,6 +37,8 @@ import { Context } from "../context/ContextApi.jsx";
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
+  const {themeMode} = useContext(Context);
+  const theme = getTheme(themeMode)
 
   return (
     <div
@@ -47,7 +49,7 @@ function CustomTabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3, padding: 0, backgroundColor: "#1a1a1a" }}>
+        <Box sx={{ p: 3, padding: 0, backgroundColor: theme.palette.backgroundColor}}>
           {children}
         </Box>
       )}
@@ -100,6 +102,8 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
   const [selectedActionIndex, setSelectedActionIndex] = useState(0);
   const [ExampleBody, setExampleBody] = useState({});
   const [filteredActions, setFilteredActions] = useState([]);
+  const {themeMode} = useContext(Context);
+  const theme = getTheme(themeMode)
 
   const [firstSendDone, setFirstSendDone] = useState(false)
 
@@ -1391,6 +1395,8 @@ const ActionsList = memo(({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleActions, setVisibleActions] = useState([]);
+  const {themeMode} = useContext(Context);
+  const theme = getTheme(themeMode);
   
 
   useEffect(() => {
@@ -1463,7 +1469,7 @@ const ActionsList = memo(({
 									alt="app logo"
 									style={{ marginLeft: 20, borderRadius: 8 }}
 								/>
-								<Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
+								<Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: theme.palette.textColor
 								}}> 
 									{info.title}
 								</Typography>
@@ -1471,7 +1477,7 @@ const ActionsList = memo(({
 						</Tooltip>
 					</a>
                 ) : (
-                  <Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: '#F1F1F1'
+                  <Typography style={{ fontSize: 24, fontWeight: 'bold', marginLeft: 20, overflow: 'hidden', color: theme.palette.textColor
                   }}> 
                       Api Explorer
                   </Typography>
@@ -1504,7 +1510,7 @@ const ActionsList = memo(({
         style={{
           marginLeft: 20,
           marginTop: 15,
-          backgroundColor: "#1a1a1a",
+          backgroundColor: theme.palette.backgroundColor,
           overflowY: "auto",
           height: (isLoaded && isLoggedIn) ? "calc(100vh - 190px)" : "calc(100vh - 260px)",
           paddingRight: 5,
@@ -1522,7 +1528,7 @@ const ActionsList = memo(({
                 textTransform: "none",
                 backgroundColor:
                   selectedActionIndex === actionIndex
-                    ? "#3f3f3f"
+                    ? theme.palette.hoverColor
                     : "transparent",
                 border: "none",
                 justifyContent: "flex-start",
@@ -1535,7 +1541,7 @@ const ActionsList = memo(({
                 textWrap: "nowrap",
                 textOverflow: "ellipsis",
                 "&:hover": {
-                  backgroundColor: "#2f2f2f",
+                  backgroundColor: theme.palette.hoverColor,
                 },
               }}
               onClick={() => handleActionClick(actionIndex, action)}
@@ -1554,7 +1560,7 @@ const ActionsList = memo(({
               </span>
               <span
                 style={{
-                  color: "white",
+                  color: theme.palette.textColor,
                   textOverflow: "ellipsis",
                   overflow: "hidden",
                 }}
@@ -1564,7 +1570,7 @@ const ActionsList = memo(({
             </Button>
           ))
         ) : (
-          <div style={{ padding: "15px", color: "white", textAlign: "center" }}>
+          <div style={{ padding: "15px", color: theme.palette.textColor, textAlign: "center" }}>
             No actions found
           </div>
         )}
@@ -1602,6 +1608,8 @@ const Action = memo((
         const [disableExecuteButton, setDisableExecuteButton] = useState(false);
         const [showResponseLoader, setShowResponseLoader] = useState(false);
         const [appAuthentication, setAppAuthentication] = useState([])
+        const {themeMode} = useContext(Context);
+        const theme = getTheme(themeMode);
         const parseHeaders = (headersString) => {
           if (headersString?.length > 0) {
             const headersArray = headersString.split("\n");
@@ -2082,7 +2090,7 @@ const Action = memo((
                       fontWeight: 700,
                       marginLeft: 40,
                       marginBottom: 5,
-                      color: "rgba(241, 241, 241, 1)",
+                      color: theme.palette.textColor
                     }}
                   >
                     {actionname}
@@ -2095,7 +2103,7 @@ const Action = memo((
                   borderRadius: 6,
                   marginLeft: "40px",
                   marginTop: 2,
-                  backgroundColor: "#212121",
+                  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                   height: 51,
                   alignItems: 'center',
                 }}
@@ -2109,7 +2117,7 @@ const Action = memo((
                     backgroundColor: "transparent",
                     "& .MuiSelect-select": {
                       color: RequestMethods.find((method) => method.value === selectedMethod)
-                        ?.color || "#212121",
+                        ?.color || theme.palette.textFieldStyle.backgroundColor,
                     },
                   }}
                   MenuProps={{
@@ -2117,14 +2125,14 @@ const Action = memo((
                       sx: {
                         padding: 0,
                         margin: 0,
-                        backgroundColor: "#212121",
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                       },
                     },
                     MenuListProps: {
                       sx: {
                         padding: 0,
                         margin: 0,
-                        backgroundColor: "#212121",
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                       },
                     },
                   }}
@@ -2135,20 +2143,20 @@ const Action = memo((
                       value={method.value}
                       sx={{
                         color: method.color,
-                        backgroundColor: "#212121",
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                         border: "none",
                         marginBottom: 0.25,
                         "&:hover": {
                           backgroundColor: method.color,
-                          color: "#f9fcf5", 
+                          color: theme.palette.textFieldStyle.color, 
                         },
                         "&.Mui-selected": {
                           backgroundColor: method.color,
-                          color: "#f9fcf5",
+                          color: theme.palette.textFieldStyle.color,
                           border: "none",
                           "&:hover": {
                             backgroundColor: method.color,
-                            color: "#f9fcf5",
+                            color: theme.palette.textFieldStyle.color,
                           },
                         },
                         "&.Mui-focusVisible": {
@@ -2167,9 +2175,8 @@ const Action = memo((
                   inputProps={{
                     style: {
                       margin: "auto",
-                      backgroundColor: "transparent",
                       border: "none",
-                      color: "rgba(241, 241, 241, 1)",
+                      color: theme.palette.textFieldStyle.color,
                       display: 'flex',
                       height: '100%',
                       alignItems: 'center',
@@ -2331,7 +2338,7 @@ const Action = memo((
                   style={{
                     display: "flex",
                     justifyContent: "center",
-                    background: "rgba(26, 26, 26, 1)",
+                    background: theme.palette.backgroundColor,
                   }}
                 >
                   <Tabs
@@ -2386,7 +2393,7 @@ const Action = memo((
                   <TableContainer
                     style={{
                       minWidth: 696,
-                      backgroundColor: "#212121",
+                      backgroundColor: theme.palette.platformColor,
                       borderRadius: 6,
                       border: "1px solid rgba(73, 73, 73, 1)",
                     }}
@@ -2436,7 +2443,7 @@ const Action = memo((
                                 }
                                 inputProps={{
                                   style: {
-                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                    backgroundColor: theme.palette.platformColor,
                                     padding: "4px 8px",
                                   },
                                 }}
@@ -2494,7 +2501,7 @@ const Action = memo((
                                     </InputAdornment>
                                   ),
                                   style: {
-                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                    backgroundColor: theme.palette.platformColor,
                                     padding: "4px 8px",
                                   },
                                 }}
@@ -2600,7 +2607,7 @@ const Action = memo((
                   <TableContainer
                     style={{
                       minWidth: 696,
-                      backgroundColor: "#212121",
+                      backgroundColor: theme.palette.platformColor,
                       borderRadius: 6,
                       border: "1px solid rgba(73, 73, 73, 1)",
                     }}
@@ -2640,7 +2647,7 @@ const Action = memo((
                                 type="text"
                                 inputProps={{
                                   style: {
-                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                    backgroundColor: theme.palette.platformColor ,
                                     padding: "4px 8px",
                                   },
                                 }}
@@ -2694,7 +2701,7 @@ const Action = memo((
                                 value={row.value}
                                 inputProps={{
                                   style: {
-                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                    backgroundColor: theme.palette.platformColor,
                                     padding: "4px 8px",
                                   },
                                 }}
@@ -2794,10 +2801,10 @@ const Action = memo((
                   marginLeft: 10
                 }}
               >
-                  <span style={{ fontSize: 16, fontWeight: 600 }}>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: theme.palette.textColor }}>
                     {action.name.replaceAll("_", " ")}
                   </span>
-                  <p >
+                  <p style={{color: theme.palette.textColor}}>
                     {action.description
                       ? action.description
                       : ""}
@@ -2813,6 +2820,8 @@ const ActionResponse = memo(({ apiResponse, ExampleBody, isLoggedIn, isLoaded })
   const [responseTabIndex, setResponseTabIndex] = useState(0)
   const [oldResponse, setOldResponse] = useState(apiResponse)
   const [highlight, setHighlight] = useState(false)
+  const {themeMode } = useContext(Context)
+  const theme = getTheme(themeMode)
 
   const MIN_HEIGHT = 50
 
@@ -2934,7 +2943,7 @@ const ActionResponse = memo(({ apiResponse, ExampleBody, isLoggedIn, isLoaded })
         style={{
           width: '100%',
           height: height,
-          backgroundColor: '#1a1a1a',
+          backgroundColor: theme.palette.backgroundColor,
           display: 'flex',
           flexDirection: 'column',
           borderTop: '1px solid rgba(255,255,255,0.2)',
@@ -2988,7 +2997,7 @@ const ActionResponse = memo(({ apiResponse, ExampleBody, isLoggedIn, isLoaded })
             <ReactJson
               src={formData(ExampleBody)}
               theme={theme.palette.jsonTheme}
-              style={{ backgroundColor: '#1a1a1a', padding: 5 }}
+              style={{...theme.palette.reactJsonStyle, border: "none"}}
               collapsed={false}
               iconStyle={theme.palette.jsonIconStyle}
               collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
@@ -3005,6 +3014,10 @@ const ActionResponse = memo(({ apiResponse, ExampleBody, isLoggedIn, isLoaded })
 });
 
 const ResponseTabWrapper = memo(({ apiResponse }) => {
+
+  const {themeMode } = useContext(Context)
+  const theme = getTheme(themeMode)
+
   const handleReactJsonClipboard = (copy) => {
     const elementName = "copy_element_shuffle";
     let copyText = document.getElementById(elementName);
@@ -3036,7 +3049,7 @@ const ResponseTabWrapper = memo(({ apiResponse }) => {
     <ReactJson
           src={apiResponse}
           theme={theme.palette.jsonTheme}
-          style={{ backgroundColor: "#1a1a1a", padding: 5 }}
+          style={{...theme.palette.reactJsonStyle, border: "none"}}
 		  shouldCollapse={(jsonField) => {
 			return collapseField(jsonField)
 		  }}
@@ -3049,7 +3062,8 @@ const ResponseTabWrapper = memo(({ apiResponse }) => {
   )})
 
 const PaddingWrapper = memo(({ isLoggedIn, isLoaded, children }) => {
-  const { leftSideBarOpenByClick, windowWidth } = useContext(Context);
+  const { leftSideBarOpenByClick, windowWidth, themeMode } = useContext(Context);
+  const theme = getTheme(themeMode)
   return (
     <div
       style={{
@@ -3058,7 +3072,7 @@ const PaddingWrapper = memo(({ isLoggedIn, isLoaded, children }) => {
             ? windowWidth >= 1920  ? "calc(100% - 630px)" : "calc(100% - 570px)"
             : windowWidth >= 1920 ? "calc(100vw - 460px)": "calc(100% - 410px)"
           : windowWidth >= 1920 ? "calc(100% - 370px)" : "calc(100% - 320px)",
-        backgroundColor: "#1a1a1a",
+        backgroundColor: theme.palette.backgroundColor,
         position: "fixed",
         bottom: 0,
         right: 0,

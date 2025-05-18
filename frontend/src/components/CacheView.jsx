@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext, memo } from "react";
-import theme from "../theme.jsx";
+import { getTheme } from "../theme.jsx";
 import { toast } from 'react-toastify';
 import ReactJson from "react-json-view-ssr";
-
 import {
 	Typography,
     Tooltip,
@@ -103,7 +102,10 @@ const CacheView = memo((props) => {
 	const [selectedFileId, setSelectedFileId] = React.useState("");
     const [updateToThisCategory, setUpdateToThisCategory] = useState("")
 	const [showFileCategoryPopup, setShowFileCategoryPopup] = React.useState(false);
-  	const [selectedFiles, setSelectedFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    
+    const { themeMode, brandColor } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor);
 
     useEffect(() => {
         if (orgId?.length > 0) {
@@ -357,12 +359,12 @@ const CacheView = memo((props) => {
             }}
         >
             <DialogTitle>
-                <span style={{ color: "white" }}>
+                <span style={{ color: theme.palette.text.primary }}>
                     { editCache ? "Edit Key" : "Add Key"}{selectedCategory === "" || selectedCategory === "default" ? "" : ` in category '${selectedCategory}'`}
                 </span>
 
             </DialogTitle>
-            <div style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: "#212121", }}>
+            <div style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: theme.palette.DialogStyle.backgroundColor, }}>
                 Key
                 <TextField
                     color="primary"
@@ -372,7 +374,7 @@ const CacheView = memo((props) => {
                     InputProps={{
                         style: {
                             height: "50px",
-                            color: "white",
+                            color: theme.palette.textFieldStyle.color,
                             fontSize: "1em",
                         },
                     }}
@@ -387,7 +389,7 @@ const CacheView = memo((props) => {
                     onChange={(e) => setKey(e.target.value)}
                 />
             </div>
-            <div style={{ paddingLeft: 30, paddingRight: 30, backgroundColor: "#212121" }}>
+            <div style={{ paddingLeft: 30, paddingRight: 30, backgroundColor: theme.palette.DialogStyle.backgroundColor }}>
 				<div style={{display: "flex", }}>
 					<Typography style={{marginTop: 25, marginBottom: 0, flex: 20, }}>
 						Value - ({isValidJson.valid === true ? "Valid" : "Invalid"} JSON)
@@ -408,7 +410,7 @@ const CacheView = memo((props) => {
                     style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, marginTop: 0, }}
                     InputProps={{
                         style: {
-                            color: "white",
+                            color: theme.palette.textFieldStyle.color,
                             fontSize: "1em",
                         },
                     }}
@@ -429,20 +431,19 @@ const CacheView = memo((props) => {
             </div>
             <DialogActions style={{ paddingLeft: "30px", paddingRight: '30px' }}>
                 <Button
-                    style={{ borderRadius: "2px", fontSize: 16, color: "#ff8544", textTransform:"none" }}
+                    style={{ borderRadius: "2px", fontSize: 16, color: theme.palette.primary.main, textTransform:"none" }}
                     onClick={() => {
 						setModalOpen(false)
                         setKey("")
 						setValue("")
 						setDataValue({})
 					}}
-                    color="primary"
                 >
                     Cancel
                 </Button>
                 <Button
                     variant="contained"
-                    style={{ borderRadius: "2px", backgroundColor: "#ff8544",color: "#1a1a1a", textTransform:"none" }}
+                    style={{ borderRadius: "2px", textTransform:"none" }}
                     onClick={() => {
                         if (value === "") {
                             toast("Key or Value can not be empty");
@@ -563,9 +564,9 @@ const CacheView = memo((props) => {
 		}}
 	>
 		<DialogTitle>
-			<div style={{ color: "rgba(255,255,255,0.9)" }}>
+			<Typography variant="h5" color="textPrimary">
 				Select sub-org to distribute Datastore key
-			</div>
+			</Typography>
 		</DialogTitle>
 		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
 			<MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
@@ -608,7 +609,7 @@ const CacheView = memo((props) => {
 
 			<div style={{ display: "flex", marginTop: 20 }}>
 				<Button
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#ff8544"  }}
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main  }}
 					onClick={() => setShowDistributionPopup(false)}
 					color="primary"
 				>
@@ -616,7 +617,7 @@ const CacheView = memo((props) => {
 				</Button>
 				<Button
 					variant="contained"
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544", marginLeft: 10 }}
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
 					onClick={() => {
 						changeDistribution(selectedCacheKey, selectedSubOrg);
 					}}
@@ -630,27 +631,27 @@ const CacheView = memo((props) => {
     ) : null;
 
     return (
-        <div style={{paddingBottom: isSelectedDataStore?null:250, minHeight: 1000, boxSizing: "border-box", width: isSelectedDataStore? "100%" :null, transition: "width 0.3s ease", padding:isSelectedDataStore?"27px 10px 27px 27px":null, height: isSelectedDataStore?"100%":null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderTopRightRadius: isSelectedDataStore?'8px':null, borderBottomRightRadius: isSelectedDataStore?'8px':null, borderLeft: "1px solid #494949" }}>
+        <div style={{paddingBottom: isSelectedDataStore?null:250, minHeight: 1000, boxSizing: "border-box", width: isSelectedDataStore? "100%" :null, transition: "width 0.3s ease", padding:isSelectedDataStore?"27px 10px 27px 27px":null, height: isSelectedDataStore?"100%":null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore? theme.palette.platformColor :null, borderTopRightRadius: isSelectedDataStore?'8px':null, borderBottomRightRadius: isSelectedDataStore?'8px':null, borderLeft: theme.palette.defaultBorder }}>
             {modalView}
             {cacheDistributionModal}
-            <div style={{height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
-              <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'  }}>
+            <div style={{height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
+              <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'  }}>
               <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
-                <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore {selectedCategory === "" || selectedCategory === "default" ? "" : `- Category '${selectedCategory}'`}</h2>
-                <span style={{ marginLeft: isSelectedDataStore?null:25, color:isSelectedDataStore?"#9E9E9E":null}}>
+                <Typography variant="h5" style={{ display: isSelectedDataStore?null: "inline", fontWeight: 500 }}>Shuffle Datastore {selectedCategory === "" || selectedCategory === "default" ? "" : `- Category '${selectedCategory}'`}</Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginLeft: isSelectedDataStore?null:25, marginTop: 10}}>
                     Datastore is a permanent key-value database for storing data that can be used cross-workflow. <br/>You can store anything from lists of IPs to complex configurations.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
                         href="/docs/organizations#datastore"
-                        style={{ textDecoration: isSelectedDataStore?null:"none", color: isSelectedDataStore?"#FF8444":"#f85a3e" }}
+                        style={{ textDecoration: isSelectedDataStore?null:"none", color: theme.palette.linkColor }}
                     >
                         Learn more
                     </a>
-                </span>
+                </Typography>
             </div>
             <Button
-                style={{backgroundColor: isSelectedDataStore? "#ff8544":null, fontSize: 16, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#1a1a1a":null, borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
+                style={{fontSize: 16, textTransform: isSelectedDataStore ? 'capitalize':null, borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
                 variant="contained"
                 color="primary"
                 onClick={() =>{ 
@@ -663,9 +664,9 @@ const CacheView = memo((props) => {
                 Add Key 
             </Button>
             <Button
-                style={{ marginLeft: 16, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
+                style={{ marginLeft: 16, marginRight: 15, borderRadius:isSelectedDataStore?4:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
-                color="primary"
+                color="secondary"
                 onClick={() => listOrgCache(orgId,selectedCategory)}
             >
                 <CachedIcon />
@@ -767,7 +768,9 @@ const CacheView = memo((props) => {
 										//handleUpdateFileCategory(updateToThisCategory)
 										toast.error("Not implemented.")
 									}} 
-									style={{fontSize: 16, textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544"}}
+									style={{fontSize: 16, textTransform: 'none', }}
+                                    color="primary"
+                                    variant="contained"
 								>
 									Update
 								</Button>
@@ -780,8 +783,9 @@ const CacheView = memo((props) => {
 				{renderTextBox ? 
 					<Tooltip title={"Close"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
-							color="primary"
+							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4,  textTransform: 'none', fontSize: 16,}}
+							color="secondary"
+                            variant="contained"
 							onClick={() => {
 								setRenderTextBox(false);
 								console.log(" close clicked")
@@ -793,9 +797,10 @@ const CacheView = memo((props) => {
 					:
 					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
-							color="primary"
-							onClick={() => {
+							style={{ marginLeft: 5, whiteSpace: "nowrap", marginRight: 15, width: 169, height: 35, borderRadius: 4, textTransform: 'none', fontSize: 16, }}
+							 variant="contained"
+                             color="secondary"
+                            onClick={() => {
 								setRenderTextBox(true);
 								}}
 						>
@@ -845,7 +850,7 @@ const CacheView = memo((props) => {
                 style={{
                 borderRadius: 4,
                 marginTop: 24,
-                border: "1px solid #494949",
+                border: theme.palette.defaultBorder,
                 width: "100%",
                 overflowX: "auto", 
                 paddingBottom: 0,
@@ -861,7 +866,7 @@ const CacheView = memo((props) => {
                 minWidth: 800,
                 overflowX: "auto",
              }}>
-                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore?"1px solid #494949":null, display: "table-row"}}>
+                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore? theme.palette.defaultBorder :null, display: "table-row"}}>
                 {["Key", "Value", "Actions", "Updated", "Distribution"].map((header, index) => (
                         <ListItemText
                             key={index}
@@ -872,7 +877,7 @@ const CacheView = memo((props) => {
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                borderBottom: "1px solid #494949"
+                                borderBottom: theme.palette.defaultBorder,
                             }}
                         />
                     ))}
@@ -883,7 +888,7 @@ const CacheView = memo((props) => {
                             key={rowIndex}
                             style={{
                                 display: "table-row",
-                                backgroundColor: "#212121",
+                                backgroundColor: theme.palette.platformColor,
                             }}
                         >
                             {Array(5)
@@ -900,7 +905,7 @@ const CacheView = memo((props) => {
                                             variant="text"
                                             animation="wave"
                                             sx={{
-                                                backgroundColor: "#1a1a1a",
+                                                backgroundColor: theme.palette.loaderColor,
                                                 height: "20px",
                                                 borderRadius: "4px",
                                             }}
@@ -936,9 +941,9 @@ const CacheView = memo((props) => {
 							return null
 						}
 
-                        var bgColor = isSelectedDataStore? "#212121":"#27292d";
+                        var bgColor = isSelectedDataStore? themeMode === "dark" ? "#212121" : "#FFFFFF" :"#27292d";
                         if (index % 2 === 0) {
-                            bgColor = isSelectedDataStore? "#1A1A1A":"#1f2023";
+                            bgColor = isSelectedDataStore? themeMode === "dark" ?  "#1A1A1A" : "#EAEAEA" :"#1f2023";
                         }
 
               			const validate = validateJson(data.value);
@@ -972,11 +977,12 @@ const CacheView = memo((props) => {
                                                 src={validate.result}
                                                 theme={theme.palette.jsonTheme}
                                                 style={{
+                                                    ...theme.palette.reactJsonStyle,
+                                                    backgroundColor: theme.palette.platformColor,
+                                                    border: theme.palette.defaultBorder,
                                                     padding: 5,
                                                     maxHeight: 300,
                                                     overflowY: "auto",
-                                                    backgroundColor: "#151515",
-                                                    border: "1px solid rgba(255,255,255,0.7)",
                                                 }}
                                                 collapsed={true}
                                                 enableClipboard={(copy) => {
@@ -1022,7 +1028,20 @@ const CacheView = memo((props) => {
                                                         setModalOpen(true)
                                                     }}
                                                 >
-                                                    <img src="/icons/editIcon.svg" alt="edit" />
+                                                    <svg
+                                                        width="24"
+                                                        height="24"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        >
+                                                        <path
+                                                            d="M16.1038 4.66848C16.3158 4.45654 16.5674 4.28843 16.8443 4.17373C17.1212 4.05903 17.418 4 17.7177 4C18.0174 4 18.3142 4.05903 18.5911 4.17373C18.868 4.28843 19.1196 4.45654 19.3315 4.66848C19.5435 4.88041 19.7116 5.13201 19.8263 5.40891C19.941 5.68582 20 5.9826 20 6.28232C20 6.58204 19.941 6.87882 19.8263 7.15573C19.7116 7.43263 19.5435 7.68423 19.3315 7.89617L8.43807 18.7896L4 20L5.21038 15.5619L16.1038 4.66848Z"
+                                                            stroke={themeMode=== "dark" ? "#F1F1F1" : "#333"}
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        />
+                                                        </svg>
                                                 </IconButton>
                                             </span>
                                         </Tooltip>

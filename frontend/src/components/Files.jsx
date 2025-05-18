@@ -43,7 +43,7 @@ import {
 
 import Dropzone from "../components/Dropzone.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import { Context } from "../context/ContextApi.jsx";
 
 const Files = memo((props) => {
@@ -58,6 +58,8 @@ const Files = memo((props) => {
   const [openEditor, setOpenEditor] = React.useState(false);
   const [renderTextBox, setRenderTextBox] = React.useState(false);
   const [loadFileModalOpen, setLoadFileModalOpen] = React.useState(false);
+  const { themeMode, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
   const [field1, setField1] = React.useState("");
   const [field2, setField2] = React.useState("");
@@ -442,7 +444,7 @@ const Files = memo((props) => {
       </DialogContent>
       <DialogActions>
         <Button
-          style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#ff8544"  }}
+          style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main }}
           onClick={() => setLoadFileModalOpen(false)}
           color="primary"
         >
@@ -450,7 +452,7 @@ const Files = memo((props) => {
         </Button>
         <Button
 		  variant="contained"
-          style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544" }}
+          style={{ borderRadius: "2px", textTransform: 'none', fontSize:16,  }}
           disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")}
           onClick={() => {
             handleGithubValidation();
@@ -517,9 +519,9 @@ const Files = memo((props) => {
 		}}
 	>
 		<DialogTitle>
-			<div style={{ color: "rgba(255,255,255,0.9)" }}>
+			<Typography variant="h5" color="textPrimary" >
 				Select sub-org to distribute files
-			</div>
+			</Typography>
 		</DialogTitle>
 		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
 			<MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
@@ -562,15 +564,14 @@ const Files = memo((props) => {
 
 			<div style={{ display: "flex", marginTop: 20 }}>
 				<Button
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#ff8544"  }}
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main }}
 					onClick={() => setShowDistributionPopup(false)}
-					color="primary"
 				>
 					Cancel
 				</Button>
 				<Button
 					variant="contained"
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544", marginLeft: 10 }}
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
 					onClick={() => {
 						changeDistribution(fileIdSelectedForDistribution, selectedSubOrg);
 					}}
@@ -906,27 +907,27 @@ const Files = memo((props) => {
 			onDrop={uploadFile}
 		>
 			{fileDistributionModal}
-			<div style={{width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121',borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
+			<div style={{width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
 
-        		<div style={{height: "100%", maxHeight: 1700,overflowY: 'auto', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
-					<div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin' }}>
+        		<div style={{height: "100%", maxHeight: 1700,overflowY: 'auto', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
+					<div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
 					<DownloadFileIcon setLoadFileModalOpen={setLoadFileModalOpen} isSelectedFiles={isSelectedFiles} />
 
 				{fileDownloadModal} 
 
 				<div style={{ marginTop: isSelectedFiles ? 2: 20, marginBottom:20 }}>
-					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null, color: "#FFFFFF"}}>Files</h2>
-					<span style={{ marginLeft: isSelectedFiles ? null : 25, color:isSelectedFiles?"#9E9E9E":null}}>
+					<Typography variant="h5" color="textPrimary" style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null, fontWeight: 500}}>Files</Typography>
+					<Typography variant="body2" color="textSecondary" style={{ marginLeft: isSelectedFiles ? null : 25,}}>
 						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
 							target="_blank"
 							rel="noopener noreferrer"
 							href="https://shuffler.io/docs/organizations#files"
-							style={{ textDecoration: isSelectedFiles ? null:"none", color: isSelectedFiles? "#FF8444": "#f85a3e" }}
+							style={{ textDecoration: isSelectedFiles ? null:"none", color: theme.palette.linkColor }}
 						>
 							Learn more
 						</a>
-					</span>
+					</Typography>
 				</div>
 
 
@@ -937,7 +938,7 @@ const Files = memo((props) => {
 					onClick={() => {
 						upload.click();
 					}}
-					style={{backgroundColor: isSelectedFiles?'#ff8544':null, color:isSelectedFiles?"#212121":null, textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
+					style={{ textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
 				>
 			     Upload files
 				</Button>
@@ -958,9 +959,9 @@ const Files = memo((props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 16, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
+					style={{ marginLeft: 16, marginRight: 15, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
-					color="primary"
+					color="secondary"
 					onClick={() => getFiles(selectedCategory)}
 				>
 					<CachedIcon />
@@ -976,7 +977,6 @@ const Files = memo((props) => {
 							labelId="input-namespace-select-label"
 							id="input-namespace-select-id"
 							style={{
-								color: "white",
 								minWidth: 122,
 								maxWidth: 122,
 								height: 35,
@@ -1013,7 +1013,6 @@ const Files = memo((props) => {
 									<MenuItem
 										key={index}
 										value={data}
-										style={{ color: "white" }}
 									>
 										{data.replaceAll("_", " ")}
 									</MenuItem>
@@ -1044,8 +1043,8 @@ const Files = memo((props) => {
 								Please note that your selected files ({selectedFileId?.length}) will be moved to the <kbd>{updateToThisCategory}</kbd> category.
 							</DialogContent>
 							<DialogActions>
-								<Button onClick={() => setShowFileCategoryPopup(false)} style={{fontSize: 16, textTransform: 'none'}}>Close</Button>
-								<Button onClick={() => handleUpdateFileCategory(updateToThisCategory)} style={{fontSize: 16, textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544"}}>Update</Button>
+								<Button onClick={() => setShowFileCategoryPopup(false)} style={{fontSize: 16, textTransform: 'none', color: theme.palette.primary.main }}>Close</Button>
+								<Button variant="contained" color="primary" onClick={() => handleUpdateFileCategory(updateToThisCategory)} style={{fontSize: 16, textTransform: 'none', }}>Update</Button>
 							</DialogActions>
 						</Dialog>
 					</FormControl>
@@ -1055,8 +1054,9 @@ const Files = memo((props) => {
 				{renderTextBox ? 
 					<Tooltip title={"Close"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
-							color="primary"
+							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4, textTransform: 'none', fontSize: 16, }}
+							variant="contained"
+						color="secondary"
 							onClick={() => {
 								setRenderTextBox(false);
 								console.log(" close clicked")
@@ -1068,8 +1068,9 @@ const Files = memo((props) => {
 					:
 					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
 						<Button
-							style={{ marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4, backgroundColor: "#494949", textTransform: 'none', fontSize: 16, color: "#f1f1f1" }}
-							color="primary"
+							style={{whiteSpace: 'nowrap', textWrap: 'nowrap', marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4,  textTransform: 'none', fontSize: 16, }}
+							variant="contained"
+							color="secondary"
 							onClick={() => {
 								setRenderTextBox(true);
 								}}
@@ -1096,7 +1097,8 @@ const Files = memo((props) => {
 					}}
 					InputProps={{
 						style: {
-							color: "white",
+							color: theme.palette.textFieldStyle.color,
+							backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 							height: 35,
 							fontSize: 16,
 							borderRadius: 4,
@@ -1133,7 +1135,7 @@ const Files = memo((props) => {
 					style={{
 					borderRadius: 4,
 					marginTop: 24,
-					border: "1px solid #494949",
+					border: theme.palette.defaultBorder,
 					width: "100%",
 					overflowX: "auto", 
 					paddingBottom: 0,
@@ -1151,7 +1153,7 @@ const Files = memo((props) => {
 					>
 					<ListItem
 						style={{
-							borderBottom: "1px solid #494949" ,
+							borderBottom: theme.palette.defaultBorder ,
 							display: "table-row"
 						}}
 						>
@@ -1198,7 +1200,7 @@ const Files = memo((props) => {
 								padding: index === 0 ? "0px 8px 8px 15px" : "0px 8px 8px 8px",
 								whiteSpace: "nowrap",
 								textOverflow: "ellipsis",
-								borderBottom: "1px solid #494949",
+								borderBottom: theme.palette.defaultBorder,
 								verticalAlign: "middle"
 								}}
 								primaryTypographyProps={{
@@ -1215,7 +1217,7 @@ const Files = memo((props) => {
                             key={rowIndex}
                             style={{
                                 display: "table-row",
-                                backgroundColor: "#212121",
+                                backgroundColor: theme.palette.platformColor,
                             }}
                         >
                             {Array(8)
@@ -1232,7 +1234,7 @@ const Files = memo((props) => {
                                             variant="text"
                                             animation="wave"
                                             sx={{
-                                                backgroundColor: "#1a1a1a",
+                                                backgroundColor: theme.palette.loaderColor,
                                                 height: "20px",
                                                 borderRadius: "4px",
                                             }}
@@ -1257,9 +1259,9 @@ const Files = memo((props) => {
 									return null;
 								}
 	
-								var bgColor = isSelectedFiles ? "#212121":"#27292d";
+								var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
 								if (index % 2 === 0) {
-									bgColor = isSelectedFiles ? "#1A1A1A":"#1f2023";
+									bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
 								}
 								const isDistributed = file?.suborg_distribution?.length > 0 ? true : false;
 								const filenamesplit = file.filename.split(".")
@@ -1425,9 +1427,20 @@ const Files = memo((props) => {
 																readFileData(file)
 															}}
 														>
-															<img src="/icons/editIcon.svg" alt="edit icon"
-																style={{color: iseditable ? "white" : "grey", width: 24, height: 24}}
-															/>
+															<svg
+																width="24"
+																height="24"
+																viewBox="0 0 24 24"
+																fill="none"
+																xmlns="http://www.w3.org/2000/svg"
+																>
+																<path
+																	d="M16.1038 4.66848C16.3158 4.45654 16.5674 4.28843 16.8443 4.17373C17.1212 4.05903 17.418 4 17.7177 4C18.0174 4 18.3142 4.05903 18.5911 4.17373C18.868 4.28843 19.1196 4.45654 19.3315 4.66848C19.5435 4.88041 19.7116 5.13201 19.8263 5.40891C19.941 5.68582 20 5.9826 20 6.28232C20 6.58204 19.941 6.87882 19.8263 7.15573C19.7116 7.43263 19.5435 7.68423 19.3315 7.89617L8.43807 18.7896L4 20L5.21038 15.5619L16.1038 4.66848Z"
+																	stroke={themeMode=== "dark" ? "#F1F1F1" : "#333"}
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																/>
+															</svg>
 														</IconButton>
 													</span>
 												</Tooltip>
@@ -1470,15 +1483,39 @@ const Files = memo((props) => {
 																downloadFile(file);
 															}}
 														>
-															<img src="/icons/downloadIcon.svg" alt="download icon"
-																style={{
-																	width: 24, height: 24,
-																	color:
-																		file.status === "active"
-																			? "white"
-																			: "grey",
-																}}
+															<svg
+															width="24"
+															height="24"
+															viewBox="0 0 24 24"
+															fill="none"
+															xmlns="http://www.w3.org/2000/svg"
+															>
+															<rect
+																width="24"
+																height="24"
+																fill={themeMode === "dark" ? "#212121" : "#EDEDED"}
+																fillOpacity="0.02"
 															/>
+															<path
+																d="M8.22595 16.4463L11.7792 19.9995L15.3324 16.4463"
+																stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
+																strokeLinecap="round"
+																strokeLinejoin="round"
+															/>
+															<path
+																d="M11.7792 12.0049V19.9997"
+																stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
+																strokeLinecap="round"
+																strokeLinejoin="round"
+															/>
+															<path
+																d="M19.6676 17.415C20.4399 16.8719 21.019 16.0968 21.321 15.2023C21.6229 14.3078 21.632 13.3403 21.3468 12.4403C21.0617 11.5402 20.4971 10.7545 19.7352 10.197C18.9732 9.6396 18.0534 9.33948 17.1092 9.34021H15.99C15.7228 8.299 15.2229 7.33196 14.5279 6.5119C13.8329 5.69184 12.961 5.04013 11.9777 4.60583C10.9944 4.17153 9.92534 3.96596 8.85109 4.00459C7.77684 4.04322 6.72535 4.32505 5.77578 4.82886C4.82621 5.33267 4.00331 6.04534 3.36902 6.9132C2.73474 7.78106 2.30559 8.78151 2.11391 9.83922C1.92222 10.8969 1.97297 11.9844 2.26236 13.0196C2.55174 14.0549 3.07221 15.011 3.78459 15.816"
+																stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
+																strokeLinecap="round"
+																strokeLinejoin="round"
+															/>
+															</svg>
+
 														</IconButton>
 													</span>
 												</Tooltip>
@@ -1496,7 +1533,31 @@ const Files = memo((props) => {
 																toast(file.id + " copied to clipboard");
 														}}
 													>
-														<img src="/icons/copyIcon.svg" alt="copy icon" style={{ color: "white", width: 24, height: 24 }} />
+														<svg
+															width="24"
+															height="24"
+															viewBox="0 0 24 24"
+															fill="none"
+															xmlns="http://www.w3.org/2000/svg"
+															>
+															<rect
+																width="24"
+																height="24"
+																fillOpacity="1"
+															/>
+															<path
+																d="M14 4H7.6C7.17565 4 6.76869 4.16857 6.46863 4.46863C6.16857 4.76869 6 5.17565 6 5.6V18.4C6 18.8243 6.16857 19.2313 6.46863 19.5314C6.76869 19.8314 7.17565 20 7.6 20H17.2C17.6243 20 18.0313 19.8314 18.3314 19.5314C18.6314 19.2313 18.8 18.8243 18.8 18.4V8.8L14 4Z"
+																stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
+																strokeLinecap="round"
+																strokeLinejoin="round"
+															/>
+															<path
+																d="M14 4V8.8H18.8"
+																stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
+																strokeLinecap="round"
+																strokeLinejoin="round"
+															/>
+															</svg>
 													</IconButton>
 												</Tooltip>
 												<Tooltip
@@ -1570,7 +1631,6 @@ const Files = memo((props) => {
                                               disabled={userdata?.active_org?.role !== "admin" || (selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ) ? true : false}
                                               checked={isDistributed}
                                               style={{ }}
-                                              color="secondary"
                                               onClick={() => {
 												setShowDistributionPopup(true)
 												if(file?.suborg_distribution?.length > 0){

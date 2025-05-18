@@ -1,5 +1,5 @@
 /* eslint-disable react/no-multi-comp */
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import ReactDOM from "react-dom"
 
 import ReactJson from "react-json-view-ssr";
@@ -48,6 +48,7 @@ import {
   Edit as EditIcon,
   Polyline as PolylineIcon,
 } from '@mui/icons-material';
+import { Context } from '../context/ContextApi.jsx';
 
 const hrefStyle = {
 	color: "white", 
@@ -58,6 +59,7 @@ const hrefStyle = {
 const RunWorkflow = (defaultprops) => {
   const { globalUrl, userdata, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
 
+  const { supportEmail } = useContext(Context);
   let navigate = useNavigate();
   const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
   const [explorerUi, setExplorerUi] = useState(false)
@@ -471,7 +473,7 @@ const RunWorkflow = (defaultprops) => {
 			}
 
 			if (response.status === 401 || response.status === 403) {
-				toast("This Form is not available for you to run. If you this is an error, contact support@shuffler.io with a link to this form")
+				toast(`This Form is not available for you to run. If you this is an error, contact ${supportEmail} with a link to this form`)
 			}
 
 			return response.json()
@@ -627,7 +629,7 @@ const RunWorkflow = (defaultprops) => {
         }
 
 		if (response.status === 401 || response.status === 403) {
-			toast("This Form is not available to you. If you think this is an error, please contact support@shuffler.io with the URL.")
+			toast(`This Form is not available to you. If you think this is an error, please contact ${supportEmail} with the URL.`)
 		}
 
         return response.json()

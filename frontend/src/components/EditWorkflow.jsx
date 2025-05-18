@@ -1,5 +1,5 @@
 import React, { useEffect, useContext } from "react";
-import theme from '../theme.jsx';
+import { getTheme } from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import { MuiChipsInput } from "mui-chips-input";
 import { toast } from "react-toastify"
@@ -46,7 +46,7 @@ import {
 	Slider,
 
 } from "@mui/material";
-
+import { Context } from "../context/ContextApi.jsx";
 import {
 	DatePicker,
 	LocalizationProvider,
@@ -69,7 +69,8 @@ const EditWorkflow = (props) => {
 	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, setRealtimeMarkdown, boxWidth, setBoxWidth, } = props
 
 	const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
-
+	const {themeMode, brandColor} = useContext(Context)
+	const theme = getTheme(themeMode, brandColor)
 	const [submitLoading, setSubmitLoading] = React.useState(false);
 	const [showMoreClicked, setShowMoreClicked] = React.useState(isEditing !== false ? true : false);
 
@@ -203,23 +204,27 @@ const EditWorkflow = (props) => {
 				setModalOpen(false);
 			}}
 			PaperProps={{
-				style: {
-					color: "white",
-					minWidth: isMobile ? "90%" : 650,
-					maxWidth: isMobile ? "90%" : 650,
-					minHeight: 400,
-					paddingTop: 25,
-					paddingLeft: 50,
+				sx: {
+					color: theme.palette.DialogStyle.color,
+					minWidth: isMobile ? "90%" : "650px",
+					maxWidth: isMobile ? "90%" : "650px",
+					minHeight: "400px",
 					//minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 					//maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
-		    		borderRadius: theme.palette.borderRadius,
-		    		backgroundColor: "black",
+		    		borderRadius: theme.palette.DialogStyle.borderRadius,
+		    		backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+					'& .MuiDialogContent-root': {
+					  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+					},
+					'& .MuiDialogTitle-root': {
+					  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+					},
 				},
 			}}
 		>
-			<DialogTitle style={{ padding: 30, paddingBottom: 0, zIndex: 1000, }}>
+			<DialogTitle style={{ padding: 30, paddingBottom: 0, zIndex: 1000, paddingTop: "25px", paddingLeft: "50px"}}>
 				<div style={{ display: "flex" }}>
-					<div style={{ flex: 1, color: "rgba(255,255,255,0.9)" }}>
+					<div style={{ flex: 1, color: theme.palette.textColor }}>
 						<div style={{ display: "flex" }}>
 							<Typography variant="h4" style={{ flex: 9, }}>
 								{newWorkflow ? "New" : "Editing"} workflow
@@ -248,7 +253,7 @@ const EditWorkflow = (props) => {
 
 						</div>
 						<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, maxWidth: 440, }}>
-							Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
+							Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color:theme.palette.linkColor }}>Learn more</a>
 						</Typography>
 
 						<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
@@ -288,16 +293,16 @@ const EditWorkflow = (props) => {
 			</DialogTitle>
 			<FormControl>
 				<div style={{ 
-					borderTop: "1px solid rgba(255,255,255,0.5)", 
+					borderTop: theme.palette.defaultBorder, 
 					width: 600, 
 					position: "fixed", 
 					right: 20, 
 					bottom: 0, 
 					zIndex: 1002, 
-					backgroundColor: theme.palette.backgroundColor,
+					backgroundColor: theme.palette.DialogStyle.backgroundColor,
 					height: 75, 
 					paddingTop: 20, 
-					paddingLeft: 75, 
+					paddingLeft: 30, 
 				}}>
 					<Button
 						variant="contained"
@@ -388,7 +393,7 @@ const EditWorkflow = (props) => {
 					</Button>
 				</div>
 
-				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, }}>
+				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, paddingLeft: "50px" }}>
 					<div style={{ minWidth: newWorkflow ? 500 : 550, maxWidth: newWorkflow ? 450 : 500, }}>
 						<TextField
 							onChange={(event) => {
@@ -396,7 +401,7 @@ const EditWorkflow = (props) => {
 							}}
 							InputProps={{
 								style: {
-									color: "white",
+									color: theme.palette.textFieldStyle.color,
 								},
 							}}
 							color="primary"
@@ -469,7 +474,7 @@ const EditWorkflow = (props) => {
 								style={{ flex: 1, maxHeight: 120, overflow: "auto", }}
 								InputProps={{
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 									},
 								}}
 								placeholder="Tags"
@@ -1287,7 +1292,7 @@ const EditWorkflow = (props) => {
 
 
 				{newWorkflow === true ?
-					<span style={{ marginTop: 30, }}>
+					<span style={{ paddingTop: 30, backgroundColor: theme.palette.DialogStyle.backgroundColor }}>
 						<Typography variant="h6" style={{ marginLeft: 30, paddingBottom: 0, }}>
 							Relevant Workflows
 						</Typography>

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useInterval } from "react-powerhooks";
 import { toast } from 'react-toastify';
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 
 import {
@@ -20,7 +20,7 @@ import {
   Collapse,
   IconButton,
 } from "@mui/material";
-
+import { Context } from "../context/ContextApi.jsx";
 import { 
 	FavoriteBorder as FavoriteBorderIcon,
 	Error as ErrorIcon,
@@ -76,6 +76,8 @@ const ConfigureWorkflow = (props) => {
   const [showFinalizeAnimation, setShowFinalizeAnimation] = React.useState(false);
   const [loopRunning, setLoopRunning] = useState(false)
   const [checkStarted, setCheckStarted] = React.useState(false);
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
 
   useEffect(() => { 
 	  if (requiredActions.length === 0) { 
@@ -799,7 +801,7 @@ const ConfigureWorkflow = (props) => {
 		>
 			<div 
 				style={{
-					border: filled ? `1px solid ${theme.palette.green}` : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, width: "100%", padding: 12, cursor: filled ? "default" : "pointer", 
+					border: filled ? `1px solid ${theme.palette.green}` : theme.palette.textFieldStyle.border, borderRadius: theme.palette?.borderRadius, width: "100%", padding: 12, cursor: filled ? "default" : "pointer", 
 				}}
 				id="app-config"
 			>

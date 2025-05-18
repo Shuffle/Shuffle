@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, memo, useMemo } from 'react';
 
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import classNames from "classnames";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -28,6 +28,7 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
+	Box,
 } from "@mui/material";
 
 import { 
@@ -42,6 +43,8 @@ import { Context } from '../context/ContextApi.jsx';
 const LineChartWrapper = ({keys, inputname, height, width}) => {
   const [hovered, setHovered] = useState("");
 	const inputdata = keys.data === undefined ? keys : keys.data
+	const {themeMode} = useContext(Context)
+	const theme = getTheme(themeMode)
 	
 	return (
 		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
@@ -83,6 +86,8 @@ const AppStats = (defaultprops) => {
   const [workflows, setWorkflows] = useState(inputWorkflows === undefined ? [] : inputWorkflows)
   const [resultRows, setResultRows] = useState([])
   const [resultLoading, setResultLoading] = useState(true)
+  const { themeMode, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor)
   
   const includedExecutions = selectedOrganization?.sync_features?.app_executions !== undefined ? selectedOrganization?.sync_features?.app_executions?.limit : 0 
 
@@ -529,11 +534,14 @@ const AppStats = (defaultprops) => {
 
 	const paperStyle = {
 		textAlign: "center", 
-		padding: 40, 
-		margin: 5, 
-		backgroundColor: theme.palette.platformColor,
-		border: "1px solid rgba(255,255,255,0.3)",
-		maxWidth: 300,
+		padding: "40px", 
+		margin: "5px", 
+		backgroundColor: theme.palette.cardBackgroundColor,
+		border: theme.palette.defaultBorder,
+		maxWidth: "300px",
+		"&:hover": {
+			backgroundColor: theme.palette.cardHoverColor,
+		},
 	}
 
 	const columns: GridColDef[] = [
@@ -646,9 +654,9 @@ const AppStats = (defaultprops) => {
     <div className="content" style={{width: "100%", margin: "auto", }}>
 		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
 			All shown statistics are gathered from <a 
-				href={`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`} 
+				href={`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/stats`} 
 				target="_blank"
-				style={{ textDecoration: "none", color: "#FF8444",}}
+				style={{ textDecoration: "none", color: theme.palette.linkColor,}}
 			>Your Organisation Statistics. </a>
 			It exists to give you more insight into your workflows, and to understand your utilization of the Shuffle platform. <b>The billing tracker is in Beta, and is always calculated manually before being invoiced.</b>
 		</Typography>
@@ -662,9 +670,9 @@ const AppStats = (defaultprops) => {
 							The cost of app runs in the selected period based on {filteredStatistics.monthly_app_executions} App Runs. These numbers do not exclude your included 10.000/month or {includedExecutions} App Runs per month. App Run cost: ${invocationCost}. 
 						</Typography>
 					}>
-						<Paper style={paperStyle}>
+						<Box sx={paperStyle}>
 							<Typography variant="h4">
-								${selectedOrganization.lead_info.customer === false && selectedOrganization.lead_info.pov === false ?
+								${selectedOrganization?.lead_info?.customer === false && selectedOrganization?.lead_info?.pov === false ?
 									0 
 									: 
 									apprunCost
@@ -673,57 +681,49 @@ const AppStats = (defaultprops) => {
 							<Typography variant="h6">
 								Period Cost
 							</Typography>
-						</Paper>
+						</Box>
 					</Tooltip>
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							App runs in the selected period
 						</Typography>
 					}>
-					<Paper style={paperStyle}>
+					<Box sx={paperStyle}>
 						<Typography variant="h4">
 							{filteredStatistics.monthly_app_executions === null || filteredStatistics.monthly_app_executions === undefined ? 0 : filteredStatistics.monthly_app_executions}
 						</Typography>
 						<Typography variant="h6">
 							App Runs 
 						</Typography>
-					</Paper>
+					</Box>
 					</Tooltip> 
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							Workflow runs in the selected period 
 						</Typography>
 					}>
-						<Paper style={paperStyle}>
+						<Box sx={paperStyle}>
 							<Typography variant="h4">
 								{filteredStatistics.monthly_workflow_executions === null || filteredStatistics.monthly_workflow_executions === undefined ? 0 : filteredStatistics.monthly_workflow_executions}
 							</Typography>
 							<Typography variant="h6">
 								Workflow Runs 
 							</Typography>
-						</Paper>
+						</Box>
 					</Tooltip>
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							Estimated cost to be billed at the end of the current month. Subtracted contractually included app runs. Actual cost month to date: ${monthToDateCost}. App Run cost: ${invocationCost}.
 						</Typography>
 					}>
-						<Paper style={{
-							textAlign: "center", 
-							padding: 40, 
-							margin: 5, 
-							marginLeft: clickedFromOrgTab? null:90, 
-							backgroundColor: theme.palette.platformColor,
-							border: "1px solid rgba(255,255,255,0.3)",
-							maxWidth: 300,
-						}}>
+						<Box sx={paperStyle}>
 							<Typography variant="h4">
 								${monthTotalCost}
 							</Typography>
 							<Typography variant="h6">
 								Estimated cost 
 							</Typography>
-						</Paper>
+						</Box>
 					</Tooltip>
 				</div>
 			: null}

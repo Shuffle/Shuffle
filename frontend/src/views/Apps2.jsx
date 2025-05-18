@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback, memo, useMemo, useRef } from "react";
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import { isMobile } from "react-device-detect";
 
 import { useLocation, useNavigate } from "react-router-dom";
@@ -55,7 +55,9 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   //const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
   const appUrl = `/apps/${data.id}` 
-
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
+  
   var canEditApp = userdata?.support || userdata?.id === data?.owner || 
         (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || data?.contributors?.includes(userdata?.id)
 
@@ -104,7 +106,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               display: "flex",
               fontFamily: theme?.typography?.fontFamily,
               width: '100%',
-              backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
+              backgroundColor: mouseHoverIndex === index ? theme.palette.hoverColor :  theme.palette.platformColor,
             }}
             onClick={() => {
               handleAppClick(data);
@@ -150,7 +152,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: '#F1F1F1'
+                  color: theme.palette.text.primary,
                 }}>
                   {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
                 </div>
@@ -161,7 +163,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
                 marginLeft: 8,
-                color: "rgba(158, 158, 158, 1)"
+                color: theme.palette.text.secondary,
               }}>
                 {data.categories ? data.categories.join(", ") : "NA"}
               </div>
@@ -172,7 +174,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 whiteSpace: "nowrap",
                 width: "100%",
                 marginLeft: 8,
-                color: "rgba(158, 158, 158, 1)",
+                color: theme.palette.text.secondary,
                 display: "flex",
                 justifyContent: 'space-between',
                 paddingRight: 15,
@@ -202,7 +204,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   }}>
                     {
                       canEditApp ? (
-                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        <Button style={{  border: "none", cursor: "pointer", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -211,11 +213,13 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                               navigate(editUrl)
                             }
                           }}
+                          variant="contained"
+                          color="secondary"
                         >
                           <EditIcon />
-                        </button>
+                        </Button>
                       ) : (
-                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        <Button variant="contained" color="secondary" style={{ border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -224,26 +228,23 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         }}
                         >
                         <ForkRightIcon />
-                        </button>
+                        </Button>
                       )
                     }
 
                     <Button
-					  disabled={data?.reference_org === userdata?.active_org?.id}
+					            disabled={data?.reference_org === userdata?.active_org?.id}
+                      variant="contained"
+                      color="secondary"
                       className="deactivate-button"
                       sx={{
                         width: 110,
                         height: 35,
                         borderRadius: 0.75,
-                        bgcolor: "rgba(73, 73, 73, 1)",
-                        color: "rgba(241, 241, 241, 1)",
                         textTransform: "none",
                         fontSize: 16,
                         fontFamily: theme?.typography?.fontFamily,
                         transition: "background-color 0.3s ease",
-                        "&:hover": {
-                          bgcolor: "rgba(93, 93, 93, 1)",
-                        },
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onMouseUp={(e) => e.stopPropagation()}
@@ -308,6 +309,8 @@ const Hits = ({
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
   const [isLoading, setIsLoading] = useState(false)
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
 
   useEffect(() => {
     var baseurl = globalUrl;
@@ -507,7 +510,7 @@ const Hits = ({
                             overflow: "hidden",
                             display: "flex",
                             width: '100%',
-                            backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121",
+                            backgroundColor: hoverEffect === index ? theme.palette.hoverColor :  theme.palette.platformColor,
                             fontFamily: theme?.typography?.fontFamily
                           }}
                             onClick={() => {
@@ -550,7 +553,7 @@ const Hits = ({
                                   maxWidth: "90%",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
-                                  color: '#F1F1F1'
+                                  color: theme.palette.text.primary
                                 }}
                               >
                                 {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
@@ -558,7 +561,7 @@ const Hits = ({
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
-                                  color: '#F1F1F1'
+                                  color: theme.palette.text.primary,
                                 }}>
                                   {normalizedString(data.name)}
                                 </div>
@@ -569,7 +572,7 @@ const Hits = ({
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
-                                  color: "rgba(158, 158, 158, 1)",
+                                  color: theme.palette.text.secondary,
                                   marginTop: 5,
                                 }}
                               >
@@ -600,12 +603,12 @@ const Hits = ({
                                           componentsProps={{
                                             tooltip: {
                                               sx: {
-                                                backgroundColor: "rgba(33, 33, 33, 1)",
-                                                color: "rgba(241, 241, 241, 1)",
+                                                backgroundColor: theme.palette.tooltip.backgroundColor,
+                                                color: theme.palette.tooltip.color,
                                                 width: "auto",
                                                 height: "auto",
                                                 fontSize: 16,
-                                                border: "1px solid rgba(73, 73, 73, 1)",
+                                                border: theme.palette.tooltip.border,
                                               }
                                             }
                                           }}
@@ -650,15 +653,15 @@ const Hits = ({
                                     <div>
                                       {allActivatedAppIds && allActivatedAppIds?.includes(data.objectID) ? (
                                         <Button
-                                          style={{
-                                            width: 110,
-                                            height: 35,
-                                            borderRadius: 4,
-                                            backgroundColor: "rgba(73, 73, 73, 1)",
-                                            color: "rgba(241, 241, 241, 1)",
+                                         variant="contained"
+                                         color="secondary"
+                                          sx={{
+                                            width: "110px",
+                                            height: "35px",
+                                            borderRadius: "4px",
                                             textTransform: "none",
                                             fontFamily: theme?.typography?.fontFamily,
-                                            fontSize: 16,
+                                            fontSize: "16px",
                                           }}
                                           onMouseDown={(e) => e.stopPropagation()}
                                           onMouseUp={(e) => e.stopPropagation()}
@@ -671,9 +674,9 @@ const Hits = ({
                                       ) : (
 
                                         <Button
+                                          variant="contained"
+                                          color="primary"
                                           style={{
-                                            backgroundColor: "#FF8544",
-                                            color: "black",
                                             width: 102,
                                             height: 35,
                                             borderRadius: 4,
@@ -719,6 +722,8 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
   const inputRef = useRef(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const location = useLocation();
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   // Initialize search when component mounts or when switching to Discover tab
   useEffect(() => {
     if (searchQuery) {
@@ -779,7 +784,8 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
       InputProps={{
         style: {
           borderRadius: 4,
-          height: 45
+          height: 45,
+          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
         },
         endAdornment: (
           <InputAdornment position="end">
@@ -809,6 +815,8 @@ const CustomHits = connectHits(Hits);
 
 // Custom Category Dropdown Component
 const CategoryDropdown = ({ items, currentRefinement, refine }) => {
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   const handleChange = (event) => {
     const value = event.target.value;
     refine(value);
@@ -823,7 +831,7 @@ const CategoryDropdown = ({ items, currentRefinement, refine }) => {
         onChange={handleChange}
         displayEmpty
         multiple
-        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
+        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor, color:  theme.palette.textFieldStyle.color }}
         renderValue={(selected) => {
           if (selected.length === 0) return 'All Categories';
           return (
@@ -875,6 +883,9 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
     refine(value);
   };
 
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
+
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       <Select
@@ -884,7 +895,7 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
         onChange={handleChange}
         displayEmpty
         multiple
-        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
+        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor, color:  theme.palette.textFieldStyle.color }}
         renderValue={(selected) => {
           if (selected.length === 0) return 'All Labels';
           return (
@@ -930,6 +941,7 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
     </div>
   );
 };
+
 const CustomLabelDropdown = connectRefinementList(LabelDropdown);
 
 
@@ -970,6 +982,8 @@ const filterApps = (apps, searchQuery, selectedCategory, selectedLabel) => {
 
 const LoginPrompt = () => {
   const navigate = useNavigate();
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   return (
     <div style={{
       display: "flex",
@@ -1006,9 +1020,11 @@ const LoginPrompt = () => {
 
 // Add this new component for the app skeleton
 const AppSkeleton = () => {
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   return (
     <Paper elevation={0} style={{
-      backgroundColor: "#212121",
+      backgroundColor: theme.palette.platformColor,
       width: "100%",
       height: 120,
       borderRadius: 4,
@@ -1025,7 +1041,7 @@ const AppSkeleton = () => {
           height={90}
           style={{
             borderRadius: 4,
-            backgroundColor: "rgba(255, 255, 255, 0.1)"
+            backgroundColor: theme.palette.loaderColor
           }}
         />
         <div style={{
@@ -1039,19 +1055,19 @@ const AppSkeleton = () => {
             variant="text"
             width="40%"
             height={24}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            style={{ backgroundColor: theme.palette.loaderColor }}
           />
           <Skeleton
             variant="text"
             width="60%"
             height={20}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            style={{ backgroundColor: theme.palette.loaderColor }}
           />
           <Skeleton
             variant="text"
             width="30%"
             height={20}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            style={{ backgroundColor: theme.palette.loaderColor }}
           />
         </div>
       </div>
@@ -1116,6 +1132,9 @@ const Apps2 = (props) => {
   const [field2, setField2] = useState("");
   const [validation, setValidation] = useState(null);
   const [createAppModalOpen, setCreateAppModalOpen] = useState(false);
+
+  const {themeMode, brandColor} = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
   const baseRepository = "https://github.com/frikky/shuffle-apps";
 
@@ -1373,7 +1392,6 @@ const Apps2 = (props) => {
           //   setSelectedAction({});
           // }
         }
-
         if (privateapps.length > 0 && storageApps.length === 0) {
           try {
             localStorage.setItem("apps", JSON.stringify(privateapps))
@@ -1869,13 +1887,13 @@ const Apps2 = (props) => {
   }
 
   const tabActive = {
-    borderBottom: "5px solid #FF8544",
+    borderBottom: `5px solid ${theme.palette.primary.main}`,
     borderRadius: "2px",
-    color: "#FF8544"
+    color: theme.palette.primary.main,
   }
 
   return (
-    <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
+    <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: theme.palette.backgroundColor, fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
         <AppModal
           open={openModal}
@@ -1984,7 +2002,7 @@ const Apps2 = (props) => {
               </span>
             )}
           </div>
-          <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
+          <div style={{ borderBottom: themeMode === "dark" ? "1px solid #808080" : theme.palette.defaultBorder, marginBottom: 30 }}>
             <Tabs
               value={currTab}
               onChange={(event, newTab) => handleTabChange(event, newTab)}
@@ -2034,6 +2052,10 @@ const Apps2 = (props) => {
                   value={searchQuery}
                   id="shuffle_search_field"
                   onChange={handleSearchChange}
+                  style={{
+                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    color: theme.palette.textFieldStyle.color,
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -2043,7 +2065,10 @@ const Apps2 = (props) => {
                   InputProps={{
                     style: {
                       borderRadius: 4,
-                      height: 45
+                      height: 45,
+                      backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      color: theme.palette.textFieldStyle.color,
+                      fontSize: 18,
                     },
                     endAdornment: (
                       <InputAdornment position="end">
@@ -2087,7 +2112,9 @@ const Apps2 = (props) => {
                     style={{
                       borderRadius: 4,
                       height: 45,
-                      fontFamily: theme?.typography?.fontFamily
+                      fontFamily: theme?.typography?.fontFamily,
+                      backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      fontSize: 18,
                     }}
                     renderValue={(selected) => {
                       if (selected.length === 0) return 'All Categories';
@@ -2152,7 +2179,9 @@ const Apps2 = (props) => {
                     style={{
                       borderRadius: 4,
                       height: 45,
-                      fontFamily: theme?.typography?.fontFamily
+                      fontFamily: theme?.typography?.fontFamily,
+                      backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      fontSize: 18,
                     }}
                     renderValue={(selected) => {
                       if (selected.length === 0) return 'All Labels';
@@ -2211,13 +2240,11 @@ const Apps2 = (props) => {
                   width: '100%',
                   borderRadius: '4px',
                   textTransform: 'none',
-                  backgroundColor: "#FF8544",
-                  color: "#1A1A1A",
                   fontFamily: theme?.typography?.fontFamily,
                   fontSize: 16,
                   fontWeight: 500
                 }}
-                startIcon={<AddIcon style={{ color: "#1A1A1A" }} />}
+                startIcon={<AddIcon />}
               >
                 Create an App
               </Button>
