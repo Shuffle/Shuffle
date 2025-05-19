@@ -448,7 +448,7 @@ const OrgHeaderexpandedNew = (props) => {
 				<Grid item xs={12} style={{}}>
 					<span>
 						<div style={{}}>
-							<div style={{ flex: "3", color: "white" }}>
+							<div style={{ flex: "3", color: theme.palette.text.primary }}>
 								<div style={{ marginTop: 8, display: "flex" }} />
 								<div style={{ display: "flex" }}>
 									<div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
@@ -931,7 +931,7 @@ const OrgHeaderexpandedNew = (props) => {
 									marginTop: "8px",
 									marginRight: "16px",
 									height: 35,
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 								}}
 								fullWidth={true}
 								type="name"
@@ -948,7 +948,8 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -970,7 +971,7 @@ const OrgHeaderexpandedNew = (props) => {
 									flex: "1",
 									marginTop: "8px",
 									marginRight: "15px",
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									height: 35,
 								}}
 								fullWidth={true}
@@ -988,7 +989,7 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -1010,7 +1011,7 @@ const OrgHeaderexpandedNew = (props) => {
 									flex: "1",
 									marginTop: "5px",
 									marginRight: "15px",
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									height: 35,
 								}}
 								fullWidth={true}
@@ -1028,7 +1029,7 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -1050,7 +1051,7 @@ const OrgHeaderexpandedNew = (props) => {
 									flex: "1",
 									marginTop: "5px",
 									marginRight: "15px",
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									height: 35,
 								}}
 								fullWidth={true}
@@ -1068,7 +1069,7 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 
 										fontWeight: 400,
 										fontSize: 16,
