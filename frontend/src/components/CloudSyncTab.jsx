@@ -644,14 +644,15 @@ const CloudSyncTab = (props) => {
                         <TextField
                             color="primary"
                             style={{
-                                backgroundColor: "#1a1a1a",
+                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                 marginRight: 10,
                                 height: 35,
                             }}
                             InputProps={{
                                 style: {
                                     height: "35px",
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
+                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                     fontSize: "1em",
                                 },
                             }}

@@ -657,7 +657,7 @@ const UserManagmentTab = memo((props) => {
                                 InputProps={{
                                     style: {
                                         height: "50px",
-                                        color: "white",
+                                        color: theme.palette.textFieldStyle.color,
                                         fontSize: "1em",
                                     },
                                 }}
@@ -772,7 +772,7 @@ const UserManagmentTab = memo((props) => {
                             InputProps={{
                                 style: {
                                     height: 50,
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
                                 },
                             }}
                             color="primary"
@@ -815,7 +815,7 @@ const UserManagmentTab = memo((props) => {
                             InputProps={{
                                 style: {
                                     height: 50,
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
                                 },
                             }}
                             color="primary"
@@ -956,7 +956,7 @@ const UserManagmentTab = memo((props) => {
                             InputProps={{
                                 style: {
                                     height: 50,
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
                                 },
                             }}
                             color="primary"
@@ -1027,7 +1027,7 @@ const UserManagmentTab = memo((props) => {
                                 InputProps={{
                                     style: {
                                         height: 50,
-                                        color: "white",
+                                        color: theme.palette.textFieldStyle.color,
                                         fontSize: "1em",
                                     },
                                     maxLength: 6,
@@ -1135,7 +1135,7 @@ const UserManagmentTab = memo((props) => {
         }}
         >
           <DialogTitle>
-            <span style={{ color: "white" }}>User Logs</span>
+            <span style={{ color: theme.palette.text.primary }}>User Logs</span>
           </DialogTitle>
           <DialogContent>
             {/* ask user for which IP they want to see logs for by iterating of user.login_info */}

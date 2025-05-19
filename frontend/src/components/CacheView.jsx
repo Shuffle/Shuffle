@@ -680,7 +680,7 @@ const CacheView = memo((props) => {
 							labelId="input-namespace-select-label"
 							id="input-namespace-select-id"
 							style={{
-								color: "white",
+								color: theme.palette.textFieldStyle.color,
 								minWidth: 122,
 								maxWidth: 122,
 								height: 35,
@@ -719,7 +719,7 @@ const CacheView = memo((props) => {
 									<MenuItem
 										key={index}
 										value={data}
-										style={{ color: "white" }}
+										style={{ color: theme.palette.textFieldStyle.color, }}
 									>
 										{data.replaceAll("_", " ")}
 									</MenuItem>
@@ -826,7 +826,7 @@ const CacheView = memo((props) => {
 					}}
 					InputProps={{
 						style: {
-							color: "white",
+							color: theme.palette.textFieldStyle.color,
 							height: 35,
 							fontSize: 16,
 							borderRadius: 4,
