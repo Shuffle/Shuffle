@@ -790,7 +790,7 @@ const AngularWorkflow = (defaultprops) => {
       },
       {
         "name": "fields",
-        "value": "",
+        "value": '{\n  "ticket_id": "123456",\n  "comment": "This is a comment"\n}',
         "required": false,
         "multiline": true,
       },
@@ -7000,7 +7000,11 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false) {
-          toast("Failed to auto-activate the app. Go to /apps and activate it.")
+			if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+          		toast.error("Failed to auto-activate the app: " + responseJson.reason)
+			} else {
+          		toast.error("Failed to auto-activate the app. Go to /apps and activate it.")
+			}
         } else {
           if (refresh === true) {
             setHighlightedApp(appid)
@@ -10312,7 +10316,7 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-    toast("Creating schedule")
+    toast.info("Creating schedule")
     var data = {
       name: trigger.name,
       frequency: workflow.triggers[triggerindex].parameters[0].value,
@@ -10361,9 +10365,9 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          toast("Failed to set schedule: " + responseJson.reason);
+          toast.error("Failed to set schedule: " + responseJson.reason);
         } else {
-          toast("Successfully created schedule");
+          toast.success("Successfully created schedule");
           workflow.triggers[triggerindex].status = "running";
           trigger.status = "running";
           setSelectedTrigger(trigger);
@@ -11876,8 +11880,9 @@ const AngularWorkflow = (defaultprops) => {
 
       var type = "app"
       const baseImage = <LibraryBooksIcon />
+	  const width = 230
       return (
-        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: theme.palette.textColor, zIndex: 1001, backgroundColor: theme.palette.textFieldStyle.backgroundColor, minWidth: leftBarSize+30, maxWidth: 340, boxShadows: "none", overflowX: "hidden", }}>
+        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: theme.palette.textColor, zIndex: 1001, backgroundColor: theme.palette.textFieldStyle.backgroundColor, /*minWidth: leftBarSize+30,*/ minWidth: width, maxWidth: width, boxShadows: "none", overflowX: "hidden", }}>
           <List style={{ backgroundColor: theme.palette.inputColor, }}>
             {hits.length === 0 ?
               <ListItem style={outerlistitemStyle}>
@@ -11971,7 +11976,7 @@ const AngularWorkflow = (defaultprops) => {
                     }}
                     defaultPosition={{ x: 0, y: 0 }}
                   >
-                    <div style={{ textDecoration: "none", color: theme.palette.text.primary, }} onClick={(event) => {
+                    <div style={{ overflow: "hidden", textDecoration: "none", color: theme.palette.text.primary, }} onClick={(event) => {
                       clickedApp(hit)
 
                     }}>
@@ -12125,7 +12130,12 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 if ((app.id === "integration" || app.id === "shuffle_agent") && userdata.support !== true) {
-                  return null
+					console.log("APPID: ", app.id, isCloud)
+					if (isCloud === false && app.id === "integration") {
+					} else {
+						console.log("RETURNING", app.id)
+                  		return null
+					}
                 }
 
                 if (viewedApps.includes(app.id)) {
@@ -12190,7 +12200,7 @@ const AngularWorkflow = (defaultprops) => {
             </div>
           ) : apps.length > 0 ? (
             <div
-              style={{ textAlign: "center", width: leftBarSize, marginTop: 10, marginLeft: 5, marginRight: 5, }}
+              style={{ textAlign: "center", width: leftBarSize, marginTop: 25, marginLeft: 10 , marginRight: 10, }}
               onLoad={() => {
                 console.log("Should load in extra apps?")
               }}
@@ -12198,6 +12208,7 @@ const AngularWorkflow = (defaultprops) => {
               <Typography variant="body1" color="textSecondary">
                 Couldn't find the apps you were looking for? Searching unactivated apps. Click one of these apps to Activate it for your organisation.
               </Typography>
+
               <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
                 console.log("CLICKED")
               }}>

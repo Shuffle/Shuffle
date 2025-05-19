@@ -1905,8 +1905,8 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		err = shuffle.SetSchedule(ctx, newSchedule)
 		if err != nil {
-			log.Printf("Failed setting cloud schedule: %s", err)
-			resp.WriteHeader(401)
+			log.Printf("[ERROR] Failed setting cloud schedule: %s", err)
+			resp.WriteHeader(400)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		}
@@ -1941,17 +1941,22 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - real error message lol
 	if err != nil {
-		log.Printf("Failed creating schedule: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Invalid argument. Try cron */15 * * * *"}`)))
+		log.Printf("[ERROR] Failed creating schedule: %s", err)
+
+		resp.WriteHeader(400)
+		if schedule.Environment == "cloud" {
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Invalid argument. For cloud schedules, try cron */15 * * * *"}`)))
+		} else {
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Invalid argument. For onprem schedules, try 60 for 60 seconds"}`)))
+		}
 		return
 	}
 
 	//workflow.Schedules = append(workflow.Schedules, schedule)
 	err = shuffle.SetWorkflow(ctx, *workflow, workflow.ID)
 	if err != nil {
-		log.Printf("Failed setting workflow for schedule: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[ERROR] Failed setting workflow for schedule: %s", err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
