@@ -493,7 +493,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           },
         }}
       >
-        {userdata && userdata?.support && (
+        {userdata && (
           <>
             <ToggleButtonGroup
       value={currentSelectedTheme}
