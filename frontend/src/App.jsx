@@ -92,8 +92,8 @@ const App = (message, props) => {
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
-  const { themeMode, handleThemeChange } = useContext(Context);
-  const currentTheme = getTheme(themeMode);
+  const { themeMode, handleThemeChange, setBrandColor, brandColor} = useContext(Context);
+  const currentTheme = getTheme(themeMode, brandColor);
   const mainColor = currentTheme?.palette?.backgroundColor
   const [isPreviousThemeLight, setIsPreviousThemeLight] = useState(false)
 
@@ -106,18 +106,27 @@ const App = (message, props) => {
   }, []);
 
   useEffect(() => {
-	const isDarkPath = curpath === "/" || curpath === "/pricing" || curpath === "/partners" || curpath === "/faq" || curpath === "/professional-services" || curpath === "/contact" || curpath === "/training";
-	if (curpath && isDarkPath) {
-		if (themeMode === "light") {
-			setIsPreviousThemeLight(true)
+		const isDarkPath = curpath === "/" || curpath === "/pricing" || curpath === "/partners" || curpath === "/faq" || curpath === "/professional-services" || curpath === "/contact" || curpath === "/training";
+		if (curpath && isDarkPath) {
+			if (themeMode === "light") {
+				setIsPreviousThemeLight(true)
+			}
+			handleThemeChange("dark")
+		}else if ( !isDarkPath && isPreviousThemeLight && userdata?.active_org?.branding?.theme === "light") {
+			handleThemeChange("light")
+			setIsPreviousThemeLight(false)
 		}
-		handleThemeChange("dark")
-	}else if ( !isDarkPath && isPreviousThemeLight && userdata?.active_org?.branding?.theme === "light") {
-		handleThemeChange("light")
-		setIsPreviousThemeLight(false)
-	}
 
-}, [themeMode, curpath, userdata])
+		if (isDarkPath && userdata && userdata?.active_org?.branding?.brand_color !== "#ff8544") {
+			setBrandColor("#ff8544")
+		}else if(!isDarkPath && userdata && userdata?.active_org?.branding?.brand_color !== "#ff8544" && userdata?.active_org?.branding?.brand_color?.length > 0) {
+			const brandColor = localStorage.getItem("brandColor")
+			if (brandColor !== null && brandColor !== undefined && brandColor.length > 0) {
+				setBrandColor(brandColor)
+			}
+		}
+
+	}, [themeMode, curpath, userdata])
 
   if (
     isLoaded &&
@@ -936,7 +945,7 @@ const App = (message, props) => {
 				pauseOnFocusLoss
 				draggable
 				pauseOnHover
-				theme="dark"
+				theme={themeMode}
 			/>
 		  </CookiesProvider>
 		</ThemeProvider>

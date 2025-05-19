@@ -401,6 +401,56 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     }
   }, [usersWorkFlows]); 
 
+  const handleChangeTheme = (newTheme) => {
+
+    toast.info("Changing theme to " + newTheme + " - please wait!");
+
+    const data = {
+      	  "org_id": userdata?.active_org?.id,
+  	};
+
+    data["branding"]  = {
+			"theme": newTheme,
+			"enable_chat": userdata?.active_org?.branding?.enable_chat || false,
+			"home_url": userdata.active_org?.branding?.home_url || "",
+			"brand_color": userdata?.active_org?.branding?.brand_color || theme.palette.primary.main,
+			"brand_name": userdata?.active_org?.branding?.brand_name || "",
+			"logout_url": userdata?.active_org?.branding?.logout_url || "",
+			"support_email": userdata?.active_org?.branding?.support_email || "",
+		}
+
+		data["editing_branding"] = true;
+
+    const url = globalUrl + `/api/v1/orgs/${userdata?.active_org?.id}`;
+          fetch(url, {
+            mode: "cors",
+            method: "POST",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+            },
+          })
+            .then((response) =>
+              response.json().then((responseJson) => {
+                if (responseJson["success"] === false) {
+                    toast("Failed updating org: ", responseJson.reason);
+                } else {
+                    handleThemeChange(newTheme)
+                    setCurrentSelectedTheme(newTheme);
+                  }
+
+                })
+  	      ) 
+            .catch((error) => {
+              console.log("Error changing theme: ", error);
+            });
+  };
+
+    
+
   const removeCookie = (name, path = "/") => {
     document.cookie = `${name}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
   };
@@ -505,9 +555,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         if (newTheme === currentSelectedTheme) {
           return;
         }
-        console.log("Selected theme:", newTheme);
-        setCurrentSelectedTheme(newTheme)
-        handleThemeChange(newTheme)
+        handleChangeTheme(newTheme);
       }}
       aria-label="theme"
       style={{display: 'flex', justifyContent: "center", marginBottom: 10,  }}
@@ -587,7 +635,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.1.0-beta
+          Version: 2.0.2
         </Typography>
       </Menu>
     </span>
