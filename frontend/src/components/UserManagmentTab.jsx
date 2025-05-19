@@ -1359,7 +1359,7 @@ const UserManagmentTab = memo((props) => {
                 }}
             >
                 <ListItem style={{ width: "100%", padding: "10px 10px 10px 0px", verticalAlign: 'middle', borderBottom: theme.palette.defaultBorder, display: "table-row" }}>
-                    {["Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
+                    {["Region", "Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -1461,6 +1461,10 @@ const UserManagmentTab = memo((props) => {
 
                         return (
                             <ListItem key={index} style={{ backgroundColor: bgColor, display: 'table-row', borderBottomLeftRadius: users?.length - 1 === index ? 8 : 0, borderBottomRightRadius: users?.length - 1 === index ? 8 : 0 }}>
+                                <ListItemText
+                                    primary={(<img src={`https://flagcdn.com/48x36/${data?.user_geo_info?.country?.iso_code.toLowerCase()}.png`} alt={data?.user_geo_info?.country?.iso_code} style={{ marginRight: 30, width: 25, height: 23, }} />)}
+                                    style={{ display: 'table-cell', verticalAlign: 'middle', textAlign: 'center' }}
+                                />
                                 <ListItemText
                                 primary={(
                                     <Tooltip title={data.username || 'No username available'}>
