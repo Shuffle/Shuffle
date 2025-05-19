@@ -610,13 +610,31 @@ func deployServiceWorkers(image string) {
 
 	if defaultNetworkAttach == true || strings.ToLower(os.Getenv("SHUFFLE_DEFAULT_NETWORK_ATTACH")) == "true" {
 		targetName := "shuffle_shuffle"
-		log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
-		serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
-			Target: targetName,
-		})
+		isAttachable := false
+		networks, err := dockercli.NetworkList(ctx, network.ListOptions{})
+		if err == nil {
+			for _, net := range networks {
+				if net.Name == targetName {
+					if net.Scope == "swarm" {
+						log.Printf("[DEBUG] Found swarm-scoped network: %s", targetName)
+						isAttachable = true
+					} else {
+						log.Printf("[WARNING] Network %s exist but is not swarm scoped (scope=%s)", targetName, net.Scope)
+					}
+					break
+				}
+			}
+		}
 
-		// FIXM: Remove this if deployment fails?
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
+		if isAttachable {
+			log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
+			serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+				Target: targetName,
+			})
+
+			// FIXM: Remove this if deployment fails?
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
+		}
 	}
 
 	if dockerApiVersion != "" {
@@ -709,6 +727,34 @@ func deployServiceWorkers(image string) {
 	} else {
 		if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 			log.Printf("[ERROR] Failed making service: %s", err)
+			if strings.Contains(fmt.Sprintf("%s", err), "networks scoped to the swarm can be used") {
+				log.Printf("[WARNING] Swarm network attachment failed, retrying without shuffle_shuffle")
+
+				var updatedNetworks []swarm.NetworkAttachmentConfig
+				for _, net := range serviceSpec.Networks {
+					if net.Target != "shuffle_shuffle" {
+					updatedNetworks = append(updatedNetworks, net)
+					}
+				}
+				serviceSpec.Networks = updatedNetworks
+
+				var updatedEnv []string
+				for _, env := range serviceSpec.TaskTemplate.ContainerSpec.Env {
+					if !strings.HasPrefix(env, "SHUFFLE_SWARM_OTHER_NETWORK=") {
+						updatedEnv = append(updatedEnv, env)
+					}
+				}
+				serviceSpec.TaskTemplate.ContainerSpec.Env = updatedEnv
+				serviceOptions := types.ServiceCreateOptions{}
+				_, err = dockercli.ServiceCreate(
+					ctx,
+					serviceSpec,
+					serviceOptions,
+				)
+				if err != nil {
+					log.Printf("[ERROR] Failed to deploy service even without shuffle_shuffle network: %s", err)
+				}
+			}
 		} else {
 			log.Printf("[WARNING] Failed deploying workers: %s", err)
 			if len(serviceSpec.Networks) > 1 {
