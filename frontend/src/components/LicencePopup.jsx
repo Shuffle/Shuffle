@@ -1242,7 +1242,7 @@ const LicencePopup = (props) => {
         <div>
             <Grid container spacing={2} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>
                 <Grid item maxWidth={licensePopup ? 400 : 450}>
-                    {selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0 ?
+                    {(selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0) && isCloud ?
                         <SubscriptionObject
                             index={0}
                             globalUrl={globalUrl}

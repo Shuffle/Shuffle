@@ -15303,7 +15303,8 @@ const AngularWorkflow = (defaultprops) => {
           <Typography>Name</Typography>
           <TextField
             style={{
-              backgroundColor: "#212121",
+              backgroundColor: theme.palette.inputColor,
+              color: theme.palette.text.primary,
               borderRadius: theme.palette?.borderRadius,
               marginTop: 3,
             }}
@@ -15332,7 +15333,8 @@ const AngularWorkflow = (defaultprops) => {
                 <Typography>Delay</Typography>
                 <TextField
                   style={{
-                    backgroundColor: "#212121",
+                    backgroundColor: theme.palette.inputColor,
+                    color: theme.palette.text.primary,
                     marginTop: 3,
                     maxWidth: 50,
                   }}

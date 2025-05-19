@@ -1940,7 +1940,7 @@ const Apps2 = (props) => {
                       style={{
                         height: 45,
                         minWidth: 45,
-                        backgroundColor: "#2F2F2F",
+                        backgroundColor: theme.palette.platformColor,
                         borderRadius: 4,
                         padding: "8px 16px",
                       }}
@@ -1950,9 +1950,9 @@ const Apps2 = (props) => {
                       }}
                     >
                       {isLoading ? (
-                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                        <CircularProgress size={20} style={{ color: theme.palette.primary.main }} />
                       ) : (
-                        <CachedIcon style={{ color: "#F1F1F1" }} />
+                        <CachedIcon style={{ color: theme.palette.text.primary }} />
                       )}
                     </Button>
                   </Tooltip>
@@ -1980,7 +1980,7 @@ const Apps2 = (props) => {
                       style={{
                         height: 45,
                         minWidth: 45,
-                        backgroundColor: "#2F2F2F",
+                        backgroundColor: theme.palette.platformColor,
                         borderRadius: 4,
                         padding: "8px 16px",
                       }}
@@ -1992,9 +1992,9 @@ const Apps2 = (props) => {
                       }}
                     >
                       {isLoading ? (
-                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                        <CircularProgress size={20} style={{ color: theme.palette.primary.main }} />
                       ) : (
-                        <CloudDownloadIcon style={{ color: "#F1F1F1" }} />
+                        <CloudDownloadIcon style={{ color: theme.palette.text.primary }} />
                       )}
                     </Button>
                   </Tooltip>
