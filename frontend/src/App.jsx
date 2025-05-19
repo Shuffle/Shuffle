@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 
 import { Link, Route, Routes, BrowserRouter, useNavigate } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
@@ -12,7 +12,7 @@ import Header from "./components/NewHeader.jsx";
 import HealthPage from "./components/HealthPage.jsx";
 
 //import Header from "./components/Header.jsx";
-import theme from "./theme.jsx";
+import theme, { getTheme } from "./theme.jsx";
 import Apps from "./views/Apps.jsx";
 import Apps2 from "./views/Apps2.jsx";
 import AppCreator from "./views/AppCreator.jsx";
@@ -63,7 +63,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import Drift from "react-driftjs";
 
-import { AppContext } from './context/ContextApi.jsx';
+import { Context } from './context/ContextApi.jsx';
 import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
@@ -92,7 +92,10 @@ const App = (message, props) => {
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
-
+  const { themeMode, handleThemeChange } = useContext(Context);
+  const currentTheme = getTheme(themeMode);
+  const mainColor = currentTheme?.palette?.backgroundColor
+  const [isPreviousThemeLight, setIsPreviousThemeLight] = useState(false)
 
   useEffect(() => {
     if (dataset === false) {
@@ -101,6 +104,20 @@ const App = (message, props) => {
       setDataset(true);
     }
   }, []);
+
+  useEffect(() => {
+	const isDarkPath = curpath === "/" || curpath === "/pricing" || curpath === "/partners" || curpath === "/faq" || curpath === "/professional-services" || curpath === "/contact" || curpath === "/training";
+	if (curpath && isDarkPath) {
+		if (themeMode === "light") {
+			setIsPreviousThemeLight(true)
+		}
+		handleThemeChange("dark")
+	}else if ( !isDarkPath && isPreviousThemeLight && userdata?.active_org?.branding?.theme === "light") {
+		handleThemeChange("light")
+		setIsPreviousThemeLight(false)
+	}
+
+}, [themeMode, curpath, userdata])
 
   if (
     isLoaded &&
@@ -189,7 +206,7 @@ const App = (message, props) => {
   const includedData =
       <div
         style={{
-          backgroundColor: theme.palette.backgroundColor,
+          backgroundColor: mainColor,
           color: "rgba(255, 255, 255, 0.65)",
           minHeight: "100vh",
         }}
@@ -369,7 +386,7 @@ const App = (message, props) => {
 						/>
 					}
 				/>
-					<Route exact path="/search" element={<Search serverside={false} isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} {...props} /> } />
+					<Route exact path="/search" element={<Search serverside={false} isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor} {...props} /> } />
         	<Route
         	  exact
         	  path="/admin/:key"
@@ -541,8 +558,8 @@ const App = (message, props) => {
 					checkLogin={checkLogin}
 					userdata={userdata} 
 					globalUrl={globalUrl} 
-					surfaceColor={theme.palette.surfaceColor} 
-					inputColor={theme.palette.inputColor} 
+					surfaceColor={currentTheme.palette.surfaceColor} 
+					inputColor={currentTheme.palette.inputColor} 
 					{...props} 
 				/>
         	  }
@@ -559,8 +576,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/apps/:appid" element={<AppExplorer userdata={userdata} isLoggedIn={isLoggedIn} isLoaded={isLoaded}  globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
-			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded}globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
+			<Route exact path="/apps/:appid" element={<AppExplorer userdata={userdata} isLoggedIn={isLoggedIn} isLoaded={isLoaded}  globalUrl={globalUrl} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
+			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded}globalUrl={globalUrl} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
 			<Route
 				exact
 				path="/detections/sigma"
@@ -632,13 +649,13 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/workflows/:key/code" element={<CodeWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
-			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
-			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+			<Route exact path="/workflows/:key/code" element={<CodeWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
+			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
 
-			<Route exact path="/forms" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
-			<Route exact path="/forms/:key/run" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
-			<Route exact path="/forms/:key" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key/run" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
 
         	<Route
         	  exact
@@ -722,7 +739,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/login/:key/mfa-setup" element={<MFASetUp setCookie={setCookie} serverside={false} mainColor={theme.palette.backgroundColor} userdata={userdata} stripeKey={undefined} globalUrl={globalUrl} inputColor={theme.palette.inputColor} isLoaded={isLoaded} {...props} />} />
+			<Route exact path="/login/:key/mfa-setup" element={<MFASetUp setCookie={setCookie} serverside={false} mainColor={currentTheme.palette.backgroundColor} userdata={userdata} stripeKey={undefined} globalUrl={globalUrl} inputColor={currentTheme.palette.inputColor} isLoaded={isLoaded} {...props} />} />
         	<Route
         	  exact
         	  path="/login_sso"
@@ -903,8 +920,7 @@ const App = (message, props) => {
       </div>
 
   return (
-	<AppContext>
-		<ThemeProvider theme={theme}>
+		<ThemeProvider theme={currentTheme} defaultMode="dark">
 		  <CssBaseline />
 		  <CookiesProvider>
 			<BrowserRouter>
@@ -924,7 +940,6 @@ const App = (message, props) => {
 			/>
 		  </CookiesProvider>
 		</ThemeProvider>
-	  </AppContext>
   );
 };
 
