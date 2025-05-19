@@ -604,16 +604,16 @@ func deployServiceWorkers(image string) {
 		},
 	}
 
-	if defaultNetworkAttach == true || strings.ToLower(os.Getenv("SHUFFLE_DEFAULT_NETWORK_ATTACH")) == "true" {
-		targetName := "shuffle_shuffle"
-		log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
-		serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
-			Target: targetName,
-		})
-
-		// FIXM: Remove this if deployment fails?
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
-	}
+//	if defaultNetworkAttach == true || strings.ToLower(os.Getenv("SHUFFLE_DEFAULT_NETWORK_ATTACH")) == "true" {
+//		targetName := "shuffle_shuffle"
+//		log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
+//		serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+//			Target: targetName,
+//		})
+//
+//		// FIXM: Remove this if deployment fails?
+//		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
+//	}
 
 	if dockerApiVersion != "" {
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
