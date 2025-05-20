@@ -361,7 +361,7 @@ const LoginPage = props => {
 			console.log("Should login instead of register!")
 			setRegister(!register)
 		} else {
-			console.log("Path: " + path, "Register: " + register)
+			//console.log("Path: " + path, "Register: " + register)
 		}
 	}
 
@@ -468,6 +468,11 @@ const LoginPage = props => {
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo(responseJson["reason"]);
+
+			if (responseJson?.reason?.toLowerCase().includes("connection refused")) { 
+				navigate("/loginsetup")
+			}
+
           } else {
             if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {
               setSSOUrl(responseJson.sso_url);

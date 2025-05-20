@@ -68,13 +68,19 @@ const AdminAccount = (props) => {
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            setLoginInfo(responseJson["reason"]);
+            setLoginInfo(responseJson["reason"])
+
+			if (responseJson?.reason?.toLowerCase().includes("connection refused")) { 
+				navigate("/loginsetup")
+			}
+
           } else {
             if (responseJson.reason === "redirect") {
 			  setTimeout(() => {
-              	window.location.pathname = "/login";
+              	window.location.pathname = "/login"
 			  }, 2500)
             }
+
           }
         })
       )
@@ -111,7 +117,7 @@ const AdminAccount = (props) => {
           if (responseJson["success"] === false) {
             setLoginInfo(responseJson["reason"]);
           } else {
-            setLoginInfo("Successful register :)");
+            setLoginInfo("Successful register! Redirecting in a moment...");
 
 			setTimeout(() => {
             	window.location.pathname = "/login";
