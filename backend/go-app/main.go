@@ -1069,8 +1069,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		activatedAppIds = append(activatedAppIds, app.ID)
 	}
 
-	userInfo.ActiveOrg.Branding = org.Branding
-
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
