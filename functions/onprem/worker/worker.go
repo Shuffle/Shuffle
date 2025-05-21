@@ -2368,6 +2368,10 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 	}
 
 	defer newresp.Body.Close()
+	if newresp.StatusCode != 200 {
+		return workflowExecution, errors.New(fmt.Sprintf("Got bad status code from backend %d", newresp.StatusCode))
+	}
+
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		return workflowExecution, err
