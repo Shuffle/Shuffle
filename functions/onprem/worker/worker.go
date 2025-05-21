@@ -2336,6 +2336,50 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	}
 	return envVars
 }
+func getWorkerBackendExecution(auth string, executionId string) (*shuffle.WorkflowExecution, error) {
+	backendUrl := os.Getenv("BASE_URL")
+	if len(backendUrl) == 0 {
+		backendUrl = "http://shuffle-backend:5001"
+	}
+
+	var workflowExecution *shuffle.WorkflowExecution
+
+	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", backendUrl)
+	topClient := shuffle.GetExternalClient(backendUrl)
+	requestData := shuffle.ActionResult {
+		Authorization: auth,
+		ExecutionId: executionId,
+	}
+
+	data, err := json.Marshal(requestData)
+	if err != nil {
+		return workflowExecution, err
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		streamResultUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	newresp, err := topClient.Do(req)
+	if err != nil {
+		return workflowExecution, err
+	}
+
+	defer newresp.Body.Close()
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return workflowExecution, err
+	}
+
+	err = json.Unmarshal(body, &workflowExecution)
+	if err != nil {
+		return workflowExecution, err
+	}
+
+	return workflowExecution, nil
+}
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	if request.Body == nil {
@@ -2380,10 +2424,14 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("[ERROR][%s] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, actionResult.ExecutionId, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist locally."}`, actionResult.ExecutionId)))
-		return
+		log.Printf("[WARNING][%s] Failed to find execution in cache requesting backend (1): %s", actionResult.ExecutionId, err)
+		workflowExecution, err = getWorkerBackendExecution(actionResult.Authorization, actionResult.ExecutionId)
+		if err != nil {
+			log.Printf("[ERROR][%s] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, actionResult.ExecutionId, err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist locally."}`, actionResult.ExecutionId)))
+			return
+		}
 	}
 
 	if workflowExecution.Authorization != actionResult.Authorization {
@@ -2429,10 +2477,14 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//log.Printf("[DEBUG][%s] IN WORKFLOWEXECUTION SUB!", actionResult.ExecutionId)
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
-		log.Printf("[ERROR] Failed getting execution cache: %s", err)
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
-		return
+		log.Printf("[WARNING][%s] Failed to find execution in cache requesting backend (2): %s", actionResult.ExecutionId, err)
+		workflowExecution, err = getWorkerBackendExecution(actionResult.Authorization, actionResult.ExecutionId)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting execution cache: %s", err)
+			resp.WriteHeader(400)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
+			return
+		}
 	}
 
 	resultLength := len(workflowExecution.Results)
@@ -2483,10 +2535,14 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if strings.Contains(fmt.Sprintf("%s", err), "Rerun this transaction") {
 			workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 			if err != nil {
-				log.Printf("[ERROR][%s] Failed getting execution cache (2): %s", workflowExecution.ExecutionId, err)
-				resp.WriteHeader(400)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution (2)"}`)))
-				return
+				log.Printf("[WARNING][%s] Failed to find execution in cache requesting backend (3): %s", actionResult.ExecutionId, err)
+				workflowExecution, err = getWorkerBackendExecution(actionResult.Authorization, actionResult.ExecutionId)
+				if err != nil {
+					log.Printf("[ERROR][%s] Failed getting execution cache (2): %s", workflowExecution.ExecutionId, err)
+					resp.WriteHeader(400)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution (2)"}`)))
+					return
+				}
 			}
 
 			resultLength = len(workflowExecution.Results)
@@ -2796,10 +2852,14 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("[INFO] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
-		return
+		log.Printf("[WARNING][%s] Failed to find execution in cache requesting backend (4): %s", actionResult.ExecutionId, err)
+		workflowExecution, err = getWorkerBackendExecution(actionResult.Authorization, actionResult.ExecutionId)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+			resp.WriteHeader(400)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
+			return
+		}
 	}
 
 	// Authorization is done here
