@@ -5103,7 +5103,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/{key}/get2fa", shuffle.HandleGet2fa).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{key}/set2fa", shuffle.HandleSet2fa).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/{userid}/theme", shuffle.HandleSetUserTheme).Methods("POST", "OPTIONS")
 
 	// General - duplicates and old.
 	r.HandleFunc("/api/v1/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")

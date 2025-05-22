@@ -450,15 +450,16 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
   };
 
   const handleUpdateTheme = (newTheme) => {
-    
+
     const data = {
+      "user_id": userdata?.id,
       "theme": newTheme,
     }
 
-    const url = globalUrl + `/api/v1/users/${userdata?.id}/theme`;
+    const url = globalUrl + `/api/v1/users/updateuser`;
     fetch(url, {
       mode: "cors",
-      method: "POST",
+      method: "PUT",
       body: JSON.stringify(data),
       credentials: "include",
       crossDomain: true,
