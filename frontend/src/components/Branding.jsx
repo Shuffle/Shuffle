@@ -414,9 +414,6 @@ const Branding = (props) => {
 								if (changingTheme === true) {
 									return
 								}
-
-								
-								toast.info("Changing theme to " + newTheme + ". Please wait a moment.")
 								setChangingTheme(true)
 								handleEditOrg(newTheme);
 							}}

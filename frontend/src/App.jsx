@@ -192,6 +192,11 @@ const App = (message, props) => {
               { path: "/" }
             );
           }
+		  if (responseJson?.theme?.length > 0) {
+			handleThemeChange(responseJson.theme)
+		  }else{
+			handleThemeChange("dark")
+		  }
         }
 
         // Handling Ethereum update
