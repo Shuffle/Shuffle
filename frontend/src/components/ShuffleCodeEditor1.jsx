@@ -132,7 +132,7 @@ const CodeEditor = (props) => {
 		fieldname,
 		contentLoading,
 		editorData,
-		handleSubflowParamChange,
+		handleTriggerParamChange,
 		setAiQueryModalOpen,
 		fullScreenMode,
 		environment,
@@ -212,7 +212,7 @@ const CodeEditor = (props) => {
 	const triggerField = searchParams.get('trigger_field');
 	const triggerName = searchParams.get('trigger_name');
 	const conditionId = searchParams.get('condition_id');
-	const conditionField = searchParams.get('field');
+	const conditionField = searchParams.get('condition_field');
 
 	useEffect(() => {
 		if (actionId === undefined || actionId === null) {
@@ -251,7 +251,7 @@ const CodeEditor = (props) => {
 		setSelectedCondition(condition);
 		// Update available variables when condition changes
 		updateAvailableVariables(actionlist);
-	}, [conditionId, fieldName])
+	}, [conditionId, conditionField])
 
 	// Extract variable updating logic into a separate function
 	const updateAvailableVariables = (actionlist) => {
@@ -2588,7 +2588,7 @@ const CodeEditor = (props) => {
 
 						// Handle condition fields
 						if (conditionField !== null && handleConditionFieldChange !== undefined) {
-							handleConditionFieldChange(conditionField, fieldName, fixedcodedata);
+							handleConditionFieldChange(conditionField, fixedcodedata);
 						}
 						// Handle action fields
 						else if (actionId !== undefined && actionId !== null && actionId.length > 0) {
@@ -2596,7 +2596,7 @@ const CodeEditor = (props) => {
 						}
 						// Handle trigger fields
 						else if (triggerId !== undefined && triggerId !== null && triggerId.length > 0) {
-							handleSubflowParamChange(triggerId, triggerField, fixedcodedata)
+							handleTriggerParamChange(triggerId, triggerField, fixedcodedata)
 						}
 
 						setExpansionModalOpen(false)

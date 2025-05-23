@@ -403,7 +403,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const handleChangeTheme = (newTheme) => {
 
-    toast.info("Changing theme to " + newTheme + " - please wait!");
 
     const data = {
       	  "org_id": userdata?.active_org?.id,
@@ -449,6 +448,38 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             });
   };
 
+  
+  const handleUpdateTheme = (newTheme) => {
+    
+    const data = {
+      "user_id": userdata?.id,
+      "theme": newTheme,
+    }
+
+    const url = globalUrl + `/api/v1/users/updateuser`;
+    fetch(url, {
+      mode: "cors",
+      method: "PUT",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    }).then((response) =>
+      response.json().then((responseJson) => {
+        if (responseJson["success"] === false) {
+          toast("Failed updating theme: ", responseJson.reason);
+        } else {
+          handleThemeChange(newTheme);
+          setCurrentSelectedTheme(newTheme);
+        }
+      })
+    ).catch((error) => {
+      console.log("Error changing theme: ", error);
+    }); 
+  };
     
 
   const removeCookie = (name, path = "/") => {
@@ -487,6 +518,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         console.error("Logout error:", error);
       });
   };
+  console.log("userdata: ", userdata);
   const avatarMenu = (
     <span>
       <IconButton
@@ -543,7 +575,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           },
         }}
       >
-        {userdata && (
+        {userdata && (userdata?.org_status?.includes("integration_partner") && userdata?.org_status?.includes("sub_org")) ? null : (
           <>
             <ToggleButtonGroup
       value={currentSelectedTheme}
@@ -555,7 +587,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         if (newTheme === currentSelectedTheme) {
           return;
         }
-        handleChangeTheme(newTheme);
+        if (userdata?.org_status?.includes("integration_partner")){
+            handleChangeTheme(newTheme);
+        }else {
+          handleUpdateTheme(newTheme);
+        }
       }}
       aria-label="theme"
       style={{display: 'flex', justifyContent: "center", marginBottom: 10,  }}
@@ -1648,7 +1684,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
           <Button
             component={Link}
-            to={isCloud ? "/admin?admin_tab=billingstats" : "/admin?admin_tab=locations"}
+            to={isCloud ? "/admin" : "/admin"}
             onClick={(event) => {
               setCurrentOpenTab("admin");
               localStorage.setItem("lastTabOpenByUser", "admin");

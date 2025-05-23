@@ -5071,7 +5071,7 @@ const Workflows2 = (props) => {
 
     //isLoaded && isLoggedIn && workflowDone ? (
     const loadedCheck =
-        workflowDone ? (
+        workflowDone && isLoaded ? (
             <div>
                 {/*
 				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>
@@ -5134,7 +5134,9 @@ const Workflows2 = (props) => {
                 }}
             >
                 <CircularProgress />
-                <Typography>Loading Workflows</Typography>
+                <Typography style={{marginTop: 5, }}>
+					Loading Workflows and Apps
+				</Typography>
             </div>
         );
 

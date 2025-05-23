@@ -314,12 +314,15 @@ const LoginPage = props => {
       },
     })
 
-	if (serverside !== true) {
-		const tmpMessage = new URLSearchParams(window.location.search).get("message")
-		if (tmpMessage !== undefined && tmpMessage !== null && message !== tmpMessage) {
-			setMessage(tmpMessage)
+	useEffect(() => {
+		if (serverside !== true) {
+			const tmpMessage = new URLSearchParams(window.location.search).get("message")
+			if (tmpMessage !== undefined && tmpMessage !== null && message !== tmpMessage) {
+				setMessage(tmpMessage)
+				toast(tmpMessage)
+			}
 		}
-	}
+	}, [])
 
 	if (document !== undefined) {
 		if (register) {
@@ -444,13 +447,17 @@ const LoginPage = props => {
 	}
 
 	if (isLoggedIn === true && serverside !== true) {
-		const tmpView = new URLSearchParams(window.location.search).get("view")
-		if (tmpView !== undefined && tmpView !== null && tmpView === "pricing") {
-			window.location.pathname = "/pricing"
-			return
-		} else if (tmpView !== undefined && tmpView !== null) {
-			window.location.pathname = tmpView
-			return
+		const tmpView = new URLSearchParams(window.location.search).get("view");
+		if (tmpView !== undefined && tmpView !== null) {
+			let pathOnly = tmpView.split("?")[0];
+			if (!pathOnly.startsWith("/")) pathOnly = "/" + pathOnly;
+
+			if (pathOnly === "/pricing" || pathOnly === "admin") {
+				window.location.replace(pathOnly + window.location.search);
+			} else {
+				window.location.replace(pathOnly);
+			}
+			return;
 		}
 
 		window.location.pathname = "/workflows"
@@ -575,20 +582,17 @@ const LoginPage = props => {
 							setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
 						}
 
-						const tmpView = new URLSearchParams(window.location.search).get("view")
+						const tmpView = new URLSearchParams(window.location.search).get("view");
 						if (tmpView !== undefined && tmpView !== null) {
-							//const newUrl = `/${tmpView}${decodeURIComponent(window.location.search)}`
-							// Check if slash in the url
+							let pathOnly = tmpView.split("?")[0];
+							if (!pathOnly.startsWith("/")) pathOnly = "/" + pathOnly;
 
-							var newUrl = `/${tmpView}`
-							if (tmpView.startsWith("/")) {
-								newUrl = `${tmpView}`
+							if (pathOnly === "/pricing" || pathOnly === "admin") {
+								window.location.replace(pathOnly + window.location.search);
+							} else {
+								window.location.replace(pathOnly);
 							}
-
-							console.log("Found url: ", newUrl)
-
-							window.location.pathname = newUrl
-							return
+							return;
 						}
 
 						console.log("LOGIN DATA: ", responseJson)
@@ -647,9 +651,14 @@ const LoginPage = props => {
 
 								const tmpView = new URLSearchParams(window.location.search).get("view")
 								if (tmpView !== undefined && tmpView !== null) {
-									//const newUrl = `/${tmpView}${decodeURIComponent(window.location.search)}`
-									const newUrl = `/${tmpView}`
-									window.location.pathname = newUrl
+									let pathOnly = tmpView.split("?")[0];
+									if (!pathOnly.startsWith("/")) pathOnly = "/" + pathOnly;
+
+									if (pathOnly === "/pricing" || pathOnly === "admin") {
+										window.location.replace(pathOnly + window.location.search);
+									} else {
+										window.location.replace(pathOnly);
+									}
 									return
 								}
 

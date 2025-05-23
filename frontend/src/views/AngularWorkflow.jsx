@@ -13032,7 +13032,7 @@ const AngularWorkflow = (defaultprops) => {
                       event.preventDefault()
                       setExpansionModalOpen(true)
                       setActiveDialog("codeeditor")
-                      navigate(`?condition_id=${data.id}&field=${data.name}`)
+                      navigate(`?condition_id=${data.id}&condition_field=${data.name}`)
                       setEditorData({
                         "name": data.name,
                         "value": data.value || "",
@@ -13117,9 +13117,9 @@ const AngularWorkflow = (defaultprops) => {
         
           // Update the field value based on type
           if (type === "source") {
-            handleConditionFieldChange("source", "value", toComplete);
+            handleConditionFieldChange("source", toComplete);
           } else if (type === "destination") {
-            handleConditionFieldChange("destination", "value", toComplete);
+            handleConditionFieldChange("destination", toComplete);
           }
         
           handleMenuClose();
@@ -13996,7 +13996,7 @@ const AngularWorkflow = (defaultprops) => {
       />
     </Dialog>
 
-  const handleConditionFieldChange = (fieldType, fieldName, value) => {
+  const handleConditionFieldChange = (fieldType, value) => {
     if (fieldType === "source") {
       setSourceValue({
         ...sourceValue,
@@ -15197,7 +15197,7 @@ const AngularWorkflow = (defaultprops) => {
     }
   ]
 
-  const handleSubflowParamChange = (triggerId, triggerField, newData) => {
+  const handleTriggerParamChange = (triggerId, triggerField, newData) => {
 	var updateFail = "" 
 
     if (workflow !== undefined && workflow !== null) {  
@@ -17336,9 +17336,13 @@ const AngularWorkflow = (defaultprops) => {
           fullWidth
           rows="4"
           multiline
-          defaultValue={selectedTrigger.parameters[0]?.value}
+          value={selectedTriggerValue || ""}
           color="primary"
           placeholder=""
+          onChange={(e) => {  
+            setLastSaved(false)
+            setSelectedTriggerValue(e.target.value)
+          }}
           onBlur={(e) => {
             setLastSaved(false)
             setTriggerTextInformationWrapper(e.target.value);
@@ -25472,7 +25476,7 @@ const AngularWorkflow = (defaultprops) => {
             // selectedTrigger={selectedTrigger}
             aiSubmit={aiSubmit}
             toolsAppId={toolsApp.id}
-            handleSubflowParamChange={handleSubflowParamChange}
+            handleTriggerParamChange={handleTriggerParamChange}
             codedata={editorData.value}
             setcodedata={setcodedata}
             selectedEdge={selectedEdge}

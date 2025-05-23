@@ -39,7 +39,7 @@ const Branding = (props) => {
 	const theme = getTheme(themeMode, brandColor)
 	const [selectedBrandColor, setSelectedBrandColor] = useState(theme?.palette?.main || "#FF8544")
 	const [selectedBrandName, setSelectedBrandName] = useState(selectedOrganization?.branding?.brand_name || "")
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+
 	const [isLoading,setIsLoading] = useState(false);
 
 	const handleEditOrg = (joinStatus) => {
@@ -391,7 +391,7 @@ const Branding = (props) => {
 				</div>
 
 
-				{ integrationPartner ? (
+				{integrationPartner ? (
 					<>
 					<Divider style={{marginTop: 50, marginBottom: 50, color: theme.palette.defaultBorder}} />
 					<Typography style={{fontSize: 24, fontWeight: "bold"}}>
@@ -414,9 +414,6 @@ const Branding = (props) => {
 								if (changingTheme === true) {
 									return
 								}
-
-								
-								toast.info("Changing theme to " + newTheme + ". Please wait a moment.")
 								setChangingTheme(true)
 								handleEditOrg(newTheme);
 							}}
