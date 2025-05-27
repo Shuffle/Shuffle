@@ -52,11 +52,13 @@ import {
 
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
-import BillingStats from "./BillingStats.jsx";
+import BillingStats from "../components/BillingStats.jsx";
+import LicencePopup from "../components/LicencePopup.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
-import DeleteIcon from '@mui/icons-material/Delete';
+
 import { Context } from "../context/ContextApi.jsx";
-import LicencePopup from "./LicencePopup.jsx";
+
+import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid } from "@mui/x-data-grid";
 
 const Billing = memo((props) => {

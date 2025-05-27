@@ -438,7 +438,7 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const AngularWorkflow = (defaultprops) => {
   const { globalUrl, setCookie, isLoggedIn, isLoaded, userdata, data_id, ReactGA, } = defaultprops;
   const {themeMode, supportEmail, brandColor} = useContext(Context)
@@ -3572,6 +3572,12 @@ const AngularWorkflow = (defaultprops) => {
 			const curapp = responseJson[key]
 			if (curapp?.actions === undefined || curapp?.actions === null || curapp?.actions?.length === 0 || curapp?.actions?.length === 1) {
         		loadAppConfig(curapp?.id, false, true)
+			}
+
+			if (key > 10) {
+				console.log("Breaking on 10 sideloads of total", responseJson.length)
+				break
+
 			}
 		}
 
@@ -11856,7 +11862,7 @@ const AngularWorkflow = (defaultprops) => {
         if (queryID !== undefined && queryID !== null) {
           aa('init', {
             appId: "JNSS5CFDZZ",
-            apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+            apiKey: "c8f882473ff42d41158430be09ec2b4e",
           })
 
           const timestamp = new Date().getTime()
@@ -18698,7 +18704,9 @@ const AngularWorkflow = (defaultprops) => {
 
           {originalWorkflow?.suborg_distribution === undefined || originalWorkflow?.suborg_distribution === null || originalWorkflow?.suborg_distribution?.length === 0 || originalWorkflow?.suborg_distribution.includes("none") ? 
 
-			originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
+			<div>
+			  {originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
+
 				<Button
 				  color="secondary"
 				  variant="outlined"
@@ -18708,7 +18716,7 @@ const AngularWorkflow = (defaultprops) => {
 					  textTransform: "none",
 					  marginLeft: 10, 
 				  }}
-			  	  onClick={() => {
+				  onClick={() => {
 					navigate(`/workflows/${workflow.parentorg_workflow}`)
 					// Reload the page
 					window.location.reload()
@@ -18716,7 +18724,10 @@ const AngularWorkflow = (defaultprops) => {
 				>
 				  Go to parent org workflow
 				</Button>
-				: userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 ?
+
+				: null}
+
+			  {userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 ?
 					<Button
 					  color="secondary"
 					  variant="outlined"
@@ -18732,8 +18743,8 @@ const AngularWorkflow = (defaultprops) => {
 					>
 						Enable Suborg Distribution
 					</Button>
-			    : null
-
+				: null}
+			</div>
 			:
 
 			<Tooltip title={lastSaved === false && originalWorkflow.id === workflow.id ? 
@@ -20080,7 +20091,7 @@ const AngularWorkflow = (defaultprops) => {
                       if (queryID !== undefined && queryID !== null) {
                         aa('init', {
                           appId: "JNSS5CFDZZ",
-                          apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+                          apiKey: "c8f882473ff42d41158430be09ec2b4e",
                         })
 
                         const timestamp = new Date().getTime()

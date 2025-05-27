@@ -48,15 +48,21 @@ const CloudSyncTab = (props) => {
     const [, forceUpdate] = React.useState();
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
+
     const { themeMode, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
+
     useEffect(() => { getSettings(); }, []);
+
     const GridItem = (props) => {
         const [expanded, setExpanded] = React.useState(false);
         const [showEdit, setShowEdit] = React.useState(false);
         const [newValue, setNewValue] = React.useState(-100);
 
-        const primary = props.data.primary;
+        var primary = props.data.primary
+
+		const shownName = props.data.newname !== undefined && props.data.newname !== null && props.data.newname !== primary ? props.data.newname : primary
+
         const secondary = props.data.secondary;
         const primaryIcon = props.data.icon;
         const secondaryIcon = props.data.active ?
@@ -191,7 +197,7 @@ const CloudSyncTab = (props) => {
                         </ListItemAvatar>
                         <ListItemText
                             style={{ textTransform: "capitalize", color: theme.palette.text.primary, fontSize: 14, fontWeight: 400, }}
-                            primary={primary}
+                            primary={shownName}
                         />
                         {isCloud && userdata.support === true ?
                             <Tooltip title="Edit features (support users only)">
@@ -717,7 +723,9 @@ const CloudSyncTab = (props) => {
                 {selectedOrganization.sync_features === undefined ||
                     selectedOrganization.sync_features === null
                     ? <Grid container spacing={2} justifyContent="center">
+
                     {[...Array(18)].map((_, i) => (
+
                         <Grid item xs={12} sm={6} md={4} key={i}>
                             <div
                                 style={{
@@ -756,6 +764,13 @@ const CloudSyncTab = (props) => {
                         }
 
                         const newkey = key.replaceAll("_", " ");
+
+						// Rewrites to frontend names
+						var newname = newkey
+						if (newkey === "app executions") {
+							newname = "app runs"
+						}
+
                         const griditem = {
                             primary: newkey,
                             secondary:
@@ -770,6 +785,8 @@ const CloudSyncTab = (props) => {
                             data_collection: "None",
                             active: item.active,
                             icon: <PolylineIcon style={{ color: "#1a1a1a" }} />,
+
+							newname: newname,
                         };
 
                         return (

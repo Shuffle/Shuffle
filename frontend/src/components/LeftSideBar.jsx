@@ -518,7 +518,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         console.error("Logout error:", error);
       });
   };
-  console.log("userdata: ", userdata);
+
   const avatarMenu = (
     <span>
       <IconButton

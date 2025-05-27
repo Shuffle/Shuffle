@@ -111,7 +111,7 @@ import { removeQuery } from "../components/ScrollToTop.jsx";
 import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240");
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
 
 const svgSize = 24;
 const imagesize = 22;
@@ -5071,7 +5071,7 @@ const Workflows2 = (props) => {
 
     //isLoaded && isLoggedIn && workflowDone ? (
     const loadedCheck =
-        workflowDone && isLoaded ? (
+        workflowDone ? (
             <div>
                 {/*
 				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>

@@ -447,7 +447,7 @@ func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
 	// Returns false if there is an issue
 	// Use this for register
-	err := shuffle.CheckPasswordStrength(password)
+	err := shuffle.CheckPasswordStrength(username, password)
 	if err != nil {
 		log.Printf("[WARNING] Bad password strength: %s", err)
 		return err
@@ -460,8 +460,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	}
 
 	ctx := context.Background()
-	//users, err := FindUser(ctx context.Context, username string) ([]User, error) {
-
 	users, err := shuffle.FindUser(ctx, strings.ToLower(strings.TrimSpace(username)))
 	if err != nil && len(users) == 0 {
 		log.Printf("[WARNING] Failed getting user %s: %s", username, err)
@@ -486,7 +484,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	newUser.Active = true
 	newUser.Orgs = []string{org.Id}
 
-	// FIXME - Remove this later
 	if role == "admin" {
 		newUser.Role = "admin"
 		newUser.Roles = []string{"admin"}
