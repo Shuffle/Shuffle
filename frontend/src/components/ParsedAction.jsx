@@ -1216,7 +1216,7 @@ const ParsedAction = (props) => {
 					selectedActionParameters[1].value = splitparsed[1]
 					selectedAction.parameters[1].value = splitparsed[1]
 
-					if (splitparsed.length > 2) {
+					if (splitparsed.length >= 2) {
 						toast.warn("Filter list only supports filtering on the first list. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.", {
 							autoClose: 10000,
 						})
@@ -1494,7 +1494,7 @@ const ParsedAction = (props) => {
 
 		// Helpertext for openapi fields
 		//if (helperText === "" && name === "body" && selectedApp.generated && selectedApp.activated) {
-		//	helperText = <span style={{color: "white", marginBottom: 5, marginleft: 5}}>
+		//	helperText = <span style={{color: theme.palette.text.primary, marginBottom: 5, marginleft: 5}}>
 		//}
 
 		return helperText
@@ -1563,7 +1563,7 @@ const ParsedAction = (props) => {
 		}
 
 		return <Paper style={{ padding: 10, backgroundColor: theme.palette.surfaceColor, border: "1px solid red", }}>
-			<Typography variant="body" style={{ color: "white", }}>
+			<Typography variant="body" style={{ color: theme.palette.text.primary, }}>
 				<b>Tip:</b> {suggestionText}
 			</Typography>
 		</Paper>
@@ -2606,7 +2606,7 @@ const ParsedAction = (props) => {
             }}
             style={{
               backgroundColor: theme.palette.inputColor,
-              color: "white",
+              color: theme.palette.text.primary,
               height: "50px",
               borderRadius: theme.palette?.borderRadius,
             }}
@@ -2623,7 +2623,7 @@ const ParsedAction = (props) => {
                   key={data.Name}
                   style={{
                     backgroundColor: theme.palette.inputColor,
-                    color: "white",
+                    color: theme.palette.text.primary,
                   }}
                   value={data.Name}
                 >
@@ -2702,7 +2702,7 @@ const ParsedAction = (props) => {
 						}}
 						style={{
 							backgroundColor: theme.palette.inputColor,
-							color: "white",
+							color: theme.palette.text.primary,
 							height: "50px",
 							borderRadius: theme.palette?.borderRadius,
 						}}
@@ -2710,7 +2710,7 @@ const ParsedAction = (props) => {
 						<MenuItem
 							style={{
 								backgroundColor: theme.palette.inputColor,
-								color: "white",
+								color: theme.palette.text.primary,
 							}}
 							value="No selection"
 						>
@@ -2721,7 +2721,7 @@ const ParsedAction = (props) => {
 							<MenuItem
 								style={{
 									backgroundColor: theme.palette.inputColor,
-									color: "white",
+									color: theme.palette.text.primary,
 								}}
 								value={data.name}
 							>
@@ -2986,7 +2986,7 @@ const ParsedAction = (props) => {
 				<div
 					style={{
 						marginTop: "10px",
-						borderColor: "white",
+						borderColor: theme.palette.text.primary,
 						borderWidth: "2px",
 						marginBottom: hideExtraTypes ? 50 : 200,
 					}}
@@ -3182,7 +3182,7 @@ const ParsedAction = (props) => {
 											ListboxProps={{
 												style: {
 													backgroundColor: theme.palette.inputColor,
-													color: "white",
+													color: theme.palette.text.primary,
 												},
 											}}
 											getOptionLabel={(option) => {
@@ -4422,7 +4422,7 @@ const ParsedAction = (props) => {
 												}}
 												open={!!menuPosition}
 												style={{
-													color: "white",
+													color: theme.palette.text.primary,
 													marginTop: 2,
 													maxHeight: 650,
 												}}
@@ -4550,7 +4550,7 @@ const ParsedAction = (props) => {
 															}
 															parentMenuOpen={!!menuPosition}
 															style={{
-																color: "white",
+																color: theme.palette.text.primary,
 																minWidth: 250,
 																maxWidth: 250,
 																maxHeight: 50,
@@ -4566,7 +4566,7 @@ const ParsedAction = (props) => {
 																	key={innerdata.name}
 																	style={{
 																		marginLeft: 15,
-																		color: "white",
+																		color: theme.palette.text.primary,
 																		minWidth: 250,
 																		maxWidth: 250,
 																		padding: 0,
@@ -4607,7 +4607,7 @@ const ParsedAction = (props) => {
 																		<MenuItem
 																			key={pathdata.name}
 																			style={{
-																				color: "white",
+																				color: theme.palette.text.primary,
 																				minWidth: 250,
 																				maxWidth: 250,
 																				padding: boxPadding,
@@ -4664,7 +4664,7 @@ const ParsedAction = (props) => {
 															key={innerdata.name}
 															style={{
 																backgroundColor: theme.palette.inputColor,
-																color: "white",
+																color: theme.palette.text.primary,
 																minWidth: 250,
 																maxWidth: 250,
 																marginRight: 0,
@@ -4835,17 +4835,21 @@ const ParsedAction = (props) => {
 													<OpenInFullIcon
 														style={{ color: theme.palette.textPrimary, cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
 														onMouseOver={(event) => {
-															const clickedField = document.getElementById(clickedFieldId)
-															if (clickedField !== null) {
-																clickedField.focus()
+															if(selectedAction?.name !== "filter_list"){
+																const clickedField = document.getElementById(clickedFieldId)
+																if (clickedField !== null) {
+																	clickedField.focus()
+																}
 															}
 														}}
 														onClick={(event) => {
 															// Set focus to the Textfield we just clicked
 															// This is to ensure focus is set correctly at all times with blur
-															const clickedField = document.getElementById(clickedFieldId)
-															if (clickedField !== null) {
-																clickedField.focus()
+															if(selectedAction?.name !== "filter_list"){
+																const clickedField = document.getElementById(clickedFieldId)
+																if (clickedField !== null) {
+																	clickedField.focus()
+																}
 															}
 
 															event.preventDefault()
@@ -4887,7 +4891,7 @@ const ParsedAction = (props) => {
 												<FormControl fullWidth style={{ marginTop: 0 }}>
 													<InputLabel
 														id="action-autocompleter"
-														style={{ marginLeft: 10, color: "white" }}
+														style={{ marginLeft: 10, color: theme.palette.text.primary }}
 													>
 														Autocomplete
 													</InputLabel>
@@ -4915,7 +4919,7 @@ const ParsedAction = (props) => {
 														fullWidth
 														open={showAutocomplete}
 														style={{
-															color: "white",
+															color: theme.palette.text.primary,
 															height: 35,
 															marginTop: 2,
 															borderRadius: theme.palette?.borderRadius,
@@ -4954,7 +4958,7 @@ const ParsedAction = (props) => {
 																	key={data.name}
 																	style={{
 																		backgroundColor: theme.palette.inputColor,
-																		color: "white",
+																		color: theme.palette.text.primary,
 																	}}
 																	value={data}
 																	onMouseOver={() => { }}

@@ -867,7 +867,7 @@ const CacheView = memo((props) => {
                 overflowX: "auto",
              }}>
                 <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore? theme.palette.defaultBorder :null, display: "table-row"}}>
-                {["Key", "Value", "Actions", "Updated", "Distribution"].map((header, index) => (
+                {["Key", "Value", "workflow", "Actions", "Updated", "Distribution"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -891,7 +891,7 @@ const CacheView = memo((props) => {
                                 backgroundColor: theme.palette.platformColor,
                             }}
                         >
-                            {Array(5)
+                            {Array(6)
                                 .fill()
                                 .map((_, colIndex) => (
                                     <ListItemText
@@ -1001,6 +1001,66 @@ const CacheView = memo((props) => {
 										data.value
 									}
 								/>
+                                <ListItemText
+                                    primary={
+                                        data.workflow_id === "" || data.workflow_id === null || data.workflow_id === undefined ?
+                                            <IconButton
+                                                disabled={data.workflow_id?.length === 0}
+                                                style={{marginLeft: 10}}
+                                            >
+                                                <OpenInNewIcon
+                                                    style={{
+                                                        color:
+                                                            data.workflow_id?.length !== 0
+                                                                ? "#FF8444"
+                                                                : "grey",
+                                                    }}
+                                                />
+                                            </IconButton>
+                                            : (
+                                            <Tooltip
+                                                title={"Go to workflow"}
+                                                style={{}}
+                                                aria-label={"Download"}
+                                            >
+                                                <span>
+                                                    <a
+                                                        rel="noopener noreferrer"
+                                                        style={{
+                                                            textDecoration: "none",
+                                                            color: "#f85a3e",
+                                                        }}
+                                                        href={`/workflows/${data.workflow_id}`}
+                                                        target="_blank"
+                                                    >
+                                                        <IconButton
+                                                            disabled={data.workflow_id?.length ===0}
+                                                            style={{marginLeft: 10}}
+                                                        >
+                                                            <OpenInNewIcon
+                                                                style={{
+                                                                    width: 24, height: 24,
+                                                                    color:
+                                                                        data.workflow_id?.length !== 0
+                                                                            ? "#FF8444"
+                                                                            : "grey",
+                                                                }}
+                                                            />
+                                                        </IconButton>
+                                                    </a>
+                                                </span>
+                                            </Tooltip>
+                                        )
+                                    }
+                                    style={{
+                                        display: "table-cell",
+                                        overflow: "hidden",
+                                        verticalAlign: "middle",
+                                        padding: "8px 8px 8px 15px",
+                                        maxWidth: 200,
+                                        overflowX: "auto",
+                                    }}
+                                />
                                 <ListItemText
                                     style={{
                                         display: "table-cell",

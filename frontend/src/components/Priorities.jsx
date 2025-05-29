@@ -228,7 +228,6 @@ const Priorities = memo((props) => {
 
 								let newJSON = notificationAppList;
 
-								console.log("item: ", item)
 
 								// keeping state changes to a minimum
 								if ((newJSON[item.name] === undefined) && (item?.authentication_data !== null)) {

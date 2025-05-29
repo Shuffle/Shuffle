@@ -1181,6 +1181,47 @@ const AppAuthTab = memo((props) => {
                                     </IconButton>
                                   </Tooltip>
                                 )}
+                                <Tooltip
+                                    title={"Copy Auth ID"}
+                                    style={{}}
+                                    aria-label={"copy"}
+                                  >
+                                    <IconButton
+                                      style = {{padding: "6px"}}
+                                      onClick={() => {
+                                          navigator.clipboard.writeText(data.id);
+                                          document.execCommand("copy");
+            
+                                          toast(data.id + " copied to clipboard");
+                                      }}
+                                    >
+                                      <svg
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                        <rect
+                                          width="24"
+                                          height="24"
+                                          fillOpacity="1"
+                                        />
+                                        <path
+                                          d="M14 4H7.6C7.17565 4 6.76869 4.16857 6.46863 4.46863C6.16857 4.76869 6 5.17565 6 5.6V18.4C6 18.8243 6.16857 19.2313 6.46863 19.5314C6.76869 19.8314 7.17565 20 7.6 20H17.2C17.6243 20 18.0313 19.8314 18.3314 19.5314C18.6314 19.2313 18.8 18.8243 18.8 18.4V8.8L14 4Z"
+                                          stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                        <path
+                                          d="M14 4V8.8H18.8"
+                                          stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                        </svg>
+                                    </IconButton>
+                                  </Tooltip>
                                 <IconButton
                                   style={{ }}
                                   disabled={data.org_id !== selectedOrganization.id}

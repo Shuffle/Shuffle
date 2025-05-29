@@ -647,7 +647,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
 
-        <Link to="/docs" style={hrefStyle}>
+        <Link to={userdata && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs" } target={userdata?.active_org?.branding?.documentation_link?.length > 0 && userdata?.org_status?.includes("integration_partner") ? "_blank" : "_self" } style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -1633,7 +1633,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
           <Button
             component={Link}
-            to="/docs"
+            to={userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs"}
+            target={userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? "_blank" : "_self"}
             onClick={(event) => {
               setCurrentOpenTab("docs");
               localStorage.setItem("lastTabOpenByUser", "docs");

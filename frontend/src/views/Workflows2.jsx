@@ -1107,23 +1107,31 @@ const Workflows2 = (props) => {
                 setSelectedWorkflowId("");
             }}
             PaperProps={{
-                style: {
-                    backgroundColor: theme.palette.surfaceColor,
-                    color: "white",
-                    minWidth: 500,
-                    padding: 50,
-                },
-            }}
+                sx: {
+                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                    border: theme?.palette?.DialogStyle?.border,
+                    minWidth: '440px',
+                    fontFamily: theme?.typography?.fontFamily,
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    zIndex: 1000,
+                    '& .MuiDialogContent-root': {
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogTitle-root': {
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                }
+                }}
         >
             <DialogTitle>
-                <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
+                <div style={{ textAlign: "center", color: theme.palette.DialogStyle?.color }}>
                     Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId)?.name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
 
                     Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working
                 </div>
             </DialogTitle>
             <DialogContent
-                style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+                style={{ color: theme.palette.DialogStyle.color, textAlign: "center" }}
             >
                 <Button
                     style={{}}
@@ -1216,7 +1224,7 @@ const Workflows2 = (props) => {
 							data.status
 						).then((response) => {
 							if (response !== undefined) {
-								toast(`Successfully imported ${data.name}`);
+								toast.success(`Successfully imported ${data.name}`);
 							}
 						});
 					}
@@ -2073,7 +2081,7 @@ const Workflows2 = (props) => {
 					}
                 } else {
                     if (bulk !== true) {
-                        toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
+                        toast.success(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
                     }
                 }
 
@@ -2087,7 +2095,7 @@ const Workflows2 = (props) => {
                 }
             })
             .catch((error) => {
-                toast(error.toString());
+                toast.error(error.toString());
             })
     }
 
@@ -3040,7 +3048,7 @@ const Workflows2 = (props) => {
                                     data.status,
                                 ).then((response) => {
                                     if (response !== undefined) {
-                                        toast("Successfully imported " + data.name);
+                                        toast.success("Imported " + data.name);
                                     }
                                 });
                             }

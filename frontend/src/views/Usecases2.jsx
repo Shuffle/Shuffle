@@ -126,6 +126,13 @@ const UsecaseListComponent = (props) => {
 	const { themeMode, brandName } = useContext(Context)
 	const theme = getTheme(themeMode)
 
+	const usecaseLightThemeColor = {
+		"collect": "#FB47A0",
+		"enrich": "#F38B14",
+		"detect": "#0AAD65",
+		"respond": "#289BDB",
+		"verify": "#624CE9",
+	}
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
 	const [inputUsecase, setInputUsecase] = useState({});
@@ -743,7 +750,7 @@ const UsecaseListComponent = (props) => {
 			{keys.map((usecase, index) => {
 				return (
 					<div key={index} style={{marginTop: 75, }}>
-						<Typography variant="body1" style={{color: usecase.color, textAlign: "left", marginBottom: 10, }}>
+						<Typography variant="body1" style={{color: themeMode === "dark" ? usecase.color : usecaseLightThemeColor[usecase.name.slice(3, 100).toLowerCase()], textAlign: "left", marginBottom: 10, }}>
 							<b>{index+1}. {usecase.name.slice(3, 100)}</b>
 						</Typography>
       					<Grid container spacing={1}>
