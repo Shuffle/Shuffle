@@ -1850,6 +1850,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	log.Printf("[DEBUG] HOOKS: webhook callback: %s", request.URL.String())
+
 	if request.Method != "POST" {
 		request.Method = "POST"
 	}
@@ -1861,6 +1863,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	path := strings.Split(request.URL.String(), "/")
 	if len(path) < 4 {
+		log.Printf("[DEBUG] HOOKS: Invalid webhook path: %s", request.URL.String())
 		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1876,7 +1879,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	if location[1] == "api" {
 		if len(location) <= 4 {
 			log.Printf("[INFO] Couldn't handle location. Too short in webhook: %d", len(location))
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -1892,6 +1895,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			queries = splitter[1]
 		}
 	}
+
+	log.Printf("[DEBUG] HOOKS: Pre user agent check")
 
 	// Find user agent header
 	userAgent := request.Header.Get("User-Agent")
@@ -1915,8 +1920,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("HookID: %s", hookId)
 	hook, err := shuffle.GetHook(ctx, hookId)
 	if err != nil {
-		log.Printf("[WARNING] Failed getting hook %s (callback): %s", hookId, err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] HOOKS: Failed getting hook %s (callback): %s", hookId, err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -1928,21 +1933,21 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 	//resp.Write([]byte(`{"success": true}`))
 	if hook.Status == "stopped" {
-		log.Printf("[WARNING] Not running %s because hook status is stopped", hook.Id)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] HOOKS: Not running %s because hook status is stopped", hook.Id)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Is it running?"}`)))
 		return
 	}
 
 	if len(hook.Workflows) == 0 {
-		log.Printf("[DEBUG] Not running because hook isn't connected to any workflows")
-		resp.WriteHeader(401)
+		log.Printf("[DEBUG] HOOKS: Not running because hook isn't connected to any workflows")
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
 		return
 	}
 
 	if hook.Environment == "cloud" {
-		log.Printf("[DEBUG] This should trigger in the cloud. Duplicate action allowed onprem.")
+		log.Printf("[DEBUG] HOOKS: This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
 	// Check auth
@@ -1958,7 +1963,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("[DEBUG] Body data error: %s", err)
+		log.Printf("[DEBUG] HOOKS: data read error: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1999,7 +2004,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(newBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed newBody marshaling for webhook: %s", err)
+		log.Printf("[ERROR] HOOKS: Failed newBody marshaling for webhook: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2015,7 +2020,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(hook.Start) == 0 {
-			log.Printf("[WARNING] No start node for hook %s - running with workflow default.", hook.Id)
+			log.Printf("[ERROR] HOOKS: No start node for hook %s - running with workflow default.", hook.Id)
 			//bodyWrapper = string(parsedBody)
 		}
 
@@ -2027,7 +2032,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
-
 		if err == nil {
 			if hook.Version == "v2" {
 				timeout := 15
@@ -2062,12 +2066,18 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			} else {
 				resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
 			}
+
 			return
 		}
 
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
 	}
+
+	log.Printf("[ERROR] HOOKS: END OF FUNCTION FOR '%s'. IF this is reached, something went wrong.", hook.Id)
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false, "reason": "Failed to run workflow. Check logs."}`))
+
 
 }
 
