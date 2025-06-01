@@ -1127,7 +1127,6 @@ const LicencePopup = (props) => {
         color: "white",
     }
 
-    console.log("Priceitem: ", shuffleVariant)
     // const isLoggedInHandler = () => {
     //     if (calculatedCost === payasyougo) {
     //         handlePayasyougo(props.userdata)
@@ -1237,7 +1236,6 @@ const LicencePopup = (props) => {
           });
       };
 
-      console.log("Selected Organization: ", selectedOrganization.subscriptions)
     return (
         <div>
             <Grid container spacing={2} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>

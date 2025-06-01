@@ -188,7 +188,7 @@ const EditWorkflow = (props) => {
 	}
 
 	const newWorkflow = isEditing === true ? false : true
-	const priority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+	const priority = userdata === undefined || userdata === null || userdata.priorities === null || userdata.priorities === undefined ? null : userdata?.priorities?.find(prio => prio.type === "usecase" && prio.active === true)
 	var upload = "";
 	var total_count = 0
 

@@ -2608,7 +2608,7 @@ const Billing = memo((props) => {
 					userdata={userdata}
 				/>
 				): (
-					<>
+					<span>
 					<Tabs
 					value={currentTab}
 					onChange={(event, newValue) => setCurrentTab(newValue)}
@@ -2627,35 +2627,37 @@ const Billing = memo((props) => {
 						style={{ textTransform: 'none', fontSize: 16, minWidth: 'auto', paddingLeft: 12, paddingRight: 12 }}
 					/>
 					<Tab
-						label="Child Organization"
+						label="Child Organization Stats"
 						style={{ textTransform: 'none', fontSize: 16, minWidth: 'auto', paddingLeft: 12, paddingRight: 12 }}
 					/>
 					</Tabs>
 
-					{currentTab === 0 ? (
-						<div style={{ marginTop: 30,}}>
-							<BillingStats
-							isCloud={isCloud}
-							clickedFromOrgTab={clickedFromOrgTab}
-							globalUrl={globalUrl}
-							selectedOrganization={selectedOrganization}
-							userdata={userdata}
-						/>
-						</div>
-					): (
-						<BillingStatsChildOrg
-							isCloud={isCloud}
-							clickedFromOrgTab={clickedFromOrgTab}
-							globalUrl={globalUrl}
-							selectedOrganization={selectedOrganization}
-							userdata={userdata}
-							allChildOrgs={allChildOrgs}
-							setAllChildOrgs={setAllChildOrgs}
-							allChildOrgsStats={allChildOrgsStats}
-							setAllChildOrgsStats={setAllChildOrgsStats}
-						/>
-						)}
-					</>
+					<div style={{paddingBottom: 200, }}>
+						{currentTab === 0 ? 
+							<div style={{ marginTop: 30,}}>
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+								/>
+							</div>
+						: 
+							<BillingStatsChildOrg
+								isCloud={isCloud}
+								clickedFromOrgTab={clickedFromOrgTab}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								userdata={userdata}
+								allChildOrgs={allChildOrgs}
+								setAllChildOrgs={setAllChildOrgs}
+								allChildOrgsStats={allChildOrgsStats}
+								setAllChildOrgsStats={setAllChildOrgsStats}
+							/>
+						}
+					</div>
+					</span>
 				)}
 			</div>
 		</Wrapper>

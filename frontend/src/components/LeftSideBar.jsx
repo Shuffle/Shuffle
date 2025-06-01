@@ -450,6 +450,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   
   const handleUpdateTheme = (newTheme) => {
+    handleThemeChange(newTheme);
+    setCurrentSelectedTheme(newTheme)
     
     const data = {
       "user_id": userdata?.id,
@@ -470,14 +472,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     }).then((response) =>
       response.json().then((responseJson) => {
         if (responseJson["success"] === false) {
-          toast("Failed updating theme: ", responseJson.reason);
-        } else {
-          handleThemeChange(newTheme);
-          setCurrentSelectedTheme(newTheme);
+          toast("Failed saving your theme: ", responseJson.reason);
         }
       })
     ).catch((error) => {
-      console.log("Error changing theme: ", error);
+      console.log("Error saving your theme: ", error);
     }); 
   };
     
@@ -589,7 +588,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         }
         if (userdata?.org_status?.includes("integration_partner")){
             handleChangeTheme(newTheme);
-        }else {
+        } else {
+
           handleUpdateTheme(newTheme);
         }
       }}
@@ -671,7 +671,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.2
+          Version: 2.1.0-rc1
         </Typography>
       </Menu>
     </span>

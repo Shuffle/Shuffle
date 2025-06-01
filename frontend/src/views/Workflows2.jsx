@@ -1349,7 +1349,9 @@ const Workflows2 = (props) => {
                         // When there are no workflows, we can set the loading to false
                         setIsLoadingWorkflow(false)
 						if (currTab !== 2) {
-							toast("No workflows found. Showing workflow discovery")
+							toast.info("No workflows found in this org. Feel free to look into our public workflows!" , {
+								timeout: 7500,
+							})
 							setCurrTab(2)
 						}
 					}

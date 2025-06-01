@@ -33,8 +33,15 @@ import {
 
 import { 
 	BarChart,
+	BarSeries,
+	Bar,
+	BarLabel,
+
 	GridlineSeries,
 	Gridline,
+	TooltipArea,
+	ChartTooltip,
+	TooltipTemplate,
 } from 'reaviz';
 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
@@ -45,20 +52,32 @@ const LineChartWrapper = ({keys, inputname, height, width}) => {
 	const inputdata = keys.data === undefined ? keys : keys.data
 	const {themeMode} = useContext(Context)
 	const theme = getTheme(themeMode)
-	
+
+
 	return (
 		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
-			<Typography variant="h6" style={{marginBotton: 15, }}>
+			<Typography variant="h6" style={{marginBotton: 30, }}>
 				{inputname}
 			</Typography>
+
 			<BarChart
+				style={{marginTop: 100, }}
 				width={"100%"}
 				height={height}
 				data={inputdata}
+
+		      	series={
+					<BarSeries
+					  bar={
+						<Bar />
+					  } 
+					/>
+				}
 				gridlines={
 					<GridlineSeries line={<Gridline direction="all" />} />
 				}
 			/>
+
 		</div>
 	)
 }
@@ -70,6 +89,7 @@ const AppStats = (defaultprops) => {
   const [keys, setKeys] = useState([])
   const [searches, setSearches] = useState([]);
   const [appRuns, setAppruns] = useState(undefined);
+  const [childOrgsAppRuns, setChildOrgsAppRuns] = useState(undefined);
   const [appRunCosts, setApprunCosts] = useState(undefined);
   const [workflowRuns, setWorkflowRuns] = useState(undefined);
   const [subflowRuns, setSubflowRuns] = useState(undefined);
@@ -401,6 +421,11 @@ const AppStats = (defaultprops) => {
 			"data": []
 		}
 
+		var childorgappRuns = {
+			"key": "Child Org App Runs",
+			"data": []
+		}
+
 		var workflowRuns = {
 			"key": "Workflow Runs (includes subflows)",
 			"data": []
@@ -442,6 +467,13 @@ const AppStats = (defaultprops) => {
 				})
 			} 
 
+			if (item["child_app_executions"] !== undefined && item["child_app_executions"] !== null) {
+				childorgappRuns["data"].push({
+					key: new Date(item["date"]),
+					data: inputdata["child_app_executions"]
+				})
+			}
+
 			// Check if workflow_executions key in item
 			if (item["workflow_executions"] !== undefined && item["workflow_executions"] !== null) {
 				workflowRuns["data"].push({
@@ -471,6 +503,15 @@ const AppStats = (defaultprops) => {
 			})
 		}
 
+		if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
+			childorgappRuns["data"].push({
+				key: new Date(),
+				data: inputdata["daily_child_app_executions"]
+			})
+
+			//setApprunCosts(appcostRuns)
+		}
+
 		if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
 			workflowRuns["data"].push({
 				key: new Date(),
@@ -483,6 +524,11 @@ const AppStats = (defaultprops) => {
 				key: new Date(),
 				data: inputdata["daily_subflow_executions"]
 			})
+		}
+
+		// Only for parent orgs
+		if (childorgappRuns["data"].length > 0) {
+	  		setChildOrgsAppRuns(childorgappRuns)
 		}
 
 		setSubflowRuns(subflowRuns)
@@ -895,7 +941,13 @@ const AppStats = (defaultprops) => {
 		{appRuns === undefined ? 
 			null
 			: 
-			<LineChartWrapper keys={appRuns} height={300} width={"100%"} inputname={"Daily App Runs"}/>
+			<LineChartWrapper keys={appRuns} height={300} width={"100%"} inputname={"App Runs - Current Org"}/>
+		}
+
+		{childOrgsAppRuns === undefined ? 
+			null
+			: 
+			<LineChartWrapper keys={childOrgsAppRuns} height={300} width={"100%"} inputname={"Child Org App Runs"}/>
 		}
 
 		{workflowRuns === undefined ? 
@@ -922,8 +974,9 @@ const AppStats = (defaultprops) => {
 				<div style={{margin: "auto", alignItems: "center", width: 350, height: "100%", }}>
 					<Typography variant="body2" color="textSecondary" component="p" style={{textAlign: "center", marginTop: 50, marginBottom: 15, }}>
 						Loading usage for selected period (may take a while) 
+					
+						<CircularProgress style={{marginTop: 15, }} /> 
 					</Typography>
-					<CircularProgress style={{}} /> 
 				</div>
 				:
 				<DataGrid
