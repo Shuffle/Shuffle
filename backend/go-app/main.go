@@ -35,9 +35,9 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/storage/memory"
 	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -2078,7 +2078,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(500)
 	resp.Write([]byte(`{"success": false, "reason": "Failed to run workflow. Check logs."}`))
 
-
 }
 
 func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
@@ -3095,7 +3094,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			return
 		}
 
-		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id)  {
+		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id) {
 			log.Printf("[DEBUG] Editing app %s with user %s (%s) in org %s", test.Id, user.Username, user.Id, user.ActiveOrg.Id)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
@@ -3382,7 +3381,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			}
 		}
 	}
-
 
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
@@ -3826,6 +3824,8 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 	}
 
+	// Send stats once every 10 times or so..?
+	// For now, just send every time 
 	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
@@ -4385,7 +4385,7 @@ func runInitEs(ctx context.Context) {
 	}
 
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 60 
+		healthcheckInterval := 60
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats, and dashboard on /health. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter
