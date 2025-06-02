@@ -61,8 +61,8 @@ var baseDockerName = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
-//var syncUrl = "https://shuffler.io"
-var syncUrl = "http://localhost:5002"
+var syncUrl = "https://shuffler.io"
+//var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
 	Success         bool                 `json:"success"`
@@ -3807,13 +3807,14 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 	}
 
+	// Check if it's 1/20 times (600 seconds - 10 min on average)
+	// Only problem: May take time to sync the first time, which is annoying
 	shouldBackupData := false
 	randomNumber := rand.Intn(20)
 	if randomNumber == 0 {
 		shouldBackupData = true
 	}
 
-	// Check if it's 1/20 times (600 seconds - 10 min on average)
 	// Just to prevent it from spamming large outbound requests
 	if shouldBackupData { 
 		if org.SyncConfig.WorkflowBackup {
@@ -4285,7 +4286,10 @@ func runInitEs(ctx context.Context) {
 					}
 
 					if newresp.StatusCode != 200 {
-						log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d. Body: %s", environment, newresp.StatusCode, string(respBody))
+						if !strings.Contains(string(respBody), "is active") {
+							log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d. Body: %s", environment, newresp.StatusCode, string(respBody))
+						}
+
 						continue
 					}
 
