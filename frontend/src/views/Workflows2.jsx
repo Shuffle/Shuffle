@@ -678,6 +678,7 @@ const Workflows2 = (props) => {
     var upload = "";
 
     const [workflows, setWorkflows] = React.useState([]);
+    const [backupWorkflows, setBackupWorkflows] = React.useState([]);
     const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
     const [selectedUsecases, setSelectedUsecases] = React.useState([]);
     const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
@@ -756,7 +757,8 @@ const Workflows2 = (props) => {
         const tabMapping = {
             0: 'org_workflows',
             1: 'my_workflows',
-            2: 'all_workflows'
+            2: 'all_workflows',
+            3: 'backup_apps',
         };
         const queryParams = new URLSearchParams(location.search);
         queryParams.set('tab', tabMapping[newValue]);
@@ -1357,14 +1359,24 @@ const Workflows2 = (props) => {
 					}
 
                     var newarray = []
+					var backupWf = []
                     for (var wfkey in responseJson) {
                         const wf = responseJson[wfkey]
                         if (wf.public === true || wf.hidden === true) {
                             continue
                         }
 
+						if (wf?.backup_config?.onprem_backup === true) {
+							backupWf.push(wf)
+							continue
+						}
+
                         newarray.push(wf)
                     }
+
+					if (backupWf.length > 0) {
+						setBackupWorkflows(backupWf)
+					}
 
                     var setProdFilter = false
 
@@ -4332,6 +4344,17 @@ const Workflows2 = (props) => {
                                     }}
                                 />
 
+								{backupWorkflows.length > 0 &&
+									<Tab
+										label={`Onprem Backup (${backupWorkflows.length})`}
+										style={{
+											...tabStyle,
+											marginLeft: 25, 
+											...(currTab === 3 ? tabActive : {})
+										}}
+									/>
+								}
+
                                 <Tab
                                     label="Org Forms"
 									onClick={() => {
@@ -4341,7 +4364,7 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
 										marginLeft: 25, 
-                                        ...(currTab === 3 ? tabActive : {})
+                                        ...(currTab === 4 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>
@@ -4676,9 +4699,28 @@ const Workflows2 = (props) => {
                                                 paddingBottom: 40
                                             }}>
 
-
-
                                                 {currTab === 0 && orgWorkflows.map((data, index) => {
+                                                    // Shouldn't be a part of this list
+                                                    if (data.public === true) {
+                                                        return null
+                                                    }
+
+                                                    // if (firstLoad) {
+                                                    //     workflowDelay += 75
+                                                    // } else {
+                                                    //     return <WorkflowPaper key={index} data={data} />
+                                                    // }
+
+                                                    return (
+                                                        <span key={index}>
+                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+                                                            <WorkflowPaper data={data} />
+                                                            {/*</Zoom>*/}
+                                                        </span>
+                                                    )
+                                                })}
+
+                                                {currTab === 3 && backupWorkflows.map((data, index) => {
                                                     // Shouldn't be a part of this list
                                                     if (data.public === true) {
                                                         return null

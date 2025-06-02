@@ -11,17 +11,18 @@ import (
 	"crypto/md5"
 	"strconv"
 
+	"os"
+	"io"
+	"log"
+	"fmt"
+	"errors"
+	"net/url"
+	"os/exec"
+	"net/http"
+	"io/ioutil"
+	"math/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"os/exec"
 
 	"net/http/httptest"
 	"strings"
@@ -60,7 +61,8 @@ var baseDockerName = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
-var syncUrl = "https://shuffler.io"
+//var syncUrl = "https://shuffler.io"
+var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
 	Success         bool                 `json:"success"`
@@ -3805,32 +3807,55 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 	}
 
-	if org.SyncConfig.WorkflowBackup {
-		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
-		if err != nil {
-			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
-		} else {
-			backupJob.Workflows = workflows
-		}
+	shouldBackupData := false
+	randomNumber := rand.Intn(20)
+	if randomNumber == 0 {
+		shouldBackupData = true
 	}
 
-	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
-
-		apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
-		} else {
-			backupJob.Apps = apps
+	// Check if it's 1/20 times (600 seconds - 10 min on average)
+	// Just to prevent it from spamming large outbound requests
+	if shouldBackupData { 
+		if org.SyncConfig.WorkflowBackup {
+			workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
+			if err != nil {
+				log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+			} else {
+				backupJob.Workflows = workflows
+			}
 		}
-	}
 
-	// Send stats once every 10 times or so..?
-	// For now, just send every time 
-	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
-	} else {
-		backupJob.Stats = *info
+		if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+			foundUser.ActiveOrg.Id = org.Id
+			apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+			} else {
+				parsedApps := []shuffle.WorkflowApp{}
+				for _, app := range apps {
+					if len(app.Actions) == 0 {
+						continue
+					}
+
+					if !app.Generated {
+						continue
+					}
+
+					parsedApps = append(parsedApps, app)
+				}
+
+				backupJob.Apps = parsedApps
+			}
+		}
+
+		// Send stats once every 10 times or so..?
+		// For now, just send every time 
+		info, err := shuffle.GetOrgStatistics(ctx, org.Id)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Stats = *info
+		}
 	}
 
 	backupJobData, err := json.Marshal(backupJob)
@@ -3867,6 +3892,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
+
 	return nil
 }
 
@@ -4003,6 +4029,8 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
 		time.Sleep(30 * time.Second)
 	}
+
+	// FIXME: This should ONLY run on one backend instance
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
@@ -4147,7 +4175,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		//interval := int(org.SyncConfig.Interval)
-		interval := 15
+		interval := 30 
 		if interval == 0 {
 			log.Printf("[WARNING] Skipping org %s because sync isn't set (0).", org.Id)
 			continue
@@ -4249,17 +4277,17 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					if newresp.StatusCode != 200 {
-						log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d", environment, newresp.StatusCode)
+
+					respBody, err := ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s for execution stop. Status: %d", err, newresp.StatusCode)
 						continue
 					}
 
-					//respBody, err := ioutil.ReadAll(newresp.Body)
-					//if err != nil {
-					//	log.Printf("[ERROR] Failed setting respbody %s", err)
-					//	continue
-					//}
-					//log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+					if newresp.StatusCode != 200 {
+						log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d. Body: %s", environment, newresp.StatusCode, string(respBody))
+						continue
+					}
 
 					url = fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/rerun", backendPort, environment)
 					req, err = http.NewRequest(
@@ -4677,7 +4705,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
 		log.Printf("[WARNING] Org %s is already syncing. Skip", org.Id)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Your org is already syncing. Nothing to set up."}`)))
 		return
 	}
@@ -4754,6 +4782,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
+
+		WorkflowBackup: true,
+		AppBackup: true, 
 	}
 
 	interval := int(responseData.IntervalSeconds)

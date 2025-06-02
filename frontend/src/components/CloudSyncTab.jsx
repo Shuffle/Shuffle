@@ -483,7 +483,7 @@ const CloudSyncTab = (props) => {
                     } else {
                         toast("Cloud Syncronization successfully set up!");
                         setOrgSyncResponse(
-                            "Successfully started syncronization. Cloud features you now have access to can be seen below."
+                            "Successfully started syncronization. Cloud/Hybrid features are available below."
                         );
                     }
 
@@ -541,8 +541,8 @@ const CloudSyncTab = (props) => {
                     Cloud syncronization
                 </Typography>
                 <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400, }}>
-                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach.
-                    </Typography>
+                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach. This will by default back up apps and workflows.
+                </Typography>
             </div>
 
             {isCloud ? (
@@ -714,7 +714,7 @@ const CloudSyncTab = (props) => {
             )}
 
             <Typography variant="h5" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
-                Features
+				{isCloud ? "Cloud" : "Hybrid"} Features
             </Typography>
             <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24, fontSize: 16, fontWeight: 400, marginLeft: 5, color: theme.palette.text.secondary }}>
               Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced.            </Typography>
