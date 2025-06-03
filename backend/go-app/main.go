@@ -3809,6 +3809,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 
 	// Check if it's 1/20 times (600 seconds - 10 min on average)
 	// Only problem: May take time to sync the first time, which is annoying
+	// This is to ensure that we don't spam the shuffle cloud servers with a lot of data
 	shouldBackupData := false
 	randomNumber := rand.Intn(20)
 	if randomNumber == 0 {

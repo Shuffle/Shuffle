@@ -347,7 +347,6 @@ const Hits = ({
     }
   }, [currTab, window.location]);
 
-
   //Function for activation and deactivation of app
   const handleActivateButton = (event, data, type) => {
 
@@ -1205,7 +1204,7 @@ const Apps2 = (props) => {
 
   // Find top categories and tags based on the current tab
   useEffect(() => {
-    if (currTab === 0 || currTab === 1) {
+    if (currTab === 0 || currTab === 1 || currTab === 3) {
       setCategories(findTopCategories());
       setLabels(findTopTags());
     }
@@ -1325,19 +1324,21 @@ const Apps2 = (props) => {
           }
         }
 
-		console.log("BACKUPAPPS: ", backups)
 		if (backups.length > 0) {
 			setBackupApps(backups)
 		}
 
         privateapps.push(...valid);
         privateapps.push(...invalid);
-        console.log("privateapps: setting apps ", privateapps)
+
         setAppsToShow(privateapps);
         setOrgApps(privateapps);
         setApps(privateapps);
 
-        // setFilteredApps(privateapps);
+        //setFilteredApps(privateapps);
+      	const filteredOrgApps = filterApps(privateapps, searchQuery, selectedCategory, selectedLabel);
+      	setAppsToShow(filteredOrgApps)
+
         if (privateapps.length > 0) {
           if (selectedApp?.id === undefined || selectedApp?.id === null) {
             if (privateapps[0]?.owner !== undefined && privateapps[0]?.owner !== null) {
@@ -1345,6 +1346,7 @@ const Apps2 = (props) => {
             }
           }
         }
+
         if (privateapps?.length > 0 && storageApps?.length === 0) {
           try {
             localStorage.setItem("apps", JSON.stringify(privateapps))
@@ -2106,6 +2108,7 @@ const Apps2 = (props) => {
                       </MenuItem>
                     ))}
                   </Select>
+
                   {selectedCategory.length > 0 && (
                     <ClearIcon
                       style={{
@@ -2219,7 +2222,10 @@ const Apps2 = (props) => {
           <div>
 
             {
-              currTab === 0 || currTab === 3 && (
+              currTab !== 0 && currTab !== 3 ? 
+				null 
+				: 
+				(
                 <div style={{ minHeight: 570 }}>
                   {isLoading ? (
                     <LoadingGrid />
