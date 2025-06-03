@@ -52,11 +52,13 @@ import {
 
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
-import BillingStats from "./BillingStats.jsx";
+import BillingStats from "../components/BillingStats.jsx";
+import LicencePopup from "../components/LicencePopup.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
-import DeleteIcon from '@mui/icons-material/Delete';
+
 import { Context } from "../context/ContextApi.jsx";
-import LicencePopup from "./LicencePopup.jsx";
+
+import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid } from "@mui/x-data-grid";
 
 const Billing = memo((props) => {
@@ -2597,64 +2599,87 @@ const Billing = memo((props) => {
 					Utilization & Stats
 				</Typography>
 			</div>
-			 {isChildOrg ? (
-				<BillingStats
-					isCloud={isCloud}
-					clickedFromOrgTab={clickedFromOrgTab}
-					globalUrl={globalUrl}
-					selectedOrganization={selectedOrganization}
-					userdata={userdata}
-				/>
-				): (
-					<>
+				<span>
 					<Tabs
 					value={currentTab}
-					onChange={(event, newValue) => setCurrentTab(newValue)}
+					onChange={(event, newValue) => {
+						setCurrentTab(-1)
+
+						// Force re-render
+						setTimeout(() => {
+							setCurrentTab(newValue)
+						}, 100);
+					}}
 					style={{ marginTop: 20 }}
 					TabIndicatorProps={{
 						style: {
-						height: 3,
-						backgroundColor: theme.palette.primary.main,
-						marginLeft: 12,
-						marginRight: 12,
+							height: 3,
+							backgroundColor: theme.palette.primary.main,
+							marginLeft: 12,
+							marginRight: 12,
 						}
 					}}
 					>
-					<Tab
-						label="Parent Organization"
-						style={{ textTransform: 'none', fontSize: 16, minWidth: 'auto', paddingLeft: 12, paddingRight: 12 }}
-					/>
-					<Tab
-						label="Child Organization"
-						style={{ textTransform: 'none', fontSize: 16, minWidth: 'auto', paddingLeft: 12, paddingRight: 12 }}
-					/>
+						<Tab
+							label="Parent Organization"
+							style={{ textTransform: 'none',}}
+							value={0}
+						/>
+
+						{isCloud ? 
+							<Tab
+								label="Cloud-Synced Stats"
+								style={{ textTransform: 'none', }}
+								value={1}
+							/>
+						: null}
+
+						<Tab
+							label="Child Organization Stats"
+							disabled={isChildOrg}
+							style={{ textTransform: 'none', }}
+							value={2}
+						/>
 					</Tabs>
 
-					{currentTab === 0 ? (
-						<div style={{ marginTop: 30,}}>
-							<BillingStats
-							isCloud={isCloud}
-							clickedFromOrgTab={clickedFromOrgTab}
-							globalUrl={globalUrl}
-							selectedOrganization={selectedOrganization}
-							userdata={userdata}
-						/>
-						</div>
-					): (
-						<BillingStatsChildOrg
-							isCloud={isCloud}
-							clickedFromOrgTab={clickedFromOrgTab}
-							globalUrl={globalUrl}
-							selectedOrganization={selectedOrganization}
-							userdata={userdata}
-							allChildOrgs={allChildOrgs}
-							setAllChildOrgs={setAllChildOrgs}
-							allChildOrgsStats={allChildOrgsStats}
-							setAllChildOrgsStats={setAllChildOrgsStats}
-						/>
-						)}
-					</>
-				)}
+					<div style={{paddingBottom: 200, minHeight: 750, }}>
+						{currentTab === 0 ? 
+							<div style={{ marginTop: 30,}}>
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+								/>
+							</div>
+						: currentTab === 1 ? 
+							<div style={{ marginTop: 30,}}>
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+
+									syncStats={true}
+								/>
+							</div>
+						: 
+							<BillingStatsChildOrg
+								isCloud={isCloud}
+								clickedFromOrgTab={clickedFromOrgTab}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								userdata={userdata}
+								allChildOrgs={allChildOrgs}
+								setAllChildOrgs={setAllChildOrgs}
+								allChildOrgsStats={allChildOrgsStats}
+								setAllChildOrgsStats={setAllChildOrgsStats}
+							/>
+						}
+					</div>
+				</span>
 			</div>
 		</Wrapper>
 	)

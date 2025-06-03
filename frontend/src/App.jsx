@@ -468,7 +468,7 @@ const App = (message, props) => {
 
         	<Route
         	  exact
-        	  path="/AdminSetup"
+        	  path="/adminsetup"
         	  element={
         	    <AdminSetup
         	      isLoaded={isLoaded}

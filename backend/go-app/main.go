@@ -11,17 +11,18 @@ import (
 	"crypto/md5"
 	"strconv"
 
+	"os"
+	"io"
+	"log"
+	"fmt"
+	"errors"
+	"net/url"
+	"os/exec"
+	"net/http"
+	"io/ioutil"
+	"math/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"os/exec"
 
 	"net/http/httptest"
 	"strings"
@@ -35,9 +36,9 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/storage/memory"
 	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -61,6 +62,7 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
+//var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
 	Success         bool                 `json:"success"`
@@ -447,7 +449,7 @@ func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
 	// Returns false if there is an issue
 	// Use this for register
-	err := shuffle.CheckPasswordStrength(password)
+	err := shuffle.CheckPasswordStrength(username, password)
 	if err != nil {
 		log.Printf("[WARNING] Bad password strength: %s", err)
 		return err
@@ -460,8 +462,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	}
 
 	ctx := context.Background()
-	//users, err := FindUser(ctx context.Context, username string) ([]User, error) {
-
 	users, err := shuffle.FindUser(ctx, strings.ToLower(strings.TrimSpace(username)))
 	if err != nil && len(users) == 0 {
 		log.Printf("[WARNING] Failed getting user %s: %s", username, err)
@@ -486,7 +486,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	newUser.Active = true
 	newUser.Orgs = []string{org.Id}
 
-	// FIXME - Remove this later
 	if role == "admin" {
 		newUser.Role = "admin"
 		newUser.Roles = []string{"admin"}
@@ -1852,6 +1851,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	log.Printf("[DEBUG] HOOKS: webhook callback: %s", request.URL.String())
+
 	if request.Method != "POST" {
 		request.Method = "POST"
 	}
@@ -1863,6 +1864,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	path := strings.Split(request.URL.String(), "/")
 	if len(path) < 4 {
+		log.Printf("[DEBUG] HOOKS: Invalid webhook path: %s", request.URL.String())
 		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1878,7 +1880,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	if location[1] == "api" {
 		if len(location) <= 4 {
 			log.Printf("[INFO] Couldn't handle location. Too short in webhook: %d", len(location))
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -1894,6 +1896,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			queries = splitter[1]
 		}
 	}
+
+	log.Printf("[DEBUG] HOOKS: Pre user agent check")
 
 	// Find user agent header
 	userAgent := request.Header.Get("User-Agent")
@@ -1917,8 +1921,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("HookID: %s", hookId)
 	hook, err := shuffle.GetHook(ctx, hookId)
 	if err != nil {
-		log.Printf("[WARNING] Failed getting hook %s (callback): %s", hookId, err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] HOOKS: Failed getting hook %s (callback): %s", hookId, err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -1930,21 +1934,21 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 	//resp.Write([]byte(`{"success": true}`))
 	if hook.Status == "stopped" {
-		log.Printf("[WARNING] Not running %s because hook status is stopped", hook.Id)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] HOOKS: Not running %s because hook status is stopped", hook.Id)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Is it running?"}`)))
 		return
 	}
 
 	if len(hook.Workflows) == 0 {
-		log.Printf("[DEBUG] Not running because hook isn't connected to any workflows")
-		resp.WriteHeader(401)
+		log.Printf("[DEBUG] HOOKS: Not running because hook isn't connected to any workflows")
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
 		return
 	}
 
 	if hook.Environment == "cloud" {
-		log.Printf("[DEBUG] This should trigger in the cloud. Duplicate action allowed onprem.")
+		log.Printf("[DEBUG] HOOKS: This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
 	// Check auth
@@ -1960,7 +1964,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("[DEBUG] Body data error: %s", err)
+		log.Printf("[DEBUG] HOOKS: data read error: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2001,7 +2005,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(newBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed newBody marshaling for webhook: %s", err)
+		log.Printf("[ERROR] HOOKS: Failed newBody marshaling for webhook: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2017,7 +2021,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(hook.Start) == 0 {
-			log.Printf("[WARNING] No start node for hook %s - running with workflow default.", hook.Id)
+			log.Printf("[ERROR] HOOKS: No start node for hook %s - running with workflow default.", hook.Id)
 			//bodyWrapper = string(parsedBody)
 		}
 
@@ -2029,7 +2033,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
-
 		if err == nil {
 			if hook.Version == "v2" {
 				timeout := 15
@@ -2064,12 +2067,17 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			} else {
 				resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
 			}
+
 			return
 		}
 
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
 	}
+
+	log.Printf("[ERROR] HOOKS: END OF FUNCTION FOR '%s'. IF this is reached, something went wrong.", hook.Id)
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false, "reason": "Failed to run workflow. Check logs."}`))
 
 }
 
@@ -3087,7 +3095,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			return
 		}
 
-		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id)  {
+		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id) {
 			log.Printf("[DEBUG] Editing app %s with user %s (%s) in org %s", test.Id, user.Username, user.Id, user.ActiveOrg.Id)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
@@ -3374,7 +3382,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			}
 		}
 	}
-
 
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
@@ -3799,30 +3806,56 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 	}
 
-	if org.SyncConfig.WorkflowBackup {
-		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
-		if err != nil {
-			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
-		} else {
-			backupJob.Workflows = workflows
-		}
+	// Check if it's 1/20 times (600 seconds - 10 min on average)
+	// Only problem: May take time to sync the first time, which is annoying
+	shouldBackupData := false
+	randomNumber := rand.Intn(20)
+	if randomNumber == 0 {
+		shouldBackupData = true
 	}
 
-	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
-
-		apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
-		} else {
-			backupJob.Apps = apps
+	// Just to prevent it from spamming large outbound requests
+	if shouldBackupData { 
+		if org.SyncConfig.WorkflowBackup {
+			workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
+			if err != nil {
+				log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+			} else {
+				backupJob.Workflows = workflows
+			}
 		}
-	}
 
-	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
-	} else {
-		backupJob.Stats = *info
+		if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+			foundUser.ActiveOrg.Id = org.Id
+			apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+			} else {
+				parsedApps := []shuffle.WorkflowApp{}
+				for _, app := range apps {
+					if len(app.Actions) == 0 {
+						continue
+					}
+
+					if !app.Generated {
+						continue
+					}
+
+					parsedApps = append(parsedApps, app)
+				}
+
+				backupJob.Apps = parsedApps
+			}
+		}
+
+		// Send stats once every 10 times or so..?
+		// For now, just send every time 
+		info, err := shuffle.GetOrgStatistics(ctx, org.Id)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Stats = *info
+		}
 	}
 
 	backupJobData, err := json.Marshal(backupJob)
@@ -3859,6 +3892,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
+
 	return nil
 }
 
@@ -3995,6 +4029,8 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
 		time.Sleep(30 * time.Second)
 	}
+
+	// FIXME: This should ONLY run on one backend instance
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
@@ -4139,7 +4175,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		//interval := int(org.SyncConfig.Interval)
-		interval := 15
+		interval := 30 
 		if interval == 0 {
 			log.Printf("[WARNING] Skipping org %s because sync isn't set (0).", org.Id)
 			continue
@@ -4241,17 +4277,20 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					if newresp.StatusCode != 200 {
-						log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d", environment, newresp.StatusCode)
+
+					respBody, err := ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s for execution stop. Status: %d", err, newresp.StatusCode)
 						continue
 					}
 
-					//respBody, err := ioutil.ReadAll(newresp.Body)
-					//if err != nil {
-					//	log.Printf("[ERROR] Failed setting respbody %s", err)
-					//	continue
-					//}
-					//log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+					if newresp.StatusCode != 200 {
+						if !strings.Contains(string(respBody), "is active") {
+							log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d. Body: %s", environment, newresp.StatusCode, string(respBody))
+						}
+
+						continue
+					}
 
 					url = fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/rerun", backendPort, environment)
 					req, err = http.NewRequest(
@@ -4377,7 +4416,7 @@ func runInitEs(ctx context.Context) {
 	}
 
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 60 
+		healthcheckInterval := 60
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats, and dashboard on /health. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter
@@ -4669,7 +4708,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
 		log.Printf("[WARNING] Org %s is already syncing. Skip", org.Id)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Your org is already syncing. Nothing to set up."}`)))
 		return
 	}
@@ -4746,6 +4785,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
+
+		WorkflowBackup: true,
+		AppBackup: true, 
 	}
 
 	interval := int(responseData.IntervalSeconds)

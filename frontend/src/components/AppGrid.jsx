@@ -53,7 +53,7 @@ import {
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "db08e40265e2941b9a7d8f644b6e5240"
+  "c8f882473ff42d41158430be09ec2b4e"
 );
 //const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
 

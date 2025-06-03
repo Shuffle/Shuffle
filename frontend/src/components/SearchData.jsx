@@ -47,7 +47,7 @@ const chipStyle = {
     backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const SearchData = props => {
     const { serverside, globalUrl, userdata } = props
     let navigate = useNavigate();

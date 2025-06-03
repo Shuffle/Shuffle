@@ -111,7 +111,7 @@ import { removeQuery } from "../components/ScrollToTop.jsx";
 import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240");
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
 
 const svgSize = 24;
 const imagesize = 22;
@@ -678,6 +678,7 @@ const Workflows2 = (props) => {
     var upload = "";
 
     const [workflows, setWorkflows] = React.useState([]);
+    const [backupWorkflows, setBackupWorkflows] = React.useState([]);
     const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
     const [selectedUsecases, setSelectedUsecases] = React.useState([]);
     const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
@@ -756,7 +757,8 @@ const Workflows2 = (props) => {
         const tabMapping = {
             0: 'org_workflows',
             1: 'my_workflows',
-            2: 'all_workflows'
+            2: 'all_workflows',
+            3: 'backup_apps',
         };
         const queryParams = new URLSearchParams(location.search);
         queryParams.set('tab', tabMapping[newValue]);
@@ -1107,23 +1109,31 @@ const Workflows2 = (props) => {
                 setSelectedWorkflowId("");
             }}
             PaperProps={{
-                style: {
-                    backgroundColor: theme.palette.surfaceColor,
-                    color: "white",
-                    minWidth: 500,
-                    padding: 50,
-                },
-            }}
+                sx: {
+                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                    border: theme?.palette?.DialogStyle?.border,
+                    minWidth: '440px',
+                    fontFamily: theme?.typography?.fontFamily,
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    zIndex: 1000,
+                    '& .MuiDialogContent-root': {
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogTitle-root': {
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                }
+                }}
         >
             <DialogTitle>
-                <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
+                <div style={{ textAlign: "center", color: theme.palette.DialogStyle?.color }}>
                     Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId)?.name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
 
                     Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working
                 </div>
             </DialogTitle>
             <DialogContent
-                style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+                style={{ color: theme.palette.DialogStyle.color, textAlign: "center" }}
             >
                 <Button
                     style={{}}
@@ -1216,7 +1226,7 @@ const Workflows2 = (props) => {
 							data.status
 						).then((response) => {
 							if (response !== undefined) {
-								toast(`Successfully imported ${data.name}`);
+								toast.success(`Successfully imported ${data.name}`);
 							}
 						});
 					}
@@ -1341,20 +1351,32 @@ const Workflows2 = (props) => {
                         // When there are no workflows, we can set the loading to false
                         setIsLoadingWorkflow(false)
 						if (currTab !== 2) {
-							toast("No workflows found. Showing workflow discovery")
+							toast.info("No workflows found in this org. Feel free to look into our public workflows!" , {
+								timeout: 7500,
+							})
 							setCurrTab(2)
 						}
 					}
 
                     var newarray = []
+					var backupWf = []
                     for (var wfkey in responseJson) {
                         const wf = responseJson[wfkey]
                         if (wf.public === true || wf.hidden === true) {
                             continue
                         }
 
+						if (wf?.backup_config?.onprem_backup === true) {
+							backupWf.push(wf)
+							continue
+						}
+
                         newarray.push(wf)
                     }
+
+					if (backupWf.length > 0) {
+						setBackupWorkflows(backupWf)
+					}
 
                     var setProdFilter = false
 
@@ -2073,7 +2095,7 @@ const Workflows2 = (props) => {
 					}
                 } else {
                     if (bulk !== true) {
-                        toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
+                        toast.success(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
                     }
                 }
 
@@ -2087,7 +2109,7 @@ const Workflows2 = (props) => {
                 }
             })
             .catch((error) => {
-                toast(error.toString());
+                toast.error(error.toString());
             })
     }
 
@@ -3040,7 +3062,7 @@ const Workflows2 = (props) => {
                                     data.status,
                                 ).then((response) => {
                                     if (response !== undefined) {
-                                        toast("Successfully imported " + data.name);
+                                        toast.success("Imported " + data.name);
                                     }
                                 });
                             }
@@ -4322,6 +4344,17 @@ const Workflows2 = (props) => {
                                     }}
                                 />
 
+								{backupWorkflows.length > 0 &&
+									<Tab
+										label={`Onprem Backup (${backupWorkflows.length})`}
+										style={{
+											...tabStyle,
+											marginLeft: 25, 
+											...(currTab === 3 ? tabActive : {})
+										}}
+									/>
+								}
+
                                 <Tab
                                     label="Org Forms"
 									onClick={() => {
@@ -4331,7 +4364,7 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
 										marginLeft: 25, 
-                                        ...(currTab === 3 ? tabActive : {})
+                                        ...(currTab === 4 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>
@@ -4666,9 +4699,28 @@ const Workflows2 = (props) => {
                                                 paddingBottom: 40
                                             }}>
 
-
-
                                                 {currTab === 0 && orgWorkflows.map((data, index) => {
+                                                    // Shouldn't be a part of this list
+                                                    if (data.public === true) {
+                                                        return null
+                                                    }
+
+                                                    // if (firstLoad) {
+                                                    //     workflowDelay += 75
+                                                    // } else {
+                                                    //     return <WorkflowPaper key={index} data={data} />
+                                                    // }
+
+                                                    return (
+                                                        <span key={index}>
+                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+                                                            <WorkflowPaper data={data} />
+                                                            {/*</Zoom>*/}
+                                                        </span>
+                                                    )
+                                                })}
+
+                                                {currTab === 3 && backupWorkflows.map((data, index) => {
                                                     // Shouldn't be a part of this list
                                                     if (data.public === true) {
                                                         return null
@@ -5134,7 +5186,9 @@ const Workflows2 = (props) => {
                 }}
             >
                 <CircularProgress />
-                <Typography>Loading Workflows</Typography>
+                <Typography style={{marginTop: 5, }}>
+					Loading Workflows and Apps
+				</Typography>
             </div>
         );
 

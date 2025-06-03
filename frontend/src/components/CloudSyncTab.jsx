@@ -48,15 +48,21 @@ const CloudSyncTab = (props) => {
     const [, forceUpdate] = React.useState();
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
+
     const { themeMode, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
+
     useEffect(() => { getSettings(); }, []);
+
     const GridItem = (props) => {
         const [expanded, setExpanded] = React.useState(false);
         const [showEdit, setShowEdit] = React.useState(false);
         const [newValue, setNewValue] = React.useState(-100);
 
-        const primary = props.data.primary;
+        var primary = props.data.primary
+
+		const shownName = props.data.newname !== undefined && props.data.newname !== null && props.data.newname !== primary ? props.data.newname : primary
+
         const secondary = props.data.secondary;
         const primaryIcon = props.data.icon;
         const secondaryIcon = props.data.active ?
@@ -191,7 +197,7 @@ const CloudSyncTab = (props) => {
                         </ListItemAvatar>
                         <ListItemText
                             style={{ textTransform: "capitalize", color: theme.palette.text.primary, fontSize: 14, fontWeight: 400, }}
-                            primary={primary}
+                            primary={shownName}
                         />
                         {isCloud && userdata.support === true ?
                             <Tooltip title="Edit features (support users only)">
@@ -477,7 +483,7 @@ const CloudSyncTab = (props) => {
                     } else {
                         toast("Cloud Syncronization successfully set up!");
                         setOrgSyncResponse(
-                            "Successfully started syncronization. Cloud features you now have access to can be seen below."
+                            "Successfully started syncronization. Cloud/Hybrid features are available below."
                         );
                     }
 
@@ -535,8 +541,8 @@ const CloudSyncTab = (props) => {
                     Cloud syncronization
                 </Typography>
                 <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400, }}>
-                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach.
-                    </Typography>
+                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach. This will by default back up apps and workflows.
+                </Typography>
             </div>
 
             {isCloud ? (
@@ -708,7 +714,7 @@ const CloudSyncTab = (props) => {
             )}
 
             <Typography variant="h5" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
-                Features
+				{isCloud ? "Cloud" : "Hybrid"} Features
             </Typography>
             <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24, fontSize: 16, fontWeight: 400, marginLeft: 5, color: theme.palette.text.secondary }}>
               Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced.            </Typography>
@@ -717,7 +723,9 @@ const CloudSyncTab = (props) => {
                 {selectedOrganization.sync_features === undefined ||
                     selectedOrganization.sync_features === null
                     ? <Grid container spacing={2} justifyContent="center">
+
                     {[...Array(18)].map((_, i) => (
+
                         <Grid item xs={12} sm={6} md={4} key={i}>
                             <div
                                 style={{
@@ -756,6 +764,13 @@ const CloudSyncTab = (props) => {
                         }
 
                         const newkey = key.replaceAll("_", " ");
+
+						// Rewrites to frontend names
+						var newname = newkey
+						if (newkey === "app executions") {
+							newname = "app runs"
+						}
+
                         const griditem = {
                             primary: newkey,
                             secondary:
@@ -770,6 +785,8 @@ const CloudSyncTab = (props) => {
                             data_collection: "None",
                             active: item.active,
                             icon: <PolylineIcon style={{ color: "#1a1a1a" }} />,
+
+							newname: newname,
                         };
 
                         return (

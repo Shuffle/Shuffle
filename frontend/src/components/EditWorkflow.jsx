@@ -188,7 +188,7 @@ const EditWorkflow = (props) => {
 	}
 
 	const newWorkflow = isEditing === true ? false : true
-	const priority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+	const priority = userdata === undefined || userdata === null || userdata.priorities === null || userdata.priorities === undefined ? null : userdata?.priorities?.find(prio => prio.type === "usecase" && prio.active === true)
 	var upload = "";
 	var total_count = 0
 
@@ -226,8 +226,8 @@ const EditWorkflow = (props) => {
 				<div style={{ display: "flex" }}>
 					<div style={{ flex: 1, color: theme.palette.textColor }}>
 						<div style={{ display: "flex" }}>
-							<Typography variant="h4" style={{ flex: 9, }}>
-								{newWorkflow ? "New" : "Editing"} workflow
+							<Typography variant="h4" style={{ flex: 9, marginTop: 25, }}>
+								{newWorkflow ? "New" : "Editing"} Workflow
 							</Typography>
 
 							{newWorkflow === true ? null :
@@ -393,7 +393,7 @@ const EditWorkflow = (props) => {
 					</Button>
 				</div>
 
-				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, paddingLeft: "50px" }}>
+				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 400, paddingLeft: 50, }}>
 					<div style={{ minWidth: newWorkflow ? 500 : 550, maxWidth: newWorkflow ? 450 : 500, }}>
 						<TextField
 							onChange={(event) => {

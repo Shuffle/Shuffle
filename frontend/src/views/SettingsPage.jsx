@@ -458,7 +458,12 @@ const Settings = (props) => {
           if (responseJson["success"] === false) {
             setPasswordFormMessage(responseJson["reason"]);
           } else {
-            toast("Changed password!");
+			var reason = ""
+			if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+				reason += responseJson.reason
+			}
+
+            toast.success("Changed password! " + reason);
             setPasswordFormMessage("");
           }
         })

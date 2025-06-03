@@ -1127,7 +1127,6 @@ const LicencePopup = (props) => {
         color: "white",
     }
 
-    console.log("Priceitem: ", shuffleVariant)
     // const isLoggedInHandler = () => {
     //     if (calculatedCost === payasyougo) {
     //         handlePayasyougo(props.userdata)
@@ -1237,12 +1236,11 @@ const LicencePopup = (props) => {
           });
       };
 
-      console.log("Selected Organization: ", selectedOrganization.subscriptions)
     return (
         <div>
             <Grid container spacing={2} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>
                 <Grid item maxWidth={licensePopup ? 400 : 450}>
-                    {selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0 ?
+                    {(selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0) && isCloud ?
                         <SubscriptionObject
                             index={0}
                             globalUrl={globalUrl}

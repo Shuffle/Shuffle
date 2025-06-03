@@ -1,3 +1,11 @@
 # No extra requirements needed
-requests
-urllib3
+requests==2.32.3
+urllib3==2.3.0
+liquidpy==0.8.2
+MarkupSafe==3.0.2
+flask[async]==3.1.0
+python-dateutil==2.9.0.post0
+PyJWT==2.10.1
+cryptography==44.0.2
+shufflepy==0.1.0
+shuffle-sdk==0.0.25

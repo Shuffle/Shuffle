@@ -1359,7 +1359,7 @@ const UserManagmentTab = memo((props) => {
                 }}
             >
                 <ListItem style={{ width: "100%", padding: "10px 10px 10px 0px", verticalAlign: 'middle', borderBottom: theme.palette.defaultBorder, display: "table-row" }}>
-                    {["Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
+                    {["Region", "Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -1459,8 +1459,40 @@ const UserManagmentTab = memo((props) => {
                             );
                         }
 
+                        const getRegionFlag = (region_url) => {
+                            let regiontag = "UK";
+                            let regionCode = "gb";
+                            const regionsplit = region_url?.split(".");
+                            if (regionsplit?.length > 2 && !regionsplit[0]?.includes("shuffler")) {
+                                const namesplit = regionsplit[0]?.split("/");
+                                regiontag = namesplit[namesplit?.length - 1];
+
+                                if (regiontag === "california") {
+                                    regiontag = "US";
+                                    regionCode = "us";
+                                } else if (regiontag === "frankfurt") {
+                                    regiontag = "EU-2";
+                                    regionCode = "eu";
+                                } else if (regiontag === "ca") {
+                                    regiontag = "CA";
+                                    regionCode = "ca";
+                                }else if (regiontag === "au") {
+                                    regiontag = "AUS";
+                                    regionCode = "au"
+                                }
+                            }
+                            
+                            return regionCode;
+                        };
+
+                        const userRegion = data?.user_geo_info?.country?.iso_code?.length > 0 ? data?.user_geo_info?.country?.iso_code :   data?.active_org?.region_url?.length > 0 ? getRegionFlag(data?.active_org?.region_url) : "eu";
+
                         return (
                             <ListItem key={index} style={{ backgroundColor: bgColor, display: 'table-row', borderBottomLeftRadius: users?.length - 1 === index ? 8 : 0, borderBottomRightRadius: users?.length - 1 === index ? 8 : 0 }}>
+                                <ListItemText
+                                    primary={(<img src={`https://flagcdn.com/48x36/${userRegion.toLowerCase()}.png`} alt={data?.user_geo_info?.country?.iso_code} style={{ marginRight: 30, width: 25, height: 23, }} />)}
+                                    style={{ display: 'table-cell', verticalAlign: 'middle', textAlign: 'center' }}
+                                />
                                 <ListItemText
                                 primary={(
                                     <Tooltip title={data.username || 'No username available'}>

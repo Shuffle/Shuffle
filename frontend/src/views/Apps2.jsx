@@ -46,7 +46,7 @@ import AppCreationModal from "../components/AppCreationModal.jsx";
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "db08e40265e2941b9a7d8f644b6e5240"
+  "c8f882473ff42d41158430be09ec2b4e"
 );
 
 // AppCard Component
@@ -1122,6 +1122,7 @@ const Apps2 = (props) => {
   const [defaultSearch, setDefaultSearch] = useState("");
 
   const [apps, setApps] = useState([]);
+  const [backupApps, setBackupApps] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
   const [appSearchLoading, setAppSearchLoading] = useState(false);
   const [creatorProfile, setCreatorProfile] = useState({});
@@ -1198,57 +1199,9 @@ const Apps2 = (props) => {
     getFramework();
   }, []);
 
-  // Fetch apps based on the current tab : 0 -> org_apps, 1 -> my_apps, 2 -> all_apps
-  const fetchApps = async () => {
-    const baseUrl = globalUrl;
-    let url;
-    setIsLoading(true);
-    const userId = userdata?.id;
-    if (currTab === 1 && userId) {
-      url = `${baseUrl}/api/v1/users/${userId}/apps`;
-    } else if (currTab === 0) {
-      url = `${baseUrl}/api/v1/apps`;
-    }
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await response.json();
-      if (currTab === 1) {
-        setAppsToShow(data);
-        setUserApps(data);
-      } else if (currTab === 0) {
-        setAppsToShow(data);
-        setOrgApps(data);
-        // For testing the empty state
-        // setAppsToShow([]);
-        // setOrgApps([]);
-      }
-      setIsLoading(false);
-    } catch (err) {
-      console.error("Error fetching apps:", err);
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-
-    // Only fetch if we have required data
-    if (globalUrl && (currTab === 0 || (currTab === 1 && userdata?.id))) {
-      fetchApps();
-    }
-  }, [currTab, globalUrl, userdata?.id]); // Remove location.search dependency
-
-  // useEffect(() => {
-  //   // setSearchQuery("");
-  //   setSelectedCategory([]);
-  //   setSelectedLabel([]);
-  // }, [currTab])
-
+	  getApps()
+  }, [])
 
   // Find top categories and tags based on the current tab
   useEffect(() => {
@@ -1293,11 +1246,13 @@ const Apps2 = (props) => {
       });
   };
 
+  /*
   useEffect(() => {
     if (serverside) {
       return null;
     }
   }, [serverside]);
+  */
 
   const getApps = () => {
     // Get apps from localstorage
@@ -1308,7 +1263,7 @@ const Apps2 = (props) => {
       if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
         storageApps = []
       } else {
-        setAppsToShow(storageApps)
+        //setAppsToShow(storageApps)
         setOrgApps(storageApps)
         setApps(storageApps)
         // setFilteredApps(storageApps)
@@ -1344,24 +1299,36 @@ const Apps2 = (props) => {
         var privateapps = [];
         var valid = [];
         var invalid = [];
+
+		var backups = [] 
         for (var key in responseJson) {
           const app = responseJson[key];
 
-          if (app.categories !== undefined && app.categories !== null && app?.categories.includes("Eradication")) {
+		  if (app?.reference_info?.onprem_backup === true) {
+			  backups.push(app)
+			  continue
+		  }
+
+          if (app?.categories !== undefined && app?.categories !== null && app?.categories?.includes("Eradication")) {
             app.categories = ["EDR"]
           }
 
-          if (app.is_valid && !(!app.activated && app.generated)) {
+          if (app?.is_valid && !(!app?.activated && app?.generated)) {
             privateapps.push(app);
           } else if (
-            app.private_id !== undefined &&
-            app.private_id.length > 0
+            app?.private_id !== undefined &&
+            app?.private_id.length > 0
           ) {
             valid.push(app);
           } else {
             invalid.push(app);
           }
         }
+
+		console.log("BACKUPAPPS: ", backups)
+		if (backups.length > 0) {
+			setBackupApps(backups)
+		}
 
         privateapps.push(...valid);
         privateapps.push(...invalid);
@@ -1372,39 +1339,22 @@ const Apps2 = (props) => {
 
         // setFilteredApps(privateapps);
         if (privateapps.length > 0) {
-          if (selectedApp.id === undefined || selectedApp.id === null) {
-            if (privateapps[0].owner !== undefined && privateapps[0].owner !== null) {
-              getUserProfile(privateapps[0].owner);
+          if (selectedApp?.id === undefined || selectedApp?.id === null) {
+            if (privateapps[0]?.owner !== undefined && privateapps[0]?.owner !== null) {
+              getUserProfile(privateapps[0]?.owner);
             }
-
-            // setContact(privateapps[0].contact_info)
-
-            // setSelectedApp(privateapps[0]);
-            // setSharingConfiguration(privateapps[0].sharing === true ? "public" : "you")
           }
-
-          // if (
-          //   privateapps[0].actions !== null &&
-          //   privateapps[0].actions.length > 0
-          // ) {
-          //   setSelectedAction(privateapps[0].actions[0]);
-          // } else {
-          //   setSelectedAction({});
-          // }
         }
-        if (privateapps.length > 0 && storageApps.length === 0) {
+        if (privateapps?.length > 0 && storageApps?.length === 0) {
           try {
             localStorage.setItem("apps", JSON.stringify(privateapps))
           } catch (e) {
             console.log("Failed to set apps in localstorage: ", e)
           }
         }
-
-        //setTimeout(() => {
-        //	setFirstLoad(false)
-        //}, 5000)
       })
       .catch((error) => {
+		console.log("Failed to get apps: ", error.toString());
         toast(error.toString());
         setIsLoading(false);
       });
@@ -1780,7 +1730,6 @@ const Apps2 = (props) => {
     // setOpenModal(true);
   };
 
-
   useEffect(() => {
     const apps = currTab === 1 ? userApps : orgApps;
     const filteredUserAppdata = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
@@ -1798,33 +1747,38 @@ const Apps2 = (props) => {
     } else if (newTab === 1) {
       const filteredUserApps = filterApps(userApps, searchQuery, selectedCategory, selectedLabel);
       setAppsToShow(filteredUserApps);
-    }
+    } else if (newTab === 3) {
+      const filteredUserApps = filterApps(backupApps, searchQuery, selectedCategory, selectedLabel);
+      setAppsToShow(filteredUserApps);
+	  return
+	}
 
     // Update URL query params based on tab index
     const tabMapping = {
       0: 'org_apps',
       1: 'my_apps',
-      2: 'all_apps'
+      2: 'all_apps',
+      3: 'backup_apps',
     };
 
-    const queryParams = new URLSearchParams(location.search);
-    queryParams.set('tab', tabMapping[newTab]);
+	const queryParams = new URLSearchParams(location.search);
+	queryParams.set('tab', tabMapping[newTab]);
 
-    // Maintain search query in URL regardless of tab
-    if (searchQuery) {
-      queryParams.set('q', searchQuery);
-    } else {
-      queryParams.delete('q');
-    }
+	// Maintain search query in URL regardless of tab
+	if (searchQuery) {
+	  queryParams.set('q', searchQuery);
+	} else {
+	  queryParams.delete('q');
+	}
 
-    navigate(`${location.pathname}?${queryParams.toString()}`);
+	navigate(`${location.pathname}?${queryParams.toString()}`);
   };
 
   // Update useEffect for filtering without URL manipulation
   useEffect(() => {
     if (currTab === 2) return; // Skip for "Discover Apps" tab as it uses Algolia
 
-    const apps = currTab === 1 ? userApps : orgApps;
+    const apps = currTab === 1 ? userApps : currTab === 3 ? backupApps : orgApps;
     const filteredApps = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
     setAppsToShow(filteredApps);
   }, [searchQuery, selectedCategory, selectedLabel, currTab, userApps, orgApps]);
@@ -1914,7 +1868,7 @@ const Apps2 = (props) => {
         <div style={boxStyle}>
           <div style={{ display: "flex", flexDirection: "row", width: "100%", justifyContent: "space-between" }}>
             <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
-				{currTab === 0 ? "Org" : currTab === 1 ?  "Your" : "Discover"} Apps
+				{currTab === 0 ? "Org" : currTab === 1 ? "Your" : currTab === 3 ? "Backup" :  "Discover"} Apps
             </Typography>
             {isCloud ? null : (
               <span style={{ display: "flex", gap: 15 }}>
@@ -1940,7 +1894,7 @@ const Apps2 = (props) => {
                       style={{
                         height: 45,
                         minWidth: 45,
-                        backgroundColor: "#2F2F2F",
+                        backgroundColor: theme.palette.platformColor,
                         borderRadius: 4,
                         padding: "8px 16px",
                       }}
@@ -1950,9 +1904,9 @@ const Apps2 = (props) => {
                       }}
                     >
                       {isLoading ? (
-                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                        <CircularProgress size={20} style={{ color: theme.palette.primary.main }} />
                       ) : (
-                        <CachedIcon style={{ color: "#F1F1F1" }} />
+                        <CachedIcon style={{ color: theme.palette.text.primary }} />
                       )}
                     </Button>
                   </Tooltip>
@@ -1980,7 +1934,7 @@ const Apps2 = (props) => {
                       style={{
                         height: 45,
                         minWidth: 45,
-                        backgroundColor: "#2F2F2F",
+                        backgroundColor: theme.palette.platformColor,
                         borderRadius: 4,
                         padding: "8px 16px",
                       }}
@@ -1992,9 +1946,9 @@ const Apps2 = (props) => {
                       }}
                     >
                       {isLoading ? (
-                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                        <CircularProgress size={20} style={{ color: theme.palette.primary.main }} />
                       ) : (
-                        <CloudDownloadIcon style={{ color: "#F1F1F1" }} />
+                        <CloudDownloadIcon style={{ color: theme.palette.text.primary }} />
                       )}
                     </Button>
                   </Tooltip>
@@ -2027,6 +1981,7 @@ const Apps2 = (props) => {
                   ...(currTab === 1 ? tabActive : {})
                 }}
               />
+
               <Tab
                 label="Discover Public Apps"
                 style={{
@@ -2035,6 +1990,17 @@ const Apps2 = (props) => {
                   ...(currTab === 2 ? tabActive : {})
                 }}
               />
+
+				{backupApps.length > 0 &&
+					<Tab
+						label={`Onprem Backup (${backupApps.length})`}
+						style={{
+							...tabStyle,
+							marginLeft: 25, 
+							...(currTab === 3 ? tabActive : {})
+						}}
+					/>
+				}
             </Tabs>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, height: 45, paddingRight: 25 }}>
@@ -2043,7 +2009,7 @@ const Apps2 = (props) => {
               minWidth: "25%",
               maxWidth: "25%"
             }}>
-              {(currTab === 0 || currTab === 1) ? (
+              {(currTab === 0 || currTab === 1 || currTab === 3) ? (
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -2253,7 +2219,7 @@ const Apps2 = (props) => {
           <div>
 
             {
-              currTab === 0 && (
+              currTab === 0 || currTab === 3 && (
                 <div style={{ minHeight: 570 }}>
                   {isLoading ? (
                     <LoadingGrid />
@@ -2285,7 +2251,7 @@ const Apps2 = (props) => {
                                 handleAppClick={handleAppClick}
                                 leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 userdata={userdata}
-                                fetchApps={fetchApps}
+                                fetchApps={getApps}
 
 								setUserApps={setUserApps}
 								appsToShow={appsToShow}
@@ -2338,7 +2304,7 @@ const Apps2 = (props) => {
                             {appsToShow.map((data, index) => (
                               <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
                                 handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
-                                fetchApps={fetchApps}
+                                fetchApps={getApps}
 								setUserApps={setUserApps}
 								appsToShow={appsToShow}
 								setAppsToShow={setAppsToShow}

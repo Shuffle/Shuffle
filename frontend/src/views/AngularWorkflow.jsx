@@ -438,7 +438,7 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const AngularWorkflow = (defaultprops) => {
   const { globalUrl, setCookie, isLoggedIn, isLoaded, userdata, data_id, ReactGA, } = defaultprops;
   const {themeMode, supportEmail, brandColor} = useContext(Context)
@@ -790,7 +790,7 @@ const AngularWorkflow = (defaultprops) => {
       },
       {
         "name": "fields",
-        "value": "",
+        "value": '{\n  "ticket_id": "123456",\n  "comment": "This is a comment"\n}',
         "required": false,
         "multiline": true,
       },
@@ -3572,6 +3572,12 @@ const AngularWorkflow = (defaultprops) => {
 			const curapp = responseJson[key]
 			if (curapp?.actions === undefined || curapp?.actions === null || curapp?.actions?.length === 0 || curapp?.actions?.length === 1) {
         		loadAppConfig(curapp?.id, false, true)
+			}
+
+			if (key > 10) {
+				console.log("Breaking on 10 sideloads of total", responseJson.length)
+				break
+
 			}
 		}
 
@@ -7000,7 +7006,11 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false) {
-          toast("Failed to auto-activate the app. Go to /apps and activate it.")
+			if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+          		toast.error("Failed to auto-activate the app: " + responseJson.reason)
+			} else {
+          		toast.error("Failed to auto-activate the app. Go to /apps and activate it.")
+			}
         } else {
           if (refresh === true) {
             setHighlightedApp(appid)
@@ -10312,7 +10322,7 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-    toast("Creating schedule")
+    toast.info("Creating schedule")
     var data = {
       name: trigger.name,
       frequency: workflow.triggers[triggerindex].parameters[0].value,
@@ -10361,9 +10371,9 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          toast("Failed to set schedule: " + responseJson.reason);
+          toast.error("Failed to set schedule: " + responseJson.reason);
         } else {
-          toast("Successfully created schedule");
+          toast.success("Successfully created schedule");
           workflow.triggers[triggerindex].status = "running";
           trigger.status = "running";
           setSelectedTrigger(trigger);
@@ -11852,7 +11862,7 @@ const AngularWorkflow = (defaultprops) => {
         if (queryID !== undefined && queryID !== null) {
           aa('init', {
             appId: "JNSS5CFDZZ",
-            apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+            apiKey: "c8f882473ff42d41158430be09ec2b4e",
           })
 
           const timestamp = new Date().getTime()
@@ -11876,8 +11886,9 @@ const AngularWorkflow = (defaultprops) => {
 
       var type = "app"
       const baseImage = <LibraryBooksIcon />
+	  const width = 230
       return (
-        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: theme.palette.textColor, zIndex: 1001, backgroundColor: theme.palette.textFieldStyle.backgroundColor, minWidth: leftBarSize+30, maxWidth: 340, boxShadows: "none", overflowX: "hidden", }}>
+        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: theme.palette.textColor, zIndex: 1001, backgroundColor: theme.palette.textFieldStyle.backgroundColor, /*minWidth: leftBarSize+30,*/ minWidth: width, maxWidth: width, boxShadows: "none", overflowX: "hidden", }}>
           <List style={{ backgroundColor: theme.palette.inputColor, }}>
             {hits.length === 0 ?
               <ListItem style={outerlistitemStyle}>
@@ -11971,7 +11982,7 @@ const AngularWorkflow = (defaultprops) => {
                     }}
                     defaultPosition={{ x: 0, y: 0 }}
                   >
-                    <div style={{ textDecoration: "none", color: theme.palette.text.primary, }} onClick={(event) => {
+                    <div style={{ overflow: "hidden", textDecoration: "none", color: theme.palette.text.primary, }} onClick={(event) => {
                       clickedApp(hit)
 
                     }}>
@@ -12125,7 +12136,12 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 if ((app.id === "integration" || app.id === "shuffle_agent") && userdata.support !== true) {
-                  return null
+					console.log("APPID: ", app.id, isCloud)
+					if (isCloud === false && app.id === "integration") {
+					} else {
+						console.log("RETURNING", app.id)
+                  		return null
+					}
                 }
 
                 if (viewedApps.includes(app.id)) {
@@ -12190,7 +12206,7 @@ const AngularWorkflow = (defaultprops) => {
             </div>
           ) : apps.length > 0 ? (
             <div
-              style={{ textAlign: "center", width: leftBarSize, marginTop: 10, marginLeft: 5, marginRight: 5, }}
+              style={{ textAlign: "center", width: leftBarSize, marginTop: 25, marginLeft: 10 , marginRight: 10, }}
               onLoad={() => {
                 console.log("Should load in extra apps?")
               }}
@@ -12198,6 +12214,7 @@ const AngularWorkflow = (defaultprops) => {
               <Typography variant="body1" color="textSecondary">
                 Couldn't find the apps you were looking for? Searching unactivated apps. Click one of these apps to Activate it for your organisation.
               </Typography>
+
               <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
                 console.log("CLICKED")
               }}>
@@ -13021,7 +13038,7 @@ const AngularWorkflow = (defaultprops) => {
                       event.preventDefault()
                       setExpansionModalOpen(true)
                       setActiveDialog("codeeditor")
-                      navigate(`?condition_id=${data.id}&field=${data.name}`)
+                      navigate(`?condition_id=${data.id}&condition_field=${data.name}`)
                       setEditorData({
                         "name": data.name,
                         "value": data.value || "",
@@ -13106,9 +13123,9 @@ const AngularWorkflow = (defaultprops) => {
         
           // Update the field value based on type
           if (type === "source") {
-            handleConditionFieldChange("source", "value", toComplete);
+            handleConditionFieldChange("source", toComplete);
           } else if (type === "destination") {
-            handleConditionFieldChange("destination", "value", toComplete);
+            handleConditionFieldChange("destination", toComplete);
           }
         
           handleMenuClose();
@@ -13985,7 +14002,7 @@ const AngularWorkflow = (defaultprops) => {
       />
     </Dialog>
 
-  const handleConditionFieldChange = (fieldType, fieldName, value) => {
+  const handleConditionFieldChange = (fieldType, value) => {
     if (fieldType === "source") {
       setSourceValue({
         ...sourceValue,
@@ -15186,7 +15203,7 @@ const AngularWorkflow = (defaultprops) => {
     }
   ]
 
-  const handleSubflowParamChange = (triggerId, triggerField, newData) => {
+  const handleTriggerParamChange = (triggerId, triggerField, newData) => {
 	var updateFail = "" 
 
     if (workflow !== undefined && workflow !== null) {  
@@ -15303,7 +15320,8 @@ const AngularWorkflow = (defaultprops) => {
           <Typography>Name</Typography>
           <TextField
             style={{
-              backgroundColor: "#212121",
+              backgroundColor: theme.palette.inputColor,
+              color: theme.palette.text.primary,
               borderRadius: theme.palette?.borderRadius,
               marginTop: 3,
             }}
@@ -15332,7 +15350,8 @@ const AngularWorkflow = (defaultprops) => {
                 <Typography>Delay</Typography>
                 <TextField
                   style={{
-                    backgroundColor: "#212121",
+                    backgroundColor: theme.palette.inputColor,
+                    color: theme.palette.text.primary,
                     marginTop: 3,
                     maxWidth: 50,
                   }}
@@ -17323,9 +17342,13 @@ const AngularWorkflow = (defaultprops) => {
           fullWidth
           rows="4"
           multiline
-          defaultValue={selectedTrigger.parameters[0]?.value}
+          value={selectedTriggerValue || ""}
           color="primary"
           placeholder=""
+          onChange={(e) => {  
+            setLastSaved(false)
+            setSelectedTriggerValue(e.target.value)
+          }}
           onBlur={(e) => {
             setLastSaved(false)
             setTriggerTextInformationWrapper(e.target.value);
@@ -18681,7 +18704,9 @@ const AngularWorkflow = (defaultprops) => {
 
           {originalWorkflow?.suborg_distribution === undefined || originalWorkflow?.suborg_distribution === null || originalWorkflow?.suborg_distribution?.length === 0 || originalWorkflow?.suborg_distribution.includes("none") ? 
 
-			originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
+			<div>
+			  {originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
+
 				<Button
 				  color="secondary"
 				  variant="outlined"
@@ -18691,7 +18716,7 @@ const AngularWorkflow = (defaultprops) => {
 					  textTransform: "none",
 					  marginLeft: 10, 
 				  }}
-			  	  onClick={() => {
+				  onClick={() => {
 					navigate(`/workflows/${workflow.parentorg_workflow}`)
 					// Reload the page
 					window.location.reload()
@@ -18699,7 +18724,10 @@ const AngularWorkflow = (defaultprops) => {
 				>
 				  Go to parent org workflow
 				</Button>
-				: userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 ?
+
+				: null}
+
+			  {userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 ?
 					<Button
 					  color="secondary"
 					  variant="outlined"
@@ -18715,8 +18743,8 @@ const AngularWorkflow = (defaultprops) => {
 					>
 						Enable Suborg Distribution
 					</Button>
-			    : null
-
+				: null}
+			</div>
 			:
 
 			<Tooltip title={lastSaved === false && originalWorkflow.id === workflow.id ? 
@@ -20063,7 +20091,7 @@ const AngularWorkflow = (defaultprops) => {
                       if (queryID !== undefined && queryID !== null) {
                         aa('init', {
                           appId: "JNSS5CFDZZ",
-                          apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+                          apiKey: "c8f882473ff42d41158430be09ec2b4e",
                         })
 
                         const timestamp = new Date().getTime()
@@ -25459,7 +25487,7 @@ const AngularWorkflow = (defaultprops) => {
             // selectedTrigger={selectedTrigger}
             aiSubmit={aiSubmit}
             toolsAppId={toolsApp.id}
-            handleSubflowParamChange={handleSubflowParamChange}
+            handleTriggerParamChange={handleTriggerParamChange}
             codedata={editorData.value}
             setcodedata={setcodedata}
             selectedEdge={selectedEdge}

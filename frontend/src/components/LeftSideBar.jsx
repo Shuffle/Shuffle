@@ -403,7 +403,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const handleChangeTheme = (newTheme) => {
 
-    toast.info("Changing theme to " + newTheme + " - please wait!");
 
     const data = {
       	  "org_id": userdata?.active_org?.id,
@@ -449,8 +448,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             });
   };
 
+  
   const handleUpdateTheme = (newTheme) => {
-
+    handleThemeChange(newTheme);
+    setCurrentSelectedTheme(newTheme)
+    
     const data = {
       "user_id": userdata?.id,
       "theme": newTheme,
@@ -470,14 +472,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     }).then((response) =>
       response.json().then((responseJson) => {
         if (responseJson["success"] === false) {
-          toast("Failed updating theme: ", responseJson.reason);
-        } else {
-          handleThemeChange(newTheme);
-          setCurrentSelectedTheme(newTheme);
+          toast("Failed saving your theme: ", responseJson.reason);
         }
       })
     ).catch((error) => {
-      console.log("Error changing theme: ", error);
+      console.log("Error saving your theme: ", error);
     }); 
   };
     
@@ -518,6 +517,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         console.error("Logout error:", error);
       });
   };
+
   const avatarMenu = (
     <span>
       <IconButton
@@ -588,7 +588,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         }
         if (userdata?.org_status?.includes("integration_partner")){
             handleChangeTheme(newTheme);
-        }else {
+        } else {
+
           handleUpdateTheme(newTheme);
         }
       }}
@@ -646,7 +647,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
 
-        <Link to="/docs" style={hrefStyle}>
+        <Link to={userdata && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs" } target={userdata?.active_org?.branding?.documentation_link?.length > 0 && userdata?.org_status?.includes("integration_partner") ? "_blank" : "_self" } style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -670,7 +671,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.2
+          Version: 2.1.0-rc1
         </Typography>
       </Menu>
     </span>
@@ -1632,7 +1633,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
           <Button
             component={Link}
-            to="/docs"
+            to={userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs"}
+            target={userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? "_blank" : "_self"}
             onClick={(event) => {
               setCurrentOpenTab("docs");
               localStorage.setItem("lastTabOpenByUser", "docs");
@@ -1683,7 +1685,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
           <Button
             component={Link}
-            to={isCloud ? "/admin?admin_tab=billingstats" : "/admin?admin_tab=locations"}
+            to={isCloud ? "/admin" : "/admin"}
             onClick={(event) => {
               setCurrentOpenTab("admin");
               localStorage.setItem("lastTabOpenByUser", "admin");

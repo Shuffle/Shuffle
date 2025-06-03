@@ -208,8 +208,16 @@ const AdminNavBar = (props) => {
         const ComponentToRender = selectedItemData.component;
         const componentProps = selectedItemData.props;
 
-        return <ComponentToRender {...componentProps} />;
+    const updatedProps = {
+        ...componentProps,
+        notifications: notifications,
+        setNotifications: setNotifications, 
+        userdata: userdata, 
+        selectedOrganization: selectedOrganization
     };
+
+    return <ComponentToRender {...updatedProps} />;
+};
 
     const defaultImage = "/images/logos/orange_logo.svg"
     const imageData =

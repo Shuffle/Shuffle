@@ -22,7 +22,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.8.58
+	github.com/shuffle/shuffle-shared v0.8.72
 	golang.org/x/crypto v0.37.0
 	google.golang.org/api v0.228.0
 	google.golang.org/grpc v1.71.1
