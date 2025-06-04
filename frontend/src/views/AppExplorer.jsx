@@ -3121,12 +3121,12 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
               style={{ marginBottom: 0, marginLeft: 0, marginRight: 0, minWidth: 800, maxWidth: 800, margin: "auto", }}
               aria-label="disabled tabs example"
             >
-              <Tab style={{marginLeft: 0, color: theme.palette.text.primary }} icon={<DescriptionIcon />} label="Docs" />
-              <Tab icon={appType === 0 || appType === 2 ? <OpenInNewIcon /> : <AppsIcon />} label={appType === 0 || appType === 2 ? "Explore the API" : "Try it out"} />
+              <Tab style={{marginLeft: 0, color: theme.palette.text.primary, textTransform: "none",}} icon={<DescriptionIcon />} label="Docs" />
+              <Tab style={{color: theme.palette.text.primary, textTransform: "none", }} icon={appType === 0 || appType === 2 ? <OpenInNewIcon /> : <AppsIcon />} label={appType === 0 || appType === 2 ? "Try the API" : "Try it out"} />
 
-              <Tab icon={<ShowChartIcon />} style={{color: theme.palette.text.primary}} label="Stats" />
-              <Tab icon={<PolylineIcon />} disabled style={{color: theme.palette.text.secondary}} label="Integrations" />
-              <Tab icon={<PersonIcon />} disabled={userdata.support !== true} style={{color: userdata.support !== true ? theme.palette.text.secondary: theme.palette.text.primary}} label="Creator" value={4}  />
+              <Tab icon={<ShowChartIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} label="Stats & Downloads" />
+              <Tab icon={<PolylineIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} disabled style={{color: theme.palette.text.secondary}} label="Integrations" />
+              <Tab icon={<PersonIcon />} disabled={userdata.support !== true} style={{color: userdata.support !== true ? theme.palette.text.secondary: theme.palette.text.primary, textTransform: "none", }} label="Creator" value={4}  />
             </Tabs>
             <div style={{ marginTop: 25 }}>
               {selectedTab === 1 && app.skipped_build == false ? (
@@ -3135,8 +3135,8 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                     <SelectedActionView action={currentAction} />
                   </div>
                   <div style={{ marginLeft: 25, maxWidth: 350 }}>
-										{currentAction.description !== undefined && currentAction.description !== null && currentAction.description !== "" ? 
-											<div
+					{currentAction.description !== undefined && currentAction.description !== null && currentAction.description !== "" ? 
+						<div
                         style={{
                           maxHeight: 175,
                           overflowX: "hidden",
@@ -3253,11 +3253,11 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 				  	Use the App onprem (hybrid)
 				  </Typography> 
 				  <Typography variant="body2" color="textSecondary" style={{marginTop: 5, }}>
-				  	Due to using docker containers with privately uploaded containers, we had to use a custom registry. Use the command below to download the image to the server if it fails to run.
+				  	Custom uses a custom Docker registry for private containers. Use the command below to download the app image to a server if it fails to do so automatically.
 
-				  	It will authenticate and authorize you, before redirecting to a Signed URL on https://storage.googleapis.com
+				  	The downloadable image may not be ready until 5 minutes after the app was built.
 
-				  	<b>&nbsp;Now also works for ARM containers!</b>
+				  	<b>&nbsp;Now also works for ARM containers (?arch=arm)!</b>
 				  </Typography> 
 
 				  <div
@@ -4027,7 +4027,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
             </IconButton>
           ) : null}
 
-	  	  {selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.id !== undefined && userdata.support === true ?
+	  	  {selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.id !== undefined  ?
 			// Iconbutton for authentication with just an icon. Link to /apps/authentication?app_id=app.id
 			<IconButton
 				color="secondary"
@@ -4165,7 +4165,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 			  		style={{ height: 40, marginTop: 5, marginLeft: 5, }}
 				  >
   					<OpenInNewIcon style={{marginRight: 5, }}/>
-					Explore API
+					Try the API
 				  </Button>
 				</a>
                 <Select

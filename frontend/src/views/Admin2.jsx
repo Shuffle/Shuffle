@@ -237,7 +237,8 @@ const Admin2 = (props) => {
         defaults,
         sso_config,
         lead_info,
-        { mfa_required } = {}
+        { mfa_required } = {},
+        editing,
     ) => {
         const data = {
             name: name,
@@ -248,6 +249,7 @@ const Admin2 = (props) => {
             sso_config: sso_config,
             lead_info: lead_info,
             mfa_required: mfa_required !== undefined  ? mfa_required : selectedOrganization?.mfa_required,
+            editing: editing?.length > 0 ? editing : "",
         };
 
         const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;

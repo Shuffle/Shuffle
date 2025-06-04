@@ -33,7 +33,7 @@ const Branding = (props) => {
     //const alert = useAlert();
     const [publishingInfo, setPublishingInfo] = useState("");
 	const [publishRequirements, setPublishRequirements] = useState([])
-	const [currentSelectedTheme, setCurrentSelectedTheme] = useState("dark");
+	const [currentSelectedTheme, setCurrentSelectedTheme] = useState(themeMode);
 	const [integrationPartner, setIntegrationPartner] = useState(false);
 	const [changingTheme, setChangingTheme] = useState(false);
 	const theme = getTheme(themeMode, brandColor)
@@ -190,6 +190,13 @@ const Branding = (props) => {
   	    })
   	};
 
+	useEffect(() => {
+		if (userdata && userdata?.active_org && userdata?.active_org?.branding?.theme?.length > 0) {
+			console.log("Setting current selected theme from userdata", userdata?.active_org?.branding?.theme);	
+			setCurrentSelectedTheme(userdata?.active_org?.branding?.theme);
+		}
+	},[userdata]);
+
     // Should enable / disable org branding
     const handleChangePublishing = () => {
       console.log("Handle change publishing");
@@ -245,10 +252,6 @@ const Branding = (props) => {
 
 		if (selectedOrganization?.creator_org?.length > 0 && userdata?.active_org?.branding.theme) {
 			setCurrentSelectedTheme(userdata?.active_org?.branding.theme);
-		}
-
-		if (userdata.support) {
-			setCurrentSelectedTheme(localStorage.getItem("theme") || "dark");
 		}
 
 		if (

@@ -3750,41 +3750,46 @@ const ParsedAction = (props) => {
 											boxShadow={2}
 											backgroundColor={theme.palette.textFieldStyle}
 											display="flex"
+											height={"100%"}
 											flexDirection="column"
 										>
 											<Box display="flex" alignItems="center" justifyContent="space-between">
-												<Typography variant="body1" style={{ flexGrow: 1 }}>
+												<Typography sx={{fontSize: "16px"}} style={{ flexGrow: 1 }}>
 													{tmpitem.charAt(0).toUpperCase() + tmpitem.slice(1)}
 												</Typography>
-												<IconButton size="small"
+												{/* <IconButton size="small"
 													onClick={() => {
 														setUiBox("closed")
 													}}
 												>
 													<CloseIcon fontSize="small" />
-												</IconButton>
+												</IconButton> */}
 											</Box>
-											<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom: "10px", height: "3px" }} />
+											<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom: "10px", height: "1px" }} />
 											<Box display="flex" flexDirection="column">
-												<Typography variant="body2" mb={0.5}>
+												<Typography sx={{fontSize: "14px"}} mb={0.5}>
 													<strong>Required:</strong> {data.required === true || data.configuration === true ? "True" : "False"}
 												</Typography>
-												<Typography variant="body2" mb={0.5}>
-													<strong>Description:</strong> {description}
-												</Typography>
-												<Typography variant="body2">
+												{
+													data.description !== undefined && data.description !== null && data.description.length > 0 ?
+														<Typography sx={{fontSize: "14px"}} mb={0.5}>
+															<strong>Description:</strong> {description}
+														</Typography>
+														: null
+												}
+												<Typography sx={{fontSize: "14px"}}>
 													<strong>Ex. :</strong> {data?.example?.length > 0 ? data.example : "No example available"}
 												</Typography>
 												{
 													data?.configuration === true ?
 														(
-															<Typography variant="body2" mt={0.5}>
+															<Typography sx={{fontSize: "14px"}} mt={0.5}>
 																<strong>Auth: </strong>Use "\$" instead of "$"
 															</Typography>
 														) : null
 												}
 
-												<div onClick={(e) => {
+												{/* <div onClick={(e) => {
 													e.preventDefault()
 													e.stopPropagation()
 
@@ -3794,7 +3799,7 @@ const ParsedAction = (props) => {
 													<Typography style={{ marginTop: 10, color: "#FF8544", cursor: "pointer", }} variant="body2">
 														Don't show again
 													</Typography>
-												</div>
+												</div> */}
 											</Box>
 										</Box>
 									);
@@ -4734,8 +4739,9 @@ const ParsedAction = (props) => {
 											{isFirstOptional ? <Divider style={{ backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 20, }} /> : null}
 											{showButtonField === true ? hideBodyButtonValue : null}
 											<div
-												style={{ marginTop: 18, marginBottom: 0, display: "flex" }}
+												style={{ marginTop: 18, marginBottom: "4px", display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center"}}
 											>
+												<div style={{display: "flex", alignItems: "center", justifyContent: "flex-start"}}>
 												{data.configuration === true ? (
 													<Tooltip
 														title={buttonTitle}
@@ -4794,28 +4800,59 @@ const ParsedAction = (props) => {
 															<StorageIcon style={{
 																color: "#FF8544",
 																marginRight: 10,
+																marginBottom: "-5px",
 															}} />
 														</a>
 													</Tooltip>
 													: null}
 
-												<div
-													style={{
-														flex: "10",
-														marginTop: "auto",
-														marginBottom: "auto",
-														color: theme.palette.textPrimary,
+												<Tooltip
+													title={tooltipDescription}
+													placement="left"
+													sx={{
+														zIndex: 0,
+													}}
+													PopperProps={{
+														sx: {
+															'& .MuiTooltip-tooltip': {
+																backgroundColor: 'transparent',
+																boxShadow: 'none',
+															},
+															'& .MuiTooltip-arrow': {
+																color: 'transparent',
+															},
+														},
+														modifiers: [
+															{
+																name: 'offset',
+																options: {
+																	offset: (data?.configuration || showCacheConfig || hasAutocomplete) ? [0, 31] : [0,0]
+																},
+															},
+														],
 													}}
 												>
-													{tmpitem} <span style={{ color: theme.palette.main }}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
-												</div>
+													<Typography
+														sx={{
+															marginTop: "auto",
+															width: "fit-content",
+															cursor: "pointer",
+															color: theme.palette.textPrimary,
+															fontFamily: theme.typography.fontFamily,
+															"&:hover": {
+																color: theme.palette.main,
+															},
+														}}
+													>
+														{tmpitem} <span style={{ color: theme.palette.main }}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
+													</Typography>
+												</Tooltip>
 
 												{parentParamValue !== undefined && parentParamValue !== null && parentParamValue !== "" && parentParamValue !== data.value ?
 													<Tooltip title={`Parent value is different. Click to reset.`} placement="top" arrow>
 														<RestoreIcon 
 															style={{
 																marginRight: 10, 
-																marginBottom: 5, 
 																cursor: "pointer", 
 																color: theme.palette.distributionColor,
 															}}
@@ -4828,7 +4865,7 @@ const ParsedAction = (props) => {
 														/>
 													</Tooltip>
 												: null}
-
+												</div>
 
 												{((data.options !== undefined && data.options !== null && data.options.length > 0) || (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0)) ? null : 
 												<Tooltip title="Expand editor window" placement="top">

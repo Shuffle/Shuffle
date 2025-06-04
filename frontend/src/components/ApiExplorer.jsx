@@ -1463,7 +1463,7 @@ const ActionsList = memo(({
 						<Tooltip title="Go to app" placement="right">
 							<div style={{ display: "flex", alignItems: "center" }}>
 								<img
-									src={openapi?.info["x-logo"]}
+									src={openapi?.info["x-logo"]?.length > 0 ? openapi?.info["x-logo"] : theme?.palette?.defaultImage}
 									width={48}
 									height={48}
 									alt="app logo"

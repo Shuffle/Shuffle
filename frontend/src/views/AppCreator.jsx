@@ -1973,7 +1973,7 @@ const AppCreator = (defaultprops) => {
   // Saving the app that's been configured.
 	// Save SAVE app
   const submitApp = () => {
-    toast("Uploading and building app " + name);
+    toast.info("Uploading and building app " + name + ". This may take a minute or two.");
     setAppBuilding(true);
     setErrorCode("");
 
@@ -2600,14 +2600,22 @@ const AppCreator = (defaultprops) => {
     }
 
     if (setExtraAuth.length > 0) {
+	  const invalidfieldnames = ["apikey", "username", "password", "username_basic", "password_basic", "url", "access_token"]
       for (let authkey in extraAuth) {
         const curauth = extraAuth[authkey];
-
         if (curauth.name.length === 0 || curauth.name.toLowerCase() == "url") {
           toast("Can't add extra auth with empty name or Name URL");
           setAppBuilding(false);
           return;
         }
+
+		// Additional comparisonchecks
+    	if (authenticationOption !== "No authentication" && authenticationOption !== "") {
+			if (invalidfieldnames.includes(curauth.name.toLowerCase())) {
+				toast.warn("Skipping extra auth field: " + curauth.name + ". This is not valid.")
+				continue
+			}
+		}
 
         data.components.securitySchemes[curauth.name] = {
           type: "apiKey",
@@ -2662,9 +2670,15 @@ const AppCreator = (defaultprops) => {
           if (responseJson.reason !== undefined) {
             setErrorCode(responseJson.reason);
 
-			toast.error("Failed to build: " + responseJson.reason, {
-				autoClose: 10000
-			})
+			if (responseJson.details !== undefined && responseJson.details !== null) {
+				toast.error("Failed to build - contact support@shuffler.io: " + responseJson.details, {
+					autoClose: 60000 
+				})
+			} else {
+				toast.error("Failed to build: " + responseJson.reason, {
+					autoClose: 10000
+				})
+			}
           }
         } else {
           toast.success("Successfully built openapi app! Added job to rebuild it in your hybrid runtime locations (Orborus).");
@@ -2678,7 +2692,7 @@ const AppCreator = (defaultprops) => {
       .catch((error) => {
         setAppBuilding(false);
         setErrorCode(error.toString());
-        toast(error.toString());
+        toast.error(error.toString());
       });
   };
 
@@ -2810,10 +2824,21 @@ const AppCreator = (defaultprops) => {
               margin="normal"
               variant="outlined"
               defaultValue={extraAuth[index].name}
+			  helperText={
+				  <Typography variant="caption" style={{ color: theme.palette.error.main, marginTop: 10, marginBottom: 10, }}>
+				  	{extraAuth[index]?.name?.toLowerCase() === "url" 
+					  || extraAuth[index]?.name?.toLowerCase() === "apikey"
+					  ? `ERROR: Invalid key: ${extraAuth[index].name}. ` : ""}
+					</Typography>
+			  }
               onChange={(e) => {
                 extraAuth[index].name = e.target.value;
                 setExtraAuth(extraAuth);
               }}
+			  onBlur={(e) => {
+				  // Forcerender
+				  setUpdate(Math.random());
+			  }}
               InputProps={{
                 classes: {
                   notchedOutline: classes.notchedOutline,
@@ -5865,7 +5890,9 @@ const AppCreator = (defaultprops) => {
           </h2>
         </Link>
         <h2>
-          {name}{" "}
+	  	  <Link to={props?.match?.params?.appid !== undefined && props?.match?.params?.appid !== null && props?.match?.params?.appid.length > 0 ? `/apps/${props?.match?.params?.appid}` : "/apps" } style={{ textDecoration: "none", color: theme.palette.text.primary }}>
+          	{name}{" "}
+	  	  </Link>
           {actions === null ||
           actions === undefined ||
           actions.length === 0 ? null : (

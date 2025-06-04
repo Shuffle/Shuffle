@@ -213,8 +213,15 @@ const CacheView = memo((props) => {
         const cache = { 
 			key: dataValue.key, 
 			value: value,
-			category: selectedCategory, 
+			category: selectedCategory,
 		}
+
+        if (listCache.length > 0) {
+            const selectedCache = listCache.find((data) => data.key === dataValue.key);
+            if (selectedCache?.suborg_distribution?.length > 0) {
+                cache.suborg_distribution = selectedCache.suborg_distribution;
+            }
+        }
 
         setCacheInput([cache]);
 
@@ -805,7 +812,7 @@ const CacheView = memo((props) => {
 								}}
 						>
 							<AddIcon/>
-							Category (beta)
+							Category
 						</Button>
 					</Tooltip> 
 				}

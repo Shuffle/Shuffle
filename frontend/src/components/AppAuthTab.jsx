@@ -83,18 +83,17 @@ const AppAuthTab = memo((props) => {
     const [appAuthenticationGroupId, setAppAuthenticationGroupId] = React.useState("");
     const [appAuthenticationGroups, setAppAuthenticationGroups] = React.useState([]);
     const [appAuthenticationGroupName, setAppAuthenticationGroupName] = React.useState("");
+    const [selectedSubOrg, setSelectedSubOrg] = useState([]);
     const [appAuthenticationGroupDescription, setAppAuthenticationGroupDescription] = React.useState("");
     const [appsForAppAuthGroup, setAppsForAppAuthGroup] = React.useState([]);
     const [searchQuery, setSearchQuery] = React.useState("");
     const [showAppModal, setShowAppModal] = useState(false)
+    const [selectedAuthId, setSelectedAuthId] = useState("");
+    const [showDistributionPopup, setShowDistributionPopup] = useState(false);
     const [showAuthenticationLoader, setShowAuthenticationLoader] = useState(true)
   const [showAppAuthGroupLoader, setShowAppAuthGroupLoader] = useState(true)
   const { themeMode, supportEmail, brandColor } = useContext(Context)
   const theme = getTheme(themeMode, brandColor)
-    const changeDistribution = (data) => {
-        //changeDistributed(data, !isDistributed)
-        editAuthenticationConfig(data.id, "suborg_distribute")
-    }
     
     useEffect(() => {
         getAppAuthentication();
@@ -214,11 +213,39 @@ const AppAuthTab = memo((props) => {
             });
     };
 
-    const editAuthenticationConfig = (id, parentAction) => {
+    const handleSelectSubOrg = (id, action) => {
+        if (action === "all") {
+            const childOrgs = userdata.orgs.filter(
+                (data) => data.creator_org === userdata.active_org.id
+            );
+            setSelectedSubOrg((prev) => {
+                if (prev.length === childOrgs.length) {
+                    // If all child orgs are already selected, clear the selection
+                    return [];
+                } else {
+                    // Otherwise, select all child org IDs
+                    return childOrgs.map((data) => data.id);
+                }
+            });
+        } else if (action === "none") {
+            setSelectedSubOrg([]);
+        } else {
+            setSelectedSubOrg((prev) => {
+                if (prev.includes(id)) {
+                    return prev.filter((data) => data !== id);
+                } else {
+                    return [...prev, id];
+                }
+            });
+        }
+    };
+
+    const editAuthenticationConfig = (id, parentAction, selectedSuborgs) => {
         const data = {
             id: id,
             action: parentAction !== undefined && parentAction !== null ? parentAction : "assign_everywhere",
-        }
+            selected_suborgs: selectedSuborgs !== undefined && selectedSuborgs !== null ? selectedSuborgs : [],
+          }
 
         const url = globalUrl + "/api/v1/apps/authentication/" + id + "/config";
 
@@ -240,6 +267,7 @@ const AppAuthTab = memo((props) => {
                     } else {
                         toast("Successfully updated auth!");
                         setSelectedUserModalOpen(false);
+                        setShowDistributionPopup(false);
                         setTimeout(() => {
                             getAppAuthentication();
                         }, 1000);
@@ -250,6 +278,106 @@ const AppAuthTab = memo((props) => {
                 toast("Err: " + error.toString());
             });
     };
+
+
+    const changeDistribution = (id, selectedSubOrg) => {	
+    
+        editAuthenticationConfig(id, "suborg_distribute", [...new Set(selectedSubOrg)])
+      }
+  
+  
+      const cacheDistributionModal = showDistributionPopup ? (
+          <Dialog
+      open={showDistributionPopup}
+      onClose={() => {setShowDistributionPopup(false);setSelectedAuthId("")}}
+      PaperProps={{
+        sx: {
+          borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+          border: theme?.palette?.DialogStyle?.border,
+          fontFamily: theme?.typography?.fontFamily,
+          backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+          zIndex: 1000,
+          minWidth: "600px",
+          minHeight: "320px",
+          overflow: "auto",
+          '& .MuiDialogContent-root': {
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+          },
+          '& .MuiDialogTitle-root': {
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+          },
+          '& .MuiDialogActions-root': {
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+          },
+        },
+      }}
+    >
+      <DialogTitle>
+        <Typography variant="h5" color="textPrimary">
+          Select sub-org to distribute Datastore key
+        </Typography>
+      </DialogTitle>
+      <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+        <MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
+        <MenuItem value="all" onClick={()=> {handleSelectSubOrg(null, "all")}}>All</MenuItem>
+        {userdata.orgs.map((data, index) => {
+          if (data.creator_org !== userdata.active_org.id) {
+            return null;
+          }
+  
+          const imagesize = 22;
+          const imageStyle = {
+            width: imagesize,
+            height: imagesize,
+            pointerEvents: "none",
+            marginRight: 10,
+            marginLeft: data.id === userdata.active_org.id ? 0 : 20,
+          };
+  
+          const image = data.image === "" ? (
+            <img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+          ) : (
+            <img alt={data.name} src={data.image} style={imageStyle} />
+          );
+
+          return (
+            <MenuItem
+              key={index}
+              value={data.id}
+              onClick={() => handleSelectSubOrg(data.id)}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              <Checkbox
+                checked={selectedSubOrg.includes(data.id)}
+              />
+              {image}
+              <span style={{ marginLeft: 8 }}>{data.name}</span>
+            </MenuItem>
+          );
+        })}
+  
+        <div style={{ display: "flex", marginTop: 20 }}>
+          <Button
+            style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main  }}
+            onClick={() => {setShowDistributionPopup(false); setSelectedAuthId("")}}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
+            onClick={() => {
+              changeDistribution(selectedAuthId, selectedSubOrg);
+            }}
+            color="primary"
+          >
+            Submit
+          </Button>
+        </div>
+      </DialogContent>
+      </Dialog>
+      ) : null;
 
     const editAuthenticationModal = selectedAuthenticationModalOpen ? (
         <Dialog
@@ -857,6 +985,7 @@ const AppAuthTab = memo((props) => {
     return (
         <div style={{width: "100%", minHeight: 1100, maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin',boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
           {appModal}
+          {cacheDistributionModal}
             <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
             <div style={{ width: 'auto', display:'flex',}}>
                 <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -1004,7 +1133,7 @@ const AppAuthTab = memo((props) => {
                           ];
                       }
 
-                      const isDistributed = data.suborg_distributed === true ? true : false;
+                      const isDistributed = data?.suborg_distribution?.length > 0 || data?.suborg_distributed ? true : false;
                       var validIcon = <CheckCircleIcon style={{ color: "green" }} />
                       if (data.validation !== null && data.validation !== undefined && data.validation.valid === false) {
 
@@ -1260,7 +1389,23 @@ const AppAuthTab = memo((props) => {
                                               style={{ }}
                                               color="secondary"
                                               onClick={() => {
-                                                  changeDistribution(data, !isDistributed)
+                                                  setShowDistributionPopup(true)
+                                                  if(data?.suborg_distribution?.length > 0){
+                                                    setSelectedSubOrg(data.suborg_distribution)
+                                                  }else{
+                                                    setSelectedSubOrg([])
+                                                  }
+                                                  setSelectedAuthId(data.id)
+                                                  if (data?.suborg_distributed) {
+                                                    const allSuborg = userdata?.orgs?.map((data, index) => {
+                                                      if (data.creator_org !== userdata.active_org.id) {
+                                                        return null;
+                                                      }
+                                                      return data.id;
+                                                    })
+                                                    setSelectedSubOrg(allSuborg.filter((data) => data !== null))
+                                                  }
+
                                               }}
                                           />
                                       </Tooltip>

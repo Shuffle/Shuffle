@@ -31,6 +31,13 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	const [roleRequired, setRoleRequired] = React.useState(selectedOrganization?.sso_config?.role_required || false);
 	const [showOpenIdCred, setShowOpenIdCred] = React.useState(false);
 	const [showSamlCred, setShowSamlCred] = React.useState(false);
+	const [skipSSOForAdmin, setSkipSSOForAdmin] = React.useState(
+		selectedOrganization?.sso_config === undefined
+			? false
+			: selectedOrganization?.sso_config?.skip_sso_for_admins === undefined
+				? false
+				: selectedOrganization?.sso_config?.skip_sso_for_admins
+	);
     const [ssoEntrypoint, setSsoEntrypoint] = React.useState(
 		selectedOrganization.sso_config === undefined
 			? ""
@@ -127,6 +134,10 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			setRoleRequired(selectedOrganization?.sso_config?.role_required)
 		}
 
+		if (skipSSOForAdmin !== selectedOrganization?.sso_config?.skip_sso_for_admins) {
+			setSkipSSOForAdmin(selectedOrganization?.sso_config?.skip_sso_for_admins)
+		}
+
     },[selectedOrganization])
 
     const orgSaveButton = (
@@ -170,9 +181,14 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 							SSORequired: SSORequired,
 							auto_provision: autoPrivision,
 							role_required: roleRequired,
-						}
+							skip_sso_for_admins: skipSSOForAdmin,
+						},
+						undefined, 
+						{},     
+						"sso_config"
 					)
 				}
+
 			>
 				Save Changes
 				{/* <SaveIcon /> */}
@@ -206,12 +222,9 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			openidAuthorization === "" &&
 			openidToken === ""
 		) {
-			if (!autoPrivision) {
-				toast.error(
-					"Please fill in fields for either OpenID connect or SSO before continuing. "
-				);
-				return;
-			}
+			toast.error(
+				"Please fill in fields for either OpenID connect or SSO before continuing. "
+			);
 		} else {
 			setAutoProvision((prev)=> !prev);
 			toast.info("Toggled Auto Provisioning. Remember to save.");
@@ -232,6 +245,12 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			toast.info("Toggled Role Required. Remember to save.");
 		}
 	}
+
+	const handlechangeSkipSSOForAdmin = (event) => {
+		
+		setSkipSSOForAdmin((prev) => !prev);
+		toast.info("Toggled Skip SSO for Admins. Remember to save.");
+	};	
 	
 	const HandleTestSSO = () => {
 		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
@@ -385,6 +404,35 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					</div>
 					
 				</div>
+				{userdata && userdata?.active_org?.creator_org?.length > 0 ? null : 
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						width: "100%",
+                        justifyContent: 'flex-start',
+						marginTop: 30
+					}}
+					>
+					<Typography
+						variant="body2"
+						color="textSecondary"
+						style={{ marginTop: 5, marginBottom: 5, color: "rgba(158, 158, 158, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
+					>
+						Skip SSO for Admins. When enabled, parent org admins will be able switch to the sub-organization without SSO. 	
+					</Typography>
+					<div>
+						<Switch
+						checked={skipSSOForAdmin}
+						onChange={handlechangeSkipSSOForAdmin}
+                        sx={{marginBottom: 0.6, marginTop: 0.6}}
+						name="onOffSwitch"
+						color="primary"
+						title="Disable auto-provisioning of users in SSO"
+						/>
+					</div> 
+				</div>
+				}
 
 					<div
 					style={{

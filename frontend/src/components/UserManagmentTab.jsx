@@ -76,7 +76,6 @@ const UserManagmentTab = memo((props) => {
     const [ipSelected, setIpSelected] = React.useState("");
     const [userLogViewing, setUserLogViewing] = React.useState({});
     const { themeMode, supportEmail, brandColor } = useContext(Context);
-    
     const theme = getTheme(themeMode, brandColor);
 
 
@@ -1359,7 +1358,7 @@ const UserManagmentTab = memo((props) => {
                 }}
             >
                 <ListItem style={{ width: "100%", padding: "10px 10px 10px 0px", verticalAlign: 'middle', borderBottom: theme.palette.defaultBorder, display: "table-row" }}>
-                    {["Region", "Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
+                    {[...(isCloud ? ["Region"] : []), "Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -1384,7 +1383,7 @@ const UserManagmentTab = memo((props) => {
                                 backgroundColor: theme.palette.platformColor,
                             }}
                         >
-                            {Array(9)
+                            {Array(isCloud ? 7 : 6)
                                 .fill()
                                 .map((_, colIndex) => (
                                     <ListItemText
@@ -1485,14 +1484,15 @@ const UserManagmentTab = memo((props) => {
                             return regionCode;
                         };
 
-                        const userRegion = data?.user_geo_info?.country?.iso_code?.length > 0 ? data?.user_geo_info?.country?.iso_code :   data?.active_org?.region_url?.length > 0 ? getRegionFlag(data?.active_org?.region_url) : "eu";
+                        const userRegion = data?.user_geo_info?.country?.iso_code?.length > 0 ? data?.user_geo_info?.country?.iso_code :   selectedOrganization?.region_url?.length > 0 ? getRegionFlag(selectedOrganization?.region_url) : "eu";
 
                         return (
                             <ListItem key={index} style={{ backgroundColor: bgColor, display: 'table-row', borderBottomLeftRadius: users?.length - 1 === index ? 8 : 0, borderBottomRightRadius: users?.length - 1 === index ? 8 : 0 }}>
-                                <ListItemText
+                                {isCloud ? (
+                                    <ListItemText
                                     primary={(<img src={`https://flagcdn.com/48x36/${userRegion.toLowerCase()}.png`} alt={data?.user_geo_info?.country?.iso_code} style={{ marginRight: 30, width: 25, height: 23, }} />)}
                                     style={{ display: 'table-cell', verticalAlign: 'middle', textAlign: 'center' }}
-                                />
+                                />) : null}
                                 <ListItemText
                                 primary={(
                                     <Tooltip title={data.username || 'No username available'}>

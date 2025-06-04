@@ -117,6 +117,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 		window.removeEventListener("keydown", handleKeyDown);
 	  };
 	}, [setSearchBarModalOpen]);
+
+  useEffect(() => {
+    if (userdata && userdata?.active_org?.branding?.theme?.length > 0) {
+      setCurrentSelectedTheme(userdata?.active_org?.branding?.theme);
+    }else if (userdata && userdata?.theme?.length > 0) {
+      setCurrentSelectedTheme(userdata?.theme);
+    }
+  }, [userdata]);
   
   const CustomPopper = (props) => {
     return (
@@ -436,11 +444,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               response.json().then((responseJson) => {
                 if (responseJson["success"] === false) {
                     toast("Failed updating org: ", responseJson.reason);
-                } else {
-                    handleThemeChange(newTheme)
-                    setCurrentSelectedTheme(newTheme);
-                  }
-
+                }
                 })
   	      ) 
             .catch((error) => {
@@ -586,6 +590,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         if (newTheme === currentSelectedTheme) {
           return;
         }
+        handleThemeChange(newTheme)
+        setCurrentSelectedTheme(newTheme);
         if (userdata?.org_status?.includes("integration_partner")){
             handleChangeTheme(newTheme);
         } else {

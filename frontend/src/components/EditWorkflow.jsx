@@ -212,13 +212,7 @@ const EditWorkflow = (props) => {
 					//minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 					//maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 		    		borderRadius: theme.palette.DialogStyle.borderRadius,
-		    		backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-					'& .MuiDialogContent-root': {
-					  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-					},
-					'& .MuiDialogTitle-root': {
-					  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-					},
+		    		backgroundColor: themeMode === "dark" ? "black" :  theme?.palette?.DialogStyle?.backgroundColor,
 				},
 			}}
 		>
@@ -299,10 +293,10 @@ const EditWorkflow = (props) => {
 					right: 20, 
 					bottom: 0, 
 					zIndex: 1002, 
-					backgroundColor: theme.palette.DialogStyle.backgroundColor,
 					height: 75, 
 					paddingTop: 20, 
 					paddingLeft: 30, 
+					backgroundColor: themeMode === "dark" ? "#262626" :  theme.palette.DialogStyle.backgroundColor,
 				}}>
 					<Button
 						variant="contained"
@@ -1292,7 +1286,7 @@ const EditWorkflow = (props) => {
 
 
 				{newWorkflow === true ?
-					<span style={{ paddingTop: 30, backgroundColor: theme.palette.DialogStyle.backgroundColor }}>
+					<span style={{ paddingTop: 30 }}>
 						<Typography variant="h6" style={{ marginLeft: 30, paddingBottom: 0, }}>
 							Relevant Workflows
 						</Typography>

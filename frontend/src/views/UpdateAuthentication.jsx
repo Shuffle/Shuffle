@@ -191,6 +191,7 @@ const SetAuthentication = (props) => {
 									appAuthentication={appAuthentication} />}
 					</Typography>
 
+					{/*
 					<Typography variant="h6" style={{ marginTop: 50, marginBottom: 20, }}>
 						What can they do with this?
 					</Typography>
@@ -217,6 +218,7 @@ const SetAuthentication = (props) => {
 							</div>
 						</div>
 					</Typography>
+					*/}
 				</div>
 					<>
 					<div style={{ height: 100, }}></div>
