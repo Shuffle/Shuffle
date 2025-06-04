@@ -1983,6 +1983,8 @@ const AppCreator = (defaultprops) => {
     const schemes = [splitBase[0]];
     const basePath = "/" + splitBase.slice(3).join("/");
 
+	const newBaseUrl = baseUrl.replaceAll("http//", "http://").replaceAll("https//", "https://")
+
     const data = {
       openapi: "3.0.0",
       info: {
@@ -1991,7 +1993,7 @@ const AppCreator = (defaultprops) => {
         version: "1.0",
         "x-logo": fileBase64,
       },
-      servers: [{ url: baseUrl }],
+      servers: [{ url: newBaseUrl }],
       host: host,
       basePath: basePath,
       schemes: schemes,
@@ -2637,12 +2639,17 @@ const AppCreator = (defaultprops) => {
       credentials: "include",
     })
       .then((response) => {
+		setAppBuilding(false)
         if (response.status === 403) {
+
+
     		var urlParams = new URLSearchParams(window.location.search)
 			if (urlParams.has("id")) {
 				toast.error(`Please log in to build this app. If this error persists, please contact ${supportEmail}`)
 			} else {
-				toast.error("Failed to save the app as you are not the owner. Redirecting you to the forking page. When there, save again.")
+				toast.error("Failed to save the app as you are not the owner. Redirecting you to the forking page. If this does not load, please download and re-import the app.", {
+					autoClose: 10000
+				})
 				if (props.match.params.appid !== undefined && props.match.params.appid !== null && props.match.params.appid.length > 0) {
 					setTimeout(() => {
 						window.open(`/apps/new?id=${props.match.params.appid}`, "_blank")
@@ -2658,19 +2665,16 @@ const AppCreator = (defaultprops) => {
         	//throw new Error("NOT 200 :O")
         }
 
-        setAppBuilding(false);
         return response.json();
       })
       .then((responseJson) => {
-        if (!responseJson.success) {
-		  if (responseJson.extra !== undefined && responseJson.extra !== null) {
+        if (responseJson?.success !== true) {
+		  if (responseJson?.extra !== undefined && responseJson?.extra !== null) {
 			toast("Failed building: " + responseJson.extra);
-		  }
-
-          if (responseJson.reason !== undefined) {
+		  } else if (responseJson?.reason !== undefined) {
             setErrorCode(responseJson.reason);
 
-			if (responseJson.details !== undefined && responseJson.details !== null) {
+			if (responseJson?.details !== undefined && responseJson?.details !== null) {
 				toast.error("Failed to build - contact support@shuffler.io: " + responseJson.details, {
 					autoClose: 60000 
 				})
@@ -2679,7 +2683,8 @@ const AppCreator = (defaultprops) => {
 					autoClose: 10000
 				})
 			}
-          }
+          } else {
+		  }
         } else {
           toast.success("Successfully built openapi app! Added job to rebuild it in your hybrid runtime locations (Orborus).");
           if (window.location.pathname.includes("/new")) {
@@ -6117,7 +6122,7 @@ const AppCreator = (defaultprops) => {
           value={baseUrl}
           helperText={
             <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
-              Must start with http(s):// and CANT end with /.{" "}
+              Must start with http(s):// and can NOT end with /.{" "}
             </span>
           }
           placeholder="https://api.example.com"
@@ -6136,12 +6141,12 @@ const AppCreator = (defaultprops) => {
               toast("URL must start with http(s)://");
             }
 
-						if (tmpstring.includes("?")) {
-							var newtmp = tmpstring.split("?")
-							if (tmpstring.length > 1) {
-								tmpstring = newtmp[0]
-							}
-						}
+			if (tmpstring.includes("?")) {
+				var newtmp = tmpstring.split("?")
+				if (tmpstring.length > 1) {
+					tmpstring = newtmp[0]
+				}
+			}
 
             setBaseUrl(tmpstring);
           }}

@@ -562,7 +562,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           "& .MuiPaper-root": {
             backgroundColor: theme.palette.backgroundColor,
             color: theme.palette.text.primary,
-            borderRadius: 1,
+            borderRadius: theme.palette.borderRadius/3,
           },
           "& .MuiList-root": {
             backgroundColor: theme.palette.backgroundColor,
@@ -602,6 +602,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       aria-label="theme"
       style={{display: 'flex', justifyContent: "center", marginBottom: 10,  }}
       >
+
       <ToggleButton value="light" aria-label="light theme" style={{ backgroundColor: currentSelectedTheme === "light" ? theme.palette.hoverColor : theme.palette.backgroundColor }}>
         <LightModeIcon style={{ color: themeMode === "light" ? darkText : lightText }} />
       </ToggleButton>
@@ -622,7 +623,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             }}
             style={{fontSize: 18}}
           >
-            <BusinessIcon style={{ marginRight: 5 }} /> Organization
+            <BusinessIcon style={{ marginRight: 5 }} /> Org Admin 
           </MenuItem>
         </Link>
         <Link to="/settings" style={hrefStyle}>
@@ -632,11 +633,13 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             }}
             style={{fontSize: 18}}
           >
-            <SettingsIcon style={{ marginRight: 5 }} /> Account
+            <SettingsIcon style={{ marginRight: 5 }} /> User Account
           </MenuItem>
         </Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+
+	  	{/*
 		<Link to="/admin?admin_tab=notifications" style={hrefStyle}>
 		  <MenuItem
 			onClick={(event) => {
@@ -644,7 +647,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 			}}
       style={{fontSize: 18}}
 		  >
-			<NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
+			<NotificationsIcon style={{ marginRight: 5 }} /> Org Notifications ({
 				notifications === undefined || notifications === null ? 0 : 
 				notifications?.filter((notification) => notification.read === false).length
 			}) 
@@ -652,6 +655,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 		</Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+	  	*/}
 
         <Link to={userdata && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs" } target={userdata?.active_org?.branding?.documentation_link?.length > 0 && userdata?.org_status?.includes("integration_partner") ? "_blank" : "_self" } style={hrefStyle}>
           <MenuItem
@@ -1425,6 +1429,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               </span>
             </Button>
         </span>
+
             <IconButton
               onClick={() => {
                 setOpenSecurityTab((prev) => !prev);
@@ -1456,10 +1461,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               )}
             </IconButton>
           </Box>
+
           <Collapse in={openSecurityTab} timeout="auto" unmountOnExit >
               <Box
                 style={{
-                  maxHeight: openSecurityTab && expandLeftNav ? 150 : 0,
+                  maxHeight: openSecurityTab && expandLeftNav ? 185 : 0,
                   overflow: "hidden",
                   transition: "max-height 0.3s ease, opacity 0.3s ease",
                   display: "flex",
@@ -1592,46 +1598,88 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           </Button>
       </span>
 
-      <span style={{ display: "inline-block", width: "100%" }}>
-          <Button
-           component={Link}
-           to="/admin?tab=locations"
-            onClick={(event) => {
-              setCurrentOpenTab("locations");
-              localStorage.setItem("lastTabOpenByUser", "locations");
-            }}
-            variant="text"
-            sx={{
-              width: "100%",
-              height: 35,
-              color: themeMode === "dark" ? lightText : darkText, 
-              justifyContent: "flex-start",
-              textTransform: "none",
-              backgroundColor:
-                currentOpenTab === "locations"
-                  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
-                  : "transparent",
-              "&:hover": {
-                backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
-              },
-              cursor: "pointer", 
-            }}
-          >
-            <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
-              •
-            </span>
-            <span
-              style={{
-                display: expandLeftNav ? "inline" : "none",
-                opacity: expandLeftNav ? 1 : 0,
-                transition: "opacity 0.3s ease",
-                fontSize: 18,
-                color: themeMode === "dark" ? currentOpenTab === "locations" ? theme.palette.text.primary : lightText : darkText,
-              }}
-            >
-    Hybrid Locations
-            </span>
-          </Button>
+      		<span style={{ display: "inline-block", width: "100%" }}>
+			  <Button
+			   component={Link}
+			   to="/admin?admin_tab=notifications"
+				onClick={(event) => {
+				  setCurrentOpenTab("notifications");
+				  localStorage.setItem("lastTabOpenByUser", "notifications");
+				}}
+				variant="text"
+				sx={{
+				  width: "100%",
+				  height: 35,
+				  color: themeMode === "dark" ? lightText : darkText, 
+				  justifyContent: "flex-start",
+				  textTransform: "none",
+				  backgroundColor:
+					currentOpenTab === "notifications"
+					  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+					  : "transparent",
+				  "&:hover": {
+					backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+				  },
+				  cursor: "pointer", 
+				}}
+			  >
+				<span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+				  •
+				</span>
+				<span
+				  style={{
+					display: expandLeftNav ? "inline" : "none",
+					opacity: expandLeftNav ? 1 : 0,
+					transition: "opacity 0.3s ease",
+					fontSize: 18,
+					color: themeMode === "dark" ? currentOpenTab === "notifications" ? theme.palette.text.primary : lightText : darkText,
+				  }}
+				>
+					Notifications
+				</span>
+			  </Button>
+          </span>
+
+      		<span style={{ display: "inline-block", width: "100%" }}>
+			  <Button
+			   component={Link}
+			   to="/admin?tab=locations"
+				onClick={(event) => {
+				  setCurrentOpenTab("locations");
+				  localStorage.setItem("lastTabOpenByUser", "locations");
+				}}
+				variant="text"
+				sx={{
+				  width: "100%",
+				  height: 35,
+				  color: themeMode === "dark" ? lightText : darkText, 
+				  justifyContent: "flex-start",
+				  textTransform: "none",
+				  backgroundColor:
+					currentOpenTab === "locations"
+					  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+					  : "transparent",
+				  "&:hover": {
+					backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+				  },
+				  cursor: "pointer", 
+				}}
+			  >
+				<span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+				  •
+				</span>
+				<span
+				  style={{
+					display: expandLeftNav ? "inline" : "none",
+					opacity: expandLeftNav ? 1 : 0,
+					transition: "opacity 0.3s ease",
+					fontSize: 18,
+					color: themeMode === "dark" ? currentOpenTab === "locations" ? theme.palette.text.primary : lightText : darkText,
+				  }}
+				>
+					Runtime Locations
+				</span>
+			  </Button>
           </span>
           </>): null}
               </Box>
