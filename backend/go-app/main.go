@@ -1068,8 +1068,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		activatedAppIds = append(activatedAppIds, app.ID)
 	}
 
-	userInfo.ActiveOrg.Branding = org.Branding
-
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1092,6 +1090,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Priorities: orgPriorities,
 		Licensed:   licensed,
 		ActiveApps: activatedAppIds,
+		Theme:      userInfo.Theme,
 	}
 
 	returnData, err := json.Marshal(returnValue)

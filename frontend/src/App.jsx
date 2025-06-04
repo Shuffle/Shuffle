@@ -92,7 +92,7 @@ const App = (message, props) => {
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
-  const { themeMode, handleThemeChange, setBrandColor, brandColor} = useContext(Context);
+  const { themeMode, handleThemeChange, setBrandColor, brandColor,setThemeMode} = useContext(Context);
   const currentTheme = getTheme(themeMode, brandColor);
   const mainColor = currentTheme?.palette?.backgroundColor
   const [isPreviousThemeLight, setIsPreviousThemeLight] = useState(false)
@@ -192,7 +192,16 @@ const App = (message, props) => {
               { path: "/" }
             );
           }
-        }
+		  if (responseJson?.theme?.length > 0) {
+			handleThemeChange(responseJson.theme)
+		  }else{
+			handleThemeChange("dark")
+		  }
+        }else {
+			handleThemeChange("dark")
+			setThemeMode("dark")
+			localStorage.removeItem("theme");
+		}
 
         // Handling Ethereum update
 
