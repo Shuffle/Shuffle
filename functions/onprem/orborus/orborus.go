@@ -123,6 +123,7 @@ var tenzirDisabled = false
 var dockercli *dockerclient.Client
 var containerId string
 var executionCount = 0
+var orborusUuid = os.Getenv("SHUFFLE_ORBORUS_UUID")
 
 var imagedownloadTimeout = time.Second * 300
 var window = shuffle.NewTimeWindow(1 * time.Minute)
@@ -885,11 +886,12 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 						log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 					} else {
 						log.Printf("[DEBUG] Updated service %s with the new image %s. Resp: %#v", service.Spec.Annotations.Name, image, resp)
+							
+						found = true
 
 						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
 							break
 						} else {
-							found = true
 							log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 						}
 					}
@@ -1746,6 +1748,8 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		Environment:  environment,
 		OrborusLabel: orborusLabel,
 		Timestamp:    time.Now().Unix(),
+
+		Uuid: orborusUuid,
 	}
 
 	if (swarmConfig == "run" || swarmConfig == "swarm") && strings.Contains(newWorkerImage, "scale") {
@@ -2002,6 +2006,10 @@ func main() {
 		//baseUrl = "http://localhost:5001"
 	}
 
+	if len(orborusUuid) == 0 {
+		orborusUuid = uuid.NewV4().String()
+	}
+
 	//if orgId == "" {
 	//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
 	//	os.Exit(3)
@@ -2204,6 +2212,8 @@ func main() {
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
+
+
 	hasStarted := false
 	for {
 		if req.Method == "POST" {
@@ -2274,8 +2284,12 @@ func main() {
 			continue
 		}
 
-		// FIXME - add check for StatusCode
-		if newresp.StatusCode != 200 {
+		// Controls Leader/Follower mode
+		if newresp.StatusCode == 409 {
+			log.Printf("[INFO] Another Orborus is already handling jobs. Polling every 30 seconds in case Leader stops. Resp: %s", string(body))
+			time.Sleep(time.Duration(30) * time.Second)
+			continue
+		} else if newresp.StatusCode != 200 {
 			log.Printf("[ERROR] Backend connection failed for url '%s', or is missing (%d): %s", fullUrl, newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {
