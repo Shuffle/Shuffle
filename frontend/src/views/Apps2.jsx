@@ -154,7 +154,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   whiteSpace: "nowrap",
                   color: theme.palette.text.primary,
                 }}>
-                  {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                  {data?.name?.replace(/_/g, ' ')?.replace(/\b\w/g, char => char?.toUpperCase())}
                 </div>
 
               </div>
@@ -165,7 +165,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 marginLeft: 8,
                 color: theme.palette.text.secondary,
               }}>
-                {data.categories ? data.categories.join(", ") : "NA"}
+                {data?.categories ? data?.categories?.join(", ") : "NA"}
               </div>
 
               <div style={{
@@ -186,7 +186,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   whiteSpace: "nowrap",
                   color: "rgba(158, 158, 158, 1)",
                 }}>
-                  {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
+                  {data?.generated !== true && data?.tags && data?.tags?.slice(0, 2).map((tag, tagIndex) => (
                     <span key={tagIndex}>
                       {tag}
                       {tagIndex < data.tags.length - 1 ? ", " : ""}

@@ -3,6 +3,7 @@ import React, { useEffect, useContext, memo, useState, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import ReactDOM from "react-dom"
 import { getTheme } from "../theme.jsx";
+
 // Material UI Icons
 import Add from '@mui/icons-material/Add';
 import Search from '@mui/icons-material/Search';
@@ -12,6 +13,7 @@ import GridOnIcon from '@mui/icons-material/GridOn';
 import ListIcon from '@mui/icons-material/List';
 import PublishIcon from '@mui/icons-material/Publish';
 import GetAppIcon from '@mui/icons-material/GetApp';
+
 // Material UI & Components
 import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
@@ -92,6 +94,11 @@ import {
     Visibility as VisibilityIcon,
     EditNote as EditNoteIcon,
 	ErrorOutline as ErrorOutlineIcon,
+	Coronavirus as CoronavirusIcon, 
+	Fingerprint as FingerprintIcon,
+	Psychology as PsychologyIcon,
+	Wifi as WifiIcon,
+	Devices as DevicesIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -128,19 +135,20 @@ const imagesize = 22;
 export const GetIconInfo = (action) => {
     // Finds the icon based on the action. Should be verbs.
     const iconList = [
-        { key: "cases", values: ["cases"] },
+        { key: "cases", values: ["cases", "ticket", "alert"] },
         { key: "cache_add", values: ["set_cache"] },
         { key: "cache_get", values: ["get_cache"] },
         { key: "filter", values: ["filter"] },
         { key: "merge", values: ["join", "merge", "route", "router"] },
         {
             key: "search",
-            values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
+            values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate", "siem", ],
         },
         { key: "list", values: ["list", "head", "options"] },
         {
             key: "download",
             values: [
+				"ingest",
                 "capture",
                 "get",
                 "download",
@@ -154,20 +162,6 @@ export const GetIconInfo = (action) => {
         },
         { key: "add", values: ["add", "accept",] },
         { key: "delete", values: ["delete", "remove", "clear", "clean", "dismiss",] },
-        {
-            key: "send",
-            values: [
-                "send",
-                "dispatch",
-                "mail",
-                "forward",
-                "post",
-                "submit",
-                "mark",
-                "set",
-                "release",
-            ],
-        },
         {
             key: "repeat",
             values: ["repeat", "retry", "pause", "skip", "copy", "replicat", "demo",],
@@ -197,8 +191,29 @@ export const GetIconInfo = (action) => {
             key: "compare",
             values: ["compare", "convert", "to", "filter", "translate", "parse"],
         },
+        { key: "assets", values: ["cmdb", "assets", "asset", "cmdb", "inventory", "host", "hosts", "device", "devices"] },
         { key: "close", values: ["close", "stop", "cancel", "block"] },
         { key: "communication", values: ["communication", "comms", "email", "mail",] },
+        { key: "eradication", values: ["eradication", "edr", "xdr"] },
+        { key: "iam", values: ["iam", "identity", "access", "auth", "authentication", "authorization", "oauth", "sso", "openid"] },
+		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator",] },
+		{ key: "network", values: ["network", "net", "networking", "firewall", "proxy", "vpn", "sdwan", "sd-wan"] },
+        {
+            key: "send",
+            values: [
+                "send",
+                "dispatch",
+                "mail",
+                "forward",
+                "post",
+                "submit",
+                "mark",
+                "set",
+                "release",
+            ],
+        },
+
+
     ];
 
     var selectedKey = ""
@@ -357,7 +372,45 @@ export const GetIconInfo = (action) => {
             iconBackgroundColor: "green",
             originalIcon: <SearchIcon />,
         },
-    };
+		eradication: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <CoronavirusIcon />,
+		},
+		iam: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <FingerprintIcon />,
+		},
+		intel: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <PsychologyIcon />,
+		},
+		network: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <WifiIcon />,
+		},
+		assets: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <DevicesIcon />,
+		},
+    }
+
+		/*
+        { key: "eradication", values: ["eradication", "edr", "xdr"] },
+        { key: "iam", values: ["iam", "identity", "access", "auth", "authentication", "authorization", "oauth", "sso", "openid"] },
+		{ key: "intel", values: ["intel", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti."] },
+		{ key: "network", values: ["network", "net", "networking", "firewall", "proxy", "vpn", "sdwan", "sd-wan"] },
+		{ key: "siem", values: ["siem", "security information and event management", "security information and event management", "security information and event management"] },
+		*/
 
     var selectedItem = parsedIcons[selectedKey];
     if (selectedItem === undefined || selectedItem === null) {
@@ -374,11 +427,8 @@ export const GetIconInfo = (action) => {
         selectedItem.iconBackgroundColor = defaultColor;
     }
 
-    if (selectedItem.icon === "" || selectedItem.icon === undefined) {
-        console.log(
-            `MISSING PATH FOR ${selectedKey} (find in scope): `,
-            selectedItem.originalIcon.type.type
-        );
+    if ((selectedItem.icon === "" || selectedItem.icon === undefined) && (selectedItem.originalIcon === undefined || selectedItem.originalIcon === "")) {
+        console.log(`MISSING PATH FOR ${selectedKey} (find in scope): `, selectedItem.originalIcon.type.type)
     }
 
     if (
@@ -753,6 +803,12 @@ const Workflows2 = (props) => {
 
     const handleTabChange = (event, newValue) => {
         setCurrTab(newValue);
+
+		//if (view === "list" && currTab > 0) {
+		//	setView("grid")
+		//	setUpdate(Math.random())
+		//}
+
         // Update URL query params based on tab index
         const tabMapping = {
             0: 'org_workflows',
@@ -766,9 +822,6 @@ const Workflows2 = (props) => {
 
         navigate(`${location.pathname}?${queryParams.toString()}`);
     };
-
-
-
 
     const handleCreateWorkflow = () => {
         setModalOpen(true)
@@ -1854,9 +1907,9 @@ const Workflows2 = (props) => {
         data = JSON.parse(JSON.stringify(data));
         data = sanitizeWorkflow(data);
         toast("Sanitizing and publishing " + data.name);
-
+    
         // This ALWAYS talks to Shuffle cloud
-        fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish", {
+        fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish" , {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -3414,6 +3467,8 @@ const Workflows2 = (props) => {
                 return obj;
             })
 
+			console.log("ROWS: ", rows)
+
             workflowData = (
                 <DataGrid
                     color="primary"
@@ -3851,6 +3906,8 @@ const Workflows2 = (props) => {
                         onClick={() => {
                             localStorage.setItem("view", "list");
                             setView("list");
+
+							setCurrTab(0)
                         }}
                     >
                         <ListIcon />
@@ -4005,20 +4062,30 @@ const Workflows2 = (props) => {
     // 	}
 
     useEffect(() => {
-        if (currTab === 2) return;
-        if (userdata !== undefined && userdata !== null && filteredWorkflows.length > 0) {
+        if (filteredWorkflows.length > 0) {
+
             var categoryWorkflows = []
             if (currTab === 0) {
                 categoryWorkflows = filteredWorkflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id)
-                setOrgWorkflows(categoryWorkflows)
+
+				if (categoryWorkflows.length === 0) { 
+					setOrgWorkflows(filteredWorkflows)
+				} else {
+                	setOrgWorkflows(categoryWorkflows)
+				}
             }
             else if (currTab === 1) {
                 categoryWorkflows = filteredWorkflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id && workflow?.owner === userdata?.id)
                 setMyWorkflows(categoryWorkflows)
             }
+
             setIsLoadingWorkflow(false);
 
-        }
+        } else {
+            if (currTab === 0 && workflows?.length > 0) {
+				setOrgWorkflows(workflows)
+			}
+		}
     }, [currTab, workflows, userdata, filteredWorkflows, filters])
 
 
@@ -4607,13 +4674,17 @@ const Workflows2 = (props) => {
                                         </IconButton>
                                     </Tooltip>
 
-                                    <Tooltip title={view === "grid" ? "List view" : "Grid view"} placement="top">
+                                    <Tooltip title={view === "grid" ? "List view (Org Workflows only)" : "Grid view"} placement="top">
                                         <IconButton
                                             style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => {
                                                 const newView = view === "grid" ? "list" : "grid";
                                                 localStorage.setItem("workflowView", newView);
                                                 setView(newView);
+
+												if (view === "grid") {
+													setCurrTab(0)
+												}
                                             }}
                                             disabled={currTab === 2}
                                         >
@@ -4699,25 +4770,30 @@ const Workflows2 = (props) => {
                                                 paddingBottom: 40
                                             }}>
 
-                                                {currTab === 0 && orgWorkflows.map((data, index) => {
-                                                    // Shouldn't be a part of this list
-                                                    if (data.public === true) {
-                                                        return null
-                                                    }
+                                                {currTab !== 0 ? null :
+														orgWorkflows.length === 0 ? 
+														<Typography variant="h6" style={{margin: "auto", minWidth: 500, }} >
+															No workflows found in this org with the Org ID filter. If this is an error, please click the "List View" button at the top to see ALL available workflows ({workflows.length}). 
+														</Typography> :
+													orgWorkflows.map((data, index) => {
+														// Shouldn't be a part of this list
+														if (data.public === true) {
+															return null
+														}
 
-                                                    // if (firstLoad) {
-                                                    //     workflowDelay += 75
-                                                    // } else {
-                                                    //     return <WorkflowPaper key={index} data={data} />
-                                                    // }
+														// if (firstLoad) {
+														//     workflowDelay += 75
+														// } else {
+														//     return <WorkflowPaper key={index} data={data} />
+														// }
 
-                                                    return (
-                                                        <span key={index}>
-                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-                                                            <WorkflowPaper data={data} />
-                                                            {/*</Zoom>*/}
-                                                        </span>
-                                                    )
+														return (
+															<span key={index}>
+																{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+																<WorkflowPaper data={data} />
+																{/*</Zoom>*/}
+															</span>
+														)
                                                 })}
 
                                                 {currTab === 3 && backupWorkflows.map((data, index) => {
@@ -4742,24 +4818,29 @@ const Workflows2 = (props) => {
                                                 })}
 
                                                 {
-                                                    currTab === 1 && myWorkflows.map((data, index) => {
-                                                        if (data.public === true) {
-                                                            return null
-                                                        }
+                                                    currTab !== 1 ? null :
+														myWorkflows.length === 0 ? 
+														<Typography variant="h6" style={{margin: "auto", width: 500, }} >
+															No workflows found in this org for your user. 
+														</Typography> :
+														myWorkflows.map((data, index) => {
+															if (data.public === true) {
+																return null
+															}
 
-                                                        // if (firstLoad) {
-                                                        //     workflowDelay += 75
-                                                        // } else {
-                                                        //     return <WorkflowPaper key={index} data={data} />
-                                                        // }
+															// if (firstLoad) {
+															//     workflowDelay += 75
+															// } else {
+															//     return <WorkflowPaper key={index} data={data} />
+															// }
 
-                                                        return (
-                                                            <span key={index}>
-                                                                {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-                                                                <WorkflowPaper data={data} />
-                                                                {/*</Zoom>*/}
-                                                            </span>
-                                                        )
+															return (
+																<span key={index}>
+																	{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+																	<WorkflowPaper data={data} />
+																	{/*</Zoom>*/}
+																</span>
+															)
                                                     })
                                                 }
                                             </div>
@@ -5123,7 +5204,7 @@ const Workflows2 = (props) => {
 
     //isLoaded && isLoggedIn && workflowDone ? (
     const loadedCheck =
-        workflowDone ? (
+        workflowDone && isLoaded ? (
             <div>
                 {/*
 				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>

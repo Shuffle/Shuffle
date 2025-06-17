@@ -681,7 +681,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.1.0-rc1
+          Version: 2.1.0-rc2
         </Typography>
       </Menu>
     </span>
@@ -745,6 +745,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
     localStorage.setItem("globalUrl", "");
     localStorage.setItem("getting_started_sidebar", "open");
+    localStorage.removeItem("workflows");
+    localStorage.removeItem("apps");
 
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
       mode: "cors",
@@ -913,7 +915,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 			"US": "us",
 			"EU": "eu",
 			"CA": "ca",
-			"UK": "gb"
+			"UK": "gb",
+      "au": "au",
 		};
 
     region = regionMapping[region_url] || "eu";
@@ -1465,7 +1468,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           <Collapse in={openSecurityTab} timeout="auto" unmountOnExit >
               <Box
                 style={{
-                  maxHeight: openSecurityTab && expandLeftNav ? 185 : 0,
+                  maxHeight: openSecurityTab && expandLeftNav ? 250 : 0,
                   overflow: "hidden",
                   transition: "max-height 0.3s ease, opacity 0.3s ease",
                   display: "flex",
@@ -1680,6 +1683,48 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 					Runtime Locations
 				</span>
 			  </Button>
+          </span>
+
+          <span style={{ display: "inline-block", width: "100%" }}>
+          <Button
+           component={Link}
+           to="/partners"
+            onClick={(event) => {
+              setCurrentOpenTab("partners");
+              localStorage.setItem("lastTabOpenByUser", "partners");
+            }}
+            variant="text"
+            sx={{
+              width: "100%",
+              height: 35,
+              color: themeMode === "dark" ? lightText : darkText, 
+              justifyContent: "flex-start",
+              textTransform: "none",
+              backgroundColor:
+                currentOpenTab === "partners"
+                  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+                  : "transparent",
+              "&:hover": {
+                backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+              },
+              cursor: "pointer", 
+            }}
+          >
+            <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+              •
+            </span>
+            <span
+              style={{
+                display: expandLeftNav ? "inline" : "none",
+                opacity: expandLeftNav ? 1 : 0,
+                transition: "opacity 0.3s ease",
+                fontSize: 18,
+                color: themeMode === "dark" ? currentOpenTab === "locations" ? theme.palette.text.primary : lightText : darkText,
+              }}
+            >
+    Partners
+            </span>
+          </Button>
           </span>
           </>): null}
               </Box>

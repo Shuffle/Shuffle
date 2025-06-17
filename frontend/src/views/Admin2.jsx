@@ -287,8 +287,8 @@ const Admin2 = (props) => {
 
 
     const handleStatusChange = (event) => {
-        const { value } = event.target;
-        setSelectedStatus(value);
+        const { value } = event.target
+        setSelectedStatus(value)
 
         handleEditOrg(
             selectedOrganization?.name,

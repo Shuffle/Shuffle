@@ -4,7 +4,7 @@ import { makeStyles, createStyles } from "@mui/styles";
 import {getTheme} from '../theme.jsx';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
+import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { NestedMenuItem } from "mui-nested-menu";
@@ -825,7 +825,7 @@ const ParsedAction = (props) => {
 									// Check if array, and if first item is object + success
 									if (Array.isArray(valid.result) && valid.result.length > 0 && typeof valid.result[0] === "object") {
 										if (valid.result[0].success !== false) {
-											exampleData = valid.result[0]
+											exampleData = valid.result
 											break
 										}
 									} else {
@@ -910,14 +910,48 @@ const ParsedAction = (props) => {
 				if (newActionList?.length > 0) {
 					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
 					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
+					
+					// Extract all variable references from paramvalue
+					// Examples of what it matches:
+					//   - Simple variables: $test, $myVar, $x
+					//   - Variables with underscores: $my_variable, $ok_ok, $testing_nice, $nice_try_man
+					//   - Workflow data access patterns: $not_customer_copy.body.subject.#, $not_customer.body.subject.text
+					//   - Deep nested properties: $email_action.response.items[0].sender.address
+
+					const variablePattern = /\$[a-zA-Z0-9_]+(?=\.|,|;|:|\s|"|'|`|\)|\]|\}|$)/g;
+					const foundVariables = paramvalue.match(variablePattern) || [];
+
 					notPresentAction?.forEach((action) => {
 						action = action.replace(" ", "_");
-						if (paramvalue.includes(action)) {
+						
+						// Check if the exact action is in the foundVariables list
+						if (foundVariables.includes(action)) {
 							errorVars.push(action);
-							// paramvalue = paramvalue.replace(action, "")
-							// paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
 						}
-					})
+					});
+					
+					// Check for variables that don't exist in the workflow at all
+					foundVariables.forEach(variable => {
+						// Skip checking for $ followed by system vars as exec and shuffle_cache.
+						if (variable.match(/\$(exec|shuffle_cache)/)) {
+							return;
+						}
+						// Create list of all valid action variables from newActionList
+						const newActionNames = newActionList?.map(action => "$" + action.name.toLowerCase()) || [];
+						
+						// Extract workflow and execution variables from newActionList
+						const workflowVars = newActionList
+							.filter(item => item.type === "workflow_variable" || item.type === "execution_variable")
+							.map(item => "$" + item.autocomplete.toLowerCase());
+						
+						// If the variable doesn't exist in any workflow actions, parent actions, newActionList, or extracted variables, show error
+						if (!actions.includes(variable) && 
+							!appParentActions.includes(variable) && 
+							!newActionNames.includes(variable) && 
+							!workflowVars.includes(variable.toLowerCase())) {
+							errorVars.push(variable);
+						}
+					});
 				}
 			}
 
@@ -3085,9 +3119,6 @@ const ParsedAction = (props) => {
 												}
 
 												var isAppSelected = false
-
-												console.log("App found: ", app.name, app.categories, appIndex, newactionname)
-
 												const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
 												if (paramIndex > -1) {
 													// Check the actual value and if it's the same

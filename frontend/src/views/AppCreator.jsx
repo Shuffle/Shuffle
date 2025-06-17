@@ -745,7 +745,7 @@ const AppCreator = (defaultprops) => {
     }
 
     setBasedata(data);
-		console.log("Info: ", data)
+		console.log("Loaded Info: ", data)
 
 		try { 
 			if (data.info !== null && data.info !== undefined) {
@@ -759,7 +759,12 @@ const AppCreator = (defaultprops) => {
 					if (data.info.title.length > 29) {
 						setName(data.info.title.slice(0, 29));
 					} else {
-						setName(data.info.title);
+						// Check if fork=true in URL
+						if (window.location.search.includes("fork=true")) {
+							setName(data.info.title + " Fork");
+						} else {
+							setName(data.info.title)
+						}
 					}
 				}
 

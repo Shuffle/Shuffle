@@ -4066,7 +4066,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
             </Button>
           }
 
-          {isMobile ? null : (
+          {isMobile || app?.reference_org === userdata?.active_org?.id ? null : (
             <Button
 			  variant={userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ? "outlined": "contained"}
               component="label"
@@ -4142,7 +4142,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 						component="label"
 						color="secondary"
 						onClick={() => {
-							navigate(`/apps/new?id=${appId}`)
+							navigate(`/apps/new?id=${appId}&fork=true`)
 						}}
 						style={{ height: 40, marginTop: 5, marginLeft: 5, }}
 					>

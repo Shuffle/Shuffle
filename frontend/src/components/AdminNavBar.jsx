@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import OrganizationTab from '../components/OrganizationTab.jsx';
+import PartnerTab from '../components/PartnerTab.jsx';
 import UserManagmentTab from '../components/UserManagmentTab.jsx';
 import CacheView from "../components/CacheView.jsx";
 import Files from "../components/Files.jsx";
@@ -25,6 +26,24 @@ import { Index } from 'react-instantsearch-dom';
 import { Context } from '../context/ContextApi.jsx';
 import { toast } from 'react-toastify';
 
+const PartnerIcon = ({ strokeColor, fillColor = 'transparent', width = 22, height = 22 }) => (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 18 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M14.5327 4.49465C14.0102 4.60513 13.5779 4.90684 13.2905 5.31071L12.382 1L1.7665 3.23791C1.24516 3.34838 0.911462 3.86034 1.02072 4.38181L3.25807 15L7.57601 14.0901C7.16749 13.8026 6.85992 13.3679 6.74948 12.8393C6.51672 11.7334 7.22331 10.6477 8.32892 10.4149C9.43453 10.1821 10.52 10.8889 10.7527 11.9947C10.8643 12.5221 10.7587 13.0448 10.501 13.4724L14.8189 12.5625L13.9104 8.25182C14.3368 8.50484 14.8533 8.60699 15.3759 8.49652C16.4815 8.2637 17.1893 7.17801 16.9553 6.07212C16.7225 4.96623 15.6371 4.25827 14.5315 4.49228L14.5327 4.49465Z"
+        fill={fillColor}
+        stroke={strokeColor}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+);
+
 const AdminNavBar = (props) => {
     const location = useLocation();
     const { globalUrl, userdata, isCloud,isOrgLoaded, isLoaded,removeCookie,  handleStatusChange, selectedStatus, setSelectedStatus, handleEditOrg, serverside, notifications, handleGetOrg, orgId, checkLogin, setNotifications, stripeKey, setSelectedOrganization, selectedOrganization } = props;
@@ -36,17 +55,6 @@ const AdminNavBar = (props) => {
     const [isGlobalUser, setIsGlobalUser] = useState(false);
     const [visibleItems, setVisibleItems] = useState([]);
     const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
-
-    const items = [
-        { iconSrc: <BusinessIcon />, alt: "Organization Icon", text: "Organization", component: OrganizationTab, props: { isIntegrationPartner, isChildOrg, isGlobalUser, globalUrl,removeCookie,  selectedStatus, isLoaded, setSelectedStatus, handleStatusChange, handleEditOrg, handleGetOrg, userdata, isCloud, serverside, notifications, checkLogin, setNotifications, stripeKey, setSelectedOrganization, selectedOrganization } },
-        { iconSrc: <PermIdentityIcon />, alt: "Users Icon", text: "Users", component: UserManagmentTab, props: { globalUrl, userdata, serverside, isCloud, selectedOrganization, setSelectedOrganization, handleEditOrg } },
-        { iconSrc: <HttpsOutlinedIcon />, alt: "App Auth Icon", text: "App_auth", component: AppAuthTab, props: { globalUrl, userdata, isCloud, selectedOrganization } },
-        { iconSrc: <StorageOutlinedIcon />, alt: "Datastore Icon", text: "Datastore", component: CacheView, props: { globalUrl, userdata, selectedOrganization, serverside, isSelectedDataStore, orgId , isCloud} },
-        { iconSrc: <InsertDriveFileOutlinedIcon />, alt: "Files Icon", text: "Files", component: Files, props: { isCloud, globalUrl, userdata, serverside, selectedOrganization, isSelectedFiles } },
-        { iconSrc: <AccessTimeOutlinedIcon />, alt: "Trigger Icon", text: "Triggers", component: SchedulesTab, props: { globalUrl, userdata, isCloud, serverside } },
-        { iconSrc: <FmdGoodOutlinedIcon />, alt: "Environments Icon", text: "Locations", component: EnvironmentTab, props: { globalUrl, userdata, isCloud, selectedOrganization } },
-        { iconSrc: <GroupOutlinedIcon />, alt: "Tenants Icon", text: "Tenants", component: TenantsTab, props: {isCloud, globalUrl, userdata, serverside, selectedOrganization, setSelectedOrganization, checkLogin } }
-    ];
 
 
     useEffect(() => {
@@ -119,7 +127,17 @@ const AdminNavBar = (props) => {
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         const tabName = queryParams.get('tab');
-    
+        const partnerTab = queryParams.get('partner_tab');
+
+        // if(!isCloud){
+        //     if(tabName === "partner" || partnerTab !== null) {
+        //         setSelectedItem("Organization");
+        //         navigate(`?tab=organization`, { replace: true });
+        //     }
+        // }
+        if (partnerTab) {
+            setSelectedItem("Partner");
+        }
         if (tabName === "environments") {
             setSelectedItem("Locations");
         } else if (tabName === "suborgs") {
@@ -128,10 +146,23 @@ const AdminNavBar = (props) => {
             setSelectedItem("Datastore");
         }else if (tabName) {
             setSelectedItem(tabName.charAt(0).toUpperCase() + tabName.slice(1));
-        } else {
-            setSelectedItem("Organization");
+        }else if (tabName === "partner") {
+            setSelectedItem("Partner");
         }
+
     }, [location.search]);
+
+    const items = [
+        { iconSrc: <BusinessIcon />, alt: "Organization Icon", text: "Organization", component: OrganizationTab, props: { isIntegrationPartner, isChildOrg, isGlobalUser,globalUrl,removeCookie,  selectedStatus, isLoaded, setSelectedStatus, handleStatusChange, handleEditOrg, handleGetOrg, userdata, isCloud, serverside, notifications, checkLogin, setNotifications, stripeKey, setSelectedOrganization, selectedOrganization } },
+        { iconSrc: undefined, alt: "Partner Icon", text: "Partner", component: PartnerTab, props: { globalUrl,removeCookie, isLoaded, handleGetOrg, userdata, isCloud, serverside, checkLogin, setSelectedOrganization, selectedOrganization } },
+        { iconSrc: <PermIdentityIcon />, alt: "Users Icon", text: "Users", component: UserManagmentTab, props: { globalUrl, userdata, serverside, isCloud, selectedOrganization, setSelectedOrganization, handleEditOrg } },
+        { iconSrc: <HttpsOutlinedIcon />, alt: "App Auth Icon", text: "App_auth", component: AppAuthTab, props: { globalUrl, userdata, isCloud, selectedOrganization } },
+        { iconSrc: <StorageOutlinedIcon />, alt: "Datastore Icon", text: "Datastore", component: CacheView, props: { globalUrl, userdata, selectedOrganization, serverside, isSelectedDataStore, orgId , isCloud} },
+        { iconSrc: <InsertDriveFileOutlinedIcon />, alt: "Files Icon", text: "Files", component: Files, props: { isCloud, globalUrl, userdata, serverside, selectedOrganization, isSelectedFiles } },
+        { iconSrc: <AccessTimeOutlinedIcon />, alt: "Trigger Icon", text: "Triggers", component: SchedulesTab, props: { globalUrl, userdata, isCloud, serverside } },
+        { iconSrc: <FmdGoodOutlinedIcon />, alt: "Environments Icon", text: "Locations", component: EnvironmentTab, props: { globalUrl, userdata, isCloud, selectedOrganization } },
+        { iconSrc: <GroupOutlinedIcon />, alt: "Tenants Icon", text: "Tenants", component: TenantsTab, props: {isCloud, globalUrl, userdata, serverside, selectedOrganization, setSelectedOrganization, checkLogin } }
+    ].filter(Boolean);
 
     const setConfig = (newValue) => {
         setSelectedItem(newValue);
@@ -208,16 +239,16 @@ const AdminNavBar = (props) => {
         const ComponentToRender = selectedItemData.component;
         const componentProps = selectedItemData.props;
 
-    const updatedProps = {
-        ...componentProps,
-        notifications: notifications,
-        setNotifications: setNotifications, 
-        userdata: userdata, 
-        selectedOrganization: selectedOrganization
-    };
+		const updatedProps = {
+			...componentProps,
+			notifications: notifications,
+			setNotifications: setNotifications, 
+			userdata: userdata, 
+			selectedOrganization: selectedOrganization
+		};
 
-    return <ComponentToRender {...updatedProps} />;
-};
+		return <ComponentToRender {...updatedProps} />;
+	};
 
     const defaultImage = "/images/logos/orange_logo.svg"
     const imageData =
@@ -296,7 +327,7 @@ const AdminNavBar = (props) => {
                                 disabled={
                                 ((item.text === "Users") || (item.text === "Files") || (item.text === "Triggers") || (item.text === "Locations")) && !(userdata?.support || userdata?.active_org?.role === "admin")
                                 }
-                                startIcon={item.iconSrc}
+                                startIcon={item?.iconSrc === undefined ? <PartnerIcon strokeColor={selectedItem === item.text ? theme.palette.text.primary : theme.palette.text.secondary} /> : item?.iconSrc}
                                 onClick={() => setConfig(item.text)}
                             >
                                 {item.text.replace(/_/g, " ")}
@@ -308,7 +339,10 @@ const AdminNavBar = (props) => {
 
                 </nav>
             </div>
-            <Wrapper2>{renderComponent()}</Wrapper2>
+
+            <Wrapper2>
+				{renderComponent()}
+			</Wrapper2>
         </Wrapper>
     );
 };
@@ -424,7 +458,13 @@ const Loader = () => {
 const PaddingWrapper2 = memo(({ children }) => {
 
     return (
-        <div div style={{marginBottom: 30, width: "75%" , maxWidth: 1200, height: "100%", boxSizing: 'border-box'}}>
+        <div style={{
+			marginBottom: 30, 
+			width: "75%" , 
+			maxWidth: 1200, 
+			height: "100%", 
+			boxSizing: 'border-box',
+		}}>
             {children}
         </div>
     )

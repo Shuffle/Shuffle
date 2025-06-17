@@ -21,6 +21,9 @@ import {
     DialogActions,
     DialogContent,
     Skeleton,
+    IconButton,
+    Modal,
+    Checkbox,
   } from "@mui/material";
   
   import {
@@ -32,6 +35,8 @@ import {
     Business as BusinessIcon,
     Flag,
 	ArrowDropDown as ArrowDropDownIcon,
+    VisibilityOff,
+    Visibility,
 
   } from "@mui/icons-material";
 
@@ -66,7 +71,8 @@ const TenantsTab = memo((props) => {
     const itemColor = "black";
     const { themeMode, supportEmail, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
-
+    const [accountDeleteButtonClicked, setAccountDeleteButtonClicked] = useState(false);
+    const [selectedSuborg, setSelectedSuborg] = useState(null);
     useEffect(() => {
         if(parentOrg !== null && parentOrgFlag === null) {
             let regiontag = "UK";
@@ -594,6 +600,221 @@ const TenantsTab = memo((props) => {
             });
     };
 
+    const DeleteAccountPopUp = () => {
+        const [userDeleteAccepted, setUserDeleteAccepted] = useState(false);
+        const [password, setPassword] = useState("");
+        const [showPassword, setShowPassword] = useState(false);
+        const [disabled, setDisabled] = useState(true);
+        const [open, setOpen] = useState(true);
+        const boxStyling = {
+          position: "relative",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: "9999",
+          backgroundColor: theme.palette.backgroundColor,
+          color: theme.palette.text.primary,
+          padding: 20,
+          borderRadius: 5,
+          boxShadow: "0 0 10px rgba(0, 0, 0, 0.3)",
+          width: 430,
+          height: 430,
+        };
+    
+        const closeIconButtonStyling = {
+          color: theme.palette.text.primary,
+          border: "none",
+          backgroundColor: "transparent",
+          position: 'relative',
+          width: 20,
+          height: 20,
+          cursor: "pointer",
+          left: "calc(100% - 30px)",
+        };
+    
+        const handlePasswordVisibility = () => {
+          setShowPassword(!showPassword);
+        };
+    
+        const buttonStyle = {
+          marginTop: 20,
+          height: 50,
+          border: "none",
+          width: "100%",
+          fontSize: 16,
+          backgroundColor: disabled ? "gray" : "red",
+          color: theme.palette.text.primary,
+          cursor: disabled === false && "pointer",
+        };    
+    
+        const handlePasswordChange = (e) => {
+          setPassword(e.target.value);
+        };
+    
+        const handleCheckBoxEvent = () => {
+          setUserDeleteAccepted((prev) => !prev);
+        };
+    
+        useEffect(() => {
+          if (password.length > 8 && userDeleteAccepted) {
+            setDisabled(false);
+          } else {
+            setDisabled(true);
+          }
+        }, [password, userDeleteAccepted]);
+
+    
+        const handleDeleteAccount = () => {
+          const baseURL = globalUrl;
+    
+          const url = `${baseURL}/api/v1/orgs/${selectedOrganization?.id}`;
+
+          const data = {
+            suborg_id : selectedSuborg?.id,
+            password: password,
+          }
+    
+          fetch(url, {
+            mode: "cors",
+            method: "DELETE",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                toast.success(
+                  "Suborg deleted"
+                );
+                handleGetSubOrgs(userdata.active_org.id);
+                setAccountDeleteButtonClicked(false);
+
+              } else {
+                if (data.reason) {
+                  toast.error(data.reason);
+                }else {
+                    toast.error("Failed to delete suborg. Please try again or contact support@shuffler.io for help.");
+                }
+              }
+            })
+            .catch((error) => {
+              console.error(
+                "There was a problem with your fetch operation:",
+                error
+              );
+            });
+        };
+    
+        return (
+          <Modal open= {open} >
+          <div style={boxStyling}>
+            <IconButton
+                style={closeIconButtonStyling}
+                onClick={() => {
+                    setAccountDeleteButtonClicked(false);
+                    setSelectedSuborg(null);
+                }}
+            >
+              <CloseIcon />
+            </IconButton>
+            <h1 style={{textAlign:"center", margin : "0 0 20px 0"}}>Sub-Organization</h1>
+          {/* <div style={{paddingLeft: 15}} > */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                textAlign: "left",
+                // paddingLeft: 15
+                // marginLeft: 20
+              }}
+            >
+              <label>If you delete your suborg then:</label>
+              <ul style={{ textAlign: "left" }}>
+                <li>
+                  <label>
+                    Your suborg information will be removed from our Database
+                    permanently.
+                  </label>
+                </li>
+                <li>
+                  <label>This action cannot be reversed.</label>
+                </li>
+              </ul>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Checkbox
+                  checked={userDeleteAccepted}
+                  onChange={handleCheckBoxEvent}
+                  size="medium"
+                />
+                <label style={{ fontSize: "16px", color: theme.palette.text.primary }}>
+                  I have read the above information and I agree to it completely
+                </label>
+              </div>
+              <div
+                style={{
+                  marginTop: 20,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                <label>Enter password to delete suborg {" " + selectedSuborg?.name}</label>
+                <TextField
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      flex: "1",
+                    }}
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={handlePasswordChange}
+                    required
+                    placeholder="Password"
+                    id="standard-required"
+                    autoComplete="off"
+                    InputProps={{
+                        style: {
+                            color: theme.palette.textFieldStyle.color,
+                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                            height: "45px",
+                            fontSize: "1em",
+                            borderRadius: theme.palette.textFieldStyle.borderRadius,
+                        },
+                      endAdornment: (
+                        <IconButton
+                          onClick={handlePasswordVisibility}
+                          style={{color:theme.palette.text.primary}}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      ),
+                    }}
+                  />
+              </div>
+              <button
+                style={buttonStyle}
+                disabled={disabled}
+                onClick={handleDeleteAccount}
+              >
+                Delete Suborg
+              </button>
+            </div>
+          </div>
+          </Modal>
+        );
+      };
+
     const modalView = (
         <Dialog
             open={modalOpen}
@@ -795,6 +1016,7 @@ const TenantsTab = memo((props) => {
         <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder,}}>
             {modalView}
             {cloudSyncModal}
+             {accountDeleteButtonClicked && <DeleteAccountPopUp/>}
             <div style={{height: "100%", maxHeight: 1700, overflowY: "auto",overflowX: 'hidden', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
                 <div style={{ height: "100%", width: "calc(100% - 20px)",  scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>   
                 <div style={{ marginBottom: 20 }}>
@@ -1340,7 +1562,8 @@ const TenantsTab = memo((props) => {
 
                             	        <ListItemText
                             			primary={
-                            	    		<Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
+                            	    		<>
+                                                <Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
                             	            <Button
                             	                color="primary"
                             	                variant='outlined'
@@ -1359,7 +1582,34 @@ const TenantsTab = memo((props) => {
                             	            >
                             	                Change Active Org
                             	            </Button>
+                                            
                             	        </Tooltip>
+                                        {selectedOrganization?.creator_org?.length > 0 ? null : 
+                                        <Button
+                                            variant="outlined"
+                                            sx={{
+                                                whiteSpace: "nowrap",
+                                                textTransform: "none",
+                                                fontSize: "16px",
+                                                color: "red",
+                                                marginLeft: "5px",
+                                                borderColor: "red",
+                                                "&:hover": {
+                                                    color: theme.palette.text.primary,
+                                                    backgroundColor: "red",
+                                                },
+
+                                            }}
+                                            disabled={data?.id === userdata?.active_org?.id}
+                                            onClick={() => {
+                                                setAccountDeleteButtonClicked(true);
+                                                setSelectedSuborg(data);
+                                            }}
+                                            >
+                                            Delete Org
+                                            </Button>}
+
+                                        </>
                             	}
                             	style={{ display: "table-cell", verticalAlign: "middle" }}
                             	/>

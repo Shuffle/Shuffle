@@ -6,6 +6,7 @@ import { getTheme } from "../theme.jsx";
 import { useInterval } from "react-powerhooks";
 import { makeStyles, } from "@mui/styles";
 
+import YAML from "yaml";
 import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { v4 as uuidv4, v5 as uuidv5, validate as isUUID, } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -132,6 +133,7 @@ import {
   ArrowForward as ArrowForwardIcon,
   OpenInFull as OpenInFullIcon,
   Difference as DifferenceIcon,
+  DataObject as DataObjectIcon, 
 } from "@mui/icons-material";
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 //import * as cytoscape from "cytoscape";
@@ -778,9 +780,9 @@ const AngularWorkflow = (defaultprops) => {
         "name": "action",
         "value": "list_tickets",
         "options": [
+          "create_ticket",
           "list_tickets",
           "get_ticket",
-          "create_ticket",
           "close_ticket",
           "add_comment",
           "update_ticket",
@@ -794,16 +796,6 @@ const AngularWorkflow = (defaultprops) => {
         "required": false,
         "multiline": true,
       },
-        /*{
-          "name": "options",
-          "value": "deduplicate,enrich",
-          "required": false,
-          "multiselect": true,
-          "options": [
-            "deduplicate",
-            "enrich",
-          ]
-        }*/
       ]
     }, {
       "name": "Communication",
@@ -813,9 +805,9 @@ const AngularWorkflow = (defaultprops) => {
         "name": "action",
         "value": "list_messages",
         "options": [
+          "send_message",
           "list_messages",
           "get_message", 
-          "send_message",
           "search_messages",
           "list_attachments",
           "get_attachment",
@@ -838,15 +830,15 @@ const AngularWorkflow = (defaultprops) => {
       "parameters": [{
         "name": "action",
         "value": "get_asset",
-      "options": [
-        "reset_password",
-        "enable_user",
-        "disable_user",
-        "get_identity",
-        "get_asset",
-        "search_identity"
-      ],
-        "required": true,
+      	"options": [
+			"reset_password",
+			"enable_user",
+			"disable_user",
+			"get_identity",
+			"get_asset",
+			"search_identity"
+		  ],
+          "required": true,
       },
       {
         "name": "fields",
@@ -861,9 +853,9 @@ const AngularWorkflow = (defaultprops) => {
       "label": "Assets",
       "parameters": [{
         "name": "action",
-        "value": "search_vulnerabilities",
+        "value": "list_assets",
         "options": [
-        "list_assets",
+          "list_assets",
           "get_asset",
           "search_assets",
           "search_users",
@@ -915,8 +907,8 @@ const AngularWorkflow = (defaultprops) => {
         "value": "get_ioc",
         "options": [
           "get_ioc",
-          "search_ioc",
           "create_ioc",
+          "search_ioc",
           "update_ioc",
           "delete_ioc"
         ],
@@ -975,27 +967,8 @@ const AngularWorkflow = (defaultprops) => {
         "multiline": true,
       }]
     },
-
-    
     ]
   }]
-
-  /*
-    {
-      "name": "Email",
-      "label": "Email",
-      "parameters": [{	
-        "name": "action",
-        "value": "list_email",
-        "options": [
-          "list_email", 
-          "send_mail", 
-        ],
-        "required": true,
-      }],
-    }]
-  }] 
-  */
 
   // For code editor
   const [codeEditorModalOpen, setCodeEditorModalOpen] = React.useState(false);
@@ -1213,6 +1186,7 @@ const AngularWorkflow = (defaultprops) => {
     if (workflow?.suborg_distribution !== undefined && workflow?.suborg_distribution !== null && workflow?.suborg_distribution.length > 0) {
     	getChildWorkflows(workflow.id)
     }
+
   }, [workflow]);
 
   // Event for making sure app is correct
@@ -2506,9 +2480,11 @@ const AngularWorkflow = (defaultprops) => {
       console.log("Should redirect to register with redirect.")
 
       setTimeout(() => {
-        toast("You may not have access to this workflow.")
-        //window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
-        window.location.href = `/workflows`
+        // toast("You may not have access to this workflow.")
+        localStorage.setItem("redirectId", props.match.params.key)
+        navigate("/register?view=workflows&message=You need sign up to use workflows with Shuffle");
+        // window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
+        // window.location.href = `/workflows`
       }, 2500)
 
       return
@@ -2878,9 +2854,9 @@ const AngularWorkflow = (defaultprops) => {
           setSavingState(0);
           console.log("Workflow failed loading: ", responseJson);
           if (responseJson.reason !== undefined && responseJson.reason !== null) {
-            toast("Failed to save: " + responseJson.reason);
+            toast.error("Failed to save: " + responseJson.reason);
           } else {
-            toast(`Failed to save. Please contact your ${supportEmail} or your local admin if this is unexpected.`)
+            toast.error(`Failed to save. Please contact your ${supportEmail} or your local admin if this is unexpected.`)
           }
         } else {
           setSavingState(1);
@@ -4590,6 +4566,9 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 
               setTimeout(() => {
+                if(!isLoggedIn){
+                localStorage.setItem("redirectId", props.match.params.key);
+                }
                 window.location.pathname = "/workflows";
               }, 2500);
 
@@ -4880,6 +4859,17 @@ const AngularWorkflow = (defaultprops) => {
             setOriginalWorkflow(responseJson)
           }
 
+		  const tmpUi = new URLSearchParams(cursearch).get("ui");
+		  if (
+		    tmpUi !== undefined &&
+		    tmpUi !== null &&
+		    tmpUi === "yaml"
+		  ) {
+			  setTimeout(() => {
+		  		setupWorkflowYaml(responseJson) 
+			  }, 2500)
+		  }
+
           setWorkflow(responseJson);
           setWorkflowDone(true);
 
@@ -4898,6 +4888,9 @@ const AngularWorkflow = (defaultprops) => {
 
             setConfigureWorkflowModalOpen(true)
           }
+
+
+
         }
       })
       .catch((error) => {
@@ -9959,6 +9952,191 @@ const AngularWorkflow = (defaultprops) => {
       });
   }
 
+  const setupWorkflowYaml = (inputworkflow) => {
+	  toast.warn("YAML exploring is an experimental feature - only visible to support users. The goal of this is to make it EASY to edit the workflow as YAML instead of just using the UI")
+	  if (userdata?.support !== true) {
+		  console.log("Not support: ", userdata)
+		  return
+	  }
+
+	  // This should be getting the workflow based on actual nodes in the workflow
+	  // as the goal is to have it be live
+	  var copiedWorkflow = JSON.parse(JSON.stringify(inputworkflow))
+
+	  const removeObjects = [
+		  "execution_org",
+		  "categories",
+		  "example_argument",
+		  "public",
+		  "contact_info",
+		  "published_id",
+		  "revision_id",
+		  "usecase_ids",
+		  "input_questions",
+		  "form_control",
+		  "blogpost",
+		  "video",
+		  "status",
+		  "generated",
+		  "hidden",
+		  "updated_by",
+		  "validated",
+		  "validation",
+		  "childorg_workflow_ids",
+		  "backup_config",
+		  "auth_groups",
+		  "isValid",
+		  "workflow_as_code",
+		  "image",
+		  "sharing",
+		  "owner",
+		  "configuration",
+		  "created",
+		  "edited",
+		  "last_runtime",
+		  "due_date",
+		  "is_valid",
+		  "execution_environment",
+		  "default_return_value",
+		  "visual_branches",
+		  "previously_saved",
+		  "workflow_type",
+		  "parentorg_workflow",
+		  "suborg_distribution",
+		  "id",
+		  "comments",
+		  "org_id",
+
+		  // Failing test
+		  "spalabi",
+	  ]
+
+	  for (var i = 0; i < removeObjects.length; i++) {
+		  delete copiedWorkflow[removeObjects[i]]
+	  }
+
+	  const removeActionValues = [
+		  "_id",
+		  "id",
+
+		  "large_image",
+		  "description",
+		  "is_valid",
+		  "isStartNode",
+		  "sharing",
+		  "public",
+		  "generated",
+		  "execution_variable",
+		  "position",
+		  "category",
+		  "reference_url",
+		  "sub_action",
+		  "run_magic_output",
+		  "run_magic_input",
+		  "category_label",
+		  "suggestions",
+		  "parent_controlled",
+		  "source_workflow",
+		  "source_executions",
+		  "app_association",
+		  "suggestion",
+		  "small_image",
+		  "long_description",
+		  "tags",
+		  "errors",
+		  "source_executions",
+		  "source_execution",
+		  "required",
+		  "example",
+		  "type",
+
+		  "test2",
+	  ]
+
+	  const removeActionParamValues = [
+		  "id",
+		  "multiline",
+		  "multiselect",
+		  "options",
+		  "action_field",
+		  "variant",
+		  "configuration",
+		  "tags",
+		  "schema",
+		  "skip_multicheck",
+		  "value_replace",
+		  "unique_toggled",
+		  "hidden",
+		  "error",
+		  "example",
+
+		  "test3",
+	  ]
+
+	  if (copiedWorkflow?.actions !== undefined && copiedWorkflow?.actions !== null && copiedWorkflow?.actions.length > 0) {
+		  for (var key in copiedWorkflow.actions) {
+			  for (var i = 0; i < removeActionValues.length; i++) {
+				  delete copiedWorkflow.actions[key][removeActionValues[i]]
+			  }
+
+
+			  if (copiedWorkflow.actions[key].parameters === undefined || copiedWorkflow.actions[key].parameters === null) {
+				  continue
+			  }
+
+			  for (var j = 0; j < copiedWorkflow.actions[key].parameters.length; j++) {
+				  for (var k = 0; k < removeActionParamValues.length; k++) {
+					  delete copiedWorkflow.actions[key].parameters[j][removeActionParamValues[k]]
+				  }
+			  }
+		  }
+	  }
+
+	  if (copiedWorkflow?.triggers !== undefined && copiedWorkflow?.triggers !== null && copiedWorkflow?.triggers.length > 0) {
+		  for (var key in copiedWorkflow.triggers) {
+			  for (var i = 0; i < removeActionValues.length; i++) {
+				  delete copiedWorkflow.triggers[key][removeActionValues[i]]
+			  }
+
+			  delete copiedWorkflow.triggers[key]["app_name"]
+			  delete copiedWorkflow.triggers[key]["app_version"]
+			  delete copiedWorkflow.triggers[key]["name"]
+			  delete copiedWorkflow.triggers[key]["priority"]
+			  delete copiedWorkflow.triggers[key]["replacement_for_trigger"]
+
+			  if (copiedWorkflow.triggers[key].parameters === undefined || copiedWorkflow.triggers[key].parameters === null) {
+				  continue
+			  }
+
+			  for (var j = 0; j < copiedWorkflow.triggers[key].parameters.length; j++) {
+				  for (var k = 0; k < removeActionParamValues.length; k++) {
+					  delete copiedWorkflow.triggers[key].parameters[j][removeActionParamValues[k]]
+				  }
+			  }
+		  }
+	  }
+
+	  if (copiedWorkflow?.workflow_variables === undefined || copiedWorkflow?.workflow_variables === null || copiedWorkflow?.workflow_variables.length === 0) {
+		  delete copiedWorkflow.workflow_variables
+	  }
+
+	  if (copiedWorkflow?.branches === undefined || copiedWorkflow?.branches === null || copiedWorkflow?.branches.length === 0) {
+		  delete copiedWorkflow.branches
+	  }
+
+
+	  // YAML
+	  const sampledata = YAML.stringify(copiedWorkflow)
+
+	  navigate("?ui=yaml", { replace: true })
+
+      setCodeEditorModalOpen(true) 
+	  setEditorData({
+		"name": "workflow yaml",
+		"value": sampledata,
+	  })
+  }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   //useEffect(() => {
   if (firstrequest) {
@@ -10000,6 +10178,7 @@ const AngularWorkflow = (defaultprops) => {
       //navigate(`?execution_highlight=${parsed_url}`)
       //props.history.push(curpath + newitem);
     }
+
     return;
   }
 
@@ -12136,10 +12315,8 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 if ((app.id === "integration" || app.id === "shuffle_agent") && userdata.support !== true) {
-					console.log("APPID: ", app.id, isCloud)
 					if (isCloud === false && app.id === "integration") {
 					} else {
-						console.log("RETURNING", app.id)
                   		return null
 					}
                 }
@@ -12572,7 +12749,7 @@ const AngularWorkflow = (defaultprops) => {
     // maxiter = max amount of parent nodes to loop
     // also handles breaks if there are issues
     var iterations = 0;
-    var maxiter = 10;
+    var maxiter = 100;
     while (true) {
       for (let parentkey in allkeys) {
         var currentnode = cy.getElementById(allkeys[parentkey]);
@@ -18553,6 +18730,68 @@ const AngularWorkflow = (defaultprops) => {
     zoom: isSafari ? undefined : 0.9,
   }
 
+
+	const changeOrg = () => {
+		localStorage.setItem("globalUrl", "");
+		localStorage.setItem("getting_started_sidebar", "open");
+		fetch(`${globalUrl}/api/v1/orgs/${workflow.org_id}/change`, {
+		  mode: "cors",
+		  credentials: "include",
+		  crossDomain: true,
+		  method: "POST",
+		  body: JSON.stringify({ "org_id": workflow.org_id }),
+		  withCredentials: true,
+		  headers: {
+			"Content-Type": "application/json; charset=utf-8",
+		  },
+		})
+		  .then(function (response) {
+			if (response.status !== 200) {
+			  console.log("Error in response");
+			} else {
+			  localStorage.removeItem("apps")
+			  localStorage.removeItem("workflows")
+			  localStorage.removeItem("userinfo")
+			}
+
+			return response.json();
+		  })
+		  .then(function (responseJson) {
+			console.log("In here?")
+			if (responseJson.success === true) {
+			  if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
+				console.log("Region Change: ", responseJson.region_url);
+				localStorage.setItem("globalUrl", responseJson.region_url);
+				//globalUrl = responseJson.region_url
+			  }
+
+			  if (responseJson["reason"] === "SSO_REDIRECT") {
+				setTimeout(() => {
+				  toast.info("Redirecting to SSO login page as SSO is required for this organization.")
+				  window.location.href = responseJson["url"]
+				  return
+				}, 2000)
+			  } else {
+				setTimeout(() => {
+				  window.location.reload();
+				}, 2000);
+			  }
+
+			  toast.info("Successfully changed active organisation - refreshing!");
+			} else {
+			  if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+				toast(responseJson.reason);
+			  } else {
+				toast(`Failed changing org. Try again or contact ${supportEmail} if this persists.`);
+			  }
+			}
+		  })
+		  .catch((error) => {
+			console.log("error changing: ", error);
+			//removeCookie("session_token", {path: "/"})
+		  })
+		}
+
   const TopCytoscapeBar = (props) => {
     const [hovered, setHovered] = useState(false)
 
@@ -18620,72 +18859,15 @@ const AngularWorkflow = (defaultprops) => {
             </Tooltip>
           )}
 
-          {!distributedFromParent ?
-            isCorrectOrg ? null :
+          {!distributedFromParent || userdata?.support === true ?
+            isCorrectOrg ? null : 
               <Typography variant="body2" style={{ marginLeft: 10, }}>
                 <b>Warning</b>: <span
                   style={{ color: "#FF8544", cursor: "pointer", pointerEvents: "auto", }}
                   onClick={() => {
                     toast("Changing to correct organisation. Please wait a few seconds.")
 
-                    localStorage.setItem("globalUrl", "");
-                    localStorage.setItem("getting_started_sidebar", "open");
-                    fetch(`${globalUrl}/api/v1/orgs/${workflow.org_id}/change`, {
-                      mode: "cors",
-                      credentials: "include",
-                      crossDomain: true,
-                      method: "POST",
-                      body: JSON.stringify({ "org_id": workflow.org_id }),
-                      withCredentials: true,
-                      headers: {
-                        "Content-Type": "application/json; charset=utf-8",
-                      },
-                    })
-                      .then(function (response) {
-                        if (response.status !== 200) {
-                          console.log("Error in response");
-                        } else {
-                          localStorage.removeItem("apps")
-                          localStorage.removeItem("workflows")
-                          localStorage.removeItem("userinfo")
-                        }
-
-                        return response.json();
-                      })
-                      .then(function (responseJson) {
-                        console.log("In here?")
-                        if (responseJson.success === true) {
-                          if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
-                            console.log("Region Change: ", responseJson.region_url);
-                            localStorage.setItem("globalUrl", responseJson.region_url);
-                            //globalUrl = responseJson.region_url
-                          }
-
-                          if (responseJson["reason"] === "SSO_REDIRECT") {
-                            setTimeout(() => {
-                              toast.info("Redirecting to SSO login page as SSO is required for this organization.")
-                              window.location.href = responseJson["url"]
-                              return
-                            }, 2000)
-                          } else {
-                            setTimeout(() => {
-                              window.location.reload();
-                            }, 2000);
-                          }
-
-                          toast("Successfully changed active organisation - refreshing!");
-                        } else {
-                          if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
-                            toast(responseJson.reason);
-                          } else {
-                            toast(`Failed changing org. Try again or contact ${supportEmail} if this persists.`);
-                          }
-                        }
-                      })
-                      .catch((error) => {
-                        console.log("error changing: ", error);
-                        //removeCookie("session_token", {path: "/"})
-                      })
+					changeOrg()
 
 
 
@@ -18707,6 +18889,11 @@ const AngularWorkflow = (defaultprops) => {
 			<div>
 			  {originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
 
+				null
+
+				  /*
+				   * Disabled because redirects occurred anyway
+
 				<Button
 				  color="secondary"
 				  variant="outlined"
@@ -18717,17 +18904,20 @@ const AngularWorkflow = (defaultprops) => {
 					  marginLeft: 10, 
 				  }}
 				  onClick={() => {
-					navigate(`/workflows/${workflow.parentorg_workflow}`)
+					//changeOrg() 
+
 					// Reload the page
+					navigate(`/workflows/${workflow.parentorg_workflow}`)
 					window.location.reload()
 				  }}
 				>
 				  Go to parent org workflow
 				</Button>
+				*/
 
 				: null}
 
-			  {userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 ?
+			  {userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 && userdata?.active_org?.creator_org?.length === 0 && userdata?.active_org?.id == workflow?.org_id ?
 					<Button
 					  color="secondary"
 					  variant="outlined"
@@ -19575,7 +19765,7 @@ const AngularWorkflow = (defaultprops) => {
     >
 
       <Tooltip
-        title="Hide error messages. They will show up the next refresh."
+        title="Hides error messages this session."
         placement="top"
       >
         <IconButton
@@ -19924,7 +20114,7 @@ const AngularWorkflow = (defaultprops) => {
       .catch((error) => {
         console.log("Dupe workflow for suborg error: ", error.toString())
       })
-  }
+  } 
 
   const BottomCytoscapeBar = () => {
     if (workflow.id === undefined || workflow.id === null || (!workflow.public && apps.length === 0)) {
@@ -20277,6 +20467,29 @@ const AngularWorkflow = (defaultprops) => {
                 </Button>
               </span>
             </Tooltip>
+
+			
+			{userdata?.support === true ? 
+				<Tooltip
+				  color="secondary"
+				  title="Show simplified YAML (support only)"
+				  placement="top"
+				>
+				  <span>
+					<Button
+					  disabled={workflow.public}
+					  color="secondary"
+					  variant="text"
+					  style={{ width: 65, height: buttonHeights, }}
+					  onClick={() => {
+						setupWorkflowYaml(workflow)
+					  }}
+					>
+					  <DataObjectIcon />
+					</Button>
+				  </span>
+				</Tooltip>
+			: null}
           </ButtonGroup>
 
 
@@ -20408,10 +20621,11 @@ const AngularWorkflow = (defaultprops) => {
         position,
         backgroundcolor: "#1f2023",
         color: "#ffffff",
-        textHalign: "center",
-        textValign: "center",
-        textMarginX: "0px",
-        textMarginY: "0px",
+
+        textHalign: "right",
+        textValign: "bottom",
+        textMarginX: "-250px",
+        textMarginY: "-150px",
       },
       position,
     });
@@ -25509,6 +25723,7 @@ const AngularWorkflow = (defaultprops) => {
 
 
             setAiQueryModalOpen={setAiQueryModalOpen}
+			isWorkflowEditor={editorData?.name === "workflow yaml"}
           />
           : null}
 

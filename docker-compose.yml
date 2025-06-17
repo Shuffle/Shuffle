@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/shuffle/shuffle-frontend:latest
+    image: ghcr.io/shuffle/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -14,7 +14,7 @@ services:
     depends_on:
       - backend
   backend:
-    image: ghcr.io/shuffle/shuffle-backend:latest
+    image: ghcr.io/shuffle/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -33,7 +33,7 @@ services:
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
   orborus:
-    image: ghcr.io/shuffle/shuffle-orborus:latest
+    image: ghcr.io/shuffle/shuffle-orborus:nightly
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -55,13 +55,13 @@ services:
       - SHUFFLE_STATS_DISABLED=true
       - SHUFFLE_LOGS_DISABLED=true
       - SHUFFLE_SWARM_CONFIG=run
-      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:latest
+      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:nightly
     env_file: .env
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
   opensearch:
-    image: opensearchproject/opensearch:2.19.1
+    image: opensearchproject/opensearch:3.0.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:

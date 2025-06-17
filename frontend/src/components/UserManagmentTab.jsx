@@ -1458,33 +1458,8 @@ const UserManagmentTab = memo((props) => {
                             );
                         }
 
-                        const getRegionFlag = (region_url) => {
-                            let regiontag = "UK";
-                            let regionCode = "gb";
-                            const regionsplit = region_url?.split(".");
-                            if (regionsplit?.length > 2 && !regionsplit[0]?.includes("shuffler")) {
-                                const namesplit = regionsplit[0]?.split("/");
-                                regiontag = namesplit[namesplit?.length - 1];
 
-                                if (regiontag === "california") {
-                                    regiontag = "US";
-                                    regionCode = "us";
-                                } else if (regiontag === "frankfurt") {
-                                    regiontag = "EU-2";
-                                    regionCode = "eu";
-                                } else if (regiontag === "ca") {
-                                    regiontag = "CA";
-                                    regionCode = "ca";
-                                }else if (regiontag === "au") {
-                                    regiontag = "AUS";
-                                    regionCode = "au"
-                                }
-                            }
-                            
-                            return regionCode;
-                        };
-
-                        const userRegion = data?.user_geo_info?.country?.iso_code?.length > 0 ? data?.user_geo_info?.country?.iso_code :   selectedOrganization?.region_url?.length > 0 ? getRegionFlag(selectedOrganization?.region_url) : "eu";
+                        const userRegion =  data?.user_geo_info?.country?.iso_code
 
                         return (
                             <ListItem key={index} style={{ backgroundColor: bgColor, display: 'table-row', borderBottomLeftRadius: users?.length - 1 === index ? 8 : 0, borderBottomRightRadius: users?.length - 1 === index ? 8 : 0 }}>

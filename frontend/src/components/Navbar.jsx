@@ -61,9 +61,9 @@ const menuData = {
     {
       title: "Singul",
       description:
-        "Connect and run actions seamlessly between different platforms.",
+        "Connect your favorite services with a singul line of code.",
       icon: "/images/logos/singul.svg",
-      path: "https://singul-docs.gitbook.io/singul/getting-started",
+      path: "https://singul.io",
       gaData: {
         category: "navbar",
         action: "products_click",
@@ -662,9 +662,9 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                 action: "partners_click",
                 label: "go_to_partners",
               })
-              handleItemClick('/partners')
+              handleItemClick('/become-partner')
             }else{
-              window.open("https://shuffler.io/partners", '_blank');
+              window.open("https://shuffler.io/become-partner", '_blank');
               return;
             }
           }}
@@ -1391,26 +1391,151 @@ const Navbar = (props) => {
       >
         Pricing
       </Button>
-      <Button
-        component={Link}
-        to="/partners"
-        sx={buttonStyles}
-        onClick={() => {
-          if(isCloud) {
-            navigate("/partners");
-            ReactGA.event({
-              category: "navbar",
-              action: "partners_click",
-              label: "go_to_partners",
-            })
-          } else {
-            window.open("https://shuffler.io/partners", '_blank');
-            return;
-          }
+      <Box 
+        className="partners-container"
+        sx={{ 
+          position: "relative",
+          "&::after": {
+            // This creates an invisible connection between button and dropdown
+            content: '""',
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            width: "100%",
+            height: "20px", // Buffer zone height
+            backgroundColor: "transparent",
+          },
+          "&:hover .partners-dropdown": {
+            opacity: 1,
+            visibility: "visible",
+            pointerEvents: "auto",
+            transform: "translateY(0)",
+            transition: "opacity 0.3s ease, visibility 0s, transform 0.3s ease",
+          },
         }}
       >
-        Partners
-      </Button>
+        <Button
+          component={Link}
+          to="/become-partner"
+          sx={{
+            ...buttonStyles,
+          }}
+          onClick={() => {
+            if(isCloud) {
+              navigate("/become-partner");
+              ReactGA.event({
+                category: "navbar",
+                action: "partners_click",
+                label: "go_to_become_partner",
+              })
+            } else {
+              window.open("https://shuffler.io/become-partner", '_blank');
+              return;
+            }
+          }}
+        >
+          Partners
+        </Button>
+        <Box 
+          className="partners-dropdown"
+          sx={{
+            position: "absolute",
+            top: "140%",
+            left: 0,
+            backgroundColor: "#212121",
+            borderRadius: "4px",
+            boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.2)",
+            width: "220px",
+            opacity: 0,
+            visibility: "hidden",
+            pointerEvents: "none",
+            transform: "translateY(-10px)",
+            transition: "opacity 0.3s ease, visibility 0s linear 0.3s, transform 0.3s ease",
+            zIndex: 10,
+            "&:hover": {
+              opacity: 1,
+              visibility: "visible",
+              pointerEvents: "auto",
+              transform: "translateY(0)",
+            },
+            // Add a pseudo-element to create a buffer zone above the dropdown
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              top: "-20px", // Match the height of the buffer zone
+              left: 0,
+              width: "100%",
+              height: "20px",
+              backgroundColor: "transparent",
+            }
+          }}
+        >
+          <Box sx={{}}>
+            <Button
+              fullWidth
+              sx={{
+                color: "white",
+                justifyContent: "flex-start",
+                textTransform: "none",
+                py: 2,
+                px: 2,
+                fontSize: "14px",
+                fontFamily: theme.typography.fontFamily,
+                borderRadius: "4px",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.05)"
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if(isCloud) {
+                  navigate("/become-partner");
+                  ReactGA.event({
+                    category: "navbar",
+                    action: "partners_click",
+                    label: "become_partner_click",
+                  })
+                } else {
+                  window.open("https://shuffler.io/become-partner", '_blank');
+                }
+              }}
+            >
+              Become a partner
+            </Button>
+            <Button
+              fullWidth
+              sx={{
+                color: "white",
+                justifyContent: "flex-start",
+                textTransform: "none",
+                fontSize: "14px",
+                fontFamily: theme.typography.fontFamily,
+                py: 2,
+                px: 2,
+                borderRadius: "4px",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.05)"
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate("/partners");
+                if(isCloud) {
+                  ReactGA.event({
+                    category: "navbar",
+                    action: "partners_click",
+                    label: "discover_partners_click",
+                  })
+                }
+              }}
+            >
+              Discover partners
+            </Button>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 

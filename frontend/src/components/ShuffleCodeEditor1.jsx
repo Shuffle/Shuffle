@@ -64,6 +64,7 @@ import AceEditor from "react-ace";
 import ace from "ace-builds";
 import 'ace-builds/src-noconflict/mode-python';
 import 'ace-builds/src-noconflict/mode-json';
+import 'ace-builds/src-noconflict/mode-yaml';
 //import 'ace-builds/src-noconflict/theme-twilight';
 //import 'ace-builds/src-noconflict/theme-solarized_dark';
 import 'ace-builds/src-noconflict/theme-gruvbox';
@@ -119,6 +120,7 @@ const CodeEditor = (props) => {
 		handleActionParamChange,
 		setcodedata,
 		isFileEditor,
+		isWorkflowEditor,
 		runUpdateText,
 		toolsAppId,
 		parameterName,
@@ -143,11 +145,6 @@ const CodeEditor = (props) => {
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
-	//const { setContainer } = useCodeMirror({
-	//	container: editorRef.current,
-	//	extensions,
-	//	value: localcodedata,
-	//})
 	// const {codelang, setcodelang} = props
 	const {themeMode, supportEmail} = useContext(Context)
 	const theme = getTheme(themeMode)
@@ -1529,13 +1526,15 @@ const CodeEditor = (props) => {
 					// zIndex: 12501,
 					pointerEvents: "auto",
 					color: theme.palette.DialogStyle.color,
-					minWidth: isMobile ? "100%" : isFileEditor ? "650px" : "80%",
-					maxWidth: isMobile ? "100%" : isFileEditor ? "650px" : "1100px",
-					minHeight: isMobile ? "100%" : "auto",
-					maxHeight: isMobile ? "100%" : "700px",
+					minWidth: isMobile || isWorkflowEditor ? "100%" : isFileEditor ? "650px" : "80%",
+					maxWidth: isMobile || isWorkflowEditor ? "100%" : isFileEditor ? "650px" : "1100px",
+					minHeight: isMobile || isWorkflowEditor ? "100%" : "auto",
+					maxHeight: isMobile || isWorkflowEditor ? "100%" : "700px",
 					border: "3px solid rgba(255,255,255,0.3)",
-					padding: isMobile ? "25px 10px 25px 10px" : "25px",
+					padding: isMobile ? "25px 10px 25px 10px" : isWorkflowEditor ? "25px 10px 25px 200px" : "25px",
 					backgroundColor: themeMode === "dark" ? "black" : theme.palette.DialogStyle.backgroundColor,
+
+					opacity: isWorkflowEditor ? 0.93 : 1,
 				},
 			}}
 		>
@@ -1719,7 +1718,7 @@ const CodeEditor = (props) => {
 									Code Editor
 							</DialogTitle>
 							*/}
-								{isFileEditor ? null :
+								{isFileEditor || isWorkflowEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
 										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
 											{userdata !== undefined && userdata !== null && userdata.support === true ? 
@@ -2190,15 +2189,15 @@ const CodeEditor = (props) => {
 							console.log("DROP: ", e)
 						}}
 					>	
-						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
+						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor || isWorkflowEditor ? (
 							<AceEditor
 								id="shuffle-codeeditor"
 								name="shuffle-codeeditor"
 								value={localcodedata}
-								mode={selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
+								mode={isWorkflowEditor ? "yaml" : selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
 								theme="gruvbox"
-								height={isFileEditor ? 450 : 550}
-								width={isFileEditor ? 650 : "100%"}
+								height={isFileEditor ? 450 : isWorkflowEditor ? "90vh" : 550}
+								width={isFileEditor ? 650 : isWorkflowEditor ? "90vw" : "100%"}
 
 								markers={markers}
 								highlightActiveLine={false}
@@ -2259,7 +2258,7 @@ const CodeEditor = (props) => {
 					</div>
 				</div>
 
-				{isFileEditor  ? null :
+				{isFileEditor || isWorkflowEditor ? null :
 					<div style={{ 
 						flex: sourceDataOpen ? 1.5 : 3, 
 						marginLeft: 5, 
@@ -2524,7 +2523,7 @@ const CodeEditor = (props) => {
 			</div>
 
 
-			<div style={{ display: 'flex' }}>
+			<div style={{ display: 'flex', width: isWorkflowEditor ? "90%" : "100%",  }}>
 				<Button
 					style={{
 						height: 35,
@@ -2547,6 +2546,7 @@ const CodeEditor = (props) => {
 				<Button
 					variant="contained"
 					color="primary"
+					disabled={isWorkflowEditor} 
 					style={{
 						height: 35,
 						flex: 1,
@@ -2554,13 +2554,11 @@ const CodeEditor = (props) => {
 						marginTop: 5,
 					}}
 					onClick={(event) => {
-						/*
-						const clickedFieldId = "rightside_field_" + fieldCount 
-						const clickedField = document.getElementById(clickedFieldId)
-						if (clickedField !== undefined && clickedField !== null) {
-							clickedField.focus()
+						if (isWorkflowEditor === true) {
+							setExpansionModalOpen(false)
+							navigate("")
+							return
 						}
-						*/
 
 						if (isFileEditor !== true) {
 							navigate("")
