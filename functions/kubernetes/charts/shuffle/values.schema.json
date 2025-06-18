@@ -1491,16 +1491,6 @@
                     "description": "Number of orborus replicas to deploy",
                     "default": 1
                 },
-                "containerPorts": {
-                    "type": "object",
-                    "properties": {
-                        "http": {
-                            "type": "number",
-                            "description": "orborus HTTP container port",
-                            "default": 8080
-                        }
-                    }
-                },
                 "extraContainerPorts": {
                     "type": "array",
                     "description": "Optionally specify extra list of additional ports for orborus containers",
