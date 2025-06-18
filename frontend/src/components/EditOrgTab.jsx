@@ -3,6 +3,8 @@ import OrgHeaderexpanded from "../components/OrgHeaderexpandedNew.jsx";
 import OrgHeader from '../components/OrgHeaderNew.jsx';
 import { toast } from "react-toastify";
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
+import { Context } from '../context/ContextApi.jsx';
+import { getTheme  } from '../theme.jsx';
 import {
     FileCopy as FileCopyIcon,
 } from "@mui/icons-material";
@@ -10,6 +12,7 @@ import {
     Button,
     Tooltip,
     IconButton,
+    Typography,
 } from "@mui/material";
 
 const EditOrgTab = (props) => {
@@ -32,6 +35,9 @@ const EditOrgTab = (props) => {
             getUsers();
         }
     }, []);
+
+    const { themeMode, brandColor } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor);
 
     const handleStatusChange = (event) => {
         const { value } = event.target;
@@ -283,23 +289,23 @@ If you're interested, please let me know a time that works for you, or set up a 
 
 
     return (
-        <div style={{ width: "100%", boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121', borderRadius: '16px',  }}>
-            <div style={{ height: "100%", width: "100%", overflowX: 'hidden', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}} >
+        <div style={{ width: "100%", boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor, borderRadius: '16px',  }}>
+            <div style={{ height: "100%", width: "100%", overflowX: 'hidden', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}} >
             <div style={{ marginBottom: 20 }}>
                 <div style={{display:"flex"}}>
                     <div style={{width:'70%'}}>
-                <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Organization overview</h2>
-                <span style={{ color: "#9E9E9E" }}>
+                <Typography variant='h3' sx={{ marginBottom: "15px", marginTop: 0, }}>Organization overview</Typography>
+                <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16 }}>
                     On this page organization admins can configure organisations, and sub-orgs (MSSP).{" "}
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
                         href="/docs/organizations#organization"
-                        style={{ color: "#FF8444" }}
+                        style={{ color: theme.palette.linkColor, }}
                     >
                         Learn more
                     </a>
-                </span>
+                </Typography>
                 </div>
                 <div style={{display:"flex", alignItems:"center", marginLeft:50}}>
                 <Tooltip

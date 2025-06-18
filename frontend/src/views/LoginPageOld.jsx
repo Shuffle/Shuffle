@@ -85,7 +85,13 @@ const LoginDialog = (props) => {
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            setLoginInfo(responseJson["reason"]);
+            setLoginInfo(responseJson["reason"])
+
+			if (responseJson?.reason?.toLowerCase().includes("connection refused")) { 
+        		setLoginViewLoading(true) 
+          		start()
+			}
+
           } else {
 
             if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {

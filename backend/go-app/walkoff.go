@@ -281,54 +281,18 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := shuffle.GetContext(request)
 	env, err := shuffle.GetEnvironment(ctx, orgId, "")
+	if err != nil {
+		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
+	}
+
 	timeNow := time.Now().Unix()
-	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 && request.Method == "POST" { 
-		// Updates every 60 seconds~
-		if time.Now().Unix() > env.Edited+60 {
-			env.RunningIp = shuffle.GetRequestIp(request)
-
-			// Orborus label = custom label for Orborus
-			if len(orborusLabel) > 0 {
-				env.RunningIp = orborusLabel
-			}
-
-			// Set the checkin cache
-
-
-			body, err := ioutil.ReadAll(request.Body)
-			if err == nil {
-				var envData shuffle.OrborusStats
-				err = json.Unmarshal(body, &envData)
-				if err == nil {
-					envData.RunningIp = env.RunningIp
-
-					marshalled, err := json.Marshal(envData)
-					if err == nil {
-						cacheKey := fmt.Sprintf("queueconfig-%s-%s", env.Name, env.OrgId)
-						go shuffle.SetCache(context.Background(), cacheKey, marshalled, 2)
-					}
-
-
-
-					if envData.Swarm {
-						env.Licensed = true
-						env.RunType = "docker"
-					} 
-
-					if envData.Kubernetes {
-						env.RunType = "k8s"
-					}
-
-					envData.DataLake = env.DataLake
-				}
-			}
-
-			env.Checkin = timeNow
-			err = shuffle.SetEnvironment(ctx, env)
-			if err != nil {
-				log.Printf("[ERROR] Failed updating environment: %s", err)
-			}
+	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
+	if err != nil {
+		if !strings.Contains(err.Error(), "mismatch") {
+			log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
 		}
+
+		return
 	}
 
 	//log.Printf("Found env: %#v", env)
@@ -1905,8 +1869,8 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		err = shuffle.SetSchedule(ctx, newSchedule)
 		if err != nil {
-			log.Printf("Failed setting cloud schedule: %s", err)
-			resp.WriteHeader(401)
+			log.Printf("[ERROR] Failed setting cloud schedule: %s", err)
+			resp.WriteHeader(400)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		}
@@ -1941,17 +1905,22 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - real error message lol
 	if err != nil {
-		log.Printf("Failed creating schedule: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Invalid argument. Try cron */15 * * * *"}`)))
+		log.Printf("[ERROR] Failed creating schedule: %s", err)
+
+		resp.WriteHeader(400)
+		if schedule.Environment == "cloud" {
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Invalid argument. For cloud schedules, try cron */15 * * * *"}`)))
+		} else {
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Invalid argument. For onprem schedules, try 60 for 60 seconds"}`)))
+		}
 		return
 	}
 
 	//workflow.Schedules = append(workflow.Schedules, schedule)
 	err = shuffle.SetWorkflow(ctx, *workflow, workflow.ID)
 	if err != nil {
-		log.Printf("Failed setting workflow for schedule: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[ERROR] Failed setting workflow for schedule: %s", err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -3039,7 +3008,13 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		shouldRerun = true
 	}
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
+	decisionId := ""
+	decision, decisionOk := query["decision_id"]
+	if decisionOk && len(decision) > 0 {
+		decisionId = decision[0]
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction, decisionId)
 
 	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 	resp.Header().Add("X-Debug-Url", debugUrl)
@@ -3101,7 +3076,12 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+	actionId := ""
+	if len(workflowExecution.Workflow.Actions) == 1 {
+		actionId = workflowExecution.Workflow.Actions[0].ID
+	}
+
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, actionId)
 	returnBytes, err := json.Marshal(returnBody)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)

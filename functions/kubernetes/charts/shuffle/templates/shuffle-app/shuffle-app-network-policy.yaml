@@ -29,6 +29,16 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
+    # Allow access to backend
+    - ports:
+      - port: {{ .Values.backend.containerPorts.http }}
+        protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels: {{ include "shuffle.backend.matchLabels" . | nindent 14 }}
     # Allow access to workers
     - ports:
         - port: 33333
@@ -44,17 +54,18 @@ spec:
     {{- end }}
     {{- end }}
   ingress:
-    {{- if .Values.app.networkPolicy.allowExternal }}
-    - {}
-    {{- else }}
-    # Allow access from workers. Apps will typicaly use port 80/TCP, but this is not enforced.
-    - from:
+    - ports:
+        - port: {{ .Values.app.exposedContainerPort }}
+          protocol: TCP
+      {{- if not .Values.app.networkPolicy.allowExternal }}
+      # Allow traffic from workers
+      from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
-    {{- end }}
+      {{- end }}
     {{- if .Values.app.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.app.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
     {{- end }}

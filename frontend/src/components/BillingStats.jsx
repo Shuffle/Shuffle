@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, memo, useMemo } from 'react';
 
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import classNames from "classnames";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -28,12 +28,20 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
+	Box,
 } from "@mui/material";
 
 import { 
 	BarChart,
+	BarSeries,
+	Bar,
+	BarLabel,
+
 	GridlineSeries,
 	Gridline,
+	TooltipArea,
+	ChartTooltip,
+	TooltipTemplate,
 } from 'reaviz';
 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
@@ -42,31 +50,54 @@ import { Context } from '../context/ContextApi.jsx';
 const LineChartWrapper = ({keys, inputname, height, width}) => {
   const [hovered, setHovered] = useState("");
 	const inputdata = keys.data === undefined ? keys : keys.data
-	
+	const {themeMode} = useContext(Context)
+	const theme = getTheme(themeMode)
+
+
 	return (
 		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
-			<Typography variant="h6" style={{marginBotton: 15, }}>
+			<Typography variant="h6" style={{marginBotton: 30, }}>
 				{inputname}
 			</Typography>
+
 			<BarChart
+				style={{marginTop: 100, }}
 				width={"100%"}
 				height={height}
 				data={inputdata}
+
+		      	series={
+					<BarSeries
+					  bar={
+						<Bar />
+					  } 
+					/>
+				}
 				gridlines={
 					<GridlineSeries line={<Gridline direction="all" />} />
 				}
 			/>
+
 		</div>
 	)
 }
 
 
 const AppStats = (defaultprops) => {
-  const { globalUrl, selectedOrganization, userdata, isCloud, inputWorkflows,clickedFromOrgTab } = defaultprops;
+  const { 
+	  globalUrl, 
+	  selectedOrganization, 
+	  userdata, 
+	  isCloud, 
+	  inputWorkflows,
+	  clickedFromOrgTab,
+	  syncStats,
+  } = defaultprops;
 
   const [keys, setKeys] = useState([])
   const [searches, setSearches] = useState([]);
   const [appRuns, setAppruns] = useState(undefined);
+  const [childOrgsAppRuns, setChildOrgsAppRuns] = useState(undefined);
   const [appRunCosts, setApprunCosts] = useState(undefined);
   const [workflowRuns, setWorkflowRuns] = useState(undefined);
   const [subflowRuns, setSubflowRuns] = useState(undefined);
@@ -83,6 +114,8 @@ const AppStats = (defaultprops) => {
   const [workflows, setWorkflows] = useState(inputWorkflows === undefined ? [] : inputWorkflows)
   const [resultRows, setResultRows] = useState([])
   const [resultLoading, setResultLoading] = useState(true)
+  const { themeMode, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor)
   
   const includedExecutions = selectedOrganization?.sync_features?.app_executions !== undefined ? selectedOrganization?.sync_features?.app_executions?.limit : 0 
 
@@ -94,9 +127,6 @@ const AppStats = (defaultprops) => {
 
 
   const getWorkflowStats = async (workflow, startTime, endTime) => {
-	  if (!userdata.support) {
-		  return workflow
-	  }
 
 	  if (workflow.id === undefined || workflow.id === null || workflow.id === "") {
 		  return workflow
@@ -161,12 +191,8 @@ const AppStats = (defaultprops) => {
   }
 
   const loadWorkflowStats = (foundWorkflows, startTime, endTime) => {
-	  if (!userdata.support) {
-		  return
-	  }
-
 	  if (foundWorkflows === undefined || foundWorkflows === null || foundWorkflows.length === 0) {
-		  console.log("Not workflows")
+		  setResultLoading(false)
 		  return
 	  }
 
@@ -175,6 +201,9 @@ const AppStats = (defaultprops) => {
 	  const promises = foundWorkflows.slice(0, 50).map(wf => getWorkflowStats(wf, startTime, endTime));
 
 	  const allData = Promise.all(promises);
+	  if (allData === undefined || allData === null) {
+		  setResultLoading(false)
+	  }
 
 	  allData.then((data) => {
 	  	var total = 0
@@ -234,15 +263,16 @@ const AppStats = (defaultprops) => {
 			return
 		}
 
-		if (statistics["daily_statistics"] === undefined || statistics["daily_statistics"] === null) {
+		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
+		if (statistics[statKey] === undefined || statistics[statKey] === null) {
 			setFilteredStatistics(statistics)
 			return
 		}
 
 		// Calculate month to date cost
 		var mtd_cost = 0
-		for (let key in statistics["daily_statistics"]) {
-			const item = statistics["daily_statistics"][key]
+		for (let key in statistics[statKey]) {
+			const item = statistics[statKey][key]
 			if (item["date"] === undefined) {
 				continue
 			}
@@ -300,8 +330,8 @@ const AppStats = (defaultprops) => {
 
 		// Check if start time is before the daily statistics["date"] string
 		var newlist = []
-		for (let key in statistics["daily_statistics"]) {
-			const item = statistics["daily_statistics"][key]
+		for (let key in statistics[statKey]) {
+			const item = statistics[statKey][key]
 			if (item["date"] === undefined) {
 				continue
 			}
@@ -332,7 +362,7 @@ const AppStats = (defaultprops) => {
 		var appexecutions = 0
 		var estimatedcost = 0
 		if (newlist.length > 0) {
-			tmpstats["daily_statistics"] = newlist
+			tmpstats[statKey] = newlist
 
 			for (let key in newlist) {
 				const item = newlist[key]
@@ -386,13 +416,19 @@ const AppStats = (defaultprops) => {
 			return 
 		}
 
-		const dailyStats = inputdata.daily_statistics
+		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
+		const dailyStats = inputdata[statKey]
 		if (dailyStats === undefined || dailyStats === null) {
 			return
 		}
 
 		var appRuns = {
 			"key": "App Runs",
+			"data": []
+		}
+
+		var childorgappRuns = {
+			"key": "Child Org App Runs",
 			"data": []
 		}
 
@@ -437,6 +473,13 @@ const AppStats = (defaultprops) => {
 				})
 			} 
 
+			if (item["child_app_executions"] !== undefined && item["child_app_executions"] !== null) {
+				childorgappRuns["data"].push({
+					key: new Date(item["date"]),
+					data: inputdata["child_app_executions"]
+				})
+			}
+
 			// Check if workflow_executions key in item
 			if (item["workflow_executions"] !== undefined && item["workflow_executions"] !== null) {
 				workflowRuns["data"].push({
@@ -466,6 +509,15 @@ const AppStats = (defaultprops) => {
 			})
 		}
 
+		if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
+			childorgappRuns["data"].push({
+				key: new Date(),
+				data: inputdata["daily_child_app_executions"]
+			})
+
+			//setApprunCosts(appcostRuns)
+		}
+
 		if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
 			workflowRuns["data"].push({
 				key: new Date(),
@@ -478,6 +530,11 @@ const AppStats = (defaultprops) => {
 				key: new Date(),
 				data: inputdata["daily_subflow_executions"]
 			})
+		}
+
+		// Only for parent orgs
+		if (childorgappRuns["data"].length > 0) {
+	  		setChildOrgsAppRuns(childorgappRuns)
 		}
 
 		setSubflowRuns(subflowRuns)
@@ -529,11 +586,14 @@ const AppStats = (defaultprops) => {
 
 	const paperStyle = {
 		textAlign: "center", 
-		padding: 40, 
-		margin: 5, 
-		backgroundColor: theme.palette.platformColor,
-		border: "1px solid rgba(255,255,255,0.3)",
-		maxWidth: 300,
+		padding: "40px", 
+		margin: "5px", 
+		backgroundColor: theme.palette.cardBackgroundColor,
+		border: theme.palette.defaultBorder,
+		maxWidth: "300px",
+		"&:hover": {
+			backgroundColor: theme.palette.cardHoverColor,
+		},
 	}
 
 	const columns: GridColDef[] = [
@@ -646,85 +706,94 @@ const AppStats = (defaultprops) => {
     <div className="content" style={{width: "100%", margin: "auto", }}>
 		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
 			All shown statistics are gathered from <a 
-				href={`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`} 
+				href={`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/stats`} 
 				target="_blank"
-				style={{ textDecoration: "none", color: "#FF8444",}}
+				style={{ textDecoration: "none", color: theme.palette.linkColor,}}
 			>Your Organisation Statistics. </a>
 			It exists to give you more insight into your workflows, and to understand your utilization of the Shuffle platform. <b>The billing tracker is in Beta, and is always calculated manually before being invoiced.</b>
+
+			<br style={{}}/>
+			{syncStats !== true ? null : 
+				"PS: You are currently looking at data from your onprem synced org"}
 		</Typography>
 
 		<div style={{display: "flex", flexDirection: "column", textAlign: "center",}}>
 			<div style={{flexDirection: "row", }}>
 			{filteredStatistics !== undefined ?
 				<div style={{flex: 1, display: "flex", textAlign: "center",}}>
-					<Tooltip title={
-						<Typography variant="body1" style={{padding: 10, }}>
-							The cost of app runs in the selected period based on {filteredStatistics.monthly_app_executions} App Runs. These numbers do not exclude your included 10.000/month or {includedExecutions} App Runs per month. App Run cost: ${invocationCost}. 
-						</Typography>
-					}>
-						<Paper style={paperStyle}>
-							<Typography variant="h4">
-								${selectedOrganization.lead_info.customer === false && selectedOrganization.lead_info.pov === false ?
-									0 
-									: 
-									apprunCost
-								}
+
+					{syncStats == true ? null : 
+						<Tooltip title={
+							<Typography variant="body1" style={{padding: 10, }}>
+								The cost of app runs in the selected period based on {filteredStatistics.monthly_app_executions} App Runs. These numbers do not exclude your included 10.000/month or {includedExecutions} App Runs per month. App Run cost: ${invocationCost}. 
 							</Typography>
-							<Typography variant="h6">
-								Period Cost
-							</Typography>
-						</Paper>
-					</Tooltip>
+						}>
+							<Box sx={paperStyle}>
+								<Typography variant="h4">
+									${selectedOrganization?.lead_info?.customer === false && selectedOrganization?.lead_info?.pov === false ?
+										0 
+										: 
+										apprunCost
+									}
+								</Typography>
+								
+								<Typography variant="h6">
+									Period Cost
+								</Typography>
+							</Box>
+						</Tooltip>
+					}
+
+					{syncStats === true ? null :
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							App runs in the selected period
 						</Typography>
 					}>
-					<Paper style={paperStyle}>
-						<Typography variant="h4">
-							{filteredStatistics.monthly_app_executions === null || filteredStatistics.monthly_app_executions === undefined ? 0 : filteredStatistics.monthly_app_executions}
-						</Typography>
-						<Typography variant="h6">
-							App Runs 
-						</Typography>
-					</Paper>
+						<Box sx={paperStyle}>
+							<Typography variant="h4">
+								{filteredStatistics.monthly_app_executions === null || filteredStatistics.monthly_app_executions === undefined ? 0 : filteredStatistics.monthly_app_executions}
+							</Typography>
+							<Typography variant="h6">
+								App Runs 
+							</Typography>
+						</Box>
 					</Tooltip> 
+					}
+
+					{syncStats === true ? null :
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							Workflow runs in the selected period 
 						</Typography>
 					}>
-						<Paper style={paperStyle}>
+						<Box sx={paperStyle}>
 							<Typography variant="h4">
 								{filteredStatistics.monthly_workflow_executions === null || filteredStatistics.monthly_workflow_executions === undefined ? 0 : filteredStatistics.monthly_workflow_executions}
 							</Typography>
 							<Typography variant="h6">
 								Workflow Runs 
 							</Typography>
-						</Paper>
+						</Box>
 					</Tooltip>
-					<Tooltip title={
-						<Typography variant="body1" style={{padding: 10, }}>
-							Estimated cost to be billed at the end of the current month. Subtracted contractually included app runs. Actual cost month to date: ${monthToDateCost}. App Run cost: ${invocationCost}.
-						</Typography>
-					}>
-						<Paper style={{
-							textAlign: "center", 
-							padding: 40, 
-							margin: 5, 
-							marginLeft: clickedFromOrgTab? null:90, 
-							backgroundColor: theme.palette.platformColor,
-							border: "1px solid rgba(255,255,255,0.3)",
-							maxWidth: 300,
-						}}>
-							<Typography variant="h4">
-								${monthTotalCost}
+					}
+
+					{syncStats === true ? null :
+						<Tooltip title={
+							<Typography variant="body1" style={{padding: 10, }}>
+								Estimated cost to be billed at the end of the current month. Subtracted contractually included app runs. Actual cost month to date: ${monthToDateCost}. App Run cost: ${invocationCost}.
 							</Typography>
-							<Typography variant="h6">
-								Estimated cost 
-							</Typography>
-						</Paper>
-					</Tooltip>
+						}>
+							<Box sx={paperStyle}>
+								<Typography variant="h4">
+									${monthTotalCost}
+								</Typography>
+								<Typography variant="h6">
+									Estimated cost 
+								</Typography>
+							</Box>
+						</Tooltip>
+					}
 				</div>
 			: null}
 			</div>
@@ -895,7 +964,13 @@ const AppStats = (defaultprops) => {
 		{appRuns === undefined ? 
 			null
 			: 
-			<LineChartWrapper keys={appRuns} height={300} width={"100%"} inputname={"Daily App Runs"}/>
+			<LineChartWrapper keys={appRuns} height={300} width={"100%"} inputname={"App Runs - Current Org"}/>
+		}
+
+		{childOrgsAppRuns === undefined ? 
+			null
+			: 
+			<LineChartWrapper keys={childOrgsAppRuns} height={300} width={"100%"} inputname={"Child Org App Runs"}/>
 		}
 
 		{workflowRuns === undefined ? 
@@ -916,56 +991,58 @@ const AppStats = (defaultprops) => {
 			<LineChartWrapper keys={appRunCosts} height={300} width={"100%"} inputname={"Apprun cost - Cost per day"}/>
 		*/}
 
+		{syncStats === true ? null : 
+			<div style={{height: 150+resultRows.length * 25, padding: "10px 0px 10px 0px", }}>
+				{resultLoading ? 
+					<div style={{margin: "auto", alignItems: "center", width: 350, height: "100%", }}>
+						<Typography variant="body2" color="textSecondary" component="p" style={{textAlign: "center", marginTop: 50, marginBottom: 15, }}>
+							Loading usage for selected period (may take a while) 
+						
+							<CircularProgress style={{marginTop: 15, }} /> 
+						</Typography>
+					</div>
+					:
+					<DataGrid
+						rows={resultRows}
+						columns={columns}
+						pageSize={100}
+						rowsPerPageOptions={[10, 20, 50, 100]}
+						checkboxSelection
+						disableSelectionOnClick
+						onPageSizeChange={(newPageSize) => {
+							//setRowsPerPage(newPageSize)
+							//submitSearch(workflowId, status, startTime, endTime, rowCursor, newPageSize) 
+						}}
+						// event for when clicking next page
+						// Hide page changer
+						onPageChange={(params) => {
+							console.log("page params: ", params)
+						}}
+						onSelectionModelChange={(newSelection) => {
+							console.log("newSelection: ", newSelection)
+							//console.log("newSelection: ", newSelection)
+							//setSelectedWorkflowExecutionsIndexes(newSelection)
+							//var found = []	
+							//for (var i = 0; i < newSelection.length; i++) {
+							//	// Find the workflow in the resultRows
+							//	var selected = resultRows.find((workflow) => {
+							//		return workflow.id === newSelection[i]
+							//	})
 
-		<div style={{height: 150+resultRows.length * 25, padding: "10px 0px 10px 0px", }}>
-			{resultLoading ? 
-				<div style={{margin: "auto", alignItems: "center", width: 350, height: "100%", }}>
-					<Typography variant="body2" color="textSecondary" component="p" style={{textAlign: "center", marginTop: 50, marginBottom: 15, }}>
-						Loading usage for selected period (may take a while) 
-					</Typography>
-					<CircularProgress style={{}} /> 
-				</div>
-				:
-				<DataGrid
-					rows={resultRows}
-					columns={columns}
-					pageSize={100}
-					rowsPerPageOptions={[10, 20, 50, 100]}
-					checkboxSelection
-					disableSelectionOnClick
-					onPageSizeChange={(newPageSize) => {
-						//setRowsPerPage(newPageSize)
-						//submitSearch(workflowId, status, startTime, endTime, rowCursor, newPageSize) 
-					}}
-					// event for when clicking next page
-					// Hide page changer
-					onPageChange={(params) => {
-						console.log("page params: ", params)
-					}}
-					onSelectionModelChange={(newSelection) => {
-						console.log("newSelection: ", newSelection)
-						//console.log("newSelection: ", newSelection)
-						//setSelectedWorkflowExecutionsIndexes(newSelection)
-						//var found = []	
-						//for (var i = 0; i < newSelection.length; i++) {
-						//	// Find the workflow in the resultRows
-						//	var selected = resultRows.find((workflow) => {
-						//		return workflow.id === newSelection[i]
-						//	})
+							//	if (selected === undefined || selected === null) {
+							//		continue
+							//	}
 
-						//	if (selected === undefined || selected === null) {
-						//		continue
-						//	}
+							//	found.push(selected)
+							//}
 
-						//	found.push(selected)
-						//}
-
-						//setSelectedWorkflowExecutions(found)
-					}}
-					// Track which items are selected
-				  />
-			}
-		  </div>
+							//setSelectedWorkflowExecutions(found)
+						}}
+						// Track which items are selected
+					  />
+				}
+			  </div>
+		}
     </div>
   )
 

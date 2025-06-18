@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import AdminNavBar from '../components/AdminNavBar.jsx';
 import { toast } from "react-toastify";
+import { Context } from '../context/ContextApi.jsx';
 
 const Admin2 = (props) => {
     // Destructure props if needed
@@ -10,13 +11,15 @@ const Admin2 = (props) => {
     const [selectedOrganization, setSelectedOrganization] = useState({});
     const [organizationFeatures, setOrganizationFeatures] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
+    const [isOrgLoaded, setIsOrgLoaded] = React.useState(false);
+    const {brandName}  = useContext(Context)
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 	if (document !== undefined) {
-		if (selectedOrganization?.name !== undefined) {
-			document.title = selectedOrganization?.name + " - Admin - Shuffle"
+        if (selectedOrganization?.name !== undefined) {
+			document.title = brandName?.length > 0 ? selectedOrganization?.name + ` - Admin - ${brandName}` : selectedOrganization?.name + ` - Admin - Shuffle`;
 		} else {
-  			document.title = "Admin - Shuffle"
+  			document.title = brandName?.length > 0 ? `Admin - ${brandName}` : `Admin - Shuffle`;
 		}
 	}
 
@@ -151,6 +154,8 @@ const Admin2 = (props) => {
             .catch((error) => {
                 console.log("Error getting org: ", error);
                 toast("Error getting current organization");
+            }).finally(() => {
+                setIsOrgLoaded(true)
             });
     };
 
@@ -232,7 +237,8 @@ const Admin2 = (props) => {
         defaults,
         sso_config,
         lead_info,
-        { mfa_required } = {}
+        { mfa_required } = {},
+        editing,
     ) => {
         const data = {
             name: name,
@@ -243,6 +249,7 @@ const Admin2 = (props) => {
             sso_config: sso_config,
             lead_info: lead_info,
             mfa_required: mfa_required !== undefined  ? mfa_required : selectedOrganization?.mfa_required,
+            editing: editing?.length > 0 ? editing : "",
         };
 
         const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
@@ -280,8 +287,8 @@ const Admin2 = (props) => {
 
 
     const handleStatusChange = (event) => {
-        const { value } = event.target;
-        setSelectedStatus(value);
+        const { value } = event.target
+        setSelectedStatus(value)
 
         handleEditOrg(
             selectedOrganization?.name,
@@ -329,8 +336,9 @@ const Admin2 = (props) => {
     }
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 0.9}}>
-            <AdminNavBar userdata={userdata} isLoaded={isLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud}/>
+        //<div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 0.9}}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 29, zoom: 1, }}>
+            <AdminNavBar userdata={userdata} isLoaded={isLoaded} isOrgLoaded={isOrgLoaded} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} selectedTab={selectedTab} orgId={selectedOrganization.id} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} setNotifications={setNotifications} stripeKey={stripeKey} notifications={notifications} checkLogin={checkLogin} globalUrl={globalUrl} isCloud={isCloud}/>
         </div>
     );
 };

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import ReactGA from 'react-ga4';
 
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import countries from "../components/Countries.jsx";
 import {
     Box,
@@ -32,7 +32,7 @@ import {
 import { useNavigate, Link } from "react-router-dom";
 import { Autocomplete } from "@mui/material";
 import { toast } from "react-toastify"
-
+import { Context } from "../context/ContextApi.jsx";
 import {
     Cached as CachedIcon,
     ContentCopy as ContentCopyIcon,
@@ -73,6 +73,9 @@ const LicencePopup = (props) => {
     const [isLoaded, setIsLoaded] = useState(false)
     const [errorMessage, setErrorMessage] = useState("")
     const [highlight, setHighlight] = useState(false)
+
+    const { themeMode } = useContext(Context);
+    const theme = getTheme(themeMode);
 
     // Cloud
     const [calculatedApps, setCalculatedApps] = useState(600)
@@ -145,11 +148,12 @@ const LicencePopup = (props) => {
         padding: 20,
         paddingBottom: 30,
         borderRadius: theme.palette?.borderRadius,
-        height: "100%"
+        height: "100%",
+        
     }
 
-    const userInScalePlan = userdata?.app_execution_limit > 10000
-    const appRuns = userInScalePlan ? (userdata?.app_execution_limit / 1000) + "K App Runs" : userdata?.app_execution_limit === 10000 ? "10,000 App Runs" : "2,000 App Runs"
+    const userInScalePlan = userdata?.app_execution_limit > 2000
+    const appRuns = (userdata?.app_execution_limit / 1000) + "K App Runs"
 
     // Add this function to format the limit value
     const formatLimit = (limit) => {
@@ -277,7 +281,7 @@ const LicencePopup = (props) => {
         }
     };
 
-    console.log("selectedOrganization: ", selectedOrganization)
+
     // Update the subscription features section
     billingInfo.subscription = {
         "active": true,
@@ -480,7 +484,6 @@ const LicencePopup = (props) => {
                 });
         }
 
-        console.log("OrgSyncFeatures: ", selectedOrganization?.sync_features)
 
         const extraFeatures = Object.entries(features || {})
             .filter(([_, featureData]) => {
@@ -503,9 +506,9 @@ const LicencePopup = (props) => {
                 style={{ borderRadius: theme.palette?.borderRadius, }}
                 placement="bottom"
             >
-                <div style={{ backgroundColor: "#1e1e1e", border: "1.2px solid #ff8544", borderRadius: theme.palette?.borderRadius}}>
-                    <Paper
-                        style={newPaperstyle}
+                <div style={{ backgroundColor: theme.palette.cardBackgroundColor, border: "1.2px solid #ff8544", borderRadius: theme.palette?.borderRadius}}>
+                    <div
+                        style={{ backgroundColor: theme.palette.cardBackgroundColor, ...newPaperstyle }}
                     // onMouseEnter={() => setHovered(true)}
                     // onMouseLeave={() => setHovered(false)}
                     >
@@ -591,9 +594,9 @@ const LicencePopup = (props) => {
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        {subscription.active === true && !isScale &&  <Button style={{ backgroundColor: '#2f2f2f', color: "#ffffff", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', fontSize: 13 }}
+                        {subscription.active === true && !isScale &&  <Button style={{ textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', fontSize: 13 }}
                             variant="contained"
-                            color="primary">
+                            color="secondary">
                             Current Plan
                         </Button>}
                         <div style={{ display: "flex" }}>
@@ -849,13 +852,12 @@ const LicencePopup = (props) => {
                             <Button
 							fullWidth
 							color="primary"
+                            variant="contained"
 							style={{
 								marginTop: !userdata.has_card_available ? 25 : 10,
 								borderRadius: 4,
 								height: 40,
 								fontSize: 16,
-								color: "#1a1a1a",
-								backgroundColor: "#ff8544",
 								// backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
 								textTransform: "none",
 
@@ -873,13 +875,13 @@ const LicencePopup = (props) => {
 						</Button> ) : null}
                             <Button
                             variant="outlined"
+                            color="primary"
                             style={{
                                 marginTop: isCloud? 10 : 30,
                                 borderRadius: 4,
                                 width: "100%",
                                 cursor: "pointer",
                                 textTransform: "capitalize",
-                                backgroundColor: "transparent",
                                 fontSize: 16,
                                 position: "relative", // Required for positioning tooltip
                             }}
@@ -922,7 +924,7 @@ const LicencePopup = (props) => {
                             </span>
                         </Button>
                         
-                    </Paper>
+                    </div>
                     {/*
 			<div style={{ paddingRight: 150, display: "flex", alignItems: "baseline" }}>
 				
@@ -1125,7 +1127,6 @@ const LicencePopup = (props) => {
         color: "white",
     }
 
-    console.log("Priceitem: ", shuffleVariant)
     // const isLoggedInHandler = () => {
     //     if (calculatedCost === payasyougo) {
     //         handlePayasyougo(props.userdata)
@@ -1235,12 +1236,11 @@ const LicencePopup = (props) => {
           });
       };
 
-      console.log("Selected Organization: ", selectedOrganization.subscriptions)
     return (
         <div>
             <Grid container spacing={2} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>
                 <Grid item maxWidth={licensePopup ? 400 : 450}>
-                    {selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0 ?
+                    {(selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0) && isCloud ?
                         <SubscriptionObject
                             index={0}
                             globalUrl={globalUrl}

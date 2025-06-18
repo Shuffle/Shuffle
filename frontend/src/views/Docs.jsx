@@ -1,7 +1,7 @@
-import React, { useEffect, useLayoutEffect, useRef, useState, useContext, memo } from "react"
+import React, { useEffect, useLayoutEffect, useRef, useState, useContext, memo,  } from "react"
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import ReactJson from "react-json-view-ssr";
 import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
@@ -28,7 +28,8 @@ import {
     DialogTitle,
     Box,
     DialogContent,
-    InputAdornment
+    InputAdornment,
+    CircularProgress
 } from "@mui/material";
 import {
     Link as LinkIcon,
@@ -171,6 +172,9 @@ export const Img = (props) => {
 	var height = "auto" 
 	var width = isArticlePage ? 1000 : isFormPage ? 400: 750
 
+    const { themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
+
     const docsImageStyle = {
 		border: isFormPage ? null : "1px solid rgba(255,255,255,0.3)", 
         borderRadius: theme.palette?.borderRadius, 
@@ -215,6 +219,8 @@ export const CodeHandler = (props) => {
     const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
 
     const validate = validateJson(propvalue)
+    const {themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
 
     var newprop = propvalue
     if (validate.valid === false) {
@@ -293,6 +299,7 @@ const Docs = (defaultprops) => {
 
     let navigate = useNavigate();
     const location = useLocation();
+    const pathname = location.pathname
     // Quickfix for react router 5 -> 6 
     const params = useParams();
     //var props = JSON.parse(JSON.stringify(defaultprops))
@@ -301,6 +308,8 @@ const Docs = (defaultprops) => {
     props.match.params = params
 
     //console.log("PARAMS: ", params)
+    const { themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
 
     const [mobile, setMobile] = useState(serverMobile === true || isMobile === true ? true : false);
     const [data, setData] = useState("");
@@ -326,9 +335,37 @@ const Docs = (defaultprops) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeSubItem, setActiveSubItem] = useState(false);
     const headingElementsRef = useRef({})
+    const [hasRedirected, setHasRedirected] = useState(false)
     var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
     const searchFieldRef = useRef(null);
 
+    const handleDocRedirectForPartners = () => {
+        if (hasRedirected) return;
+
+        if (
+            userdata &&
+            userdata?.org_status?.includes("integration_partner") &&
+            userdata?.active_org?.branding?.documentation_link?.length > 0
+        ) {
+            const docLink = userdata?.active_org?.branding?.documentation_link;
+            if (docLink && docLink !== "") {
+                setHasRedirected(true);
+                if (docLink.startsWith('http')) {
+                    window.location.replace(docLink);
+                } else {
+                    navigate(docLink);
+                }
+            }
+        }
+    };
+
+
+    useEffect(() => {
+        if (isLoggedIn && isLoaded) {
+            handleDocRedirectForPartners()
+        }
+
+    }, [isLoggedIn, isLoaded]);
 
     useEffect(() => {
         fetchDocList();
@@ -353,6 +390,8 @@ const Docs = (defaultprops) => {
 				navigate('/docs/apps#app-creation-introduction')
 			}
 		}
+
+        
     }, [location]);
 
     useEffect(() => {
@@ -501,19 +540,25 @@ const Docs = (defaultprops) => {
             }
           }}
           PaperProps={{
-            style: {
-              color: "white",
-              minWidth: 750,
+            sx: {
+              color: theme.palette.DialogStyle.color,
+              minWidth: "750px",
               minHeight: "180px",
               maxHeight: "85vh",
-              borderRadius: 16,
+              borderRadius: theme.palette.DialogStyle.borderRadius,
               border: "1px solid var(--Container-Stroke, #494949)",
-              background: "var(--Container, #000000)",
+              background: theme.palette.DialogStyle.backgroundColor,
               boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
               position: "fixed",
               top: "70px",
               left: "50%",
               transform: "translateX(-50%)",
+              '& .MuiDialogContent-root': {
+                backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                },
+                '& .MuiDialogTitle-root': {
+                backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                },
             },
           }}
           sx={{
@@ -526,7 +571,7 @@ const Docs = (defaultprops) => {
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2, pr: 3, pt: 2 }}>
             <DialogTitle
               sx={{ 
-                color: "var(--Paragraph-text, #C8C8C8)",
+                color: theme.palette.DialogStyle.color,
                 p: 0,
                 m: 0,
                 ml: 1.5,
@@ -594,7 +639,7 @@ const Docs = (defaultprops) => {
     }
 
     const SidebarPaperStyle = {
-        backgroundColor: isArticlePage ? "transparent" : "rgb(26,26,26)",
+        backgroundColor: isArticlePage ? "transparent" : theme.palette.backgroundColor,
         border: isArticlePage ? "none" : undefined,
         borderRadius: isArticlePage ? "none" : undefined,
         boxShadow: isArticlePage ? "none" : undefined,
@@ -663,9 +708,9 @@ const Docs = (defaultprops) => {
             extraInfo = (
                 <div
                     style={{
-                        backgroundColor: theme.palette.inputColor,
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                         padding: 15,
-                        borderRadius: theme.palette?.borderRadius,
+                        borderRadius: theme.palette?.textFieldStyle.borderRadius,
                         marginBottom: isArticlePage ? 25 : 30,
                         display: "flex",
                     }}
@@ -679,7 +724,7 @@ const Docs = (defaultprops) => {
                                     href={selectedMeta.link}
                                     style={{ textDecoration: "none", color: "#f85a3e" }}
                                 >
-                                    <Button style={{ color: "white", }} variant="outlined" color="secondary">
+                                    <Button variant="outlined" color="secondary">
                                         <EditIcon /> &nbsp;&nbsp;Edit
                                     </Button>
                                 </a>
@@ -788,7 +833,7 @@ const Docs = (defaultprops) => {
                         paddingLeft: "0.3em", rotate: "-30deg",
                         paddingTop: "0.9em", display: props.level === 1 ? "none" : "block",
                     }}>
-                        <LinkIcon />
+                        <LinkIcon style={{color: theme.palette.textColor}} />
                     </Link>
                 </div>
                 {isArticlePage ? (userdata?.support ? extraInfo : "") : extraInfo}
@@ -1028,13 +1073,12 @@ const Docs = (defaultprops) => {
     }
 
     const markdownStyle = {
-        color: "rgba(255, 255, 255, 0.90)",
+        color: theme.palette.textColor,
         overflow: "hidden",
         paddingBottom: 100,
         margin: "auto",
         maxWidth: "100%",
         minWidth: "100%",
-        overflow: "hidden",
         fontSize: isMobile ? "1.3rem" : "1.1rem",
     };
 
@@ -1188,6 +1232,7 @@ const Docs = (defaultprops) => {
     const activeHrefStyleToc2 = {
         ...hrefStyleToc2,
         color: "#f86a3e",
+        fontFamily: theme.typography.fontFamily,
     };
 
     const activeListItemStyle = {
@@ -1228,9 +1273,10 @@ const Docs = (defaultprops) => {
                                             </InputAdornment>
                                         ),
                                         style: {
-                                            backgroundColor: "#212121",
+                                            backgroundColor: theme.palette.platformColor,
                                             borderRadius: 4,
-                                            color: "white",
+                                            fontSize: 18,
+                                            color: theme.palette.textColor,
                                         },
                                     }}
                                     style={{
@@ -1290,16 +1336,17 @@ const Docs = (defaultprops) => {
                                         >
                                             <ListItemText
                                                 style={{ 
-                                                    color: itemMatching ? "#f86a3e" : "inherit",
+                                                    color: itemMatching ? "#f86a3e" : theme.palette.textColor,
                                                     flex: 1,
                                                 }}
                                                 primary={
                                                     <Typography
-                                                        variant="body1"
                                                         style={{
                                                             whiteSpace: "nowrap",
                                                             overflow: "hidden",
+                                                            color : "inherit",
                                                             textOverflow: "ellipsis",
+                                                            fontSize: "18px",
                                                         }}
                                                     >
                                                         {newname}
@@ -1371,7 +1418,7 @@ const Docs = (defaultprops) => {
                     )}
                     {tocLines.length > 0 ?
                         (
-                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table Of Content</h4>
+                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>
 
                         ) : null}
                     <div
@@ -1393,16 +1440,17 @@ const Docs = (defaultprops) => {
                                             paddingLeft: isArticlePage ? "0" : "8px",
                                             paddingRight: isArticlePage ? "0" : "8px",
                                             lineHeight: "20px",
-                                            color: activeId === data.id ? "#f86a3e" : "inherit", 
                                         }}
                                         onClick={(e) => {
                                             handleCollapse(index)
                                             setActiveId(data.id)
                                         }}
                                     >
-                                        {data.title}
+                                        <Typography style={{ fontSize: 14, fontWeight: 400, color: activeId === data.id ? "#f86a3e" : theme.palette.textColor, }}>
+                                            {data.title}
+                                        </Typography>
                                         {data.items.length > 0 ? (
-                                            <>{isopen == index ? <ExpandMoreIcon /> : <KeyboardArrowRightIcon />}</>
+                                            <>{isopen === index ? <ExpandMoreIcon style={{color: theme.palette.text.secondary}} /> : <KeyboardArrowRightIcon style={{color: theme.palette.text.secondary}} />}</>
                                         ) : null}
                                     </ListItemButton>
                                     {
@@ -1414,7 +1462,7 @@ const Docs = (defaultprops) => {
                                                     return (
                                                         <ListItemButton
                                                             key={i}
-                                                            style={activeSubItem === d.id ? activeHrefStyleToc2 : hrefStyleToc2}
+                                                            style={activeSubItem === d.id ? activeHrefStyleToc2 : {...hrefStyleToc2, color: theme.palette.text.secondary,  fontFamily: theme.typography.fontFamily,}}
                                                             href={`#${d.id}`}
                                                             onClick={(e) => {
                                                                 // e.preventDefault()
@@ -1577,7 +1625,7 @@ const Docs = (defaultprops) => {
 
     // Padding and zIndex etc set because of footer in cloud.
 const loadedCheck = (
-    <DocsWrapper isLoggedIn={isLoggedIn} isLoaded={isLoaded}>
+    <DocsWrapper isLoggedIn={isLoggedIn} isLoaded={isLoaded} userdata={userdata}>
         <DocsContent postDataBrowser={postDataBrowser} postDataMobile={postDataMobile}/>
     </DocsWrapper>
 );
@@ -1589,6 +1637,8 @@ return <div>{loadedCheck}</div>;
 export default Docs;
 
 const DocsContent = memo(({postDataBrowser, postDataMobile}) => {
+    const { themeMode } = useContext(Context);
+    const theme = getTheme(themeMode);
     return(
         <div style={{fontFamily: theme?.palette?.fontFamily}}>
             <BrowserView>{postDataBrowser}</BrowserView>
@@ -1596,9 +1646,21 @@ const DocsContent = memo(({postDataBrowser, postDataMobile}) => {
         </div>
 )})
 
-const DocsWrapper = memo(({isLoggedIn, isLoaded, children })=>{
+const DocsWrapper = memo(({isLoggedIn, isLoaded, children, userdata })=>{
     
     const { leftSideBarOpenByClick, windowWidth } = useContext(Context);
+
+    useEffect(() => {
+        if (isLoaded && isLoggedIn && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding.documentation_link?.length > 0) {
+            window.location.href = userdata?.active_org?.branding.documentation_link;
+        }
+    }, [isLoaded, isLoggedIn, userdata]);
+
+    if (isLoaded && isLoggedIn && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding.documentation_link?.length > 0) {
+        return <CircularProgress style={{position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)"}} />;
+    }
+
+    
 
     return (
         <div style={{

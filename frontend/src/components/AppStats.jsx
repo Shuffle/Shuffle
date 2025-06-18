@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 
 import classNames from "classnames";
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 
 import {
 	Tooltip,
@@ -14,6 +14,7 @@ import {
 	Chip,
 	Checkbox,
 } from "@mui/material";
+import { Context } from '../context/ContextApi.jsx';
 
 import { 
 	BarChart,
@@ -73,6 +74,8 @@ const inputdata = {
 
 const LineChartWrapper = ({keys, inputname, height, width}) => {
   const [hovered, setHovered] = useState("");
+  const {themeMode} = useContext(Context);
+	const theme = getTheme(themeMode)
 
 	//console.log("Date: ", new Date("2019-11-14T08:00:00.000Z"))
 	//var inputdata = keys.data
@@ -166,6 +169,8 @@ const AppStats = (defaultprops) => {
   const [searches, setSearches] = useState([]);
   const [clickData, setClickData] = useState(undefined);
   const [conversionData, setConversionData] = useState(undefined);
+  const {themeMode} = useContext(Context);
+	const theme = getTheme(themeMode)
 
 	const handleDataSetting = (inputdata, grouping) => {
 		var newlist = [] 
@@ -292,7 +297,7 @@ const AppStats = (defaultprops) => {
 		textAlign: "center", 
 		padding: 40, 
 		margin: 5, 
-		backgroundColor: theme.palette.inputColor,
+		backgroundColor: theme.palette.surfaceColor,
 	}
 
 	console.log("Widget: ", widgetData)

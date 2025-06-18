@@ -1,5 +1,5 @@
 import React, { forwardRef, memo, useContext, useEffect } from 'react';
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import { toast } from "react-toastify" ;
 import { 
 	Divider, 
@@ -32,6 +32,9 @@ const SchedulesTab = memo((props) => {
   const [showLoader, setShowLoader] = React.useState(true);
   const [pipelineModalOpen, setPipelineModalOpen] = React.useState(false);
   const [newPipelineValue, setNewPipelineValue] = React.useState("export | sigma /tmp/sigma_rules | to SHUFFLE_WEBHOOK");
+
+  const { themeMode, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
   useEffect(() => {
     if (allSchedules.length === 0 && webHooks.length === 0 && pipelines.length === 0) {
@@ -142,11 +145,11 @@ const SchedulesTab = memo((props) => {
           }}
         >
             <DialogTitle>
-                <span style={{ color: "white" }}>
+                <Typography variant='h5' color="textPrimary" >
 					Run a Tenzir pipeline
-				</span>
+				</Typography>
 				<Typography variant="body2" color="textSecondary" style={{marginTop: 10, }}>
-					Alpha feature. Deploys to the first available Orborus location. <a href="https://docs.tenzir.com/pipelines" target="_blank" rel="noopener noreferrer" style={{ color: "#ff8544" }}>Explore Tenzir Pipelines</a>. The example below exports everything in the Tenzir database, runs Sigma rules on it, and forwards the results to a Shuffle webhook.
+					Alpha feature. Deploys to the first available Orborus location. <a href="https://docs.tenzir.com/pipelines" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.primary.main }}>Explore Tenzir Pipelines</a>. The example below exports everything in the Tenzir database, runs Sigma rules on it, and forwards the results to a Shuffle webhook.
 				</Typography>
             </DialogTitle>
             <DialogContent>
@@ -173,17 +176,16 @@ const SchedulesTab = memo((props) => {
             </DialogContent>
             <DialogActions>
                 <Button
-                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: "#ff8544" }}
+                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: theme.palette.primary.main }}
                     onClick={() => {
 						setPipelineModalOpen(false)
 					}}
-                    color="primary"
                 >
                     Cancel
                 </Button>
                 <Button
                     variant="contained"
-                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", backgroundColor: "#ff8544", color: "#1a1a1a" }}
+                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none",  }}
                     onClick={() => {
                         submitPipelineWrapper(newPipelineValue)
                     }}
@@ -472,7 +474,7 @@ const SchedulesTab = memo((props) => {
       height: "100%",
       transition: 'width 0.3s ease',
       padding: '27px 10px 27px 27px',
-      backgroundColor: '#212121',
+      backgroundColor: theme.palette.platformColor,
       borderTopRightRadius: 8,
       borderBottomRightRadius: 8,
       borderLeft: '1px solid #494949',
@@ -480,36 +482,36 @@ const SchedulesTab = memo((props) => {
 
 	  {NewPipelineView} 
 
-      <div style={{height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
-      <h2 style={{ marginBottom: 8, marginTop: 0, color: "#FFFFFF"  }}>
+      <div style={{height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
+      <Typography variant='h5' color="textPrimary" style={{ marginBottom: 8, marginTop: 0, }}>
 	  	Triggers	
-	  </h2>
-      <Typography variant="body1" style={{ marginBottom: 50, marginTop: 0, }} color="textSecondary">
+	  </Typography>
+      <Typography variant="body2" style={{ marginBottom: 50, marginTop: 0, }} color="textSecondary">
 	  	Triggers are Automatic Workflow starters. <b>Status: Schedules ({allSchedules.length}), Webhooks ({webHooks.length}), Pipelines ({pipelines.length})</b>
 	  </Typography>
 
       <div>
-        <h4 style={{ marginBottom: 8, marginTop: 0, color: "#FFFFFF"  }}>
+        <Typography variant='h6' color="textPrimary" style={{ marginBottom: 8, marginTop: 0, fontWeight: 500}}>
 	  		Schedules
-	  	</h4>
-        <span style={{color:textColor}}>
+	  	</Typography>
+        <Typography variant='body2' color="textSecondary">
           Schedules used in Workflows. Makes locating and control easier.{" "}
           <a
             target="_blank"
             rel="noopener noreferrer"
             href="/docs/organizations#schedules"
-            style={{ color:"#FF8444" }}
+            style={{ color: theme.palette.primary.main }}
           >
             Learn more
           </a>
-        </span>
+        </Typography>
       </div>
-      <div style={{height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
+      <div style={{height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
       <div
         style={{
           borderRadius: 4,
           marginTop: 24,
-          border: "1px solid #494949",
+          border: theme.palette.defaultBorder,
           width: "100%",
           overflowX: "auto", 
           paddingBottom: 0,
@@ -525,7 +527,7 @@ const SchedulesTab = memo((props) => {
                 overflowX: "auto",
                 paddingBottom: 0
         }}>
-          <ListItem style={{width: "100%", paddingTop: 10, paddingBottom: 10, paddingRight: 10,  borderBottom: "1px solid #494949", display: 'table-row'}}>
+          <ListItem style={{width: "100%", paddingTop: 10, paddingBottom: 10, paddingRight: 10,  borderBottom: theme.palette.defaultBorder, display: 'table-row'}}>
           {["Name", "Interval", "Environment", "Workflow", "Argument", "Action"].map((header, index) => (
                           <ListItemText
                               key={index}
@@ -535,7 +537,7 @@ const SchedulesTab = memo((props) => {
                                 padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                                 whiteSpace: "nowrap",
                                 textOverflow: "ellipsis",
-                                borderBottom: "1px solid #494949",
+                                borderBottom: theme.palette.defaultBorder,
                               }}
                           />
                       ))}
@@ -546,7 +548,7 @@ const SchedulesTab = memo((props) => {
                   key={rowIndex}
                   style={{
                       display: "table-row",
-                      backgroundColor: "#212121",
+                      backgroundColor: theme.palette.platformColor,
                   }}
               >
                   {Array(6)
@@ -563,7 +565,7 @@ const SchedulesTab = memo((props) => {
                                   variant="text"
                                   animation="wave"
                                   sx={{
-                                      backgroundColor: "#1a1a1a",
+                                      backgroundColor: theme.palette.loaderColor,
                                       height: "20px",
                                       borderRadius: "4px",
                                   }}
@@ -575,13 +577,13 @@ const SchedulesTab = memo((props) => {
           ):(
             allSchedules?.length === 0 ? (
               <div style={{ textAlign: 'center'}}>
-                <Typography style={{color: "#FFFFFF", fontSize: 16, padding: 20, textAlign: 'center'}}>No schedules found</Typography>
+                <Typography style={{color: theme.palette.text.primary, fontSize: 16, padding: 20, textAlign: 'center'}}>No schedules found</Typography>
               </div>
             ):(
               allSchedules.map((schedule, index) => {
-                var bgColor = "#212121"
+                var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
                 if (index % 2 === 0) {
-                  bgColor = "#1a1a1a";
+                    bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
                 }
         
                 return (
@@ -645,7 +647,7 @@ const SchedulesTab = memo((props) => {
                                   rel="noopener noreferrer"
                                   style={{
                                     textDecoration: "none",
-                                    color: "#f85a3e",
+                                    color: theme.palette.primary.main,
                                   }}
                                   href={`/workflows/${schedule.workflow_id}`}
                                   target="_blank"
@@ -658,7 +660,7 @@ const SchedulesTab = memo((props) => {
                                       style={{
                                         color:
                                           schedule.workflow_id !== "global"
-                                            ? "#FF8444"
+                                            ? theme.palette.primary.main
                                             : "grey",
                                       }}
                                     />
@@ -698,8 +700,7 @@ const SchedulesTab = memo((props) => {
                           style={{
                             textTransform: 'none',
                             fontSize: 16,
-                            color: schedule.status === "running" ? '#1a1a1a' : null,
-                            backgroundColor: schedule.status === "running" ? '#ff8544' : null,
+                            width: 150,
                           }}
                           color={schedule.status === "running" ? "secondary" : "primary"}
                           variant={schedule.status === "running" ? "contained" : "outlined"}
@@ -725,23 +726,23 @@ const SchedulesTab = memo((props) => {
       </div>
 
         <div style={{ marginTop: 50, marginBottom: 20 }}>
-          <h4 style={{color: "#FFFFFF"}} >Webhooks</h4>
-          <span> Webhooks used in Shuffle workflows.&nbsp;
+          <Typography variant='h6' color="textPrimary">Webhooks</Typography>
+          <Typography variant='body2' color="textSecondary"> Webhooks used in Shuffle workflows.&nbsp;
             <a
               target="_blank"
               rel="noopener noreferrer"
               href="/docs/triggers#webhooks"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
+              style={{ color: theme.palette.primary.main }}
             >
               Learn more
             </a>
-          </span>
+          </Typography>
         </div>
         <div
               style={{
               borderRadius: 4,
               marginTop: 24,
-              border: "1px solid #494949",
+              border: theme.palette.defaultBorder,
               width: "100%",
               overflowX: "auto", 
               paddingBottom: 0,
@@ -757,7 +758,7 @@ const SchedulesTab = memo((props) => {
                     paddingBottom: 0,
                     minWidth: 600,
             }}>
-        <ListItem style={{width:"100%", borderBottom:"1px solid #494949", display: "table-row"}}>
+        <ListItem style={{width:"100%", borderBottom:theme.palette.defaultBorder, display: "table-row"}}>
         {["Name", "Environment", "Workflow", "URL", "Action"].map((header, index) => (
                 <ListItemText
                     key={index}
@@ -767,7 +768,7 @@ const SchedulesTab = memo((props) => {
                       padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                       whiteSpace: "nowrap",
                       textOverflow: "ellipsis",
-                      borderBottom: "1px solid #494949",
+                      borderBottom: theme.palette.defaultBorder,
                       position: "sticky",
                     }}
                 />
@@ -779,7 +780,7 @@ const SchedulesTab = memo((props) => {
                 key={rowIndex}
                 style={{
                     display: "table-row",
-                    backgroundColor: "#212121",
+                    backgroundColor: theme.palette.platformColor,
                 }}
             >
                 {Array(5)
@@ -796,7 +797,7 @@ const SchedulesTab = memo((props) => {
                                 variant="text"
                                 animation="wave"
                                 sx={{
-                                    backgroundColor: "#1a1a1a",
+                                    backgroundColor: theme.palette.loaderColor,
                                     height: "20px",
                                     borderRadius: "4px",
                                 }}
@@ -808,13 +809,13 @@ const SchedulesTab = memo((props) => {
         ):(
            webHooks?.length === 0 ? (
               <div style={{textAlign: "center"}}>
-                  <Typography style={{color: "#FFFFFF", padding: 20, fontSize: 16, textAlign: 'center'}}>No webhooks found</Typography>
+                  <Typography style={{color: theme.palette.text.primary, padding: 20, fontSize: 16, textAlign: 'center'}}>No webhooks found</Typography>
               </div>
           ):(
             webHooks.map((webhook, index) => {
-              var bgColor = "#212121"
+              var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
               if (index % 2 === 0) {
-                bgColor = "#1a1a1a";
+                  bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
               }
   
               return (
@@ -840,7 +841,7 @@ const SchedulesTab = memo((props) => {
 																rel="noopener noreferrer"
 																style={{
 																	textDecoration: "none",
-																	color: "#f85a3e",
+																	color: theme.palette.primary.main,
 																}}
 																href={`/workflows/${webhook.workflows[0]}`}
 																target="_blank"
@@ -853,7 +854,7 @@ const SchedulesTab = memo((props) => {
 																		style={{
 																			color:
                                       webhook.workflows[0].workflow_id !== "global"
-																					? "#FF8444"
+																					? theme.palette.primary.main
 																					: "grey",
 																		}}
 																	/>
@@ -904,6 +905,7 @@ const SchedulesTab = memo((props) => {
                           fontSize: 16,
                           color:webhook.status === "running" ? '#1a1a1a' : null,
                           backgroundColor: webhook.status === "running" ? '#ff8544' : null,
+                          width: 150,
                         }}
                         color={webhook.status === "running" ? "secondary" : "primary"}
                         variant={webhook.status === "running" ? "contained" : "outlined"}
@@ -928,24 +930,24 @@ const SchedulesTab = memo((props) => {
           </List>
         </div>
         <div style={{ marginTop: 50, marginBottom: 20 }}>
-          <h4 style={{color: "#FFFFFF"}}>Pipelines</h4>
+          <Typography variant='h6' color="textPrimary" >Pipelines</Typography>
 
-          <span>
+          <Typography variant='body2' color="textSecondary" >
             Controls Pipelines on your Orborus Runners, e.g. for Log Ingestion, MQ subscriptions or Sigma Detections.{" "}
             <a
               target="_blank"
               rel="noopener noreferrer"
               href="/docs/triggers#pipelines"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
+              style={{ color: theme.palette.primary.main }}
             >
               Learn more
             </a>
-          </span>
+          </Typography>
 
 	  	  <div style={{marginBottom: 10, marginTop: 10,  }}/>
 
 		  <Button
-		  	style={{ backgroundColor: '#ff8544', color: "#1a1a1a", borderRadius: 4, textTransform: "capitalize", fontSize: 16,  }}
+		  	style={{ borderRadius: 4, textTransform: "capitalize", fontSize: 16,  }}
 		  	variant="contained"
 		  	color="primary"
 		  	onClick={() => setPipelineModalOpen(true)}
@@ -958,7 +960,7 @@ const SchedulesTab = memo((props) => {
               style={{
               borderRadius: 4,
               marginTop: 24,
-              border: "1px solid #494949",
+              border: theme.palette.defaultBorder,
               width: "100%",
               overflowX: pipelines?.length === 0 ? "hidden" : "auto", 
               paddingBottom: 0,
@@ -974,7 +976,7 @@ const SchedulesTab = memo((props) => {
                     overflowX: "auto",
                     paddingBottom: 0
             }}>
-            <ListItem style={{width:"100%", borderBottom:"1px solid #494949", display: "table-row"}}>
+            <ListItem style={{width:"100%", borderBottom:theme.palette.defaultBorder, display: "table-row"}}>
             {["Command", "Environment", "Total Runs", "Actions"].map((header, index) => (
                     <ListItemText
                         key={index}
@@ -984,7 +986,7 @@ const SchedulesTab = memo((props) => {
                           padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                           whiteSpace: "nowrap",
                           textOverflow: "ellipsis",
-                          borderBottom: "1px solid #494949",
+                          borderBottom: theme.palette.defaultBorder,
                           position: "sticky",
                         }}
                     />
@@ -997,7 +999,7 @@ const SchedulesTab = memo((props) => {
 						key={rowIndex}
 						style={{
 							display: "table-row",
-							backgroundColor: "#212121",
+							backgroundColor: theme.palette.platformColor,
 						}}
 					>
 						{Array(5)
@@ -1015,7 +1017,7 @@ const SchedulesTab = memo((props) => {
 											variant="text"
 											animation="wave"
 											sx={{
-												backgroundColor: "#1a1a1a",
+												backgroundColor: theme.palette.loaderColor,
 												height: "20px",
 												borderRadius: "4px",
 											}}
@@ -1031,14 +1033,14 @@ const SchedulesTab = memo((props) => {
             ): (
               pipelines?.length === 0 ? ( 
                 <div style={{width: "100%", textAlign: "center", }}>
-                  <Typography style={{color: "#FFFFFF", padding: 20,width: "100%", fontSize: 16, textAlign: 'center'}}>No pipeline trigger found</Typography>
+                  <Typography style={{color: theme.palette.text.primary, padding: 20,width: "100%", fontSize: 16, textAlign: 'center'}}>No pipeline trigger found</Typography>
                 </div>
 
               ):(
                 pipelines.map((pipeline, index) => {
-                  var bgColor = "#212121"
+                  var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
                   if (index % 2 === 0) {
-                    bgColor = "#1a1a1a";
+                      bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
                   }
 
                   return (
@@ -1094,4 +1096,3 @@ const SchedulesTab = memo((props) => {
 });
 
 export default SchedulesTab;
-

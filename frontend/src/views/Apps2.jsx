@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback, memo, useMemo, useRef } from "react";
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import { isMobile } from "react-device-detect";
 
 import { useLocation, useNavigate } from "react-router-dom";
@@ -46,7 +46,7 @@ import AppCreationModal from "../components/AppCreationModal.jsx";
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "db08e40265e2941b9a7d8f644b6e5240"
+  "c8f882473ff42d41158430be09ec2b4e"
 );
 
 // AppCard Component
@@ -55,7 +55,9 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   //const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
   const appUrl = `/apps/${data.id}` 
-
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
+  
   var canEditApp = userdata?.support || userdata?.id === data?.owner || 
         (userdata?.admin === "true" && userdata?.active_org?.id === data?.reference_org) || data?.contributors?.includes(userdata?.id)
 
@@ -104,7 +106,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               display: "flex",
               fontFamily: theme?.typography?.fontFamily,
               width: '100%',
-              backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
+              backgroundColor: mouseHoverIndex === index ? theme.palette.hoverColor :  theme.palette.platformColor,
             }}
             onClick={() => {
               handleAppClick(data);
@@ -150,9 +152,9 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: '#F1F1F1'
+                  color: theme.palette.text.primary,
                 }}>
-                  {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                  {data?.name?.replace(/_/g, ' ')?.replace(/\b\w/g, char => char?.toUpperCase())}
                 </div>
 
               </div>
@@ -161,9 +163,9 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
                 marginLeft: 8,
-                color: "rgba(158, 158, 158, 1)"
+                color: theme.palette.text.secondary,
               }}>
-                {data.categories ? data.categories.join(", ") : "NA"}
+                {data?.categories ? data?.categories?.join(", ") : "NA"}
               </div>
 
               <div style={{
@@ -172,7 +174,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 whiteSpace: "nowrap",
                 width: "100%",
                 marginLeft: 8,
-                color: "rgba(158, 158, 158, 1)",
+                color: theme.palette.text.secondary,
                 display: "flex",
                 justifyContent: 'space-between',
                 paddingRight: 15,
@@ -184,7 +186,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   whiteSpace: "nowrap",
                   color: "rgba(158, 158, 158, 1)",
                 }}>
-                  {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
+                  {data?.generated !== true && data?.tags && data?.tags?.slice(0, 2).map((tag, tagIndex) => (
                     <span key={tagIndex}>
                       {tag}
                       {tagIndex < data.tags.length - 1 ? ", " : ""}
@@ -202,7 +204,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                   }}>
                     {
                       canEditApp ? (
-                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        <Button style={{  border: "none", cursor: "pointer", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -211,11 +213,13 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                               navigate(editUrl)
                             }
                           }}
+                          variant="contained"
+                          color="secondary"
                         >
                           <EditIcon />
-                        </button>
+                        </Button>
                       ) : (
-                        <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        <Button variant="contained" color="secondary" style={{ border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -224,26 +228,23 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                         }}
                         >
                         <ForkRightIcon />
-                        </button>
+                        </Button>
                       )
                     }
 
                     <Button
-					  disabled={data?.reference_org === userdata?.active_org?.id}
+					            disabled={data?.reference_org === userdata?.active_org?.id}
+                      variant="contained"
+                      color="secondary"
                       className="deactivate-button"
                       sx={{
                         width: 110,
                         height: 35,
                         borderRadius: 0.75,
-                        bgcolor: "rgba(73, 73, 73, 1)",
-                        color: "rgba(241, 241, 241, 1)",
                         textTransform: "none",
                         fontSize: 16,
                         fontFamily: theme?.typography?.fontFamily,
                         transition: "background-color 0.3s ease",
-                        "&:hover": {
-                          bgcolor: "rgba(93, 93, 93, 1)",
-                        },
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onMouseUp={(e) => e.stopPropagation()}
@@ -308,6 +309,8 @@ const Hits = ({
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
   const [isLoading, setIsLoading] = useState(false)
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
 
   useEffect(() => {
     var baseurl = globalUrl;
@@ -343,7 +346,6 @@ const Hits = ({
       setAllActivatedAppIds(userdata.active_apps);
     }
   }, [currTab, window.location]);
-
 
   //Function for activation and deactivation of app
   const handleActivateButton = (event, data, type) => {
@@ -507,7 +509,7 @@ const Hits = ({
                             overflow: "hidden",
                             display: "flex",
                             width: '100%',
-                            backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121",
+                            backgroundColor: hoverEffect === index ? theme.palette.hoverColor :  theme.palette.platformColor,
                             fontFamily: theme?.typography?.fontFamily
                           }}
                             onClick={() => {
@@ -550,7 +552,7 @@ const Hits = ({
                                   maxWidth: "90%",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
-                                  color: '#F1F1F1'
+                                  color: theme.palette.text.primary
                                 }}
                               >
                                 {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
@@ -558,7 +560,7 @@ const Hits = ({
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
-                                  color: '#F1F1F1'
+                                  color: theme.palette.text.primary,
                                 }}>
                                   {normalizedString(data.name)}
                                 </div>
@@ -569,7 +571,7 @@ const Hits = ({
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
-                                  color: "rgba(158, 158, 158, 1)",
+                                  color: theme.palette.text.secondary,
                                   marginTop: 5,
                                 }}
                               >
@@ -600,12 +602,12 @@ const Hits = ({
                                           componentsProps={{
                                             tooltip: {
                                               sx: {
-                                                backgroundColor: "rgba(33, 33, 33, 1)",
-                                                color: "rgba(241, 241, 241, 1)",
+                                                backgroundColor: theme.palette.tooltip.backgroundColor,
+                                                color: theme.palette.tooltip.color,
                                                 width: "auto",
                                                 height: "auto",
                                                 fontSize: 16,
-                                                border: "1px solid rgba(73, 73, 73, 1)",
+                                                border: theme.palette.tooltip.border,
                                               }
                                             }
                                           }}
@@ -650,15 +652,15 @@ const Hits = ({
                                     <div>
                                       {allActivatedAppIds && allActivatedAppIds?.includes(data.objectID) ? (
                                         <Button
-                                          style={{
-                                            width: 110,
-                                            height: 35,
-                                            borderRadius: 4,
-                                            backgroundColor: "rgba(73, 73, 73, 1)",
-                                            color: "rgba(241, 241, 241, 1)",
+                                         variant="contained"
+                                         color="secondary"
+                                          sx={{
+                                            width: "110px",
+                                            height: "35px",
+                                            borderRadius: "4px",
                                             textTransform: "none",
                                             fontFamily: theme?.typography?.fontFamily,
-                                            fontSize: 16,
+                                            fontSize: "16px",
                                           }}
                                           onMouseDown={(e) => e.stopPropagation()}
                                           onMouseUp={(e) => e.stopPropagation()}
@@ -671,9 +673,9 @@ const Hits = ({
                                       ) : (
 
                                         <Button
+                                          variant="contained"
+                                          color="primary"
                                           style={{
-                                            backgroundColor: "#FF8544",
-                                            color: "black",
                                             width: 102,
                                             height: 35,
                                             borderRadius: 4,
@@ -719,6 +721,8 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
   const inputRef = useRef(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const location = useLocation();
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   // Initialize search when component mounts or when switching to Discover tab
   useEffect(() => {
     if (searchQuery) {
@@ -779,7 +783,8 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
       InputProps={{
         style: {
           borderRadius: 4,
-          height: 45
+          height: 45,
+          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
         },
         endAdornment: (
           <InputAdornment position="end">
@@ -809,6 +814,8 @@ const CustomHits = connectHits(Hits);
 
 // Custom Category Dropdown Component
 const CategoryDropdown = ({ items, currentRefinement, refine }) => {
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   const handleChange = (event) => {
     const value = event.target.value;
     refine(value);
@@ -823,7 +830,7 @@ const CategoryDropdown = ({ items, currentRefinement, refine }) => {
         onChange={handleChange}
         displayEmpty
         multiple
-        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
+        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor, color:  theme.palette.textFieldStyle.color }}
         renderValue={(selected) => {
           if (selected.length === 0) return 'All Categories';
           return (
@@ -875,6 +882,9 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
     refine(value);
   };
 
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
+
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       <Select
@@ -884,7 +894,7 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
         onChange={handleChange}
         displayEmpty
         multiple
-        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
+        style={{ borderRadius: 4, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor, color:  theme.palette.textFieldStyle.color }}
         renderValue={(selected) => {
           if (selected.length === 0) return 'All Labels';
           return (
@@ -930,6 +940,7 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
     </div>
   );
 };
+
 const CustomLabelDropdown = connectRefinementList(LabelDropdown);
 
 
@@ -970,6 +981,8 @@ const filterApps = (apps, searchQuery, selectedCategory, selectedLabel) => {
 
 const LoginPrompt = () => {
   const navigate = useNavigate();
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   return (
     <div style={{
       display: "flex",
@@ -1006,9 +1019,11 @@ const LoginPrompt = () => {
 
 // Add this new component for the app skeleton
 const AppSkeleton = () => {
+  const { themeMode } = useContext(Context);
+  const theme = getTheme(themeMode);
   return (
     <Paper elevation={0} style={{
-      backgroundColor: "#212121",
+      backgroundColor: theme.palette.platformColor,
       width: "100%",
       height: 120,
       borderRadius: 4,
@@ -1025,7 +1040,7 @@ const AppSkeleton = () => {
           height={90}
           style={{
             borderRadius: 4,
-            backgroundColor: "rgba(255, 255, 255, 0.1)"
+            backgroundColor: theme.palette.loaderColor
           }}
         />
         <div style={{
@@ -1039,19 +1054,19 @@ const AppSkeleton = () => {
             variant="text"
             width="40%"
             height={24}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            style={{ backgroundColor: theme.palette.loaderColor }}
           />
           <Skeleton
             variant="text"
             width="60%"
             height={20}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            style={{ backgroundColor: theme.palette.loaderColor }}
           />
           <Skeleton
             variant="text"
             width="30%"
             height={20}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+            style={{ backgroundColor: theme.palette.loaderColor }}
           />
         </div>
       </div>
@@ -1106,6 +1121,7 @@ const Apps2 = (props) => {
   const [defaultSearch, setDefaultSearch] = useState("");
 
   const [apps, setApps] = useState([]);
+  const [backupApps, setBackupApps] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
   const [appSearchLoading, setAppSearchLoading] = useState(false);
   const [creatorProfile, setCreatorProfile] = useState({});
@@ -1116,6 +1132,9 @@ const Apps2 = (props) => {
   const [field2, setField2] = useState("");
   const [validation, setValidation] = useState(null);
   const [createAppModalOpen, setCreateAppModalOpen] = useState(false);
+
+  const {themeMode, brandColor} = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
   const baseRepository = "https://github.com/frikky/shuffle-apps";
 
@@ -1179,61 +1198,13 @@ const Apps2 = (props) => {
     getFramework();
   }, []);
 
-  // Fetch apps based on the current tab : 0 -> org_apps, 1 -> my_apps, 2 -> all_apps
-  const fetchApps = async () => {
-    const baseUrl = globalUrl;
-    let url;
-    setIsLoading(true);
-    const userId = userdata?.id;
-    if (currTab === 1 && userId) {
-      url = `${baseUrl}/api/v1/users/${userId}/apps`;
-    } else if (currTab === 0) {
-      url = `${baseUrl}/api/v1/apps`;
-    }
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await response.json();
-      if (currTab === 1) {
-        setAppsToShow(data);
-        setUserApps(data);
-      } else if (currTab === 0) {
-        setAppsToShow(data);
-        setOrgApps(data);
-        // For testing the empty state
-        // setAppsToShow([]);
-        // setOrgApps([]);
-      }
-      setIsLoading(false);
-    } catch (err) {
-      console.error("Error fetching apps:", err);
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-
-    // Only fetch if we have required data
-    if (globalUrl && (currTab === 0 || (currTab === 1 && userdata?.id))) {
-      fetchApps();
-    }
-  }, [currTab, globalUrl, userdata?.id]); // Remove location.search dependency
-
-  // useEffect(() => {
-  //   // setSearchQuery("");
-  //   setSelectedCategory([]);
-  //   setSelectedLabel([]);
-  // }, [currTab])
-
+	  getApps()
+  }, [])
 
   // Find top categories and tags based on the current tab
   useEffect(() => {
-    if (currTab === 0 || currTab === 1) {
+    if (currTab === 0 || currTab === 1 || currTab === 3) {
       setCategories(findTopCategories());
       setLabels(findTopTags());
     }
@@ -1274,11 +1245,13 @@ const Apps2 = (props) => {
       });
   };
 
+  /*
   useEffect(() => {
     if (serverside) {
       return null;
     }
   }, [serverside]);
+  */
 
   const getApps = () => {
     // Get apps from localstorage
@@ -1289,7 +1262,7 @@ const Apps2 = (props) => {
       if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
         storageApps = []
       } else {
-        setAppsToShow(storageApps)
+        //setAppsToShow(storageApps)
         setOrgApps(storageApps)
         setApps(storageApps)
         // setFilteredApps(storageApps)
@@ -1325,18 +1298,25 @@ const Apps2 = (props) => {
         var privateapps = [];
         var valid = [];
         var invalid = [];
+
+		var backups = [] 
         for (var key in responseJson) {
           const app = responseJson[key];
 
-          if (app.categories !== undefined && app.categories !== null && app?.categories.includes("Eradication")) {
+		  if (app?.reference_info?.onprem_backup === true) {
+			  backups.push(app)
+			  continue
+		  }
+
+          if (app?.categories !== undefined && app?.categories !== null && app?.categories?.includes("Eradication")) {
             app.categories = ["EDR"]
           }
 
-          if (app.is_valid && !(!app.activated && app.generated)) {
+          if (app?.is_valid && !(!app?.activated && app?.generated)) {
             privateapps.push(app);
           } else if (
-            app.private_id !== undefined &&
-            app.private_id.length > 0
+            app?.private_id !== undefined &&
+            app?.private_id.length > 0
           ) {
             valid.push(app);
           } else {
@@ -1344,49 +1324,39 @@ const Apps2 = (props) => {
           }
         }
 
+		if (backups.length > 0) {
+			setBackupApps(backups)
+		}
+
         privateapps.push(...valid);
         privateapps.push(...invalid);
-        console.log("privateapps: setting apps ", privateapps)
+
         setAppsToShow(privateapps);
         setOrgApps(privateapps);
         setApps(privateapps);
 
-        // setFilteredApps(privateapps);
+        //setFilteredApps(privateapps);
+      	const filteredOrgApps = filterApps(privateapps, searchQuery, selectedCategory, selectedLabel);
+      	setAppsToShow(filteredOrgApps)
+
         if (privateapps.length > 0) {
-          if (selectedApp.id === undefined || selectedApp.id === null) {
-            if (privateapps[0].owner !== undefined && privateapps[0].owner !== null) {
-              getUserProfile(privateapps[0].owner);
+          if (selectedApp?.id === undefined || selectedApp?.id === null) {
+            if (privateapps[0]?.owner !== undefined && privateapps[0]?.owner !== null) {
+              getUserProfile(privateapps[0]?.owner);
             }
-
-            // setContact(privateapps[0].contact_info)
-
-            // setSelectedApp(privateapps[0]);
-            // setSharingConfiguration(privateapps[0].sharing === true ? "public" : "you")
           }
-
-          // if (
-          //   privateapps[0].actions !== null &&
-          //   privateapps[0].actions.length > 0
-          // ) {
-          //   setSelectedAction(privateapps[0].actions[0]);
-          // } else {
-          //   setSelectedAction({});
-          // }
         }
 
-        if (privateapps.length > 0 && storageApps.length === 0) {
+        if (privateapps?.length > 0 && storageApps?.length === 0) {
           try {
             localStorage.setItem("apps", JSON.stringify(privateapps))
           } catch (e) {
             console.log("Failed to set apps in localstorage: ", e)
           }
         }
-
-        //setTimeout(() => {
-        //	setFirstLoad(false)
-        //}, 5000)
       })
       .catch((error) => {
+		console.log("Failed to get apps: ", error.toString());
         toast(error.toString());
         setIsLoading(false);
       });
@@ -1762,7 +1732,6 @@ const Apps2 = (props) => {
     // setOpenModal(true);
   };
 
-
   useEffect(() => {
     const apps = currTab === 1 ? userApps : orgApps;
     const filteredUserAppdata = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
@@ -1780,33 +1749,38 @@ const Apps2 = (props) => {
     } else if (newTab === 1) {
       const filteredUserApps = filterApps(userApps, searchQuery, selectedCategory, selectedLabel);
       setAppsToShow(filteredUserApps);
-    }
+    } else if (newTab === 3) {
+      const filteredUserApps = filterApps(backupApps, searchQuery, selectedCategory, selectedLabel);
+      setAppsToShow(filteredUserApps);
+	  return
+	}
 
     // Update URL query params based on tab index
     const tabMapping = {
       0: 'org_apps',
       1: 'my_apps',
-      2: 'all_apps'
+      2: 'all_apps',
+      3: 'backup_apps',
     };
 
-    const queryParams = new URLSearchParams(location.search);
-    queryParams.set('tab', tabMapping[newTab]);
+	const queryParams = new URLSearchParams(location.search);
+	queryParams.set('tab', tabMapping[newTab]);
 
-    // Maintain search query in URL regardless of tab
-    if (searchQuery) {
-      queryParams.set('q', searchQuery);
-    } else {
-      queryParams.delete('q');
-    }
+	// Maintain search query in URL regardless of tab
+	if (searchQuery) {
+	  queryParams.set('q', searchQuery);
+	} else {
+	  queryParams.delete('q');
+	}
 
-    navigate(`${location.pathname}?${queryParams.toString()}`);
+	navigate(`${location.pathname}?${queryParams.toString()}`);
   };
 
   // Update useEffect for filtering without URL manipulation
   useEffect(() => {
     if (currTab === 2) return; // Skip for "Discover Apps" tab as it uses Algolia
 
-    const apps = currTab === 1 ? userApps : orgApps;
+    const apps = currTab === 1 ? userApps : currTab === 3 ? backupApps : orgApps;
     const filteredApps = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
     setAppsToShow(filteredApps);
   }, [searchQuery, selectedCategory, selectedLabel, currTab, userApps, orgApps]);
@@ -1869,13 +1843,13 @@ const Apps2 = (props) => {
   }
 
   const tabActive = {
-    borderBottom: "5px solid #FF8544",
+    borderBottom: `5px solid ${theme.palette.primary.main}`,
     borderRadius: "2px",
-    color: "#FF8544"
+    color: theme.palette.primary.main,
   }
 
   return (
-    <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
+    <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: theme.palette.backgroundColor, fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
         <AppModal
           open={openModal}
@@ -1896,7 +1870,7 @@ const Apps2 = (props) => {
         <div style={boxStyle}>
           <div style={{ display: "flex", flexDirection: "row", width: "100%", justifyContent: "space-between" }}>
             <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
-				{currTab === 0 ? "Org" : currTab === 1 ?  "Your" : "Discover"} Apps
+				{currTab === 0 ? "Org" : currTab === 1 ? "Your" : currTab === 3 ? "Backup" :  "Discover"} Apps
             </Typography>
             {isCloud ? null : (
               <span style={{ display: "flex", gap: 15 }}>
@@ -1922,7 +1896,7 @@ const Apps2 = (props) => {
                       style={{
                         height: 45,
                         minWidth: 45,
-                        backgroundColor: "#2F2F2F",
+                        backgroundColor: theme.palette.platformColor,
                         borderRadius: 4,
                         padding: "8px 16px",
                       }}
@@ -1932,9 +1906,9 @@ const Apps2 = (props) => {
                       }}
                     >
                       {isLoading ? (
-                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                        <CircularProgress size={20} style={{ color: theme.palette.primary.main }} />
                       ) : (
-                        <CachedIcon style={{ color: "#F1F1F1" }} />
+                        <CachedIcon style={{ color: theme.palette.text.primary }} />
                       )}
                     </Button>
                   </Tooltip>
@@ -1962,7 +1936,7 @@ const Apps2 = (props) => {
                       style={{
                         height: 45,
                         minWidth: 45,
-                        backgroundColor: "#2F2F2F",
+                        backgroundColor: theme.palette.platformColor,
                         borderRadius: 4,
                         padding: "8px 16px",
                       }}
@@ -1974,9 +1948,9 @@ const Apps2 = (props) => {
                       }}
                     >
                       {isLoading ? (
-                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                        <CircularProgress size={20} style={{ color: theme.palette.primary.main }} />
                       ) : (
-                        <CloudDownloadIcon style={{ color: "#F1F1F1" }} />
+                        <CloudDownloadIcon style={{ color: theme.palette.text.primary }} />
                       )}
                     </Button>
                   </Tooltip>
@@ -1984,7 +1958,7 @@ const Apps2 = (props) => {
               </span>
             )}
           </div>
-          <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
+          <div style={{ borderBottom: themeMode === "dark" ? "1px solid #808080" : theme.palette.defaultBorder, marginBottom: 30 }}>
             <Tabs
               value={currTab}
               onChange={(event, newTab) => handleTabChange(event, newTab)}
@@ -2009,6 +1983,7 @@ const Apps2 = (props) => {
                   ...(currTab === 1 ? tabActive : {})
                 }}
               />
+
               <Tab
                 label="Discover Public Apps"
                 style={{
@@ -2017,6 +1992,17 @@ const Apps2 = (props) => {
                   ...(currTab === 2 ? tabActive : {})
                 }}
               />
+
+				{backupApps.length > 0 &&
+					<Tab
+						label={`Onprem Backup (${backupApps.length})`}
+						style={{
+							...tabStyle,
+							marginLeft: 25, 
+							...(currTab === 3 ? tabActive : {})
+						}}
+					/>
+				}
             </Tabs>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, height: 45, paddingRight: 25 }}>
@@ -2025,7 +2011,7 @@ const Apps2 = (props) => {
               minWidth: "25%",
               maxWidth: "25%"
             }}>
-              {(currTab === 0 || currTab === 1) ? (
+              {(currTab === 0 || currTab === 1 || currTab === 3) ? (
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -2034,6 +2020,10 @@ const Apps2 = (props) => {
                   value={searchQuery}
                   id="shuffle_search_field"
                   onChange={handleSearchChange}
+                  style={{
+                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    color: theme.palette.textFieldStyle.color,
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -2043,7 +2033,10 @@ const Apps2 = (props) => {
                   InputProps={{
                     style: {
                       borderRadius: 4,
-                      height: 45
+                      height: 45,
+                      backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      color: theme.palette.textFieldStyle.color,
+                      fontSize: 18,
                     },
                     endAdornment: (
                       <InputAdornment position="end">
@@ -2087,7 +2080,9 @@ const Apps2 = (props) => {
                     style={{
                       borderRadius: 4,
                       height: 45,
-                      fontFamily: theme?.typography?.fontFamily
+                      fontFamily: theme?.typography?.fontFamily,
+                      backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      fontSize: 18,
                     }}
                     renderValue={(selected) => {
                       if (selected.length === 0) return 'All Categories';
@@ -2113,6 +2108,7 @@ const Apps2 = (props) => {
                       </MenuItem>
                     ))}
                   </Select>
+
                   {selectedCategory.length > 0 && (
                     <ClearIcon
                       style={{
@@ -2152,7 +2148,9 @@ const Apps2 = (props) => {
                     style={{
                       borderRadius: 4,
                       height: 45,
-                      fontFamily: theme?.typography?.fontFamily
+                      fontFamily: theme?.typography?.fontFamily,
+                      backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      fontSize: 18,
                     }}
                     renderValue={(selected) => {
                       if (selected.length === 0) return 'All Labels';
@@ -2211,13 +2209,11 @@ const Apps2 = (props) => {
                   width: '100%',
                   borderRadius: '4px',
                   textTransform: 'none',
-                  backgroundColor: "#FF8544",
-                  color: "#1A1A1A",
                   fontFamily: theme?.typography?.fontFamily,
                   fontSize: 16,
                   fontWeight: 500
                 }}
-                startIcon={<AddIcon style={{ color: "#1A1A1A" }} />}
+                startIcon={<AddIcon />}
               >
                 Create an App
               </Button>
@@ -2226,7 +2222,10 @@ const Apps2 = (props) => {
           <div>
 
             {
-              currTab === 0 && (
+              currTab !== 0 && currTab !== 3 ? 
+				null 
+				: 
+				(
                 <div style={{ minHeight: 570 }}>
                   {isLoading ? (
                     <LoadingGrid />
@@ -2258,7 +2257,7 @@ const Apps2 = (props) => {
                                 handleAppClick={handleAppClick}
                                 leftSideBarOpenByClick={leftSideBarOpenByClick}
                                 userdata={userdata}
-                                fetchApps={fetchApps}
+                                fetchApps={getApps}
 
 								setUserApps={setUserApps}
 								appsToShow={appsToShow}
@@ -2311,7 +2310,7 @@ const Apps2 = (props) => {
                             {appsToShow.map((data, index) => (
                               <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
                                 handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
-                                fetchApps={fetchApps}
+                                fetchApps={getApps}
 								setUserApps={setUserApps}
 								appsToShow={appsToShow}
 								setAppsToShow={setAppsToShow}

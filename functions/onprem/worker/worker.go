@@ -57,9 +57,13 @@ var logsDisabled = os.Getenv("SHUFFLE_LOGS_DISABLED")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
-var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 
+// Kubernetes settings
+var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
+var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
+var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
 var executionCount int64
 
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
@@ -74,6 +78,7 @@ var appsInitialized = false
 
 var hostname string
 var maxReplicas = uint64(12)
+var debug bool
 
 /*
 var environments []string
@@ -399,6 +404,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
+	if err != nil {
+		deployport = 80
+	}
+
 	envMap := make(map[string]string)
 	for _, envStr := range env {
 		parts := strings.SplitN(envStr, "=", 2)
@@ -408,9 +418,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	// add to env
-	// fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
-	// fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
-	envMap["SHUFFLE_APP_EXPOSED_PORT"] = "80"
+	envMap["SHUFFLE_APP_EXPOSED_PORT"] = strconv.Itoa(deployport)
 	envMap["SHUFFLE_SWARM_CONFIG"] = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	envMap["BASE_URL"] = "http://shuffle-workers:33333"
 
@@ -489,18 +497,43 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	name := strings.ReplaceAll(identifier, "_", "-")
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "shuffle-app",
-		"app.kubernetes.io/instance": name,
-		// "app.kubernetes.io/version":    "",
+		// Well-known Kubernetes labels
+		"app.kubernetes.io/name":       "shuffle-app",
+		"app.kubernetes.io/instance":   name,
 		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-worker",
 		// Keep legacy labels for backward compatibility
 		"app": name,
+		// TODO: Add Shuffle specific labels
+		// "app.shuffler.io/name":    "APP_NAME",
+		// "app.shuffler.io/version": "APP_VERSION",
 	}
 
 	matchLabels := map[string]string{
 		"app.kubernetes.io/name":     "shuffle-app",
 		"app.kubernetes.io/instance": name,
+	}
+
+	// Parse security contexts from env
+	var podSecurityContext *corev1.PodSecurityContext
+	var containerSecurityContext *corev1.SecurityContext
+
+	if len(appPodSecurityContext) > 0 {
+		podSecurityContext = &corev1.PodSecurityContext{}
+		err = json.Unmarshal([]byte(appPodSecurityContext), podSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal app pod security context: %v", err)
+			return fmt.Errorf("failed to unmarshal app pod security context: %v", err)
+		}
+	}
+
+	if len(appContainerSecurityContext) > 0 {
+		containerSecurityContext = &corev1.SecurityContext{}
+		err = json.Unmarshal([]byte(appContainerSecurityContext), containerSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal app container security context: %v", err)
+			return fmt.Errorf("failed to unmarshal app container security context: %v", err)
+		}
 	}
 
 	// pod := &corev1.Pod{
@@ -599,10 +632,18 @@ func deployk8sApp(image string, identifier string, env []string) error {
 							Name:  value,
 							Image: image,
 							Env:   buildEnvVars(envMap),
+							Ports: []corev1.ContainerPort{
+								{
+									Protocol:      "TCP",
+									ContainerPort: int32(deployport),
+								},
+							},
+							SecurityContext: containerSecurityContext,
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
 					ServiceAccountName: appServiceAccountName,
+					SecurityContext:    podSecurityContext,
 				},
 			},
 		},
@@ -614,7 +655,6 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		return err
 	}
 
-	// kubectl expose deployment {podName} --type=NodePort --port=80 --target-port=80
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -626,10 +666,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 				{
 					Protocol:   "TCP",
 					Port:       80,
-					TargetPort: intstr.FromInt(80),
+					TargetPort: intstr.FromInt(deployport),
 				},
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 
@@ -917,7 +957,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// Add more volume binds if possible
 	if len(volumeBinds) > 0 {
 
-		// Only use mounts, not direct binds 
+		// Only use mounts, not direct binds
 		hostConfig.Binds = []string{}
 		hostConfig.Mounts = []mount.Mount{}
 		for _, bind := range volumeBinds {
@@ -931,7 +971,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			sourceFolder := bindSplit[0]
 			destinationFolder := bindSplit[1]
 
-			readOnly := false 
+			readOnly := false
 			if len(bindSplit) > 2 {
 				mode := bindSplit[2]
 				if mode == "ro" {
@@ -940,9 +980,9 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			}
 
 			builtMount := mount.Mount{
-				Type:   mount.TypeBind,
-				Source: sourceFolder,
-				Target: destinationFolder,
+				Type:     mount.TypeBind,
+				Source:   sourceFolder,
+				Target:   destinationFolder,
 				ReadOnly: readOnly,
 			}
 
@@ -1853,18 +1893,18 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		}
 	}
 
-	// Validates RERUN of single actions 
-	// Identified by: 
+	// Validates RERUN of single actions
+	// Identified by:
 	// 1. Predefined result from previous exec
 	// 2. Only ONE action
 	// 3. Every predefined result having result.Action.Category == "rerun"
 	/*
-	if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
-		finished := shuffle.ValidateFinished(ctx, extra, workflowExecution) 
-		if finished {
-			return nil 
+		if len(workflowExecution.Workflow.Actions) == 1 && len(workflowExecution.Results) > 0 {
+			finished := shuffle.ValidateFinished(ctx, extra, workflowExecution)
+			if finished {
+				return nil
+			}
 		}
-	}
 	*/
 
 	nextActions = append(nextActions, startAction)
@@ -1953,7 +1993,6 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		//_ = reader
 		//log.Printf("Successfully downloaded and built %s", image)
 	}
-
 
 	visited := []string{}
 	executed := []string{}
@@ -2608,11 +2647,16 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		if debug { 
+			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		}
+
 		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
 		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
-			resp.WriteHeader(401)
+			log.Printf("[ERROR][%s] Failed setting execution: %s", workflowExecution.ExecutionId, err)
+
+			resp.WriteHeader(400)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
 			return
 		}
@@ -2621,7 +2665,10 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				if debug { 
+					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				}
+
 				handleExecutionResult(*workflowExecution)
 			} else {
 				shutdownData, err := json.Marshal(workflowExecution)
@@ -3583,7 +3630,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		log.Printf("[DEBUG][%s] NEWRESP (from app %s with label %s): %s", workflowExecution.ExecutionId, action.AppName, action.Label, string(body))
+		if debug { 
+			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
+		}
 	}
 
 	return nil
@@ -3841,7 +3890,7 @@ func checkStandaloneRun() {
 	if !strings.Contains(backendUrl, "http") {
 		log.Printf("[ERROR] Backend URL should start with http:// or https://")
 		return
-	
+
 	}
 
 	// Format:
@@ -3915,7 +3964,7 @@ func checkStandaloneRun() {
 			continue
 		}
 
-		// This is to handle reruns of SINGLE actions 
+		// This is to handle reruns of SINGLE actions
 		if result.Action.Category == "rerun" {
 			newResults = append(newResults, result)
 			continue
@@ -3969,12 +4018,15 @@ func checkStandaloneRun() {
 
 	log.Printf("\n\n\n[DEBUG] Finished resetting execution %s. Body: %s. Starting execution.\n\n\n", newresp.Status, string(body))
 
-
 }
 
 // Initial loop etc
 func main() {
 	checkStandaloneRun()
+
+	if os.Getenv("DEBUG") == "true" {
+		debug = true
+	}
 
 	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {

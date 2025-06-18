@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 
 import { Typography, CircularProgress } from "@mui/material";
 import theme from '../theme.jsx';
 
 import { red,  } from "../views/AngularWorkflow.jsx"
+import { Context } from "../context/ContextApi.jsx";
 
 const SetAuthentication = (props) => {
   const { globalUrl } = props;
-
+  const { supportEmail } = useContext(Context);
 	var headers = {
 		"Content-Type": "application/json",
 		"Accept": "application/json",
@@ -328,7 +329,7 @@ const SetAuthentication = (props) => {
         <b>{failed ? "Failed auth. Error: " : ""}</b> {response}
 				<br/>
 				<br/>
-        {failed ? "If the error persists, try to use fewer scopes. Contact support@shuffler.io if you need further assistance, and include the current URL and a screenshot. You may now close this window." : ""}
+        {failed ? `If the error persists, try to use fewer scopes. Contact ${supportEmail} if you need further assistance, and include the current URL and a screenshot. You may now close this window.` : ""}
       </Typography>
     </div>
   );

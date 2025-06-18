@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router';
 
 import {
@@ -25,16 +25,17 @@ import LaunchIcon from '@mui/icons-material/Launch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { CloudDownloadOutlined, Delete } from '@mui/icons-material';
 import { findSpecificApp } from '../components/AppFramework.jsx';
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import YAML from 'yaml';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { InstantSearch, connectHits, connectSearchBox } from 'react-instantsearch-dom';
 import algoliasearch from "algoliasearch/lite";
+import { Context } from '../context/ContextApi.jsx';
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "db08e40265e2941b9a7d8f644b6e5240"
+  "c8f882473ff42d41158430be09ec2b4e"
 );;
 
 const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
@@ -51,6 +52,9 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [sharingConfiguration, setSharingConfiguration] = React.useState("you");
   const navigate = useNavigate();
+  const {themeMode} = useContext(Context);
+  const theme = getTheme(themeMode);
+
   const parseUsecase = (subcase) => {
     const srcdata = findSpecificApp(frameworkData, subcase.type)
     const dstdata = findSpecificApp(frameworkData, subcase.last)
@@ -516,12 +520,12 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
           border: "1px solid #494949",
           minWidth: '440px',
           fontFamily: theme?.typography?.fontFamily,
-          backgroundColor: "#212121",
+          backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
           '& .MuiDialogContent-root': {
-            backgroundColor: "#212121",
+            backgroundColor: theme.palette.DialogStyle.backgroundColor,
           },
           '& .MuiDialogTitle-root': {
-            backgroundColor: "#212121",
+            backgroundColor: theme.palette.DialogStyle.backgroundColor,
           },
           '& .MuiTypography-root': {
             fontFamily: theme?.typography?.fontFamily,
@@ -553,7 +557,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
         <IconButton
           onClick={onClose}
           sx={{
-            color: 'rgba(255, 255, 255, 0.7)',
+            color: theme.palette.textColor,
             '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
           }}
 	  	  style={{
@@ -633,16 +637,14 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
               >
                 <Button
                   variant="contained"
+                  color="secondary"
                   sx={{
-                    bgcolor: '#494949',
-                    '&:hover': { bgcolor: '#494949' },
                     textTransform: 'none',
                     borderRadius: 1,
                     minWidth: '45px',
                     width: '45px',
                     height: '40px',
                     padding: 2,
-                    color: "#fff",
                     fontFamily: theme?.typography?.fontFamily
                   }}
                   onClick={(event) => {
@@ -658,19 +660,16 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
             {(userdata?.id === app?.owner)? (
               <Tooltip title={"Delete app (confirm box will show)"}> 
               <Button
-                variant="outlined"
+                variant="contained"
                 component="label"
-                color="primary"
+                color="secondary"
                 sx={{
-                  bgcolor: '#494949',
-                  '&:hover': { bgcolor: '#494949', border: 'none' },
                   textTransform: 'none',
                   borderRadius: 1,
                   minWidth: '45px',
                   width: '45px',
                   height: '40px',
                   padding: 2,
-                  color: "#fff",
                   fontFamily: theme?.typography?.fontFamily,
                   border: 'none'
                 }}
@@ -687,15 +686,13 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
             {(canEditApp && app?.generated) && (
             <Button
               variant="contained"
+              color="secondary"
               sx={{
-                bgcolor: "#494949",
-                '&:hover': { bgcolor: '#494949' },
                 textTransform: 'none',
                 borderRadius: 1,
                 py: 1,
                 px: 3,
                 height: '40px',
-                color: "#fff",
                 fontFamily: theme?.typography?.fontFamily
               }}
               startIcon={canEditApp ? <EditIcon /> : <ForkRightIcon />}
@@ -729,7 +726,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
             <Typography
               variant="body2"
               sx={{
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: theme.palette.textColor,
                 fontFamily: theme?.typography?.fontFamily,
                 fontSize: '14px'
               }}
@@ -740,7 +737,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
           <div style={{
             flex: 1,
             textAlign: "start",
-            borderLeft: "1px solid rgba(255, 255, 255, 0.12)",
+            borderLeft: theme.palette.defaultBorder,
             paddingLeft: "10px",
             height: "100%",
           }}>
@@ -752,7 +749,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
               }}>
               {Array.isArray(app?.actions) ? app.actions.length : app?.actions}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+            <Typography variant="body2" sx={{ color: theme.palette.textColor }}>
               Actions
             </Typography>
           </div>
@@ -762,14 +759,14 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
             paddingLeft: "10px",
             paddingTop: "5px"
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px", fontFamily: theme?.typography?.fontFamily, fontSize: "14px", fontWeight: 600, color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px", fontFamily: theme?.typography?.fontFamily, fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary }}>
               {
                 app?.collection ? (
                   <>
                     <CheckCircleIcon sx={{ color: '#4CAF50' }} />
                     <Typography variant="body1" sx={{
                       fontWeight: 500,
-                      color: '#fff',
+                      color: theme.palette.textColor,
                       marginTop: "1px",
                       fontFamily: theme?.typography?.fontFamily,
                       fontSize: "16px"
@@ -783,7 +780,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
                     fontSize: "16px",
                     fontWeight: 500,
                     marginTop: "1px",
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: theme.palette.textColor,
                     fontFamily: theme?.typography?.fontFamily
                   }}>
                     No collection yet
@@ -832,7 +829,7 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
           )}
 
           <Box sx={{
-            bgcolor: '#2F2F2F',
+            bgcolor: themeMode === "dark" ? "#1E1E1E" : "#F5F5F5",
             p: 2,
             borderRadius: 2,
             display: 'flex',
@@ -895,16 +892,14 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
         <div style={{ display: "flex", justifyContent: "center", fontFamily: theme?.typography?.fontFamily }}>
           <Button
             variant="contained"
+            color="primary"
             sx={{
-              bgcolor: '#FF8544',
-              '&:hover': { bgcolor: '#FF8544' },
               textTransform: 'none',
               borderRadius: "4px",
               py: 1,
               px: 7,
               fontSize: "14px",
               letterSpacing: "0.5px",
-              color: "black",
               fontFamily: theme?.typography?.fontFamily,
               minWidth: '200px'
             }}

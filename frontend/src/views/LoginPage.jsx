@@ -297,7 +297,7 @@ const LoginPage = props => {
 	const [showPassword, setShowPassword] = useState(false)
 	const [ssoUrl, setSSOUrl] = useState("");
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io" || window.location.host === "sandbox.shuffler.io";
 	const parsedsearch = serverside === true ? "" : window.location.search
 
 	useEffect(() => {
@@ -314,12 +314,15 @@ const LoginPage = props => {
       },
     })
 
-	if (serverside !== true) {
-		const tmpMessage = new URLSearchParams(window.location.search).get("message")
-		if (tmpMessage !== undefined && tmpMessage !== null && message !== tmpMessage) {
-			setMessage(tmpMessage)
+	useEffect(() => {
+		if (serverside !== true) {
+			const tmpMessage = new URLSearchParams(window.location.search).get("message")
+			if (tmpMessage !== undefined && tmpMessage !== null && message !== tmpMessage) {
+				setMessage(tmpMessage)
+				toast(tmpMessage)
+			}
 		}
-	}
+	}, [])
 
 	if (document !== undefined) {
 		if (register) {
@@ -361,7 +364,7 @@ const LoginPage = props => {
 			console.log("Should login instead of register!")
 			setRegister(!register)
 		} else {
-			console.log("Path: " + path, "Register: " + register)
+			//console.log("Path: " + path, "Register: " + register)
 		}
 	}
 
@@ -444,16 +447,27 @@ const LoginPage = props => {
 	}
 
 	if (isLoggedIn === true && serverside !== true) {
-		const tmpView = new URLSearchParams(window.location.search).get("view")
-		if (tmpView !== undefined && tmpView !== null && tmpView === "pricing") {
-			window.location.pathname = "/pricing"
-			return
-		} else if (tmpView !== undefined && tmpView !== null) {
-			window.location.pathname = tmpView
-			return
-		}
+		setTimeout(() => {
+			const tmpView = new URLSearchParams(window.location.search).get("view");
+			if (tmpView !== undefined && tmpView !== null) {
+				let pathOnly = tmpView.split("?")[0];
+				if (!pathOnly.startsWith("/")) pathOnly = "/" + pathOnly;
 
-		window.location.pathname = "/workflows"
+				if (pathOnly === "/pricing" || pathOnly === "admin") {
+					window.location.replace(pathOnly + window.location.search);
+				} else {
+					if(localStorage.getItem("redirectId") !== null && localStorage.getItem("redirectId") !== undefined) {
+						const redirectId = localStorage.getItem("redirectId")
+						localStorage.removeItem("redirectId")
+						pathOnly = pathOnly + "/" + redirectId
+					}
+					window.location.replace(pathOnly);
+				}
+				return;
+			}
+
+			window.location.pathname = "/workflows"
+		}, 2000);
 	}
 
     const checkAdmin = () => {
@@ -468,6 +482,11 @@ const LoginPage = props => {
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo(responseJson["reason"]);
+
+			if (responseJson?.reason?.toLowerCase().includes("connection refused")) { 
+				navigate("/loginsetup")
+			}
+
           } else {
             if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {
               setSSOUrl(responseJson.sso_url);
@@ -525,74 +544,75 @@ const LoginPage = props => {
 					'Content-Type': 'application/json; charset=utf-8',
 				},
 			})
-				.then((response) => {
-					if (response.status !== 200) {
-						console.log("Status not 200 for login:O!");
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for login:O!");
+				}
+
+				return response.json();
+			})
+			.then((responseJson) => {
+
+				setLoginLoading(false)
+
+				if (responseJson["success"] === false) {
+					setLoginInfo(responseJson["reason"])
+				} else {
+					if (responseJson?.region_url !== undefined && responseJson?.region_url !== null && responseJson?.region_url !== "") {
+						toast.info("Set region to " + responseJson.region_url)
+						localStorage.setItem("globalUrl", responseJson.region_url)
 					}
 
-					return response.json();
-				})
-				.then((responseJson) => {
+					if (responseJson["reason"] === "MFA_REDIRECT") {
+						setLoginInfo("Enter the 6-digit MFA code.")
+						setMFAField(true)
+						return
 
-					setLoginLoading(false)
-
-					console.log("Resp from backend: ", responseJson)
-
-					if (responseJson["success"] === false) {
+					}
+					else if (responseJson["reason"] === "MFA_SETUP") {
+						window.location.href = `/login/${responseJson.url}/mfa-setup`;
+						return;
+					}
+					else if (responseJson["reason"] === "SSO_REDIRECT") {
+						//navigate(responseJson["url"])
+						window.location.href = responseJson["url"]
+						return
+					}
+					else if (responseJson["reason"] !== undefined && responseJson["reason"] !== null && responseJson["reason"].includes("error")) {
 						setLoginInfo(responseJson["reason"])
+						return
 					}
-					else {
 
-						if (responseJson["reason"] === "MFA_REDIRECT") {
-							setLoginInfo("Enter the 6-digit MFA code.")
-							setMFAField(true)
-							return
 
-						}
-						else if (responseJson["reason"] === "MFA_SETUP") {
-							window.location.href = `/login/${responseJson.url}/mfa-setup`;
+					setLoginInfo("Successful login! Redirecting you in 3 seconds...")
+					for (var key in responseJson["cookies"]) {
+						setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
+					}
+
+					setTimeout(() => {
+						const tmpView = new URLSearchParams(window.location.search).get("view");
+						if (tmpView !== undefined && tmpView !== null) {
+							let pathOnly = tmpView.split("?")[0];
+							if (!pathOnly.startsWith("/")) pathOnly = "/" + pathOnly;
+
+							if (pathOnly === "/pricing" || pathOnly === "admin") {
+								window.location.replace(pathOnly + window.location.search);
+							} else {
+								if(localStorage.getItem("redirectId") !== null && localStorage.getItem("redirectId") !== undefined) {
+									const redirectId = localStorage.getItem("redirectId")
+									localStorage.removeItem("redirectId")
+									pathOnly = pathOnly + "/" + redirectId
+								}
+								window.location.replace(pathOnly);
+							}
 							return;
 						}
-						else if (responseJson["reason"] === "SSO_REDIRECT") {
-							//navigate(responseJson["url"])
-							window.location.href = responseJson["url"]
-							return
 
-						}
-						else if (responseJson["reason"] !== undefined && responseJson["reason"] !== null && responseJson["reason"].includes("error")) {
-							setLoginInfo(responseJson["reason"])
-							return
-						}
-
-
-						setLoginInfo("Successful login! Redirecting you in 3 seconds...")
-						for (var key in responseJson["cookies"]) {
-							setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
-						}
-
-						const tmpView = new URLSearchParams(window.location.search).get("view")
-						if (tmpView !== undefined && tmpView !== null) {
-							//const newUrl = `/${tmpView}${decodeURIComponent(window.location.search)}`
-							// Check if slash in the url
-
-							var newUrl = `/${tmpView}`
-							if (tmpView.startsWith("/")) {
-								newUrl = `${tmpView}`
-							}
-
-							console.log("Found url: ", newUrl)
-
-							window.location.pathname = newUrl
-							return
-						}
-
-						console.log("LOGIN DATA: ", responseJson)
 						if (responseJson.tutorials !== undefined && responseJson.tutorials !== null) {
 							// Find welcome in responseJson.tutorials under key name
 							const welcome = responseJson.tutorials.find(function (element) {
 								return element.name === "welcome";
 							})
-
 							console.log("Welcome: ", welcome)
 							if (welcome === undefined || welcome === null) {
 								  console.log("RUN login Welcome!!")
@@ -604,12 +624,13 @@ const LoginPage = props => {
 						}
 
 						window.location.pathname = "/workflows"
-					}
-				})
-				.catch(error => {
-					setLoginInfo("Error from login API: " + error)
-					setLoginLoading(false)
-				});
+					}, 2000);
+				}
+			})
+			.catch(error => {
+				setLoginInfo("Error from login API: " + error)
+				setLoginLoading(false)
+			});
 		} else {
 			url = baseurl + '/api/v1/register';
 			fetch(url, {
@@ -632,19 +653,33 @@ const LoginPage = props => {
 							//setLoginInfo("Successful register!")
 							//var newpath = "/login?message=Successfully signed up. You can now sign in."
 							//const tmpMessage = new URLSearchParams(window.location.search).get("message")
-							setLoginInfo("Successful registration! Redirecting in 3 seconds...")
+							
 							for (var key in responseJson["cookies"]) {
 								setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
 							}
+
+							setLoginLoading(false)
+							setLoginInfo("Successful registration! Redirecting in 3 seconds...")
+
 
 							setTimeout(() => {
 								console.log("LOGIN DATA: ", responseJson)
 
 								const tmpView = new URLSearchParams(window.location.search).get("view")
 								if (tmpView !== undefined && tmpView !== null) {
-									//const newUrl = `/${tmpView}${decodeURIComponent(window.location.search)}`
-									const newUrl = `/${tmpView}`
-									window.location.pathname = newUrl
+									let pathOnly = tmpView.split("?")[0];
+									if (!pathOnly.startsWith("/")) pathOnly = "/" + pathOnly;
+
+									if (pathOnly === "/pricing" || pathOnly === "admin") {
+										window.location.replace(pathOnly + window.location.search);
+									} else {
+										if(localStorage.getItem("redirectId") !== null && localStorage.getItem("redirectId") !== undefined) {
+											const redirectId = localStorage.getItem("redirectId")
+											localStorage.removeItem("redirectId")
+											pathOnly = pathOnly + "/" + redirectId
+										}
+										window.location.replace(pathOnly);
+									}
 									return
 								}
 
@@ -652,9 +687,8 @@ const LoginPage = props => {
 								console.log("RUN Welcome!!")
 								//window.location.pathname = "/welcome?tab=2"
 								window.location.href = "/welcome"
-							}, 1500);
+							}, 2000);
 						}
-						setLoginLoading(false)
 					}),
 				)
 				.catch(error => {

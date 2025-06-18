@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useContext, useMemo } from "react";
 import * as cytoscape from "cytoscape";
 import CytoscapeComponent from "react-cytoscapejs";
-import cystyle from "../defaultCytoscapeStyle.jsx";
+import defaultCytoscapeStyle from "../defaultCytoscapeStyle.jsx";
+import { Context } from "../context/ContextApi.jsx";
+import { getTheme } from "../theme.jsx";
 
 const surfaceColor = "#27292D";
 const CytoscapeWrapper = (props) => {
   const { globalUrl, inworkflow, height, width } = props;
-
+  const {themeMode} = useContext(Context)
+  const theme = getTheme(themeMode)
+  const cystyle = useMemo(() => defaultCytoscapeStyle(theme), [themeMode]);
   const [elements, setElements] = useState([]);
   const [workflow, setWorkflow] = useState(inworkflow);
   const [cy, setCy] = React.useState();

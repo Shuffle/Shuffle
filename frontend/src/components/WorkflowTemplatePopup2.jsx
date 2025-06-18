@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 
 import { toast } from "react-toastify" 
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import AppSearchButtons from "../components/AppSearchButtons.jsx";
 import { isMobile } from "react-device-detect";
 import RenderCytoscape from "../components/RenderCytoscape.jsx";
+import { Context } from "../context/ContextApi.jsx";
 import {
 	Button,
 	Typography,
@@ -72,7 +73,8 @@ const WorkflowTemplatePopup = (props) => {
 	const [loadingWorkflow, setLoadingWorkflow] = React.useState(false)
 	const [workflow, setWorkflow] = useState(inputWorkflow !== undefined && inputWorkflow !== null && inputWorkflow.id !== undefined && inputWorkflow.id !== null && inputWorkflow.id !== "" ? inputWorkflow : {})
 	const [_, setUpdate] = useState(0)
-
+	const { themeMode } = useContext(Context);
+	const theme = getTheme(themeMode)
 	const fetchWorkflow = (id) => {
 		if (id === undefined || id === null || id === "") {
 			return
@@ -549,12 +551,10 @@ const WorkflowTemplatePopup = (props) => {
         	    open={modalOpen}
         	    onClose={handleClose}
         	    PaperProps={{
-        	        style: {
-						backgroundColor: "black",
-        	            color: "white",
-        	            minWidth: isHomePage ? null : isMobile ? 300 : 750,
-        	            maxWidth: isHomePage ? null : isMobile ? 300 : 750,
-						paddingTop: isMobile ? null : 75, 
+        	        sx: {
+						backgroundColor: theme.palette.drawer.backgroundColor,
+        	            minWidth: isHomePage ? null : isMobile ? "300px" : "750px",
+        	            maxWidth: isHomePage ? null : isMobile ? "300px" : "750px",
 						itemAlign: "center",
         	        },
         	    }}
@@ -571,7 +571,7 @@ const WorkflowTemplatePopup = (props) => {
 				>
 				  <CloseIcon />
 				</IconButton>
-				<DialogContent style={{marginTop: 0, marginLeft: isHomePage ? null : isMobile ? null :  75, maxWidth: 470, marginTop: 20 }}>
+				<DialogContent style={{paddingTop: isMobile ? null : "75px", backgroundColor: theme.palette.drawer.backgroundColor, marginTop: 0, paddingLeft: isHomePage ? null : isMobile ? null :  75, maxWidth: "100%",}}>
 					<Typography variant="h4" style={{ fontSize: isMobile ? 20 : null}}>
 						<b>Configure Workflow</b>
 					</Typography> 
@@ -790,7 +790,7 @@ const WorkflowTemplatePopup = (props) => {
 					width: isHomePage? isMobile ? null : "100%" : "99%",
 					borderRadius: 8,
 					textTransform: "none",
-					backgroundColor: isHomePage ? null : theme.palette.inputColor,
+					backgroundColor: isHomePage ? null : theme.palette.platformColor,
 					border: borderStyle,
 					cursor: isActive ? errorMessage !== "" ? "not-allowed" : "pointer" : "pointer",
 					position: "relative",
@@ -878,7 +878,7 @@ const WorkflowTemplatePopup = (props) => {
 
 						</div>
 						<div style={{ marginLeft: 20, overflow: "hidden", maxHeight: 30, marginTop: visualOnly ? 12 : showTryitOut && !isActive ? 8 : 23, }}>
-							<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16, fontWeight: isHomePage ? 600 : null, textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" : "rgba(241, 241, 241, 1)"}} >
+							<Typography variant="body1" color="textPrimary" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16, fontWeight: isHomePage ? 600 : null, textTransform: 'capitalize', }} >
 								<b>{parsedTitle}</b>
 							</Typography>
 						</div>

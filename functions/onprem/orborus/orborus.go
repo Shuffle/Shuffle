@@ -76,7 +76,11 @@ var maxCPUPercent = 90
 var isKubernetes = os.Getenv("IS_KUBERNETES")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var workerServiceAccountName = os.Getenv("SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME")
+var workerPodSecurityContext = os.Getenv("SHUFFLE_WORKER_POD_SECURITY_CONTEXT")
+var workerContainerSecurityContext = os.Getenv("SHUFFLE_WORKER_CONTAINER_SECURITY_CONTEXT")
 var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
+var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
+var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -119,6 +123,7 @@ var tenzirDisabled = false
 var dockercli *dockerclient.Client
 var containerId string
 var executionCount = 0
+var orborusUuid = os.Getenv("SHUFFLE_ORBORUS_UUID")
 
 var imagedownloadTimeout = time.Second * 300
 var window = shuffle.NewTimeWindow(1 * time.Minute)
@@ -606,13 +611,31 @@ func deployServiceWorkers(image string) {
 
 	if defaultNetworkAttach == true || strings.ToLower(os.Getenv("SHUFFLE_DEFAULT_NETWORK_ATTACH")) == "true" {
 		targetName := "shuffle_shuffle"
-		log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
-		serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
-			Target: targetName,
-		})
+		isAttachable := false
+		networks, err := dockercli.NetworkList(ctx, network.ListOptions{})
+		if err == nil {
+			for _, net := range networks {
+				if net.Name == targetName {
+					if net.Scope == "swarm" {
+						log.Printf("[DEBUG] Found swarm-scoped network: %s", targetName)
+						isAttachable = true
+					} else {
+						log.Printf("[WARNING] Network %s exist but is not swarm scoped (scope=%s)", targetName, net.Scope)
+					}
+					break
+				}
+			}
+		}
 
-		// FIXM: Remove this if deployment fails?
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
+		if isAttachable {
+			log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
+			serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+				Target: targetName,
+			})
+
+			// FIXM: Remove this if deployment fails?
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
+		}
 	}
 
 	if dockerApiVersion != "" {
@@ -705,6 +728,34 @@ func deployServiceWorkers(image string) {
 	} else {
 		if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 			log.Printf("[ERROR] Failed making service: %s", err)
+			if strings.Contains(fmt.Sprintf("%s", err), "networks scoped to the swarm can be used") {
+				log.Printf("[WARNING] Swarm network attachment failed, retrying without shuffle_shuffle")
+
+				var updatedNetworks []swarm.NetworkAttachmentConfig
+				for _, net := range serviceSpec.Networks {
+					if net.Target != "shuffle_shuffle" {
+					updatedNetworks = append(updatedNetworks, net)
+					}
+				}
+				serviceSpec.Networks = updatedNetworks
+
+				var updatedEnv []string
+				for _, env := range serviceSpec.TaskTemplate.ContainerSpec.Env {
+					if !strings.HasPrefix(env, "SHUFFLE_SWARM_OTHER_NETWORK=") {
+						updatedEnv = append(updatedEnv, env)
+					}
+				}
+				serviceSpec.TaskTemplate.ContainerSpec.Env = updatedEnv
+				serviceOptions := types.ServiceCreateOptions{}
+				_, err = dockercli.ServiceCreate(
+					ctx,
+					serviceSpec,
+					serviceOptions,
+				)
+				if err != nil {
+					log.Printf("[ERROR] Failed to deploy service even without shuffle_shuffle network: %s", err)
+				}
+			}
 		} else {
 			log.Printf("[WARNING] Failed deploying workers: %s", err)
 			if len(serviceSpec.Networks) > 1 {
@@ -747,7 +798,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	//log.Printf("[DEBUG] Removing existing image (s): %s", images)
 	newImages := []string{}
 
-	successful := []string{} 
+	successful := []string{}
 	for _, curimage := range strings.Split(images, ",") {
 		curimage = strings.TrimSpace(curimage)
 		if shuffle.ArrayContains(handled, curimage) {
@@ -835,11 +886,12 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 						log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 					} else {
 						log.Printf("[DEBUG] Updated service %s with the new image %s. Resp: %#v", service.Spec.Annotations.Name, image, resp)
+							
+						found = true
 
 						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
 							break
 						} else {
-							found = true
 							log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 						}
 					}
@@ -996,8 +1048,20 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY")))
 	}
 
+	if len(os.Getenv("SHUFFLE_APP_EXPOSED_PORT")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%s", os.Getenv("SHUFFLE_APP_EXPOSED_PORT")))
+	}
+
 	if len(appServiceAccountName) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_SERVICE_ACCOUNT_NAME=%s", appServiceAccountName))
+	}
+
+	if len(appPodSecurityContext) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_POD_SECURITY_CONTEXT=%s", appPodSecurityContext))
+	}
+
+	if len(appContainerSecurityContext) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT=%s", appContainerSecurityContext))
 	}
 
 	clientset, _, err := shuffle.GetKubernetesClient()
@@ -1067,9 +1131,9 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "shuffle-worker",
-		"app.kubernetes.io/instance": identifier,
-		// "app.kubernetes.io/version":    "",
+		// Well-known Kubernetes labels
+		"app.kubernetes.io/name":       "shuffle-worker",
+		"app.kubernetes.io/instance":   identifier,
 		"app.kubernetes.io/part-of":    "shuffle",
 		"app.kubernetes.io/managed-by": "shuffle-orborus",
 		// Keep legacy labels for backward compatibility
@@ -1081,10 +1145,33 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		"app.kubernetes.io/instance": identifier,
 	}
 
+	// Parse security contexts from env
+	var podSecurityContext *corev1.PodSecurityContext
+	var containerSecurityContext *corev1.SecurityContext
+
+	if len(workerPodSecurityContext) > 0 {
+		podSecurityContext = &corev1.PodSecurityContext{}
+		err = json.Unmarshal([]byte(workerPodSecurityContext), podSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal worker pod security context: %v", err)
+			return fmt.Errorf("failed to unmarshal worker pod security context: %v", err)
+		}
+	}
+
+	if len(workerContainerSecurityContext) > 0 {
+		containerSecurityContext = &corev1.SecurityContext{}
+		err = json.Unmarshal([]byte(workerContainerSecurityContext), containerSecurityContext)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal worker container security context: %v", err)
+			return fmt.Errorf("failed to unmarshal worker container security context: %v", err)
+		}
+	}
+
 	containerAttachment := corev1.Container{
-		Name:  identifier,
-		Image: kubernetesImage,
-		Env:   buildEnvVars(envMap),
+		Name:            identifier,
+		Image:           kubernetesImage,
+		Env:             buildEnvVars(envMap),
+		SecurityContext: containerSecurityContext,
 
 		//ImagePullPolicy: "Never",
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1201,6 +1288,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
 					ServiceAccountName: workerServiceAccountName,
+					SecurityContext:    podSecurityContext,
 				},
 			},
 		},
@@ -1212,7 +1300,6 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		return err
 	}
 
-	// kubectl expose deployment shuffle-workers --type=NodePort --port=33333 --target-port=33333
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   identifier,
@@ -1227,7 +1314,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					TargetPort: intstr.FromInt(33333),
 				},
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 
@@ -1270,7 +1357,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 		Resources: container.Resources{},
 	}
-
 
 	// This is just to test the mounting locally so
 	// I can control from what source I'm mounting
@@ -1662,6 +1748,8 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		Environment:  environment,
 		OrborusLabel: orborusLabel,
 		Timestamp:    time.Now().Unix(),
+
+		Uuid: orborusUuid,
 	}
 
 	if (swarmConfig == "run" || swarmConfig == "swarm") && strings.Contains(newWorkerImage, "scale") {
@@ -1918,6 +2006,10 @@ func main() {
 		//baseUrl = "http://localhost:5001"
 	}
 
+	if len(orborusUuid) == 0 {
+		orborusUuid = uuid.NewV4().String()
+	}
+
 	//if orgId == "" {
 	//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
 	//	os.Exit(3)
@@ -2120,6 +2212,8 @@ func main() {
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
+
+
 	hasStarted := false
 	for {
 		if req.Method == "POST" {
@@ -2190,8 +2284,12 @@ func main() {
 			continue
 		}
 
-		// FIXME - add check for StatusCode
-		if newresp.StatusCode != 200 {
+		// Controls Leader/Follower mode
+		if newresp.StatusCode == 409 {
+			log.Printf("[INFO] Another Orborus is already handling jobs. Polling every 30 seconds in case Leader stops. Resp: %s", string(body))
+			time.Sleep(time.Duration(30) * time.Second)
+			continue
+		} else if newresp.StatusCode != 200 {
 			log.Printf("[ERROR] Backend connection failed for url '%s', or is missing (%d): %s", fullUrl, newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {

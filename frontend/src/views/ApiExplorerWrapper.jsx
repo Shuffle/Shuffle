@@ -50,7 +50,7 @@ import { green } from "../views/AngularWorkflow.jsx"
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "db08e40265e2941b9a7d8f644b6e5240"
+  "c8f882473ff42d41158430be09ec2b4e"
 )
 
 // Lazy loading of ApiExplorer component to reduce initial load time
@@ -59,6 +59,7 @@ const ApiExplorer = React.lazy(() => import("../components/ApiExplorer.jsx"));
 
 const ApiExplorerWrapper = (props) => {
   const { globalUrl, serverside, userdata, isLoggedIn, isLoaded} = props;
+  const { supportEmail } = useContext(Context);
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
   const location = useLocation();
   const navigate = useNavigate();
@@ -165,7 +166,7 @@ const ApiExplorerWrapper = (props) => {
 			}
 
 			if (!found) {
-				toast.error(`Failed to get API data for '${appname}' (1). Contact support@shuffler.io if this persists.`, {
+				toast.error(`Failed to get API data for '${appname}' (1). Contact ${supportEmail} if this persists.`, {
 					"autoClose": 10000,
 				})
 
@@ -174,7 +175,7 @@ const ApiExplorerWrapper = (props) => {
 				},3000)
 			}
 		} else {
-			toast.error(`Failed to get API data for '${appname}' (2). Contact support@shuffler.io if this persists.`, {
+			toast.error(`Failed to get API data for '${appname}' (2). Contact ${supportEmail} if this persists.`, {
 				"autoClose": 10000,
 			})
 			setTimeout(()=>{
@@ -539,7 +540,7 @@ const ApiExplorerWrapper = (props) => {
     }else if (openapi?.id?.length > 0) {
       appid = openapi?.id;
     }else{
-      toast.error("App id is missing and we can't run the API. Please contact support@shuffler.io if this persists.");
+      toast.error(`App id is missing and we can't run the API. Please contact ${supportEmail} if this persists.`);
       return;
     }
 
@@ -673,7 +674,7 @@ const ApiExplorerWrapper = (props) => {
 
 				if (data.result.includes("custom_action doesn't exist")) {
 					// No timeout error
-					toast.info("This API is being rebuilt due to missing functionality. Please wait a minute or two, then try again. If this persists, please report to support@shuffler.io", {
+					toast.info(`This API is being rebuilt due to missing functionality. Please wait a minute or two, then try again. If this persists, please report to ${supportEmail}`, {
 						"autoClose": 90000,
 					})
 				} else if (data.result.includes("authentication") && data.result.includes("Oauth2")) {

@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   AppBar,
   Box,
@@ -36,6 +37,7 @@ import AddIcon from '@mui/icons-material/Add';
 import Mousetrap from "mousetrap";
 import LicencePopup from "../components/LicencePopup.jsx";
 import { Context } from "../context/ContextApi.jsx";
+import { getTheme } from "../theme.jsx";
 
 const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
 ? window.location.pathname
@@ -59,9 +61,9 @@ const menuData = {
     {
       title: "Singul",
       description:
-        "Connect and run actions seamlessly between different platforms.",
+        "Connect your favorite services with a singul line of code.",
       icon: "/images/logos/singul.svg",
-      path: "https://singul-docs.gitbook.io/singul/getting-started",
+      path: "https://singul.io",
       gaData: {
         category: "navbar",
         action: "products_click",
@@ -118,18 +120,18 @@ const menuData = {
         label: "training_click"
       }
     },
-    {
-      title: "Security Consultation",
-      description:
-        "Automate your infrastructure with expert guidance and tailored solutions.",
-      icon: "/images/SecurityConsultation.svg",
-      path: "/contact?category=security_consultation",
-      gaData: {
-        category: "navbar",
-        action: "services_click",
-        label: "security_consultation_click"
-      }
-    },
+    // {
+    //   title: "Security Consultation",
+    //   description:
+    //     "Automate your infrastructure with expert guidance and tailored solutions.",
+    //   icon: "/images/SecurityConsultation.svg",
+    //   path: "/contact?category=security_consultation",
+    //   gaData: {
+    //     category: "navbar",
+    //     action: "services_click",
+    //     label: "security_consultation_click"
+    //   }
+    // },
   ],
   Resources: {
     columns: [
@@ -660,9 +662,9 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                 action: "partners_click",
                 label: "go_to_partners",
               })
-              handleItemClick('/partners')
+              handleItemClick('/become-partner')
             }else{
-              window.open("https://shuffler.io/partners", '_blank');
+              window.open("https://shuffler.io/become-partner", '_blank');
               return;
             }
           }}
@@ -751,7 +753,9 @@ const Navbar = (props) => {
   const topbar_var = "topbar_closed10"
 
   const theme = useTheme();
-  const {searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen} = useContext(Context)
+  const {themeMode} = useContext(Context);
+  const  currentTheme = getTheme(themeMode);
+  const {searchBarModalOpen, setSearchBarModalOpen, isDocSearchModalOpen, setIsDocSearchModalOpen} = useContext(Context)
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const isTabletOrMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -772,7 +776,6 @@ const Navbar = (props) => {
     window.location.host === "shuffler.io" ||
     window.location.host === "localhost:5002";
 
-  
   const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_51PXYYMEJjT17t98N20qEqItyt1fLQjrnn41lPeG2PjnSlZHTDNKHuisAbW00s4KAn86nGuqB9uSVU4ds8MutbnMU00DPXpZ8ZD" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
 
   useEffect(() => {
@@ -853,51 +856,54 @@ const Navbar = (props) => {
         setSearchBarModalOpen(false);
       }}
       PaperProps={{
-        style: {
+        sx: {
           color: "white",
-          minWidth: 750,
-          height: 785,
-          borderRadius: 16,
+          minWidth: "750px",
+          height: "785px",
+          borderRadius: "16px",
           border: "1px solid var(--Container-Stroke, #494949)",
-          background: "var(--Container, #000000)",
+          background: currentTheme.palette.DialogStyle.backgroundColor,
           boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+        },
+        '& .MuiDialogContent-root': {
+          backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor,
+        },
+        '& .MuiDialogTitle-root': {
+          backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor,
         },
       }}
       sx={{
         zIndex: 50005,
-        '& .MuiBackdrop-root': {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        },
       }}
     >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2, pt: 2 }}>
-        <DialogTitle 
-          sx={{ 
-            color: "var(--Paragraph-text, #C8C8C8)",
-            p: 0,
-            m: 0,
-            fontFamily: theme.typography.fontFamily,
-          }}
-        >
-          Search for Docs, Apps, Workflows and more
-        </DialogTitle>
-        <IconButton 
-          onClick={() => setSearchBarModalOpen(false)}
-          sx={{ 
-            color: 'white',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)'
-            }
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </Box>
-      <DialogContent >
+        <Box sx={{ display: "flex", justifyContent: "space-between",backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor, alignItems: "center", px: 2, pt: 2 }}>
+          <DialogTitle 
+            sx={{ 
+              color: "var(--Paragraph-text, #C8C8C8)",
+              p: 0,
+              m: 0,
+              fontFamily: theme.typography.fontFamily,
+            }}
+          >
+            Search for Docs, Apps, Workflows and more
+          </DialogTitle>
+          <IconButton 
+            onClick={() => setSearchBarModalOpen(false)}
+            sx={{ 
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      <DialogContent style={{backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor}} >
         <Box sx={{ pt: 3 }}>
           <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
         </Box>
-      </DialogContent>
+      </DialogContent> 
       <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}/>
     </Dialog>
   );
@@ -973,6 +979,10 @@ const Navbar = (props) => {
       "& .MuiSvgIcon-root": {
         transform: "rotate(180deg)",
       },
+    },
+    // Add this to hide the ripple effect's container
+    "& .MuiTouchRipple-root": {
+      display: "none",
     },
   };
 
@@ -1362,6 +1372,8 @@ const Navbar = (props) => {
         </Box>
       ))}
       <Button
+        component={Link}
+        to="/pricing"
         sx={buttonStyles}
         onClick={() => {
           if(isCloud) {
@@ -1379,24 +1391,151 @@ const Navbar = (props) => {
       >
         Pricing
       </Button>
-      <Button
-        sx={buttonStyles}
-        onClick={() => {
-          if(isCloud) {
-            navigate("/partners");
-            ReactGA.event({
-              category: "navbar",
-              action: "partners_click",
-              label: "go_to_partners",
-            })
-          } else {
-            window.open("https://shuffler.io/partners", '_blank');
-            return;
-          }
+      <Box 
+        className="partners-container"
+        sx={{ 
+          position: "relative",
+          "&::after": {
+            // This creates an invisible connection between button and dropdown
+            content: '""',
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            width: "100%",
+            height: "20px", // Buffer zone height
+            backgroundColor: "transparent",
+          },
+          "&:hover .partners-dropdown": {
+            opacity: 1,
+            visibility: "visible",
+            pointerEvents: "auto",
+            transform: "translateY(0)",
+            transition: "opacity 0.3s ease, visibility 0s, transform 0.3s ease",
+          },
         }}
       >
-        Partners
-      </Button>
+        <Button
+          component={Link}
+          to="/become-partner"
+          sx={{
+            ...buttonStyles,
+          }}
+          onClick={() => {
+            if(isCloud) {
+              navigate("/become-partner");
+              ReactGA.event({
+                category: "navbar",
+                action: "partners_click",
+                label: "go_to_become_partner",
+              })
+            } else {
+              window.open("https://shuffler.io/become-partner", '_blank');
+              return;
+            }
+          }}
+        >
+          Partners
+        </Button>
+        <Box 
+          className="partners-dropdown"
+          sx={{
+            position: "absolute",
+            top: "140%",
+            left: 0,
+            backgroundColor: "#212121",
+            borderRadius: "4px",
+            boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.2)",
+            width: "220px",
+            opacity: 0,
+            visibility: "hidden",
+            pointerEvents: "none",
+            transform: "translateY(-10px)",
+            transition: "opacity 0.3s ease, visibility 0s linear 0.3s, transform 0.3s ease",
+            zIndex: 10,
+            "&:hover": {
+              opacity: 1,
+              visibility: "visible",
+              pointerEvents: "auto",
+              transform: "translateY(0)",
+            },
+            // Add a pseudo-element to create a buffer zone above the dropdown
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              top: "-20px", // Match the height of the buffer zone
+              left: 0,
+              width: "100%",
+              height: "20px",
+              backgroundColor: "transparent",
+            }
+          }}
+        >
+          <Box sx={{}}>
+            <Button
+              fullWidth
+              sx={{
+                color: "white",
+                justifyContent: "flex-start",
+                textTransform: "none",
+                py: 2,
+                px: 2,
+                fontSize: "14px",
+                fontFamily: theme.typography.fontFamily,
+                borderRadius: "4px",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.05)"
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if(isCloud) {
+                  navigate("/become-partner");
+                  ReactGA.event({
+                    category: "navbar",
+                    action: "partners_click",
+                    label: "become_partner_click",
+                  })
+                } else {
+                  window.open("https://shuffler.io/become-partner", '_blank');
+                }
+              }}
+            >
+              Become a partner
+            </Button>
+            <Button
+              fullWidth
+              sx={{
+                color: "white",
+                justifyContent: "flex-start",
+                textTransform: "none",
+                fontSize: "14px",
+                fontFamily: theme.typography.fontFamily,
+                py: 2,
+                px: 2,
+                borderRadius: "4px",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.05)"
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate("/partners");
+                if(isCloud) {
+                  ReactGA.event({
+                    category: "navbar",
+                    action: "partners_click",
+                    label: "discover_partners_click",
+                  })
+                }
+              }}
+            >
+              Discover partners
+            </Button>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 
@@ -1451,10 +1590,12 @@ const Navbar = (props) => {
   useEffect(() => {
 		Mousetrap.bind(['command+k', 'ctrl+k'], () => {
 			setSearchBarModalOpen(true);
+			setIsDocSearchModalOpen(false);
 			return false; // Prevent the default action
 		});
 		Mousetrap.bind(['esc'], () => {
 			setSearchBarModalOpen(false);
+			setIsDocSearchModalOpen(false);
 			return false; // Prevent the default action
 		});
 
@@ -1537,9 +1678,10 @@ const Navbar = (props) => {
   const topbar = !isCloud || !showTopbar ? null :
     curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/professional-services" ?
       <span style={{ zIndex: 50001, marginTop: -4}}>
-        <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
+        {/* uncommit this to show topbar for release */}
+        {/* <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
           <Typography style={{ paddingTop: 7, fontSize:16, margin: "auto", textAlign: "center", color: "white", }}>
-            {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
+            // Shuffle 1.4.0 is out! Read more about&nbsp; 
             Shuffle 2.0.0 is out now!&nbsp;
             <u>
               <span onClick={() => {
@@ -1564,7 +1706,37 @@ const Navbar = (props) => {
           }}>
             <CloseIcon />
           </IconButton>
-        </div>
+        </div> */}
+        {/* commit below div if we need to show release stuff */}
+        <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
+           <Typography style={{ paddingTop: 7, fontSize:16, margin: "auto", textAlign: "center", color: "white", }}>
+             {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
+             New&nbsp;
+             <u>
+               <span onClick={() => {
+                 ReactGA.event({
+                   category: "landingpage",
+                   action: "click_header_training",
+                   label: "",
+                 })
+ 
+                 navigate("/training")
+ 
+               }} style={{ cursor: "pointer", textDecoration: "none", fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
+                 Public Training
+               </span>
+             </u>
+             &nbsp;Dates Released! 
+           </Typography>
+           <IconButton color="secondary" style={{ position: "absolute", top: 0, right: 20, }} onClick={(event) => {
+             setShowTopbar(false)
+ 
+             // Set storage that it's clicked
+             localStorage.setItem(topbar_var, "true")
+           }}>
+             <CloseIcon />
+           </IconButton>
+         </div>
       </span>
       :
       null
@@ -1784,7 +1956,10 @@ const Navbar = (props) => {
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <IconButton 
                 sx={{ color: "white" }}
-                onClick={() => setSearchBarModalOpen(true)}
+                onClick={() => {
+                  setSearchBarModalOpen(true);
+                  setIsDocSearchModalOpen(false);
+                }}
               >
                 <SearchIcon sx={{ fontSize: 22 }} />
               </IconButton>
@@ -1866,6 +2041,7 @@ const Navbar = (props) => {
                                })
                              }
                              setSearchBarModalOpen(true);
+                             setIsDocSearchModalOpen(false);
                            }}
                          >
                            <SearchIcon sx={{ fontSize: 24 }} />
@@ -1910,6 +2086,7 @@ const Navbar = (props) => {
                             padding: "8px 20px",
                             "&:hover": {
                               backgroundColor: "#494949",
+                              color: "white",
                               border: "1px solid white",
                             },
                           }}
@@ -2263,6 +2440,7 @@ const Navbar = (props) => {
                                 sx={{ width: 20, height: 20 }}
                               />
                               <Typography sx={{ 
+                                color: "inherit",
                                 fontSize: '14px',
                                 fontFamily: theme.typography.fontFamily 
                               }}>
@@ -2304,6 +2482,7 @@ const Navbar = (props) => {
                               />
                               <Typography sx={{ 
                                 fontSize: '14px',
+                                color: "inherit",
                                 fontFamily: theme.typography.fontFamily 
                               }}>
                                 Settings
@@ -2344,6 +2523,7 @@ const Navbar = (props) => {
                               />
                               <Typography sx={{ 
                                 fontSize: '14px',
+                                color: "inherit",
                                 fontFamily: theme.typography.fontFamily 
                               }}>
                                 Notifications ({notifications === undefined || notifications === null ? 0 : 
@@ -2388,6 +2568,7 @@ const Navbar = (props) => {
                               />
                               <Typography sx={{ 
                                 fontSize: '14px',
+                                color: "inherit",
                                 fontFamily: theme.typography.fontFamily 
                               }}>
                                 About
@@ -2427,6 +2608,7 @@ const Navbar = (props) => {
                               />
                               <Typography sx={{ 
                                 fontSize: '14px',
+                                color: "inherit",
                                 fontFamily: theme.typography.fontFamily 
                               }}>
                                 Logout
@@ -2457,7 +2639,7 @@ const Navbar = (props) => {
                                 margin: 0
                               }}
                             >
-                              Version 1.4.5
+                              Version 2.0.2
                             </Typography>
                           </Box>
                         </Menu>
@@ -2503,6 +2685,7 @@ const Navbar = (props) => {
                                })
                              }
                              setSearchBarModalOpen(true);
+                             setIsDocSearchModalOpen(false);
                            }}
                          >
                            <SearchIcon sx={{ fontSize: 24 }} />
@@ -2543,14 +2726,14 @@ const Navbar = (props) => {
 
 					{isCloud && 
 						<Button
-						  variant="outlined"
+						  variant="contained"
+              color="secondary"
 						  sx={{
 							...sharedButtonStyles,
 							display: {
 							  xs: "none",
 							  lg: "block"
 							},
-							color: "white",
 							backgroundColor: "#2F2F2F",
 							border: "1px solid #2F2F2F",
 							borderRadius: "8px",

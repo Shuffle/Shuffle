@@ -26,7 +26,7 @@ import {
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
-import theme from "../theme.jsx";
+import { getTheme } from "../theme.jsx";
 import { styled } from '@mui/styles';
 import { Context } from "../context/ContextApi.jsx";
 
@@ -48,13 +48,21 @@ const CloudSyncTab = (props) => {
     const [, forceUpdate] = React.useState();
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
+
+    const { themeMode, brandColor } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor);
+
     useEffect(() => { getSettings(); }, []);
+
     const GridItem = (props) => {
         const [expanded, setExpanded] = React.useState(false);
         const [showEdit, setShowEdit] = React.useState(false);
         const [newValue, setNewValue] = React.useState(-100);
 
-        const primary = props.data.primary;
+        var primary = props.data.primary
+
+		const shownName = props.data.newname !== undefined && props.data.newname !== null && props.data.newname !== primary ? props.data.newname : primary
+
         const secondary = props.data.secondary;
         const primaryIcon = props.data.icon;
         const secondaryIcon = props.data.active ?
@@ -167,9 +175,9 @@ const CloudSyncTab = (props) => {
                 <div
                     style={{
                         margin: 4,
-                        backgroundColor: "#1a1a1a",
+                        backgroundColor: theme.palette.backgroundColor,
                         borderRadius: 8,
-                        color: "white",
+                        color: theme.palette.text.primary,
                         minHeight: expanded ? 250 : "inherit",
                         maxHeight: expanded ? 300 : "inherit",
                         boxShadow: "none",
@@ -188,13 +196,13 @@ const CloudSyncTab = (props) => {
                             <Avatar>{primaryIcon}</Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                            style={{ textTransform: "capitalize", color: "#F1F1F1", fontSize: 14, fontWeight: 400, }}
-                            primary={primary}
+                            style={{ textTransform: "capitalize", color: theme.palette.text.primary, fontSize: 14, fontWeight: 400, }}
+                            primary={shownName}
                         />
                         {isCloud && userdata.support === true ?
                             <Tooltip title="Edit features (support users only)">
                                 <EditIcon
-                                    color="secondary"
+                                    color="textPrimary"
                                     style={{ marginRight: 10, cursor: "pointer", }}
                                     onClick={(e) => {
                                         e.preventDefault();
@@ -475,7 +483,7 @@ const CloudSyncTab = (props) => {
                     } else {
                         toast("Cloud Syncronization successfully set up!");
                         setOrgSyncResponse(
-                            "Successfully started syncronization. Cloud features you now have access to can be seen below."
+                            "Successfully started syncronization. Cloud/Hybrid features are available below."
                         );
                     }
 
@@ -527,20 +535,20 @@ const CloudSyncTab = (props) => {
     return (
             <div style={{padding: "27px 10px 19px 27px",}}>
             <div style={{ marginBottom: 20 }}>
-                <h2
-                    style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}
+                <Typography variant="h5"
+                    style={{ marginBottom: 8, marginTop: 0, fontWeight: 500}}
                 >
                     Cloud syncronization
-                </h2>
-                <span style={{ color: "#C8C8C8", fontSize: 16, fontWeight: 400, }}>
-                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: "rgba(255, 132, 68, 1)", fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach.
-                    </span>
+                </Typography>
+                <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400, }}>
+                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach. This will by default back up apps and workflows.
+                </Typography>
             </div>
 
             {isCloud ? (
                 <div style={{ marginTop: 15, display: "flex" }}>
                     <div style={{ flex: 1 }}>
-                        <Typography style={{fontWeight: 400, fontSize: 16, color: "#F1F1F1"}}>
+                        <Typography style={{fontWeight: 400, fontSize: 16, color: theme.palette.text.secondary}}>
                             Currently syncronizing:{" "}
                             {selectedOrganization.cloud_sync_active === true
                                 ? <span style={{ color: "#4CFD72", fontSize: 16, marginLeft: 16}}>True</span>
@@ -561,28 +569,31 @@ const CloudSyncTab = (props) => {
                                 marginRight: 10,
                                 fontSize: 16, 
                                 fontWeight: 400,
+                                color: theme.palette.text.primary,
                                 fontFamily: theme.typography.fontFamily,
                             }}
                         >
                             Your Api key
                         </Typography>
                         {userSettings?.apikey === undefined || userSettings?.apikey === null || userSettings?.apikey?.length <=0 ? (
-                                <Skeleton variant="rectangular" animation="wave" sx={{backgroundColor: '#212121', border: '1px solid #646464', width: 500, height: 50, marginTop: 2 }}/>
+                                <Skeleton variant="rectangular" animation="wave" sx={{backgroundColor: theme.palette.loaderColor, border: '1px solid #646464', width: 500, height: 50, marginTop: 2 }}/>
                         ):
                         <div style={{ display: "flex" }}>
                             <TextField
-                                color="primary"
                                 style={{
-                                    backgroundColor: theme.palette.inputColor,
+                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                    borderRadius: theme.palette.textFieldStyle.borderRadius,
+                                    color: theme.palette.textFieldStyle.color,
                                     maxWidth: 500,
                                     height: 35
                                 }}
                                 InputProps={{
                                     sx: {
                                         height: "35px",
-                                        color: "white",
+                                        color: theme.palette.textFieldStyle.color,
                                         fontSize: "1em",
-                                        backgroundColor: '#212121',
+                                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                        borderRadius: theme.palette.textFieldStyle.borderRadius,
                                     },
                                     endAdornment: (
                                         <InputAdornment position="end">
@@ -639,14 +650,15 @@ const CloudSyncTab = (props) => {
                         <TextField
                             color="primary"
                             style={{
-                                backgroundColor: "#1a1a1a",
+                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                 marginRight: 10,
                                 height: 35,
                             }}
                             InputProps={{
                                 style: {
                                     height: "35px",
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
+                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                     fontSize: "1em",
                                 },
                             }}
@@ -701,17 +713,19 @@ const CloudSyncTab = (props) => {
                 </div>
             )}
 
-            <h2 style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
-                Features
-            </h2>
-            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24, fontSize: 16, fontWeight: 400, marginLeft: 5, color: "#C8C8C8" }}>
+            <Typography variant="h5" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
+				{isCloud ? "Cloud" : "Hybrid"} Features
+            </Typography>
+            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24, fontSize: 16, fontWeight: 400, marginLeft: 5, color: theme.palette.text.secondary }}>
               Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced.            </Typography>
-            <Grid container style={{ width: "100%", marginBottom: 15,  }}>
+                <Grid container style={{ width: "100%", marginBottom: 15,  }}>
 
                 {selectedOrganization.sync_features === undefined ||
                     selectedOrganization.sync_features === null
                     ? <Grid container spacing={2} justifyContent="center">
+
                     {[...Array(18)].map((_, i) => (
+
                         <Grid item xs={12} sm={6} md={4} key={i}>
                             <div
                                 style={{
@@ -728,7 +742,7 @@ const CloudSyncTab = (props) => {
                                     variant="rectangular"
                                     height={50}
                                     width={343}
-                                    sx={{ backgroundColor: '#1a1a1a', display: 'flex', borderRadius: 1 }}
+                                    sx={{ backgroundColor: theme.palette.loaderColor, display: 'flex', borderRadius: 1 }}
                                     animation="wave"
                                 />
                             </div>
@@ -750,6 +764,13 @@ const CloudSyncTab = (props) => {
                         }
 
                         const newkey = key.replaceAll("_", " ");
+
+						// Rewrites to frontend names
+						var newname = newkey
+						if (newkey === "app executions") {
+							newname = "app runs"
+						}
+
                         const griditem = {
                             primary: newkey,
                             secondary:
@@ -764,6 +785,8 @@ const CloudSyncTab = (props) => {
                             data_collection: "None",
                             active: item.active,
                             icon: <PolylineIcon style={{ color: "#1a1a1a" }} />,
+
+							newname: newname,
                         };
 
                         return (

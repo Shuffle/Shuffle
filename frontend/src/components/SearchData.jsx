@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify" 
 
@@ -47,7 +47,7 @@ const chipStyle = {
     backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const SearchData = props => {
     const { serverside, globalUrl, userdata } = props
     let navigate = useNavigate();
@@ -58,6 +58,8 @@ const SearchData = props => {
     const [oldPath, setOldPath] = useState("")
     const [value, setValue] = useState("");
     const isDocSearchModal = isDocSearchModalOpen;
+    const {themeMode, supportEmail} = useContext(Context);
+    const theme = getTheme(themeMode)
 
     const handleLinkClick = () => {
         if (searchBarModalOpen) {
@@ -140,14 +142,13 @@ const SearchData = props => {
             >
                 <TextField
                     fullWidth
-                    style={{ zIndex: 1100, marginTop: -20, marginBottom: 200, position: "fixed", backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: 690, }}
+                    style={{ zIndex: 1100, marginTop: -20, marginBottom: 200, position: "fixed", backgroundColor: theme.palette.textFieldStyle.backgroundColor, borderRadius: borderRadius, width: 690, }}
                     InputProps={{
                         style: {
-                            color: "white",
+                            color: theme.palette.textFieldStyle.color,
                             fontSize: "1em",
                             height: 50,
                             margin: 0,
-                            fontSize: "0.9em",
                             paddingLeft: 10,
                         },
                         disableUnderline: true,
@@ -217,12 +218,12 @@ const SearchData = props => {
         const baseImage = <CodeIcon />
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 75, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: theme.palette.text.primary, zIndex: 1002, backgroundColor: theme.palette.textFieldStyle.backgroundColor, width: "100%", left: 75, boxShadows: "none", }}>
                 <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 105 }}>
                     Workflows
                 </Typography>
 
-                <List style={{ backgroundColor: theme.palette.inputColor, }}>
+                <List style={{ backgroundColor: themeMode === "dark" ? "#2A2A2A" : "#F5F5F5", }}>
                     {hits.length === 0 ?
                         <ListItem style={outerlistitemStyle}>
                             <ListItemAvatar onClick={() => console.log(hits)}>
@@ -242,7 +243,7 @@ const SearchData = props => {
                                 overflowX: "hidden",
                                 overflowY: "hidden",
                                 borderBottom: "1px solid rgba(255,255,255,0.4)",
-                                backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
+                                backgroundColor: mouseHoverIndex === index ? theme.palette.hoverColor : "inherit",
                                 cursor: "pointer",
                                 marginLeft: 5,
                                 marginRight: 5,
@@ -396,14 +397,14 @@ const SearchData = props => {
       })
         .then((response) => {
           if (response.status !== 200) {
-			toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io`)
+			toast(`Failed to ${type} the app for your organization. Please try again or contact ${supportEmail}`)
           }
 
           return response.json()
         })
         .then((responseJson) => {
           if (responseJson.success === false) {
-            toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io for more info`) 
+            toast(`Failed to ${type} the app for your organization. Please try again or contact ${supportEmail} for more info`) 
 		  } else {
 			  toast(`App successfully ${type}d. It may now be used in your workflows.`)
 		  }
@@ -438,7 +439,7 @@ const SearchData = props => {
         const baseImage = <LibraryBooksIcon />
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, color: "white", zIndex: 999, backgroundColor: theme.palette.inputColor, width: 685, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, color: "white", zIndex: 999, backgroundColor: theme.palette.textFieldStyle.backgroundColor, width: 685, boxShadows: "none", }}>
                 {/* <IconButton style={{ zIndex: 5000, position: "absolute", right: 14, color: "grey" }} onClick={() => {
                     setSearchOpen(false)
                 }}>
@@ -448,7 +449,7 @@ const SearchData = props => {
                     Apps
                 </Typography>
 
-                <List style={{ backgroundColor: theme.palette.inputColor, }}>
+                <List style={{ backgroundColor: themeMode === "dark" ? "#2A2A2A" : "#F5F5F5", }}>
                     {hits.length === 0 ?
                         <ListItem style={outerlistitemStyle}>
                             <ListItemAvatar onClick={() => console.log(hits)}>
@@ -468,7 +469,7 @@ const SearchData = props => {
                                 overflowX: "hidden",
                                 overflowY: "hidden",
                                 borderBottom: "1px solid rgba(255,255,255,0.4)",
-                                backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
+                                backgroundColor: mouseHoverIndex === index ? theme.palette.hoverColor : "inherit",
                                 cursor: "pointer",
                                 marginLeft: 5,
                                 marginRight: 5,
@@ -630,7 +631,7 @@ const SearchData = props => {
         //console.log(type, hits.length, hits)
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, marginTop: isDocSearchModal ? 0 : 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, marginTop: isDocSearchModal ? 0 : 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.textFieldStyle.backgroundColor, width: "100%", left: 470, boxShadows: "none", }}>
                 {/* <IconButton style={{ zIndex: 5000, position: "absolute", right: 14, color: "grey" }} onClick={() => {
                     setSearchOpen(false)
                 }}>
@@ -650,7 +651,7 @@ const SearchData = props => {
 					<DeleteIcon />
 				</IconButton>
 				*/}
-                <List style={{ backgroundColor: theme.palette.inputColor, marginTop: isDocSearchModal ? 35 : 0, }}>
+                <List style={{ backgroundColor: themeMode === "dark" ? "#2A2A2A" : "#F5F5F5", marginTop: isDocSearchModal ? 35 : 0, }}>
                     {hits.length === 0 ?
                         <ListItem style={outerlistitemStyle}>
                             <ListItemAvatar onClick={() => console.log(hits)}>
@@ -670,7 +671,7 @@ const SearchData = props => {
                                 overflowX: "hidden",
                                 overflowY: "hidden",
                                 borderBottom: "1px solid rgba(255,255,255,0.4)",
-                                backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
+                                backgroundColor: mouseHoverIndex === index ? theme.palette.hoverColor : "inherit",
                                 cursor: "pointer",
                                 marginLeft: 5,
                                 marginRight: 5,
@@ -787,13 +788,20 @@ const SearchData = props => {
             window.open(modifiedUrl, '_blank');
         };
         return (
-            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.textFieldStyle.backgroundColor, width: "100%", left: 470, boxShadows: "none", }}>
                 <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 152 }}>
                     Discord Chat
                 </Typography>
-                <List style={{ backgroundColor: theme.palette.inputColor, }}>
+                <List style={{ backgroundColor: themeMode === "dark" ? "#2A2A2A" : "#F5F5F5", }}>
                 {hits.length === 0 ?
-                        <ListItem style={outerlistitemStyle}>
+                        <ListItem
+                        sx={{
+                          "&:hover": {
+                            backgroundColor: theme.palette.hoverColor
+                          }
+                        }}
+                        style={outerlistitemStyle}
+                      >                                            
                             <ListItemAvatar onClick={() => console.log(hits)}>
                                 <Avatar>
                                     <FolderIcon />
@@ -805,7 +813,11 @@ const SearchData = props => {
                             />
                         </ListItem>:
                         hits.map((chat, index) => (
-                    <ListItem onClick={() => handleHitClick(chat.url)} key={index} style={{ cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.4)" }} onMouseOver={() => setMouseHoverIndex(index)}>
+                    <ListItem  sx={{
+                        "&:hover": {
+                          backgroundColor: theme.palette.hoverColor
+                        }
+                      }} onClick={() => handleHitClick(chat.url)} key={index} style={{ cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.4)" }} onMouseOver={() => setMouseHoverIndex(index)}>
                         <ListItemAvatar>
                             <Avatar src="/discord-logo.png" />
                         </ListItemAvatar>

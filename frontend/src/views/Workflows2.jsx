@@ -2,6 +2,7 @@
 import React, { useEffect, useContext, memo, useState, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import ReactDOM from "react-dom"
+import { getTheme } from "../theme.jsx";
 
 // Material UI Icons
 import Add from '@mui/icons-material/Add';
@@ -93,6 +94,11 @@ import {
     Visibility as VisibilityIcon,
     EditNote as EditNoteIcon,
 	ErrorOutline as ErrorOutlineIcon,
+	Coronavirus as CoronavirusIcon, 
+	Fingerprint as FingerprintIcon,
+	Psychology as PsychologyIcon,
+	Wifi as WifiIcon,
+	Devices as DevicesIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -103,7 +109,7 @@ import Dropzone from "../components/Dropzone.jsx";
 import { ToastContainer, toast } from "react-toastify"
 import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
-import theme from "../theme.jsx";
+// import theme from "./theme.jsx";
 import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinementList } from 'react-instantsearch-dom';
 import { debounce } from "lodash";
@@ -112,43 +118,12 @@ import { removeQuery } from "../components/ScrollToTop.jsx";
 import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240");
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
 
 const svgSize = 24;
 const imagesize = 22;
 
-const useStyles = makeStyles(() => {
 
-    return {
-        datagrid: {
-            border: 0,
-            "& .MuiDataGrid-columnsContainer": {
-                backgroundColor:
-                    theme?.palette?.type === "light" ? "#fafafa" : theme?.palette?.inputColor,
-            },
-            "& .MuiDataGrid-iconSeparator": {
-                display: "none",
-            },
-            "& .MuiDataGrid-colCell, .MuiDataGrid-cell": {
-                borderRight: `1px solid ${theme?.palette?.type === "light" ? "white" : "#303030"
-                    }`,
-            },
-            "& .MuiDataGrid-columnsContainer, .MuiDataGrid-cell": {
-                borderBottom: `1px solid ${theme?.palette?.type === "light" ? "#f0f0f0" : "#303030"
-                    }`,
-            },
-            "& .MuiDataGrid-cell": {
-                color:
-                    theme?.palette?.type === "light" ? "white" : "rgba(255,255,255,0.65)",
-            },
-            "& .MuiPaginationItem-root, .MuiTablePagination-actions, .MuiTablePagination-caption":
-            {
-                borderRadius: 0,
-                color: "white",
-            },
-        },
-    }
-})
 
 
 
@@ -160,19 +135,20 @@ const useStyles = makeStyles(() => {
 export const GetIconInfo = (action) => {
     // Finds the icon based on the action. Should be verbs.
     const iconList = [
-        { key: "cases", values: ["cases"] },
+        { key: "cases", values: ["cases", "ticket", "alert"] },
         { key: "cache_add", values: ["set_cache"] },
         { key: "cache_get", values: ["get_cache"] },
         { key: "filter", values: ["filter"] },
         { key: "merge", values: ["join", "merge", "route", "router"] },
         {
             key: "search",
-            values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
+            values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate", "siem", ],
         },
         { key: "list", values: ["list", "head", "options"] },
         {
             key: "download",
             values: [
+				"ingest",
                 "capture",
                 "get",
                 "download",
@@ -186,20 +162,6 @@ export const GetIconInfo = (action) => {
         },
         { key: "add", values: ["add", "accept",] },
         { key: "delete", values: ["delete", "remove", "clear", "clean", "dismiss",] },
-        {
-            key: "send",
-            values: [
-                "send",
-                "dispatch",
-                "mail",
-                "forward",
-                "post",
-                "submit",
-                "mark",
-                "set",
-                "release",
-            ],
-        },
         {
             key: "repeat",
             values: ["repeat", "retry", "pause", "skip", "copy", "replicat", "demo",],
@@ -229,8 +191,29 @@ export const GetIconInfo = (action) => {
             key: "compare",
             values: ["compare", "convert", "to", "filter", "translate", "parse"],
         },
+        { key: "assets", values: ["cmdb", "assets", "asset", "cmdb", "inventory", "host", "hosts", "device", "devices"] },
         { key: "close", values: ["close", "stop", "cancel", "block"] },
         { key: "communication", values: ["communication", "comms", "email", "mail",] },
+        { key: "eradication", values: ["eradication", "edr", "xdr"] },
+        { key: "iam", values: ["iam", "identity", "access", "auth", "authentication", "authorization", "oauth", "sso", "openid"] },
+		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator",] },
+		{ key: "network", values: ["network", "net", "networking", "firewall", "proxy", "vpn", "sdwan", "sd-wan"] },
+        {
+            key: "send",
+            values: [
+                "send",
+                "dispatch",
+                "mail",
+                "forward",
+                "post",
+                "submit",
+                "mark",
+                "set",
+                "release",
+            ],
+        },
+
+
     ];
 
     var selectedKey = ""
@@ -389,7 +372,45 @@ export const GetIconInfo = (action) => {
             iconBackgroundColor: "green",
             originalIcon: <SearchIcon />,
         },
-    };
+		eradication: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <CoronavirusIcon />,
+		},
+		iam: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <FingerprintIcon />,
+		},
+		intel: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <PsychologyIcon />,
+		},
+		network: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <WifiIcon />,
+		},
+		assets: {
+            icon: "",
+            iconColor: "white",
+            iconBackgroundColor: "green",
+            originalIcon: <DevicesIcon />,
+		},
+    }
+
+		/*
+        { key: "eradication", values: ["eradication", "edr", "xdr"] },
+        { key: "iam", values: ["iam", "identity", "access", "auth", "authentication", "authorization", "oauth", "sso", "openid"] },
+		{ key: "intel", values: ["intel", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti."] },
+		{ key: "network", values: ["network", "net", "networking", "firewall", "proxy", "vpn", "sdwan", "sd-wan"] },
+		{ key: "siem", values: ["siem", "security information and event management", "security information and event management", "security information and event management"] },
+		*/
 
     var selectedItem = parsedIcons[selectedKey];
     if (selectedItem === undefined || selectedItem === null) {
@@ -406,11 +427,8 @@ export const GetIconInfo = (action) => {
         selectedItem.iconBackgroundColor = defaultColor;
     }
 
-    if (selectedItem.icon === "" || selectedItem.icon === undefined) {
-        console.log(
-            `MISSING PATH FOR ${selectedKey} (find in scope): `,
-            selectedItem.originalIcon.type.type
-        );
+    if ((selectedItem.icon === "" || selectedItem.icon === undefined) && (selectedItem.originalIcon === undefined || selectedItem.originalIcon === "")) {
+        console.log(`MISSING PATH FOR ${selectedKey} (find in scope): `, selectedItem.originalIcon.type.type)
     }
 
     if (
@@ -436,19 +454,7 @@ export const GetIconInfo = (action) => {
     return selectedItem;
 };
 
-const chipStyle = {
-    backgroundColor: "#2F2F2F",
-    marginRight: 5,
-    paddingLeft: 5,
-    paddingRight: 5,
-    height: 35,
-    cursor: "pointer",
-    borderColor: "#2F2F2F",
-    color: "#C8C8C8",
-    fontSize: "14px",
-    fontFamily: theme?.typography?.fontFamily,
-    borderRadius: "17.5px"
-};
+
 
 export const collapseField = (field) => {
     if (field === undefined || field === null) {
@@ -626,12 +632,14 @@ export const validateJson = (showResult) => {
 //Custom hook for handling styling of the dropzone
 const useDropzoneStyles = () => {
     const { leftSideBarOpenByClick } = useContext(Context);
+    const { themeMode, brandColor } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor);
 
     return {
         paddingTop: 70,
         // minHeight: 1000,
-        backgroundColor: "#1A1A1A",
-        fontFamily: theme?.typography?.fontFamily,
+        backgroundColor: theme.palette.backgroundColor,
+        fontFamily: theme.typography?.fontFamily,
         // maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
         paddingLeft: leftSideBarOpenByClick ? 200 : 0,
         transition: "padding-left 0.3s ease",
@@ -662,14 +670,65 @@ const Workflows2 = (props) => {
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
-    const classes = useStyles(theme)
     const imgSize = 60;
+
+    const { themeMode, brandColor, brandName } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor);
+    const chipStyle = {
+        backgroundColor: theme.palette.chipStyle.backgroundColor,
+        marginRight: 5,
+        paddingLeft: 5,
+        paddingRight: 5,
+        height: 35,
+        cursor: "pointer",
+        borderColor: theme.palette.chipStyle.borderColor,
+        color: theme.palette.chipStyle.color,
+        fontSize: "14px",
+        fontFamily: theme.typography?.fontFamily,
+        borderRadius: "17.5px"
+    };
+
+    const newStyles = makeStyles(() => {
+
+        return {
+            datagrid: {
+                border: 0,
+                "& .MuiDataGrid-columnsContainer": {
+                    backgroundColor:
+                        theme.palette?.type === "light" ? "#fafafa" : theme.palette?.inputColor,
+                },
+                "& .MuiDataGrid-iconSeparator": {
+                    display: "none",
+                },
+                "& .MuiDataGrid-colCell, .MuiDataGrid-cell": {
+                    borderRight: `1px solid ${theme.palette?.type === "light" ? "white" : "#303030"
+                        }`,
+                },
+                "& .MuiDataGrid-columnsContainer, .MuiDataGrid-cell": {
+                    borderBottom: `1px solid ${theme.palette?.type === "light" ? "#f0f0f0" : "#303030"
+                        }`,
+                },
+                "& .MuiDataGrid-cell": {
+                    color:
+                        theme.palette?.type === "light" ? "white" : "rgba(255,255,255,0.65)",
+                },
+                "& .MuiPaginationItem-root, .MuiTablePagination-actions, .MuiTablePagination-caption":
+                {
+                    borderRadius: 0,
+                    color: "white",
+                },
+            },
+        }
+    })
+
+    const classes = newStyles(theme);
 
     const referenceUrl = globalUrl + "/api/v1/hooks/";
 
     var upload = "";
 
     const [workflows, setWorkflows] = React.useState([]);
+    const [backupWorkflows, setBackupWorkflows] = React.useState([]);
     const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
     const [selectedUsecases, setSelectedUsecases] = React.useState([]);
     const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
@@ -726,7 +785,7 @@ const Workflows2 = (props) => {
 
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-    document.title = "Shuffle - Workflows";
+    document.title = brandName?.length > 0 ? `${brandName} - Workflows` : "Shuffle - Workflows";
 
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
@@ -744,11 +803,18 @@ const Workflows2 = (props) => {
 
     const handleTabChange = (event, newValue) => {
         setCurrTab(newValue);
+
+		//if (view === "list" && currTab > 0) {
+		//	setView("grid")
+		//	setUpdate(Math.random())
+		//}
+
         // Update URL query params based on tab index
         const tabMapping = {
             0: 'org_workflows',
             1: 'my_workflows',
-            2: 'all_workflows'
+            2: 'all_workflows',
+            3: 'backup_apps',
         };
         const queryParams = new URLSearchParams(location.search);
         queryParams.set('tab', tabMapping[newValue]);
@@ -756,9 +822,6 @@ const Workflows2 = (props) => {
 
         navigate(`${location.pathname}?${queryParams.toString()}`);
     };
-
-
-
 
     const handleCreateWorkflow = () => {
         setModalOpen(true)
@@ -1099,23 +1162,31 @@ const Workflows2 = (props) => {
                 setSelectedWorkflowId("");
             }}
             PaperProps={{
-                style: {
-                    backgroundColor: theme.palette.surfaceColor,
-                    color: "white",
-                    minWidth: 500,
-                    padding: 50,
-                },
-            }}
+                sx: {
+                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                    border: theme?.palette?.DialogStyle?.border,
+                    minWidth: '440px',
+                    fontFamily: theme?.typography?.fontFamily,
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    zIndex: 1000,
+                    '& .MuiDialogContent-root': {
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogTitle-root': {
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                }
+                }}
         >
             <DialogTitle>
-                <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
+                <div style={{ textAlign: "center", color: theme.palette.DialogStyle?.color }}>
                     Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId)?.name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
 
                     Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working
                 </div>
             </DialogTitle>
             <DialogContent
-                style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+                style={{ color: theme.palette.DialogStyle.color, textAlign: "center" }}
             >
                 <Button
                     style={{}}
@@ -1208,7 +1279,7 @@ const Workflows2 = (props) => {
 							data.status
 						).then((response) => {
 							if (response !== undefined) {
-								toast(`Successfully imported ${data.name}`);
+								toast.success(`Successfully imported ${data.name}`);
 							}
 						});
 					}
@@ -1267,7 +1338,20 @@ const Workflows2 = (props) => {
     }
 
 
-
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+        const paramType = queryParams.get("type");
+    
+        if (paramType === "sso_login") {
+            localStorage.removeItem("workflows");
+            queryParams.delete("type");
+            const newUrl = window.location.pathname +  (queryParams.toString() ? `?${queryParams.toString()}` : '');
+    
+            window.history.replaceState({}, '', newUrl);
+         window.location.reload();
+        }
+    }, []);
+    
     const getAvailableWorkflows = (amount) => {
         var storageWorkflows = []
         setIsLoadingWorkflow(true)
@@ -1320,20 +1404,32 @@ const Workflows2 = (props) => {
                         // When there are no workflows, we can set the loading to false
                         setIsLoadingWorkflow(false)
 						if (currTab !== 2) {
-							toast("No workflows found. Showing workflow discovery")
+							toast.info("No workflows found in this org. Feel free to look into our public workflows!" , {
+								timeout: 7500,
+							})
 							setCurrTab(2)
 						}
 					}
 
                     var newarray = []
+					var backupWf = []
                     for (var wfkey in responseJson) {
                         const wf = responseJson[wfkey]
                         if (wf.public === true || wf.hidden === true) {
                             continue
                         }
 
+						if (wf?.backup_config?.onprem_backup === true) {
+							backupWf.push(wf)
+							continue
+						}
+
                         newarray.push(wf)
                     }
+
+					if (backupWf.length > 0) {
+						setBackupWorkflows(backupWf)
+					}
 
                     var setProdFilter = false
 
@@ -1568,7 +1664,7 @@ const Workflows2 = (props) => {
         width: "100%",
         color: "white",
         display: "flex",
-        fontFamily: theme?.typography?.fontFamily,
+        fontFamily: theme.typography?.fontFamily,
         boxSizing: "border-box",
         position: "relative",
         borderRadius: "8px",
@@ -1589,7 +1685,7 @@ const Workflows2 = (props) => {
         width: 160,
         height: 44,
         justifyContent: "space-between",
-        fontFamily: theme?.typography?.fontFamily,
+        fontFamily: theme.typography?.fontFamily,
     };
 
     const exportAllWorkflows = (allWorkflows) => {
@@ -1811,9 +1907,9 @@ const Workflows2 = (props) => {
         data = JSON.parse(JSON.stringify(data));
         data = sanitizeWorkflow(data);
         toast("Sanitizing and publishing " + data.name);
-
+    
         // This ALWAYS talks to Shuffle cloud
-        fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish", {
+        fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish" , {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -2052,7 +2148,7 @@ const Workflows2 = (props) => {
 					}
                 } else {
                     if (bulk !== true) {
-                        toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
+                        toast.success(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
                     }
                 }
 
@@ -2066,7 +2162,7 @@ const Workflows2 = (props) => {
                 }
             })
             .catch((error) => {
-                toast(error.toString());
+                toast.error(error.toString());
             })
     }
 
@@ -2124,7 +2220,7 @@ const Workflows2 = (props) => {
     const WorkflowSkeleton = () => {
         return (
             <Paper elevation={0} style={{
-                backgroundColor: "#212121",
+                backgroundColor: theme.palette.platformColor,
                 width: "100%",
                 height: 120,
                 borderRadius: 8,
@@ -2141,7 +2237,7 @@ const Workflows2 = (props) => {
                         height={90}
                         style={{
                             borderRadius: 6,
-                            backgroundColor: "rgba(255, 255, 255, 0.1)"
+                            backgroundColor: theme.palette.loaderColor,
                         }}
                     />
                     <div style={{
@@ -2155,19 +2251,19 @@ const Workflows2 = (props) => {
                             variant="text"
                             width="40%"
                             height={24}
-                            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                            style={{ backgroundColor: theme.palette.loaderColor }}
                         />
                         <Skeleton
                             variant="text"
                             width="60%"
                             height={20}
-                            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                            style={{ backgroundColor: theme.palette.loaderColor }}
                         />
                         <Skeleton
                             variant="text"
                             width="30%"
                             height={20}
-                            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                            style={{ backgroundColor: theme.palette.loaderColor }}
                         />
                     </div>
                 </div>
@@ -2240,6 +2336,11 @@ const Workflows2 = (props) => {
                     setOpen(false);
                     setAnchorEl(null);
                 }}
+                MenuListProps={{
+                    sx: {
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    }
+                }}
             >
                 {isDistributed ?
                     <MenuItem
@@ -2253,7 +2354,7 @@ const Workflows2 = (props) => {
                     </MenuItem>
                     : null}
                 <MenuItem
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                    sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     disabled={isDistributed}
                     onClick={(event) => {
                         event.stopPropagation()
@@ -2274,7 +2375,7 @@ const Workflows2 = (props) => {
                 </MenuItem>
 
                 <MenuItem
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                    sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     onClick={(event) => {
                         window.open(`/forms/${data.id}`, "_blank")
                     }}
@@ -2287,7 +2388,7 @@ const Workflows2 = (props) => {
                 <Divider />
 
                 <MenuItem
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                    sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     disabled={isDistributed}
                     onClick={() => {
                         sideloadWorkflow(data.id, "publish")
@@ -2301,8 +2402,8 @@ const Workflows2 = (props) => {
                 </MenuItem>
 
                 <MenuItem
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-                    disabled={isDistributed}
+                    sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
+                    //disabled={isDistributed}
                     onClick={() => {
                         sideloadWorkflow(data.id, "export", setOpen)
 
@@ -2317,7 +2418,7 @@ const Workflows2 = (props) => {
                 <Divider />
 
                 <MenuItem
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                    sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     disabled={isDistributed}
                     onClick={() => {
                         duplicateWorkflow(data)
@@ -2330,7 +2431,7 @@ const Workflows2 = (props) => {
                 </MenuItem>
 
                 <MenuItem
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                    sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     onClick={() => {
                         setDeleteModalOpen(true);
                         setSelectedWorkflowId(data.id);
@@ -2447,7 +2548,7 @@ const Workflows2 = (props) => {
 
 
         return (
-            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
+            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily }}>
                 <Paper square style={paperAppStyle}>
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2461,7 +2562,7 @@ const Workflows2 = (props) => {
                                     width: 3,
                                     backgroundColor: boxColor,
                                     borderRadius: "0 100px 0 0",
-                                    fontFamily: theme?.typography?.fontFamily,
+                                    fontFamily: theme.typography?.fontFamily,
                                 }}
                                 onClick={() => {
                                     addFilter(selectedCategory)
@@ -2472,7 +2573,7 @@ const Workflows2 = (props) => {
 
                     <Grid
                         item
-                        style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme?.typography?.fontFamily }}
+                        style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme.typography?.fontFamily }}
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
 							{currTab === 2 ? null : 
@@ -2526,7 +2627,7 @@ const Workflows2 = (props) => {
                                         <Typography style={{
                                             color: "rgba(255,255,255,0.9)",
                                             fontSize: "16px",
-                                            fontFamily: theme?.typography?.fontFamily,
+                                            fontFamily: theme.typography?.fontFamily,
                                         }}>
                                             Edit: {data.name}
                                         </Typography>
@@ -2553,13 +2654,13 @@ const Workflows2 = (props) => {
                                 } placement="right">
 
                                 <Typography
-                                    variant="body1"
                                     style={{
                                         marginBottom: 0,
                                         paddingBottom: 0,
+                                        fontSize: 18,
                                         maxHeight: 30,
                                         flex: 10,
-                                        fontFamily: theme?.typography?.fontFamily,
+                                        fontFamily: theme.typography?.fontFamily,
                                         fontWeight: 500,
                                     }}
                                 >
@@ -2594,7 +2695,7 @@ const Workflows2 = (props) => {
                                                     style={{
                                                         height: 24,
                                                         width: 24,
-                                                        filter: "brightness(0.6)",
+                                                        filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(0.9)",
                                                         cursor: "pointer",
                                                     }}
                                                     onClick={() => {
@@ -2751,7 +2852,7 @@ const Workflows2 = (props) => {
                                 overflow: "hidden",
                                 marginTop: 8,
                                 maxHeight: 35,
-                                fontFamily: theme?.typography?.fontFamily,
+                                fontFamily: theme.typography?.fontFamily,
                             }}
                         >
                             {data.tags !== undefined && data.tags !== null
@@ -3014,7 +3115,7 @@ const Workflows2 = (props) => {
                                     data.status,
                                 ).then((response) => {
                                     if (response !== undefined) {
-                                        toast("Successfully imported " + data.name);
+                                        toast.success("Imported " + data.name);
                                     }
                                 });
                             }
@@ -3366,6 +3467,8 @@ const Workflows2 = (props) => {
                 return obj;
             })
 
+			console.log("ROWS: ", rows)
+
             workflowData = (
                 <DataGrid
                     color="primary"
@@ -3395,7 +3498,7 @@ const Workflows2 = (props) => {
             );
         }
         return (
-            <div style={{ ...gridContainer, backgroundColor: "#212121" }}>
+            <div style={{ ...gridContainer, backgroundColor: theme.palette.platformColor }}>
                 <Tooltip title={`New Workflow`} placement="bottom">
                     <IconButton
                         style={{ position: "absolute", top: 10, right: 50, zIndex: 1000 }}
@@ -3803,6 +3906,8 @@ const Workflows2 = (props) => {
                         onClick={() => {
                             localStorage.setItem("view", "list");
                             setView("list");
+
+							setCurrTab(0)
                         }}
                     >
                         <ListIcon />
@@ -3957,20 +4062,30 @@ const Workflows2 = (props) => {
     // 	}
 
     useEffect(() => {
-        if (currTab === 2) return;
-        if (userdata !== undefined && userdata !== null && filteredWorkflows.length > 0) {
+        if (filteredWorkflows.length > 0) {
+
             var categoryWorkflows = []
             if (currTab === 0) {
                 categoryWorkflows = filteredWorkflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id)
-                setOrgWorkflows(categoryWorkflows)
+
+				if (categoryWorkflows.length === 0) { 
+					setOrgWorkflows(filteredWorkflows)
+				} else {
+                	setOrgWorkflows(categoryWorkflows)
+				}
             }
             else if (currTab === 1) {
                 categoryWorkflows = filteredWorkflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id && workflow?.owner === userdata?.id)
                 setMyWorkflows(categoryWorkflows)
             }
+
             setIsLoadingWorkflow(false);
 
-        }
+        } else {
+            if (currTab === 0 && workflows?.length > 0) {
+				setOrgWorkflows(workflows)
+			}
+		}
     }, [currTab, workflows, userdata, filteredWorkflows, filters])
 
 
@@ -3984,8 +4099,8 @@ const Workflows2 = (props) => {
 
 
     const iconButtonStyle = {
-        color: 'white',
-        backgroundColor: '#212121',
+        color: theme.palette.text.primary,
+        backgroundColor: theme.palette.platformColor,
         borderRadius: '4px',
         padding: "12px 16px",
         cursor: 'pointer',
@@ -4085,20 +4200,20 @@ const Workflows2 = (props) => {
                     maxWidth: "25%",
                     minWidth: "25%",
                     height: 47,
-                    backgroundColor: "#212121",
+                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                 }}
                 InputProps={{
                     style: {
-                        color: "white",
+                        color: theme.palette.textFieldStyle.color,
                         height: "100%",
-                        backgroundColor: "#212121",
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                     },
                     placeholder: "Search Workflows",
                 }}
                 sx={{
                     '& .MuiOutlinedInput-root': {
                         borderRadius: '4px',
-                        backgroundColor: "#212121",
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                     },
                 }}
                 value={localQuery}
@@ -4140,9 +4255,9 @@ const Workflows2 = (props) => {
                     maxWidth: "25%",
                     height: 47,
                     borderRadius: 4,
-                    backgroundColor: "#212121",
-                    fontFamily: theme?.typography?.fontFamily,
-                    color: "#FFFFFF", 
+                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    fontFamily: theme.typography?.fontFamily,
+                    color: theme.palette.textFieldStyle.color, 
                 }}
                 MenuProps={{
                     anchorOrigin: {
@@ -4155,9 +4270,9 @@ const Workflows2 = (props) => {
                     },
                     PaperProps: {
                         style: {
-                            backgroundColor: '#212121',
-                            color: '#FFFFFF',
-                            fontFamily: theme?.typography?.fontFamily,
+                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                            color: theme.palette.textFieldStyle.color,
+                            fontFamily: theme.typography?.fontFamily,
                         }
                     }
                 }}
@@ -4193,7 +4308,7 @@ const Workflows2 = (props) => {
                     )
                 }
             >
-                <MenuItem disabled value="" style={{ fontFamily: theme?.typography?.fontFamily, fontSize: 16 }}>
+                <MenuItem disabled value="" style={{ fontFamily: theme.typography?.fontFamily, fontSize: 16 }}>
                     All Usecases
                 </MenuItem>
                 {items.map((usecase, index) => (
@@ -4206,13 +4321,13 @@ const Workflows2 = (props) => {
                             '&:hover': {
                                 backgroundColor: '#3A3A3A', // Darker background on hover
                             },
-                            fontFamily: theme?.typography?.fontFamily,
+                            fontFamily: theme.typography?.fontFamily,
                             fontSize: 16
                         }}
                     >
                         <Checkbox
                             checked={currentRefinement.includes(usecase.label)}
-                            style={{ marginRight: 8, color: '#FFFFFF', fontSize: 16 }}
+                            style={{ marginRight: 8, fontSize: 16 }}
                         />
                         {usecase.label} ({usecase.count})
                     </MenuItem>
@@ -4225,7 +4340,7 @@ const Workflows2 = (props) => {
     const tabStyle = {
         textTransform: 'none',
         marginRight: 20,
-        fontFamily: theme?.typography?.fontFamily,
+        fontFamily: theme.typography?.fontFamily,
         fontSize: 16,
         borderBottom: "5px solid transparent",
         minHeight: "48px",
@@ -4233,9 +4348,9 @@ const Workflows2 = (props) => {
     }
 
     const tabActive = {
-        borderBottom: "5px solid #FF8544",
+        borderBottom: `5px solid ${theme.palette.primary.main}`,
         borderRadius: "2px",
-        color: "#FF8544"
+        color: theme.palette.primary.main
     }
 
 
@@ -4258,16 +4373,16 @@ const Workflows2 = (props) => {
                         maxWidth: isSafari ? "100%" : "70%",
                         margin: "auto",
                     }}>
-                        <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
+                        <Typography variant="h4" color="textPrimary" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme.typography?.fontFamily }}>
 							{currTab === 0 ? "Org" : currTab === 1 ?  "Your" : "Discover"} Workflows
                         </Typography>
 
-                        <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
+                        <div style={{ borderBottom: themeMode === "dark" ? "1px solid #808080" : theme.palette.defaultBorder, marginBottom: 30 }}>
                             <Tabs
                                 value={currTab}
                                 onChange={(event, newTab) => handleTabChange(event, newTab)}
                                 style={{
-                                    fontFamily: theme?.typography?.fontFamily,
+                                    fontFamily: theme.typography?.fontFamily,
                                     fontSize: 16,
                                     marginBottom: "-2px"
                                 }}
@@ -4296,6 +4411,17 @@ const Workflows2 = (props) => {
                                     }}
                                 />
 
+								{backupWorkflows.length > 0 &&
+									<Tab
+										label={`Onprem Backup (${backupWorkflows.length})`}
+										style={{
+											...tabStyle,
+											marginLeft: 25, 
+											...(currTab === 3 ? tabActive : {})
+										}}
+									/>
+								}
+
                                 <Tab
                                     label="Org Forms"
 									onClick={() => {
@@ -4305,7 +4431,7 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
 										marginLeft: 25, 
-                                        ...(currTab === 3 ? tabActive : {})
+                                        ...(currTab === 4 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>
@@ -4327,16 +4453,17 @@ const Workflows2 = (props) => {
                                         minWidth: "25%",
                                         height: 43,
                                         maxHeight: "fit-content",
-                                        backgroundColor: "#212121",
-                                        zIndex: 1000,
+                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                            zIndex: 1000,
+                                        color: theme.palette.textFieldStyle.color
                                     }}
                                     disabled={currTab === 2}
                                     InputProps={{
                                         style: {
-                                            color: "white",
                                             height: "fit-content",
                                             maxHeight: "fit-content",
-                                            backgroundColor: "#212121",
+                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                            color: theme.palette.textFieldStyle.color
                                         },
                                         placeholder: "Filter Workflows",
                                         // endAdornment: (
@@ -4359,7 +4486,8 @@ const Workflows2 = (props) => {
                                         '& .MuiOutlinedInput-root': {
                                             height: "fit-content",
                                             borderRadius: '4px',
-                                            backgroundColor: '#212121',
+                                            color: theme.palette.textFieldStyle.color,
+                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                             '& fieldset': {
                                                 borderColor: 'rgba(255, 255, 255, 0.23)',
                                             },
@@ -4373,10 +4501,12 @@ const Workflows2 = (props) => {
                                             display: 'flex',
                                             flexWrap: 'wrap',
                                             gap: '4px',
+                                            fontSize: 18,
                                             padding: '4px 8px',
                                             alignItems: 'center',
                                             height: "fit-content", // Match height
-                                            backgroundColor: "#212121",
+                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                            color: theme.palette.textFieldStyle.color
                                         },
 
                                         // Rest of the styling remains the same...
@@ -4424,8 +4554,9 @@ const Workflows2 = (props) => {
                                             maxWidth: "25%",
                                             height: 47,
                                             borderRadius: 4,
-                                            backgroundColor: "#212121",
-                                            fontFamily: theme?.typography?.fontFamily
+                                            fontSize: 18,
+                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                            fontFamily: theme.typography?.fontFamily,
                                         }}
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
@@ -4460,12 +4591,12 @@ const Workflows2 = (props) => {
                                                             removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
                                                         }
                                                     }}
-                                                    style={{
+                                                    sx={{
                                                         padding: "12px 16px",
                                                         borderBottom: index === usecases.length - 2 ? "none" : "1px solid rgba(255,255,255,0.05)",
                                                         "&:hover": {
                                                             backgroundColor: "rgba(255,255,255,0.1)"
-                                                        }
+                                                        },
                                                     }}
                                                 >
                                                     <div style={{
@@ -4479,7 +4610,7 @@ const Workflows2 = (props) => {
                                                             style={{
                                                                 padding: 0,
                                                                 marginRight: 8,
-                                                                color: "rgba(255,255,255,0.7)"
+                                                                color: theme.palette.textFieldStyle.color,
                                                             }}
                                                         />
                                                         <div style={{
@@ -4491,7 +4622,7 @@ const Workflows2 = (props) => {
                                                             <Typography
                                                                 variant="body1"
                                                                 style={{
-                                                                    color: "rgba(255,255,255,0.9)",
+                                                                    color: theme.palette.textFieldStyle.color,
                                                                     fontWeight: selectedCategory.includes(category) ? 500 : 400
                                                                 }}
                                                             >
@@ -4500,8 +4631,8 @@ const Workflows2 = (props) => {
                                                             <Typography
                                                                 variant="body2"
                                                                 style={{
-                                                                    color: "rgba(255,255,255,0.5)",
-                                                                    backgroundColor: "rgba(255,255,255,0.1)",
+                                                                    color: theme.palette.textFieldStyle.color,
+                                                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                                                     padding: "2px 8px",
                                                                     borderRadius: "12px",
                                                                     fontSize: "0.75rem"
@@ -4539,23 +4670,27 @@ const Workflows2 = (props) => {
                                             onClick={() => navigate("/workflows/debug")}
                                             disabled={currTab === 2}
                                         >
-                                            <QueryStatsIcon style={{ color: currTab === 2 ? "rgba(241, 241, 241, 0.5)" : "#F1F1F1" }} />
+                                            <QueryStatsIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
                                         </IconButton>
                                     </Tooltip>
 
-                                    <Tooltip title={view === "grid" ? "List view" : "Grid view"} placement="top">
+                                    <Tooltip title={view === "grid" ? "List view (Org Workflows only)" : "Grid view"} placement="top">
                                         <IconButton
                                             style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => {
                                                 const newView = view === "grid" ? "list" : "grid";
                                                 localStorage.setItem("workflowView", newView);
                                                 setView(newView);
+
+												if (view === "grid") {
+													setCurrTab(0)
+												}
                                             }}
                                             disabled={currTab === 2}
                                         >
                                             {view === "grid" ?
-                                                <ListIcon style={{ color: currTab === 2 ? "rgba(255, 255, 255, 0.5)" : "white" }} /> :
-                                                <GridOnIcon style={{ color: currTab === 2 ? "rgba(255, 255, 255, 0.5)" : "white" }} />
+                                                <ListIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} /> :
+                                                <GridOnIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
                                             }
                                         </IconButton>
                                     </Tooltip>
@@ -4568,7 +4703,7 @@ const Workflows2 = (props) => {
                                         >
                                             {submitLoading ?
                                                 <CircularProgress color="secondary" /> :
-                                                <PublishIcon style={{ color: currTab === 2 ? "rgba(255, 255, 255, 0.5)" : "white" }} />
+                                                <PublishIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
                                             }
                                         </IconButton>
                                     </Tooltip>
@@ -4587,7 +4722,7 @@ const Workflows2 = (props) => {
                                             disabled={isCloud || currTab === 2}
                                             onClick={() => exportAllWorkflows(workflows)}
                                         >
-                                            <GetAppIcon style={{ color: (isCloud || currTab === 2) ? "rgba(255, 255, 255, 0.5)" : "white" }} />
+                                            <GetAppIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
                                         </IconButton>
                                     </Tooltip>
                                 </div>
@@ -4600,13 +4735,11 @@ const Workflows2 = (props) => {
                                         borderRadius: 4,
                                         flex: 0.8,
                                         textTransform: 'none',
-                                        backgroundColor: "#FF8544",
-                                        color: "#1A1A1A",
-                                        fontFamily: theme?.typography?.fontFamily,
+                                        fontFamily: theme.typography?.fontFamily,
                                         fontSize: 16,
                                         fontWeight: 500
                                     }}
-                                    startIcon={<Add style={{ color: "#1A1A1A" }} />}
+                                    startIcon={<Add/>}
                                 >
                                     Create Workflow
                                 </Button>
@@ -4637,9 +4770,33 @@ const Workflows2 = (props) => {
                                                 paddingBottom: 40
                                             }}>
 
+                                                {currTab !== 0 ? null :
+														orgWorkflows.length === 0 ? 
+														<Typography variant="h6" style={{margin: "auto", minWidth: 500, }} >
+															No workflows found in this org with the Org ID filter. If this is an error, please click the "List View" button at the top to see ALL available workflows ({workflows.length}). 
+														</Typography> :
+													orgWorkflows.map((data, index) => {
+														// Shouldn't be a part of this list
+														if (data.public === true) {
+															return null
+														}
 
+														// if (firstLoad) {
+														//     workflowDelay += 75
+														// } else {
+														//     return <WorkflowPaper key={index} data={data} />
+														// }
 
-                                                {currTab === 0 && orgWorkflows.map((data, index) => {
+														return (
+															<span key={index}>
+																{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+																<WorkflowPaper data={data} />
+																{/*</Zoom>*/}
+															</span>
+														)
+                                                })}
+
+                                                {currTab === 3 && backupWorkflows.map((data, index) => {
                                                     // Shouldn't be a part of this list
                                                     if (data.public === true) {
                                                         return null
@@ -4661,24 +4818,29 @@ const Workflows2 = (props) => {
                                                 })}
 
                                                 {
-                                                    currTab === 1 && myWorkflows.map((data, index) => {
-                                                        if (data.public === true) {
-                                                            return null
-                                                        }
+                                                    currTab !== 1 ? null :
+														myWorkflows.length === 0 ? 
+														<Typography variant="h6" style={{margin: "auto", width: 500, }} >
+															No workflows found in this org for your user. 
+														</Typography> :
+														myWorkflows.map((data, index) => {
+															if (data.public === true) {
+																return null
+															}
 
-                                                        // if (firstLoad) {
-                                                        //     workflowDelay += 75
-                                                        // } else {
-                                                        //     return <WorkflowPaper key={index} data={data} />
-                                                        // }
+															// if (firstLoad) {
+															//     workflowDelay += 75
+															// } else {
+															//     return <WorkflowPaper key={index} data={data} />
+															// }
 
-                                                        return (
-                                                            <span key={index}>
-                                                                {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-                                                                <WorkflowPaper data={data} />
-                                                                {/*</Zoom>*/}
-                                                            </span>
-                                                        )
+															return (
+																<span key={index}>
+																	{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+																	<WorkflowPaper data={data} />
+																	{/*</Zoom>*/}
+																</span>
+															)
                                                     })
                                                 }
                                             </div>
@@ -5042,7 +5204,7 @@ const Workflows2 = (props) => {
 
     //isLoaded && isLoggedIn && workflowDone ? (
     const loadedCheck =
-        workflowDone ? (
+        workflowDone && isLoaded ? (
             <div>
                 {/*
 				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>
@@ -5105,7 +5267,9 @@ const Workflows2 = (props) => {
                 }}
             >
                 <CircularProgress />
-                <Typography>Loading Workflows</Typography>
+                <Typography style={{marginTop: 5, }}>
+					Loading Workflows and Apps
+				</Typography>
             </div>
         );
 
