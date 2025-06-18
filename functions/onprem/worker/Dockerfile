@@ -1,4 +1,4 @@
-FROM golang:1.23 as builder
+FROM golang:1.24 as builder
 
 WORKDIR /app
 #RUN go get github.com/docker/docker/api/types github.com/docker/docker/api/types/container github.com/docker/docker/client
