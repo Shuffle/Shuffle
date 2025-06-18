@@ -1,5 +1,5 @@
 # No extra requirements needed
-requests==2.32.3
+requests==2.32.4
 urllib3==2.3.0
 liquidpy==0.8.2
 MarkupSafe==3.0.2
