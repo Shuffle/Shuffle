@@ -280,7 +280,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("[AUDIT] Get workflow queue for org %s, env %s, orborus label %s", orgId, environment, orborusLabel)
 
 	ctx := shuffle.GetContext(request)
-	env, err := shuffle.GetEnvironment(ctx, orgId, "")
+	env, err := shuffle.GetEnvironment(ctx, "", orgId)
 	if err != nil {
 		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
 	}
@@ -477,7 +477,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			if len(orgId) > 0 {
-				env, err := shuffle.GetEnvironment(ctx, orgId, foundId)
+				env, err := shuffle.GetEnvironment(ctx, foundId, orgId)
 				if err != nil {
 					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
 					//resp.WriteHeader(401)
