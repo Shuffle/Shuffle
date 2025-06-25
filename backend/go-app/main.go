@@ -638,7 +638,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 			} else {
 				log.Printf("[DEBUG] Successfully created the default org!")
 
-				defaultEnv := os.Getenv("ORG_ID")
+				defaultEnv := os.Getenv("ENVIRONMENT_NAME")
 				if len(defaultEnv) == 0 {
 					defaultEnv = "Shuffle"
 					log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
@@ -3925,7 +3925,7 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 	}
 
-	defaultEnv := os.Getenv("ORG_ID")
+	defaultEnv := os.Getenv("ENVIRONMENT_NAME")
 	if len(defaultEnv) == 0 {
 		defaultEnv = "Shuffle"
 		log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
