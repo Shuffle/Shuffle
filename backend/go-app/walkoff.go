@@ -302,6 +302,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
 		}
 
+		log.Printf("[DEBUG] Issue with environment ID: %s", orgId)
+
 		return
 	}
 
