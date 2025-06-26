@@ -280,9 +280,31 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("[AUDIT] Get workflow queue for org %s, env %s, orborus label %s", orgId, environment, orborusLabel)
 
 	ctx := shuffle.GetContext(request)
-	env, err := shuffle.GetEnvironment(ctx, "", orgId)
-	if err != nil {
+	// Get all env and check the name?
+	envs, err := shuffle.GetEnvironments(ctx, orgId)
+	if err != nil || len(envs) == 0 {
 		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
+	}
+
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed to read body of orborus workflow queue request")
+		return
+	}
+
+	var envData shuffle.OrborusStats
+	err = json.Unmarshal(body, &envData)
+	if err != nil {
+		log.Printf("[ERROR] Failed to unmarshal orborus workflow queue request")
+		return
+	}
+
+	var env *shuffle.Environment
+	for _, e := range envs {
+		if e.Name == envData.Environment {
+			env = &e
+			break
+		}
 	}
 
 	timeNow := time.Now().Unix()
