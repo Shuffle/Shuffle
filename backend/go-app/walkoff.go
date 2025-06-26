@@ -246,16 +246,16 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// This is really the environment's name - NOT org-id
-	orgId := request.Header.Get("Org-Id")
-	if len(orgId) == 0 {
+	environment := request.Header.Get("Org-Id")
+	if len(environment) == 0 {
 		log.Printf("[AUDIT] No org-id header set")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org-id header."}`)))
 		return
 	}
 
-	environment := request.Header.Get("org")
-	if len(environment) == 0 {
+	orgId := request.Header.Get("org")
+	if len(orgId) == 0 {
 		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 		/*
 			resp.WriteHeader(403)
@@ -280,9 +280,17 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("[AUDIT] Get workflow queue for org %s, env %s, orborus label %s", orgId, environment, orborusLabel)
 
 	ctx := shuffle.GetContext(request)
-	env, err := shuffle.GetEnvironment(ctx, orgId, "")
-	if err != nil {
-		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
+	envs, err := shuffle.GetEnvironments(ctx, orgId)
+	if err != nil || len(envs) == 0 {
+		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
+	}
+
+	var env *shuffle.Environment
+	for _, e := range envs {
+		if e.Name == environment {
+			env = &e
+			break
+		}
 	}
 
 	timeNow := time.Now().Unix()
@@ -450,7 +458,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, orgId, 100)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, environment, 100)
 	if err != nil {
 		// Skipping as this comes up over and over
 		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
