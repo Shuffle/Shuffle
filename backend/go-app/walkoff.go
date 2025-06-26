@@ -281,7 +281,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := shuffle.GetContext(request)
 	// Get all env and check the name?
-	envs, err := shuffle.GetEnvironments(ctx, environment)
+	envs, err := shuffle.GetEnvironments(ctx, orgId)
+
 	if err != nil || len(envs) == 0 {
 		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
 	}
