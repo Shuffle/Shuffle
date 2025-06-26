@@ -813,21 +813,21 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		newImages = append(newImages, curimage)
 
 		// Force remove the current image to avoid cached layers
-		if swarmConfig == "run" || swarmConfig == "swarm" {
-			_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
-				Force:         true,
-				PruneChildren: true,
-			})
-
-			if err != nil {
-				log.Printf("[ERROR] Failed removing image for re-download: %s", err)
-			} else {
-				log.Printf("[DEBUG] Removed image: %s", curimage)
-			}
-		} else {
-			//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
-		}
-
+//		if swarmConfig == "run" || swarmConfig == "swarm" {
+//			_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
+//				Force:         true,
+//				PruneChildren: true,
+//			})
+//
+//			if err != nil {
+//				log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+//			} else {
+//				log.Printf("[DEBUG] Removed image: %s", curimage)
+//			}
+//		} else {
+//			//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
+//		}
+//
 		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
 			//log.Printf("[ERROR] Failed downloading image: %s", err)
@@ -874,6 +874,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 					// Update the service to run with the new image
 					//docker service update --image username/imagename:latest servicename --force
 					serviceUpdateOptions := types.ServiceUpdateOptions{}
+					service.Spec.TaskTemplate.ForceUpdate++
 					resp, err := dockercli.ServiceUpdate(
 						ctx,
 						service.ID,
