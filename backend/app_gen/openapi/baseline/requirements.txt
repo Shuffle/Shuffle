@@ -1,6 +1,6 @@
 # No extra requirements needed
-requests==2.32.3
-urllib3==2.3.0
+requests==2.32.4
+urllib3==2.5.0
 liquidpy==0.8.2
 MarkupSafe==3.0.2
 flask[async]==3.1.0
