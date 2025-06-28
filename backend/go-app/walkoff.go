@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math/rand"
+	//"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -265,7 +265,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	orborusLabel := request.Header.Get("x-orborus-label")
-
+	_ = orborusLabel
+	
 	// This section is cloud custom for now
 	auth := request.Header.Get("Authorization")
 	if len(auth) == 0 {
@@ -286,11 +287,20 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	var env *shuffle.Environment
-	for _, e := range envs {
-		if e.Name == environment {
-			env = &e
+	found := false
+	for i := range envs {
+		if envs[i].Name == environment {
+			env = &envs[i]
+			found = true
 			break
 		}
+	}
+
+	if !found {
+		log.Printf("[ERROR] Failed to find environment(%s) for org(%s)", environment, orgId)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success":false,"reason":"environment not found"}`))
+		return
 	}
 
 	timeNow := time.Now().Unix()
@@ -300,162 +310,14 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
 		}
 
-		log.Printf("[DEBUG] Issue with environment ID: %s", orgId)
+		log.Printf("[DEBUG] Issue with environment ID: %s", environment)
 
 		return
 	}
 
 	//log.Printf("Found env: %#v", env)
 	if len(env.OrgId) > 0 {
-		environment = env.OrgId
-	}
-
-	// FIXME: Workflow stats disabled for now
-	// as it caused too many problems
-	// goal: track docker stuff once a minute and graph it
-	// For now: Disable this as it caused too many problems
-	if request.Method == "POST" && true == false {
-		//log.Printf("[DEBUG] POST to workflowqueue")
-		if rand.Intn(10) == 0 {
-			// Parse out body
-			body, err := ioutil.ReadAll(request.Body)
-			if err == nil {
-
-				// Parse out CPU, memory and disk.
-
-				var envData shuffle.OrborusStats
-				err = json.Unmarshal(body, &envData)
-				if err == nil && !envData.Swarm && !envData.Kubernetes && (envData.CPU > 0 || envData.Memory > 0 || envData.Disk > 0) {
-
-					// Set the input in memory
-					envData.OrgId = orgId
-					envData.Environment = environment
-					envData.OrborusLabel = orborusLabel
-					envData.Timestamp = time.Now().Unix()
-
-					if envData.CPU > 0 && envData.MaxCPU > 0 {
-						envData.CPUPercent = float64(envData.CPU) / float64(envData.MaxCPU)
-					}
-
-					if envData.Memory > 0 && envData.MaxMemory > 0 {
-						envData.MemoryPercent = float64(envData.Memory) / float64(envData.MaxMemory)
-					}
-
-					// Check if CPU percent constantly has stayed above X% for the last Y requests
-					percentageCheck := 90
-					concurrentChecks := 2
-
-					//if int(envData.CPUPercent) > percentageCheck {
-					// Get cached data
-					percentages := []float64{}
-					cacheKey := fmt.Sprintf("%s_%s_percent", orgId, strings.ToLower(environment))
-
-					// Marshal float list into []byte
-					cacheData := []byte{}
-					cache, err := shuffle.GetCache(ctx, cacheKey)
-					if err == nil {
-						// Unmarshal into percentages
-						cacheData := []byte(cache.([]uint8))
-						err = json.Unmarshal(cacheData, &percentages)
-						if err != nil {
-							log.Printf("[INFO] error in cache unmarshal for percentages: %s", err)
-						}
-
-						if len(percentages) > concurrentChecks {
-							percentages = percentages[:concurrentChecks]
-						}
-
-						percentages = append(percentages, envData.CPUPercent)
-						if len(percentages) > concurrentChecks {
-							//log.Printf("[INFO] Checking percentages: %v", percentages)
-
-							// percentageCheck := 1
-							sendAlert := true
-							for _, p := range percentages {
-								if int(p) < percentageCheck {
-									//log.Printf("[AUDIT] CPU percent is below %d: %d", percentageCheck, int(p))
-									sendAlert = false
-									break
-								}
-							}
-
-							if sendAlert {
-								log.Printf("[INFO] CPU percent has been above %d percent for the last 5 requests. Sending alert. Env: %s, org: %s", percentageCheck, environment, orgId)
-
-								// Set notification + alert for organization
-								err = shuffle.CreateOrgNotification(
-									ctx,
-									fmt.Sprintf("CPU percent has been above %d percent", percentageCheck),
-									fmt.Sprintf("A environment %s has been using more than %d\\% CPU for the last 5 requests.", environment, percentageCheck),
-									fmt.Sprintf("/admin?tab=environments"),
-									environment,
-									true,
-								)
-
-								if err != nil {
-									log.Printf("[ERROR] error creating notification: %s", err)
-								}
-
-								org, err := shuffle.GetOrg(ctx, environment)
-								if err == nil {
-									foundRecommendation := false
-									for _, recommendation := range org.Priorities {
-										if strings.Contains(recommendation.Name, "CPU") {
-											foundRecommendation = true
-											break
-										}
-									}
-
-									if !foundRecommendation {
-										// Add to start of org.Priorities
-										org, _ = shuffle.AddPriority(*org, shuffle.Priority{
-											Name:        fmt.Sprintf("High CPU in environment %s", orgId),
-											Description: fmt.Sprintf("The environment %s has been using more than %d percent CPU. This indicates you may need to look at scaling.", orgId, percentageCheck),
-											Type:        "scale",
-											Active:      true,
-											URL:         fmt.Sprintf("/admin?tab=environments"),
-											Severity:    1,
-										}, false)
-
-										//Make last item the first item
-										org.Priorities = append([]shuffle.Priority{org.Priorities[len(org.Priorities)-1]}, org.Priorities[:len(org.Priorities)-1]...)
-										err = shuffle.SetOrg(ctx, *org, org.Id)
-										if err != nil {
-											log.Printf("[ERROR] Problem setting org: %s", err)
-										}
-									}
-								}
-							}
-
-							if len(percentages) > 1 {
-								percentages = percentages[1:]
-							}
-						}
-
-						// Marshal float list into []byte
-					} else {
-						//log.Printf("[ERROR] Failed getting cache: %s", err)
-						percentages = append(percentages, envData.CPUPercent)
-					}
-
-					if len(percentages) > 0 {
-						//log.Printf("[DEBUG] Setting cache for %s: %#v", cacheKey, percentages)
-						cacheData, err = json.Marshal(percentages)
-						if err != nil {
-							log.Printf("[INFO] error in cache marshal: %s", err)
-						}
-
-						// Add the new data
-						go shuffle.SetCache(ctx, cacheKey, cacheData, 5)
-					}
-				}
-
-				//log.Printf("CPU percent: %f", envData.CPUPercent)
-				//log.Printf("Memory percent: %f", envData.MemoryPercent*100)
-
-				go shuffle.SetenvStats(ctx, envData)
-			}
-		}
+		orgId = env.OrgId
 	}
 
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, environment, 100)
@@ -486,10 +348,10 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 				}
 			}
 
-			if len(orgId) > 0 {
-				env, err := shuffle.GetEnvironment(ctx, orgId, foundId)
+			if len(environment) > 0 {
+				env, err := shuffle.GetEnvironment(ctx, environment, foundId)
 				if err != nil {
-					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
+					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
 					//resp.WriteHeader(401)
 					//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No env found matching %s"}`, id)))
 					//return
