@@ -254,9 +254,9 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	orgId := request.Header.Get("org")
+	orgId := request.Header.Get("Org")
 	if len(orgId) == 0 {
-		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
+		log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 		/*
 			resp.WriteHeader(403)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org header. This can be done by setting the 'ORG' environment variable for Orborus to your Org ID in Shuffle"}`)))
