@@ -1,0 +1,92 @@
+name: Tagged Nightly Release
+on:
+  release:
+    types: [published]
+    branches:
+      - nightly
+
+# there is a very clear point to this existing.
+# we want to also release versions that look like this: 
+# v2.1.0-nightly-date, v2.1.0-nightly-date-1, v2.1.0-nightly-date-2
+# we NEVER want to send customers a "nightly" tag. We always want to send them 
+# a tagged nightly tag. So that when something breaks, They can always
+# point to it.
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: frontend
+            path: frontend
+            experimental: true
+          - app: backend
+            path: backend
+            experimental: true
+          - app: app_sdk
+            path: backend/app_sdk
+            experimental: true
+          - app: orborus
+            path: functions/onprem/orborus
+            experimental: true
+          - app: worker
+            path: functions/onprem/worker
+            experimental: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Set version
+        id: set_version
+        run: |
+          if [[ ${{ github.event_name }} == 'release' ]]; then
+            echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=nightly-untagged-latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: "amd64,arm64,arm"
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ghcr Build and push
+        id: docker_build
+        uses: docker/build-push-action@v4
+        env:
+          BUILDX_NO_DEFAULT_LOAD: true
+        with:
+          logout: false
+          context: ${{ matrix.path }}/
+          file: ${{ matrix.path }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          tags: |
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ steps.set_version.outputs.VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ steps.set_version.outputs.VERSION }}
+            frikky/shuffle-${{ matrix.app }}:${{ steps.set_version.outputs.VERSION }}
+            frikky/shuffle:${{ matrix.app }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
