@@ -91,7 +91,7 @@
     "shellwords": "^1.0.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.1",
-    "sync-fetch": "^0.3.0",
+    "sync-fetch": "^0.5.2",
     "terser-webpack-plugin": "^4.2.3",
     "yaml": "^1.10.0",
     "yamljs": "^0.3.0",
