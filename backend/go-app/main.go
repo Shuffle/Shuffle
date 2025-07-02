@@ -11,17 +11,18 @@ import (
 	"crypto/md5"
 	"strconv"
 
+	"os"
+	"io"
+	"log"
+	"fmt"
+	"errors"
+	"net/url"
+	"os/exec"
+	"net/http"
+	"io/ioutil"
+	"math/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"os/exec"
 
 	"net/http/httptest"
 	"strings"
@@ -31,11 +32,12 @@ import (
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
 
-	//"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
+	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
@@ -46,7 +48,8 @@ import (
 
 	// Web
 	"github.com/gorilla/mux"
-	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	//http2 "gopkg.in/src-d/go-git.v5/plumbing/transport/http"
+	//http2 "github.com/go-git/go-git/plumbing/transport/http"
 )
 
 // This is used to handle onprem vs offprem databases etc
@@ -59,6 +62,7 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
+//var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
 	Success         bool                 `json:"success"`
@@ -445,7 +449,7 @@ func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
 	// Returns false if there is an issue
 	// Use this for register
-	err := shuffle.CheckPasswordStrength(password)
+	err := shuffle.CheckPasswordStrength(username, password)
 	if err != nil {
 		log.Printf("[WARNING] Bad password strength: %s", err)
 		return err
@@ -458,8 +462,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	}
 
 	ctx := context.Background()
-	//users, err := FindUser(ctx context.Context, username string) ([]User, error) {
-
 	users, err := shuffle.FindUser(ctx, strings.ToLower(strings.TrimSpace(username)))
 	if err != nil && len(users) == 0 {
 		log.Printf("[WARNING] Failed getting user %s: %s", username, err)
@@ -484,7 +486,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	newUser.Active = true
 	newUser.Orgs = []string{org.Id}
 
-	// FIXME - Remove this later
 	if role == "admin" {
 		newUser.Role = "admin"
 		newUser.Roles = []string{"admin"}
@@ -637,7 +638,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 			} else {
 				log.Printf("[DEBUG] Successfully created the default org!")
 
-				defaultEnv := os.Getenv("ORG_ID")
+				defaultEnv := os.Getenv("ENVIRONMENT_NAME")
 				if len(defaultEnv) == 0 {
 					defaultEnv = "Shuffle"
 					log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
@@ -1022,6 +1023,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if parsedAdmin == "true" {
+		userInfo.Role = "admin"
+		userInfo.ActiveOrg.Role = "admin"
+	}
+
 	chatDisabled := false
 	if os.Getenv("SHUFFLE_CHAT_DISABLED") == "true" {
 		chatDisabled = true
@@ -1084,6 +1090,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Priorities: orgPriorities,
 		Licensed:   licensed,
 		ActiveApps: activatedAppIds,
+		Theme:      userInfo.Theme,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -1844,6 +1851,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	log.Printf("[DEBUG] HOOKS: webhook callback: %s", request.URL.String())
+
 	if request.Method != "POST" {
 		request.Method = "POST"
 	}
@@ -1855,6 +1864,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	path := strings.Split(request.URL.String(), "/")
 	if len(path) < 4 {
+		log.Printf("[DEBUG] HOOKS: Invalid webhook path: %s", request.URL.String())
 		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1870,7 +1880,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	if location[1] == "api" {
 		if len(location) <= 4 {
 			log.Printf("[INFO] Couldn't handle location. Too short in webhook: %d", len(location))
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -1886,6 +1896,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			queries = splitter[1]
 		}
 	}
+
+	log.Printf("[DEBUG] HOOKS: Pre user agent check")
 
 	// Find user agent header
 	userAgent := request.Header.Get("User-Agent")
@@ -1909,8 +1921,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("HookID: %s", hookId)
 	hook, err := shuffle.GetHook(ctx, hookId)
 	if err != nil {
-		log.Printf("[WARNING] Failed getting hook %s (callback): %s", hookId, err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] HOOKS: Failed getting hook %s (callback): %s", hookId, err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -1922,21 +1934,21 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 	//resp.Write([]byte(`{"success": true}`))
 	if hook.Status == "stopped" {
-		log.Printf("[WARNING] Not running %s because hook status is stopped", hook.Id)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] HOOKS: Not running %s because hook status is stopped", hook.Id)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Is it running?"}`)))
 		return
 	}
 
 	if len(hook.Workflows) == 0 {
-		log.Printf("[DEBUG] Not running because hook isn't connected to any workflows")
-		resp.WriteHeader(401)
+		log.Printf("[DEBUG] HOOKS: Not running because hook isn't connected to any workflows")
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
 		return
 	}
 
 	if hook.Environment == "cloud" {
-		log.Printf("[DEBUG] This should trigger in the cloud. Duplicate action allowed onprem.")
+		log.Printf("[DEBUG] HOOKS: This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
 	// Check auth
@@ -1952,7 +1964,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("[DEBUG] Body data error: %s", err)
+		log.Printf("[DEBUG] HOOKS: data read error: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1993,7 +2005,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(newBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed newBody marshaling for webhook: %s", err)
+		log.Printf("[ERROR] HOOKS: Failed newBody marshaling for webhook: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2009,7 +2021,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(hook.Start) == 0 {
-			log.Printf("[WARNING] No start node for hook %s - running with workflow default.", hook.Id)
+			log.Printf("[ERROR] HOOKS: No start node for hook %s - running with workflow default.", hook.Id)
 			//bodyWrapper = string(parsedBody)
 		}
 
@@ -2021,7 +2033,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
-
 		if err == nil {
 			if hook.Version == "v2" {
 				timeout := 15
@@ -2056,12 +2067,17 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			} else {
 				resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
 			}
+
 			return
 		}
 
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
 	}
+
+	log.Printf("[ERROR] HOOKS: END OF FUNCTION FOR '%s'. IF this is reached, something went wrong.", hook.Id)
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false, "reason": "Failed to run workflow. Check logs."}`))
 
 }
 
@@ -3079,8 +3095,9 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 			return
 		}
 
-		// FIXME: Check whether it's in use.
-		if user.Id != app.Owner && user.Role != "admin" {
+		if user.Id == app.Owner || (user.Role == "admin" && user.ActiveOrg.Id == app.ReferenceOrg) || shuffle.ArrayContains(app.Contributors, user.Id) {
+			log.Printf("[DEBUG] Editing app %s with user %s (%s) in org %s", test.Id, user.Username, user.Id, user.ActiveOrg.Id)
+		} else {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
 			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@shuffler.io if this persists."}`))
@@ -3154,7 +3171,18 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
-	api.Owner = user.Id
+	if api.Owner == "" {
+		api.Owner = user.Id
+	}
+
+	if len(api.ReferenceOrg) == 0 {
+		api.ReferenceOrg = user.ActiveOrg.Id
+	}
+
+	if len(test.Image) > 0 {
+		api.SmallImage = test.Image
+		api.LargeImage = test.Image
+	}
 
 	err = shuffle.DumpApi(basePath, api)
 	if err != nil {
@@ -3279,6 +3307,12 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		Body: string(body),
 	}
 
+	if !shuffle.ArrayContains(api.Contributors, user.Id) {
+		api.Contributors = append(api.Contributors, user.Id)
+	}
+
+	shuffle.SetAppRevision(ctx, api)
+
 	log.Printf("[INFO] API LENGTH FOR %s: %d, ID: %s", api.Name, len(parsed.Body), newmd5)
 	// FIXME: Might cause versioning issues if we re-use the same!!
 	// FIXME: Need a way to track different versions of the same app properly.
@@ -3353,6 +3387,21 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
+	}
+
+	org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org during image build (%s): %s", user.ActiveOrg.Id, err)
+	} else {
+		imagenames := []string{
+			fmt.Sprintf("%s_%s", api.Name, api.AppVersion),
+			fmt.Sprintf("%s_%s", api.Name, api.ID),
+		}
+
+		err = shuffle.DistributeAppToEnvironments(ctx, *org, imagenames)
+		if err != nil {
+			log.Printf("[ERROR] Failed distributing app to environments: %s", err)
+		}
 	}
 }
 
@@ -3507,7 +3556,12 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 				return err
 			}
 
-			redirectDomain := "localhost:5001"
+			backendPort := os.Getenv("BACKEND_PORT")
+			if backendPort == "" {
+				backendPort = "5001"
+			}
+
+			redirectDomain := fmt.Sprintf("localhost:%s", backendPort)
 			redirectUrl := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
 			outlookClient, _, err := shuffle.GetOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
 			if err != nil {
@@ -3752,30 +3806,57 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 	}
 
-	if org.SyncConfig.WorkflowBackup {
-		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
-		if err != nil {
-			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
-		} else {
-			backupJob.Workflows = workflows
-		}
+	// Check if it's 1/20 times (600 seconds - 10 min on average)
+	// Only problem: May take time to sync the first time, which is annoying
+	// This is to ensure that we don't spam the shuffle cloud servers with a lot of data
+	shouldBackupData := false
+	randomNumber := rand.Intn(20)
+	if randomNumber == 0 {
+		shouldBackupData = true
 	}
 
-	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
-
-		apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
-		} else {
-			backupJob.Apps = apps
+	// Just to prevent it from spamming large outbound requests
+	if shouldBackupData { 
+		if org.SyncConfig.WorkflowBackup {
+			workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
+			if err != nil {
+				log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+			} else {
+				backupJob.Workflows = workflows
+			}
 		}
-	}
 
-	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
-	} else {
-		backupJob.Stats = *info
+		if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+			foundUser.ActiveOrg.Id = org.Id
+			apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+			} else {
+				parsedApps := []shuffle.WorkflowApp{}
+				for _, app := range apps {
+					if len(app.Actions) == 0 {
+						continue
+					}
+
+					if !app.Generated {
+						continue
+					}
+
+					parsedApps = append(parsedApps, app)
+				}
+
+				backupJob.Apps = parsedApps
+			}
+		}
+
+		// Send stats once every 10 times or so..?
+		// For now, just send every time 
+		info, err := shuffle.GetOrgStatistics(ctx, org.Id)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Stats = *info
+		}
 	}
 
 	backupJobData, err := json.Marshal(backupJob)
@@ -3812,6 +3893,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
+
 	return nil
 }
 
@@ -3843,7 +3925,7 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 	}
 
-	defaultEnv := os.Getenv("ORG_ID")
+	defaultEnv := os.Getenv("ENVIRONMENT_NAME")
 	if len(defaultEnv) == 0 {
 		defaultEnv = "Shuffle"
 		log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
@@ -3948,6 +4030,8 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
 		time.Sleep(30 * time.Second)
 	}
+
+	// FIXME: This should ONLY run on one backend instance
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
@@ -4092,7 +4176,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		//interval := int(org.SyncConfig.Interval)
-		interval := 15
+		interval := 30 
 		if interval == 0 {
 			log.Printf("[WARNING] Skipping org %s because sync isn't set (0).", org.Id)
 			continue
@@ -4161,20 +4245,26 @@ func runInitEs(ctx context.Context) {
 
 		cleanupJob := func() func() {
 			return func() {
-				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
+				//log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
+
+				backendPort := os.Getenv("BACKEND_PORT")
+				if backendPort == "" {
+					backendPort = "5001"
+				}
 
 				for _, environment := range environments {
 					// Allowed without PROXY management as it's localhost
 					// client := shuffle.GetExternalClient(syncUrl)
 
 					httpClient := &http.Client{}
-					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
+					url := fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/stop", backendPort, environment)
 					req, err := http.NewRequest(
 						"GET",
 						url,
 						nil,
 					)
 
+					// FIXME: This will stop working of the user rotates their key lol
 					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
 					if err != nil {
 						log.Printf("[ERROR] Failed CREATING environment request for %s: %s", environment, err)
@@ -4188,14 +4278,22 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
+
 					respBody, err := ioutil.ReadAll(newresp.Body)
 					if err != nil {
-						log.Printf("[ERROR] Failed setting respbody %s", err)
+						log.Printf("[ERROR] Failed setting respbody %s for execution stop. Status: %d", err, newresp.StatusCode)
 						continue
 					}
-					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
 
-					url = fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/rerun", environment)
+					if newresp.StatusCode != 200 {
+						if !strings.Contains(string(respBody), "is active") {
+							log.Printf("[WARNING] Failed stopping runs in environment %s. Status code: %d. Body: %s", environment, newresp.StatusCode, string(respBody))
+						}
+
+						continue
+					}
+
+					url = fmt.Sprintf("http://localhost:%s/api/v1/environments/%s/rerun", backendPort, environment)
 					req, err = http.NewRequest(
 						"GET",
 						url,
@@ -4215,12 +4313,17 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-					respBody, err = ioutil.ReadAll(newresp.Body)
-					if err != nil {
-						log.Printf("[ERROR] Failed setting respbody %s", err)
-						continue
+					if newresp.StatusCode != 200 {
+						log.Printf("[WARNING] Failed rerunning environment %s. Status code: %d", environment, newresp.StatusCode)
 					}
-					log.Printf("[DEBUG] Successfully ran workflow RERUN request for %s. Body: %s", environment, string(respBody))
+
+					//respBody, err := ioutil.ReadAll(newresp.Body)
+					//if err != nil {
+					//	log.Printf("[ERROR] Failed setting respbody %s", err)
+					//	continue
+					//}
+
+					//log.Printf("[DEBUG] Ran workflow RERUN request for %s with the response. Body: %s", environment, string(respBody))
 				}
 			}
 		}
@@ -4313,45 +4416,16 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[DEBUG] Skipping download of default apps as %d were found", len(workflowapps))
 	}
 
-	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/shuffle/security-openapis"
-
-	// THis gets memory problems hahah
-	//apis := "https://github.com/APIs-guru/openapi-directory"
-	fs := memfs.New()
-	storer := memory.NewStorage()
-	cloneOptions := &git.CloneOptions{
-		URL: apis,
-	}
-
-	cloneOptions = checkGitProxy(cloneOptions)
-
-	_, err = git.Clone(storer, fs, cloneOptions)
-	if err != nil {
-		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
-	} else if err == nil && len(workflowapps) < 10 {
-		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-
-		iterateOpenApiGithub(fs, dir, "", "")
-		log.Printf("[INFO] Finished downloading extra API samples")
-	} else {
-		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
-	}
-
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 30
-		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
+		healthcheckInterval := 60
+		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats, and dashboard on /health. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter
 			resp := httptest.NewRecorder()
 
 			request := http.Request{}
 			// Add the "force=true" query to the fake request
-			request.URL, err = url.Parse("/api/v1/health/stats?force=true")
+			request.URL, err = url.Parse("/api/v1/health?force=true")
 			if err != nil {
 				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
 			}
@@ -4422,7 +4496,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
 	}
 
-	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s", org.Id, syncUrl)
 
 	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(
@@ -4635,7 +4709,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
 		log.Printf("[WARNING] Org %s is already syncing. Skip", org.Id)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Your org is already syncing. Nothing to set up."}`)))
 		return
 	}
@@ -4712,6 +4786,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
+
+		WorkflowBackup: true,
+		AppBackup: true, 
 	}
 
 	interval := int(responseData.IntervalSeconds)
@@ -5092,8 +5169,8 @@ func initHandlers() {
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
 	// Used by frontend
-	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
-	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/streams", handleSetWorkflowExecution).Methods("POST")
+	r.HandleFunc("/api/v1/streams/results", handleGetWorkflowExecutionResult).Methods("POST", "OPTIONS")
 
 	// Used by orborus
 	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET", "POST")
@@ -5104,7 +5181,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories", shuffle.GetActiveCategories).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/deactivate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
@@ -5184,6 +5261,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
+
+	// This structure is horrendous. Needs fixing after we got the prototype up
+	r.HandleFunc("/api/v1/detections", shuffle.HandleListDetectionCategories).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}", shuffle.HandleGetDetectionRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/selected_rules/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
 
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
@@ -5327,6 +5414,7 @@ func main() {
 	if innerPort == "" {
 		log.Printf("[DEBUG] Running on %s:5001", hostname)
 		log.Fatal(http.ListenAndServe(":5001", nil))
+		os.Setenv("BACKEND_PORT", "5001")
 	} else {
 		log.Printf("[DEBUG] Running on %s:%s", hostname, innerPort)
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", innerPort), nil))

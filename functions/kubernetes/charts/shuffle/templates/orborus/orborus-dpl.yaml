@@ -88,8 +88,26 @@ spec:
               value: "true"
             - name: SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME
               value: {{ include "shuffle.worker.serviceAccount.name" . }}
+            - name: SHUFFLE_APP_EXPOSED_PORT
+              value: {{ .Values.app.exposedContainerPort | quote }}
+            {{- if .Values.worker.podSecurityContext.enabled }}
+            - name: SHUFFLE_WORKER_POD_SECURITY_CONTEXT
+              value: {{ omit .Values.worker.podSecurityContext "enabled" | mustToJson | quote }}
+            {{- end }}
+            {{- if .Values.worker.containerSecurityContext.enabled }}
+            - name: SHUFFLE_WORKER_CONTAINER_SECURITY_CONTEXT
+              value: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.worker.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+            {{- end }}
             - name: SHUFFLE_APP_SERVICE_ACCOUNT_NAME
               value: {{ include "shuffle.app.serviceAccount.name" . }}
+            {{- if .Values.app.podSecurityContext.enabled }}
+            - name: SHUFFLE_APP_POD_SECURITY_CONTEXT
+              value: {{ omit .Values.app.podSecurityContext "enabled" | mustToJson | quote }}
+            {{- end }}
+            {{- if .Values.app.containerSecurityContext.enabled }}
+            - name: SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT
+              value: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.app.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+            {{- end }}
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
@@ -110,8 +128,6 @@ spec:
           resources: {{- include "common.resources.preset" (dict "type" .Values.orborus.resourcesPreset) | nindent 12 }}
           {{- end }}
           ports:
-            - name: http
-              containerPort: {{ .Values.orborus.containerPorts.http }}
             {{- if .Values.orborus.extraContainerPorts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraContainerPorts "context" $) | nindent 12 }}
             {{- end }}
@@ -120,25 +136,16 @@ spec:
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customLivenessProbe "context" $) | nindent 12 }}
           {{- else if .Values.orborus.livenessProbe.enabled }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.livenessProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: /
-              port: {{ .Values.orborus.containerPorts.http }}
           {{- end }}
           {{- if .Values.orborus.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customReadinessProbe "context" $) | nindent 12 }}
           {{- else if .Values.orborus.readinessProbe.enabled }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.readinessProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: /
-              port: {{ .Values.orborus.containerPorts.http }}
           {{- end }}
           {{- if .Values.orborus.customStartupProbe }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.customStartupProbe "context" $) | nindent 12 }}
           {{- else if .Values.orborus.startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.orborus.startupProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: /
-              port: {{ .Values.orborus.containerPorts.http }}
           {{- end }}
           {{- end }}
           {{- if .Values.orborus.lifecycleHooks }}

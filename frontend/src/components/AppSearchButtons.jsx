@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import theme from '../theme.jsx';
+import React, { useState, useEffect, useRef, useContext } from "react";
+import {getTheme} from '../theme.jsx';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from 'react-router-dom';
 import { isMobile } from 'react-device-detect';
@@ -36,9 +36,12 @@ import {
     IconButton,
 } from '@mui/material';
 
+import { Context } from "../context/ContextApi.jsx";
+
 const AppSearchButtons = (props) => {
     const { userdata, globalUrl, appFramework, moreButton, finishedApps, appType, totalApps, index, onNodeSelect, setDiscoveryData, appName, AppImage, setDefaultSearch, discoveryData, checkLogin, setMissing, getAppFramework, } = props
-
+    const { themeMode } = useContext(Context);
+    const theme = getTheme(themeMode);
     const ref = useRef()
     let navigate = useNavigate();
 
@@ -88,7 +91,7 @@ const AppSearchButtons = (props) => {
 
     const foundApp = findSpecificApp(appFramework, appType)
     if (foundApp === undefined || foundApp === null) {
-        console.log("AppSearchButtons: App not found in appFramework: " + appType)
+        //console.log("AppSearchButtons: App not found in appFramework: " + appType)
         return null
     }
 
@@ -195,13 +198,13 @@ const AppSearchButtons = (props) => {
                         zIndex: 100,
                         borderRadius: 6,
                         border: "1px solid var(--Container-Stroke, #494949)",
-                        background: "var(--Container, #212121)",
+                        background: theme.palette.platformColor,
                         boxShadow: "8px 8px 32px 24px rgba(0, 0, 0, 0.16)",
                     }}
                 >
                     <div style={{ display: "flex" }}>
                         <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize" }}>
-                            <Typography style={{ padding: 16, color: "#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
+                            <Typography color="textPrimary" style={{ padding: 16, textTransform: "capitalize" }}> {discoveryData} </Typography>
                         </div>
                         <div style={{ display: "flex" }}>
                             <Tooltip
@@ -288,17 +291,17 @@ const AppSearchButtons = (props) => {
                 </div>
             ) : null}
             <div style={{
-                display: "flex", height: 70, border: isHover ? "1px solid #f85a3e" : "var(--Container, #212121)", borderRadius: 8, background: isHover ? "var(--Container, #212121)" : "var(--Container, #212121)",
+                display: "flex", height: 70, border: isHover ? "1px solid #f85a3e" : "var(--Container, #212121)", borderRadius: 4, background: isHover ? "var(--Container, #212121)" : "var(--Container, #212121)",
                 alignItems: "center", justifyContent: "center",
             }}
             >
                 <Button
                     fullWidth
-                    color="secondary"
                     style={{
                         height: "100%",
                         width: "100%",
-                        display: "grid"
+                        display: "grid",
+                        backgroundColor: themeMode === "dark" ? "#212121" : "#F5F5F5",
                     }}
                     onClick={(event) => {
                         if (onNodeSelect !== undefined) {

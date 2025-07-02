@@ -1,7 +1,8 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import React, { useRef, useState, useEffect, useLayoutEffect, useContext } from "react";
+import { Context } from "../context/ContextApi.jsx";
 import { toast } from 'react-toastify';
 import { useParams, useNavigate, Link } from "react-router-dom";
-import theme from '../theme.jsx';
+import { getTheme } from '../theme.jsx';
 //import { useAlert 
 
 import { v4 as uuidv4 } from "uuid";
@@ -112,6 +113,8 @@ const AuthenticationOauth2 = (props) => {
       authenticationType.client_secret !== null &&
       authenticationType.client_secret.length > 0
   );	
+  const {themeMode, brandColor} = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
   const [clientId, setClientId] = React.useState(defaultConfigSet ? authenticationType.client_id : "");
   const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "");
@@ -724,7 +727,7 @@ const AuthenticationOauth2 = (props) => {
 							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 							src={selectedAction.large_image}
 						/>
-						<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
+						<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5, color: "#2f2f2f",}} variant="body1">
 							One-click Login
 						</Typography>
 					</span>
@@ -738,7 +741,7 @@ const AuthenticationOauth2 = (props) => {
   return (
     <div>
       <DialogTitle>
-        <div style={{ color: "white" }}>
+        <div style={{ color: theme.palette.text.primary }}>
           Authenticate {selectedApp.name.replaceAll("_", " ")}
         </div>
       </DialogTitle>
@@ -749,7 +752,7 @@ const AuthenticationOauth2 = (props) => {
             target="_blank"
             rel="norefferer"
             href="/docs/apps#authentication"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
+            style={{ textDecoration: "none", color: theme.palette.linkColor}}
           >
             {" "}
             Learn more about Oauth2 with Shuffle

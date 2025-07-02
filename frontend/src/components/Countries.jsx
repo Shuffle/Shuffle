@@ -142,7 +142,6 @@ const countries = [
     suggested: true,
   },
   { code: 'GA', label: 'Gabon', phone: '241' },
-  { code: 'GB', label: 'United Kingdom', phone: '44' },
   { code: 'GD', label: 'Grenada', phone: '1-473' },
   { code: 'GE', label: 'Georgia', phone: '995' },
   { code: 'GF', label: 'French Guiana', phone: '594' },
@@ -178,7 +177,6 @@ const countries = [
   { code: 'IE', label: 'Ireland', phone: '353' },
   { code: 'IL', label: 'Israel', phone: '972' },
   { code: 'IM', label: 'Isle of Man', phone: '44' },
-  { code: 'IN', label: 'India', phone: '91' },
   {
     code: 'IO',
     label: 'British Indian Ocean Territory',
@@ -390,12 +388,6 @@ const countries = [
   },
   { code: 'UA', label: 'Ukraine', phone: '380' },
   { code: 'UG', label: 'Uganda', phone: '256' },
-  {
-    code: 'US',
-    label: 'United States',
-    phone: '1',
-    suggested: true,
-  },
   { code: 'UY', label: 'Uruguay', phone: '598' },
   { code: 'UZ', label: 'Uzbekistan', phone: '998' },
   {

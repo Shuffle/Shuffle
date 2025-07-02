@@ -1,5 +1,5 @@
 import React, { useEffect, useContext } from "react";
-import theme from '../theme.jsx';
+import { getTheme } from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import { MuiChipsInput } from "mui-chips-input";
 import { toast } from "react-toastify"
@@ -46,7 +46,7 @@ import {
 	Slider,
 
 } from "@mui/material";
-
+import { Context } from "../context/ContextApi.jsx";
 import {
 	DatePicker,
 	LocalizationProvider,
@@ -69,7 +69,8 @@ const EditWorkflow = (props) => {
 	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, setRealtimeMarkdown, boxWidth, setBoxWidth, } = props
 
 	const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
-
+	const {themeMode, brandColor} = useContext(Context)
+	const theme = getTheme(themeMode, brandColor)
 	const [submitLoading, setSubmitLoading] = React.useState(false);
 	const [showMoreClicked, setShowMoreClicked] = React.useState(isEditing !== false ? true : false);
 
@@ -187,7 +188,7 @@ const EditWorkflow = (props) => {
 	}
 
 	const newWorkflow = isEditing === true ? false : true
-	const priority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+	const priority = userdata === undefined || userdata === null || userdata.priorities === null || userdata.priorities === undefined ? null : userdata?.priorities?.find(prio => prio.type === "usecase" && prio.active === true)
 	var upload = "";
 	var total_count = 0
 
@@ -203,26 +204,24 @@ const EditWorkflow = (props) => {
 				setModalOpen(false);
 			}}
 			PaperProps={{
-				style: {
-					color: "white",
-					minWidth: isMobile ? "90%" : 650,
-					maxWidth: isMobile ? "90%" : 650,
-					minHeight: 400,
-					paddingTop: 25,
-					paddingLeft: 50,
+				sx: {
+					color: theme.palette.DialogStyle.color,
+					minWidth: isMobile ? "90%" : "650px",
+					maxWidth: isMobile ? "90%" : "650px",
+					minHeight: "400px",
 					//minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 					//maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
-		    		borderRadius: theme.palette.borderRadius,
-		    		backgroundColor: "black",
+		    		borderRadius: theme.palette.DialogStyle.borderRadius,
+		    		backgroundColor: themeMode === "dark" ? "black" :  theme?.palette?.DialogStyle?.backgroundColor,
 				},
 			}}
 		>
-			<DialogTitle style={{ padding: 30, paddingBottom: 0, zIndex: 1000, }}>
+			<DialogTitle style={{ padding: 30, paddingBottom: 0, zIndex: 1000, paddingTop: "25px", paddingLeft: "50px"}}>
 				<div style={{ display: "flex" }}>
-					<div style={{ flex: 1, color: "rgba(255,255,255,0.9)" }}>
+					<div style={{ flex: 1, color: theme.palette.textColor }}>
 						<div style={{ display: "flex" }}>
-							<Typography variant="h4" style={{ flex: 9, }}>
-								{newWorkflow ? "New" : "Editing"} workflow
+							<Typography variant="h4" style={{ flex: 9, marginTop: 25, }}>
+								{newWorkflow ? "New" : "Editing"} Workflow
 							</Typography>
 
 							{newWorkflow === true ? null :
@@ -248,7 +247,7 @@ const EditWorkflow = (props) => {
 
 						</div>
 						<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, maxWidth: 440, }}>
-							Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
+							Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color:theme.palette.linkColor }}>Learn more</a>
 						</Typography>
 
 						<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
@@ -288,20 +287,21 @@ const EditWorkflow = (props) => {
 			</DialogTitle>
 			<FormControl>
 				<div style={{ 
-					borderTop: "1px solid rgba(255,255,255,0.5)", 
+					borderTop: theme.palette.defaultBorder, 
 					width: 600, 
 					position: "fixed", 
 					right: 20, 
 					bottom: 0, 
 					zIndex: 1002, 
-					backgroundColor: theme.palette.backgroundColor,
 					height: 75, 
 					paddingTop: 20, 
-					paddingLeft: 75, 
+					paddingLeft: 30, 
+					backgroundColor: themeMode === "dark" ? "#262626" :  theme.palette.DialogStyle.backgroundColor,
 				}}>
 					<Button
 						variant="contained"
 						style={{}}
+						id="save_workflow_button"
 						disabled={name.length === 0 || submitLoading === true}
 						onClick={() => {
 							setSubmitLoading(true)
@@ -387,7 +387,7 @@ const EditWorkflow = (props) => {
 					</Button>
 				</div>
 
-				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, }}>
+				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 400, paddingLeft: 50, }}>
 					<div style={{ minWidth: newWorkflow ? 500 : 550, maxWidth: newWorkflow ? 450 : 500, }}>
 						<TextField
 							onChange={(event) => {
@@ -395,7 +395,7 @@ const EditWorkflow = (props) => {
 							}}
 							InputProps={{
 								style: {
-									color: "white",
+									color: theme.palette.textFieldStyle.color,
 								},
 							}}
 							color="primary"
@@ -406,6 +406,7 @@ const EditWorkflow = (props) => {
 							label="Name"
 							autoFocus
 							fullWidth
+							id="Enter-Workflow-Name"
 						/>
 
 						<div style={{ display: "flex", marginTop: 10, }}>
@@ -467,7 +468,7 @@ const EditWorkflow = (props) => {
 								style={{ flex: 1, maxHeight: 120, overflow: "auto", }}
 								InputProps={{
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 									},
 								}}
 								placeholder="Tags"
@@ -543,6 +544,8 @@ const EditWorkflow = (props) => {
 											}}
 										>
 											<FormControlLabel value="test" control={<Radio />} label="Test" />
+											<FormControlLabel value="staging" control={<Radio />} label="Staging" />
+											<FormControlLabel value="preprod" control={<Radio />} label="Pre-production" />
 											<FormControlLabel value="production" control={<Radio />} label="Production" />
 
 										</RadioGroup>
@@ -577,12 +580,20 @@ const EditWorkflow = (props) => {
 								<Typography variant="h4" style={{ marginTop: 50, }}>
 									Multi-Tenancy, Backups & Security
 								</Typography>
-
 								<Typography variant="body2" color="textSecondary" style={{ marginTop: 30, marginBottom: 10, }}>
-									Multi-Tenant Workflows. Make one workflow, and keep a separate, synced copy in all your tenants. Control distributed auth, runtime locations, files, datastore keys etc. (contact support@shuffler.io if you want a demo. Please try it!)
+									Control mechanisms for multi-tenancy, backups, and security.
 								</Typography>
 
-								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
+								<Typography variant="h6" style={{ marginTop: 50, }}>
+									Multi-Tenant Workflows
+								</Typography>
+
+								<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, marginBottom: 10, }}>
+									Make one workflow, and keep a separate, synced copy in your other tenants. Control distributed auth, runtime locations, files, datastore keys etc. Can only distribute from parent org to child org. Need help trying it? <a href="https://shuffler.io/contact" target="_blank" style={{color: "#f85a3e", textDecoration: "none",}}>Contact us for a demo</a>
+								</Typography>
+
+								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0  ?
+
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
 											<Typography variant="body2" style={{ marginTop: 10, color: "rgba(255,255,255,0.7)" }}>
@@ -600,6 +611,7 @@ const EditWorkflow = (props) => {
 											multiple
 											style={{ marginTop: 10, }}
 											value={innerWorkflow.suborg_distribution === undefined || innerWorkflow.suborg_distribution === null ? ["none"] : innerWorkflow.suborg_distribution}
+											disabled={workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0}
 											onChange={(e) => {
 												var newvalue = e.target.value
 												if (newvalue.length > 1 && newvalue[0] === "none") {
@@ -1274,7 +1286,7 @@ const EditWorkflow = (props) => {
 
 
 				{newWorkflow === true ?
-					<span style={{ marginTop: 30, }}>
+					<span style={{ paddingTop: 30 }}>
 						<Typography variant="h6" style={{ marginLeft: 30, paddingBottom: 0, }}>
 							Relevant Workflows
 						</Typography>

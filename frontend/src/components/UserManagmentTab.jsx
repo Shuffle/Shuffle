@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, memo } from "react";
 import { toast } from 'react-toastify';
-
+import { Context } from "../context/ContextApi.jsx";
 import {
     FormControl,
     InputLabel,
@@ -35,7 +35,7 @@ import {
 import ModeEditOutlineOutlinedIcon from '@mui/icons-material/ModeEditOutlineOutlined';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
 const MenuProps = {
@@ -75,12 +75,16 @@ const UserManagmentTab = memo((props) => {
     const [logsViewModal, setLogsViewModal] = React.useState(false);
     const [ipSelected, setIpSelected] = React.useState("");
     const [userLogViewing, setUserLogViewing] = React.useState({});
+    const { themeMode, supportEmail, brandColor } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor);
+
 
     useEffect(() => {
         if (selectedOrganization?.mfa_required !== MFARequired) {
           setMFARequired(selectedOrganization?.mfa_required);
         }
       }, [selectedOrganization]);
+
     useEffect(() => { if(users?.length === 0){
         getUsers();
     } }, []);
@@ -248,6 +252,14 @@ const UserManagmentTab = memo((props) => {
             return;
         }
 
+		if (event.target.value.includes("ALL")) {
+			toast.info("Adding to available all sub-organizations. This may take a minute.")
+			event.target.value = selectedOrganization.child_orgs.map((org) => org.id)
+		} else if (event.target.value.includes("None")) { 
+			toast.info("Removing from all sub-organizations. This may take a minute")
+			event.target.value = []
+		}
+
         console.log("event: ", event.target.value);
         setMatchingOrganizations(event.target.value);
         // Workaround for empty orgs
@@ -286,6 +298,14 @@ const UserManagmentTab = memo((props) => {
                     }}
                     MenuProps={MenuProps}
                 >
+					<MenuItem key={-2} value={"None"}>
+						<Checkbox checked={false} />
+						<ListItemText primary={"None"} />
+					</MenuItem>
+					<MenuItem key={-1} value={"ALL"}>
+						<Checkbox checked={false} />
+						<ListItemText primary={"ALL"} />
+					</MenuItem>
                     {selectedOrganization.child_orgs.map((org, index) => (
                         <MenuItem key={index} value={org.id}>
                             <Checkbox checked={matchingOrganizations.indexOf(org.id) > -1} />
@@ -347,7 +367,7 @@ const UserManagmentTab = memo((props) => {
                     toast("Failed to deactivate user: " + responseJson.reason);
                 } else if (responseJson.success === false) {
                     toast(
-                        "Failed to deactivate user. Please contact support@shuffler.io if this persists.",
+                        `Failed to deactivate user. Please contact ${supportEmail} if this persists.`,
                     );
                 } else {
                     toast("Changed activation for user " + data.id);
@@ -586,7 +606,7 @@ const UserManagmentTab = memo((props) => {
                   }}
             >
             <DialogTitle>
-                <Typography style={{ color: "white", textTransform: 'none', fontSize: 24 }}>
+                <Typography variant="h5" style={{ textTransform: 'none', fontSize: 24 }}>
                     Add user
                 </Typography>
             </DialogTitle>
@@ -603,7 +623,7 @@ const UserManagmentTab = memo((props) => {
                         InputProps={{
                             style: {
                                 height: "50px",
-                                color: "white",
+                                color: theme.palette.textFieldStyle.color,
                                 fontSize: "1em",
                             },
                         }}
@@ -636,7 +656,7 @@ const UserManagmentTab = memo((props) => {
                                 InputProps={{
                                     style: {
                                         height: "50px",
-                                        color: "white",
+                                        color: theme.palette.textFieldStyle.color,
                                         fontSize: "1em",
                                     },
                                 }}
@@ -666,17 +686,17 @@ const UserManagmentTab = memo((props) => {
                 </div>
                 {loginInfo}
             </DialogContent>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 2, backgroundColor: "#212121" }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 2, backgroundColor: theme.palette.platformColor }}>
                 <Button
-                    style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#ff8544", marginRight: 5 }}
+                    style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginRight: 5,  color: theme.palette.primary.main }}
                     onClick={() => setModalOpen(false)}
-                    color="primary"
                 >
                     Cancel
                 </Button>
                 <Button
                     variant="contained"
-                    style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544" }}
+                    color="primary"
+                    style={{ borderRadius: "2px", textTransform: 'none', fontSize:16,}}
                     onClick={() => {
                         if (isCloud) {
                             inviteUser(modalUser);
@@ -684,7 +704,6 @@ const UserManagmentTab = memo((props) => {
                             submitUser(modalUser);
                         }
                     }}
-                    color="primary"
                 >
                     Submit
                 </Button>
@@ -735,7 +754,7 @@ const UserManagmentTab = memo((props) => {
               }}
         >
             <DialogTitle style={{ maxWidth: "800px", width: "100%", textAlign: "center", margin: "auto", backgroundColor: theme?.palette?.DialogStyle?.backgroundColor}}>
-                <span style={{ color: "white", backgroundColor: theme?.palette?.DialogStyle?.backgroundColor }}>
+                <span style={{ color: theme.palette.text.primary, backgroundColor: theme?.palette?.DialogStyle?.backgroundColor }}>
                     <EditIcon style={{ marginTop: 5 }} /> Editing {selectedUser.username}
                 </span>
             </DialogTitle>
@@ -752,7 +771,7 @@ const UserManagmentTab = memo((props) => {
                             InputProps={{
                                 style: {
                                     height: 50,
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
                                 },
                             }}
                             color="primary"
@@ -795,7 +814,7 @@ const UserManagmentTab = memo((props) => {
                             InputProps={{
                                 style: {
                                     height: 50,
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
                                 },
                             }}
                             color="primary"
@@ -829,9 +848,10 @@ const UserManagmentTab = memo((props) => {
                         backgroundColor: theme.palette.inputColor,
                     }}
                 />
-                <div style={{ margin: "auto", maxWidth: 450 }}>
-                    <Button
-                        style={{textTransform: 'none', fontSize: 16}}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: "auto", maxWidth: 450 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                        <Button
+                        style={{textTransform: 'none', fontSize: 16, whiteSpace: 'nowrap', textWrap: 'nowarp'}}
                         variant="outlined"
                         color="primary"
                         disabled={selectedUser.username === userdata.username}
@@ -843,7 +863,7 @@ const UserManagmentTab = memo((props) => {
                         {selectedUser.active ? "Delete from org" : "Delete from org"}
                     </Button>
                     <Button
-                        style={{ textTransform: 'none', fontSize: 16 }}
+                        style={{ textTransform: 'none', fontSize: 16, whiteSpace: 'nowrap', textWrap: 'nowarp',  }}
                         variant="outlined"
                         color="primary"
                         disabled={
@@ -864,7 +884,7 @@ const UserManagmentTab = memo((props) => {
                         }
                         variant="outlined"
                         color="primary"
-                        style={{textTransform: 'none', fontSize: 16}}
+                        style={{textTransform: 'none', fontSize: 16, whiteSpace: 'nowrap', textWrap: 'nowarp', }}
                     >
                         {selectedUser.mfa_info !== undefined &&
                             selectedUser.mfa_info !== null &&
@@ -872,6 +892,7 @@ const UserManagmentTab = memo((props) => {
                             ? "Disable 2FA"
                             : "Enable 2FA"}
                     </Button>
+                    </div>
 
                     {isCloud && userdata.support && selectedUser.id !== userdata.id ? (
                         <Button
@@ -881,6 +902,8 @@ const UserManagmentTab = memo((props) => {
                                 marginTop: 50,
                                 border: "1px solid #d52b2b",
                                 textTransform: "none",
+                                whiteSpace: 'nowrap',
+                                textWrap: 'nowarp',
                                 color:
                                     showDeleteAccountTextbox === true &&
                                         deleteAccountText?.length > 0 &&
@@ -932,7 +955,7 @@ const UserManagmentTab = memo((props) => {
                             InputProps={{
                                 style: {
                                     height: 50,
-                                    color: "white",
+                                    color: theme.palette.textFieldStyle.color,
                                 },
                             }}
                             color="primary"
@@ -1003,7 +1026,7 @@ const UserManagmentTab = memo((props) => {
                                 InputProps={{
                                     style: {
                                         height: 50,
-                                        color: "white",
+                                        color: theme.palette.textFieldStyle.color,
                                         fontSize: "1em",
                                     },
                                     maxLength: 6,
@@ -1111,7 +1134,7 @@ const UserManagmentTab = memo((props) => {
         }}
         >
           <DialogTitle>
-            <span style={{ color: "white" }}>User Logs</span>
+            <span style={{ color: theme.palette.text.primary }}>User Logs</span>
           </DialogTitle>
           <DialogContent>
             {/* ask user for which IP they want to see logs for by iterating of user.login_info */}
@@ -1253,23 +1276,23 @@ const UserManagmentTab = memo((props) => {
       ) : null
 
     return (
-        <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121',borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
+        <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
             {modalView}
             {editUserModal}
             {logview}
-            <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
-            <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin' }}>
+            <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
+            <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
                 <div style={{display: 'flex', justifyContent: 'space-between'}}>
             <div>
                 <div style={{ marginBottom: 20 }}>
-                    <h2 style={{ marginBottom: 8, marginTop: 0, color: "#FFFFFF" }}>User Management</h2>
-                    <span style={{ color: "#9E9E9E" }}>
+                    <Typography variant="h5" style={{ marginBottom: 8, marginTop: 0,  }}>User Management</Typography>
+                    <Typography variant="body2" color="textSecondary">
                         Add, edit, distribute or remove users from your organization.{" "}
 						<a
                             target="_blank"
                             rel="noopener noreferrer"
                             href="/admin?admin_tab=sso"
-                            style={{ color: "#FF8444" }}
+                            style={{ color: theme.palette.linkColor }}
                         >
 							Configure SSO
                         </a> 
@@ -1280,15 +1303,15 @@ const UserManagmentTab = memo((props) => {
                             target="_blank"
                             rel="noopener noreferrer"
                             href="/docs/organizations#user_management"
-                            style={{ color: "#FF8444" }}
+                            style={{ color: theme.palette.linkColor }}
                         >
                             learn more about users 
                         </a> 
-                    </span>
+                    </Typography>
                 </div>
                 <div />
                 <Button
-                    style={{ color: "#1a1a1a", backgroundColor: "#ff8544",fontSize: 16, textTransform: 'none', borderRadius: 4, width: 162, height: 40, boxShadow: 'none' }}
+                    style={{ fontSize: 16, textTransform: 'none', borderRadius: 4, width: 162, height: 40, boxShadow: 'none' }}
                     variant="contained"
                     color="primary"
                     onClick={() => setModalOpen(true)}
@@ -1296,9 +1319,9 @@ const UserManagmentTab = memo((props) => {
                     Add user
                 </Button>
                 <Button
-                    style={{ backgroundColor: "#2F2F2F", boxShadow: 'none', borderRadius: 4, width: 81, height: 40, marginLeft: 16, marginRight: 15 }}
+                    style={{ boxShadow: 'none', borderRadius: 4, width: 81, height: 40, marginLeft: 16, marginRight: 15 }}
                     variant="contained"
-                    color="primary"
+                    color="secondary"
                     onClick={() => getUsers()}
                 >
                     <CachedIcon />
@@ -1318,7 +1341,7 @@ const UserManagmentTab = memo((props) => {
                 style={{
                 borderRadius: 4,
                 marginTop: 24,
-                border: "1px solid #494949",
+                border: theme.palette.defaultBorder,
                 width: "100%",
                 overflowX: "auto", 
                 paddingBottom: 0,
@@ -1334,8 +1357,8 @@ const UserManagmentTab = memo((props) => {
                     paddingBottom: 0,
                 }}
             >
-                <ListItem style={{ width: "100%", padding: "10px 10px 10px 0px", verticalAlign: 'middle', borderBottom: "1px solid #494949", display: "table-row" }}>
-                    {["Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
+                <ListItem style={{ width: "100%", padding: "10px 10px 10px 0px", verticalAlign: 'middle', borderBottom: theme.palette.defaultBorder, display: "table-row" }}>
+                    {[...(isCloud ? ["Region"] : []), "Username", /*"API Key",*/ "Role", /*"Active",*/ "Type", "MFA", ...(selectedOrganization?.child_orgs?.length > 0 ? ["Suborgs"]: []), "Actions", "Last Login"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -1344,7 +1367,7 @@ const UserManagmentTab = memo((props) => {
                                 padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
                                 whiteSpace: "nowrap",
                                 textOverflow: "ellipsis",
-                                borderBottom: "1px solid #494949",
+                                borderBottom: theme.palette.defaultBorder,
                                 position: "sticky",
                                 verticalAlign: "middle",
                              }}
@@ -1357,10 +1380,10 @@ const UserManagmentTab = memo((props) => {
                             key={rowIndex}
                             style={{
                                 display: "table-row",
-                                backgroundColor: "#212121",
+                                backgroundColor: theme.palette.platformColor,
                             }}
                         >
-                            {Array(9)
+                            {Array(isCloud ? 7 : 6)
                                 .fill()
                                 .map((_, colIndex) => (
                                     <ListItemText
@@ -1374,7 +1397,7 @@ const UserManagmentTab = memo((props) => {
                                             variant="text"
                                             animation="wave"
                                             sx={{
-                                                backgroundColor: "#1a1a1a",
+                                                backgroundColor: theme.palette.loaderColor,
                                                 height: "20px",
                                                 borderRadius: "4px",
                                             }}
@@ -1385,9 +1408,9 @@ const UserManagmentTab = memo((props) => {
                     ))
                 ): users === 0 ? null 
                     : users?.map((data, index) => {
-                        var bgColor = "#212121";
+                        var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
                         if (index % 2 === 0) {
-                            bgColor = "#1A1A1A";
+                            bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
                         }
 
                         const timeNow = new Date().getTime();
@@ -1418,8 +1441,7 @@ const UserManagmentTab = memo((props) => {
                                 style={{
                                 cursor: "pointer",
                                 textDecoration: "underline",
-                                textDecorationColor: "#F76742",
-                                color: "#F76742",
+                                color: theme.palette.linkColor,
                                 }}
                                 onClick={() => {
                                 setLogsViewModal(true);
@@ -1436,8 +1458,16 @@ const UserManagmentTab = memo((props) => {
                             );
                         }
 
+
+                        const userRegion =  data?.user_geo_info?.country?.iso_code
+
                         return (
                             <ListItem key={index} style={{ backgroundColor: bgColor, display: 'table-row', borderBottomLeftRadius: users?.length - 1 === index ? 8 : 0, borderBottomRightRadius: users?.length - 1 === index ? 8 : 0 }}>
+                                {isCloud ? (
+                                    <ListItemText
+                                    primary={(<img src={`https://flagcdn.com/48x36/${userRegion.toLowerCase()}.png`} alt={data?.user_geo_info?.country?.iso_code} style={{ marginRight: 30, width: 25, height: 23, }} />)}
+                                    style={{ display: 'table-cell', verticalAlign: 'middle', textAlign: 'center' }}
+                                />) : null}
                                 <ListItemText
                                 primary={(
                                     <Tooltip title={data.username || 'No username available'}>
@@ -1449,7 +1479,7 @@ const UserManagmentTab = memo((props) => {
                                     maxWidth: 150,
                                     minWidth: 100,
                                     width: 'auto',
-                                    color: "#FF8444",
+                                    color: theme.palette.primary.main,
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
                                     overflow: "hidden",
@@ -1506,8 +1536,8 @@ const UserManagmentTab = memo((props) => {
                                                 setUser(data.id, "role", e.target.value);
                                             }}
                                             sx={{
-                                                backgroundColor: "#1A1A1A",
-                                                color: "white",
+                                                backgroundColor: theme.palette.backgroundColor,
+                                                color: theme.palette.textColor,
                                                 height: "50px",
                                                 borderRadius: "4px",
                                                 marginTop: "8px",
@@ -1526,27 +1556,35 @@ const UserManagmentTab = memo((props) => {
                                         >
                                             <MenuItem
                                                 sx={{
-                                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                                    color: "white",
-                                                    
+                                                    backgroundColor: theme.palette.backgroundColor,
+                                                    color: theme.palette.textColor,
+                                                    "&:hover": {
+                                                        backgroundColor: theme.palette.hoverColor,
+                                                    },
                                                 }}
                                                 value={"admin"}
                                             >
                                                 Org Admin
                                             </MenuItem>
                                             <MenuItem
-                                                style={{
-                                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                                    color: "white",
+                                                sx={{
+                                                    backgroundColor: theme.palette.backgroundColor,
+                                                    color: theme.palette.textColor,
+                                                    "&:hover": {
+                                                        backgroundColor: theme.palette.hoverColor,
+                                                    },
                                                 }}
                                                 value={"user"}
                                             >
                                                 Org User
                                             </MenuItem>
                                             <MenuItem
-                                                style={{
-                                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                                    color: "white",
+                                                sx={{
+                                                    backgroundColor: theme.palette.backgroundColor,
+                                                    color: theme.palette.textColor,
+                                                    "&:hover": {
+                                                        backgroundColor: theme.palette.hoverColor,
+                                                    },
                                                 }}
                                                 value={"org-reader"}
                                             >
@@ -1557,10 +1595,12 @@ const UserManagmentTab = memo((props) => {
                                     style={{ display:'table-cell', verticalAlign: 'middle' }}
                                 />
 
+								{/*
                                 <ListItemText
                                     primary={data.active ? "True" : "False"}
                                     style={{display:'table-cell',verticalAlign: 'middle' , padding: "8px", textAlign: "center", color: data.active ? "#02CB70" : "#F53434" }}
                                 />
+								*/}
 
                                 <ListItemText
                                     primary={
@@ -1573,7 +1613,6 @@ const UserManagmentTab = memo((props) => {
                                     style={{  display:'table-cell',verticalAlign: 'middle', padding: "8px",  }}
                                 />
 
-								{/*
                                 <ListItemText
                                     primary={
                                         data?.mfa_info !== undefined &&
@@ -1584,7 +1623,6 @@ const UserManagmentTab = memo((props) => {
                                     }
                                     style={{ display:'table-cell', verticalAlign: 'middle',padding: "8px", color: data.mfa_info.active ? "#02CB70" : "#F53434" }}
                                 />
-								*/} 
 
                                 {selectedOrganization?.child_orgs !== undefined &&
                                     selectedOrganization?.child_orgs !== null &&
@@ -1648,7 +1686,20 @@ const UserManagmentTab = memo((props) => {
                                             }
                                         }}
                                     >
-                                        <img src="/icons/editIcon.svg" alt="edit icon" style={{width: 24, height: 24}} />
+                                        <svg
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                        <path
+                                            d="M16.1038 4.66848C16.3158 4.45654 16.5674 4.28843 16.8443 4.17373C17.1212 4.05903 17.418 4 17.7177 4C18.0174 4 18.3142 4.05903 18.5911 4.17373C18.868 4.28843 19.1196 4.45654 19.3315 4.66848C19.5435 4.88041 19.7116 5.13201 19.8263 5.40891C19.941 5.68582 20 5.9826 20 6.28232C20 6.58204 19.941 6.87882 19.8263 7.15573C19.7116 7.43263 19.5435 7.68423 19.3315 7.89617L8.43807 18.7896L4 20L5.21038 15.5619L16.1038 4.66848Z"
+                                            stroke={themeMode=== "dark" ? "#F1F1F1" : "#333"}
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                        </svg>
                                     </IconButton>
                                     {/* <Button
                                         onClick={() => {

@@ -280,7 +280,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
   return parsedValues;
 };
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, serverside, } = props;
 
@@ -1305,7 +1305,7 @@ const Apps = (props) => {
             		    if (queryID !== undefined && queryID !== null) {
             		      aa("init", {
             		        appId: "JNSS5CFDZZ",
-            		        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+            		        apiKey: "c8f882473ff42d41158430be09ec2b4e",
             		      });
 
             		      const timestamp = new Date().getTime();
@@ -2036,7 +2036,7 @@ const Apps = (props) => {
                     if (queryID !== undefined && queryID !== null) {
                       aa('init', {
                         appId: "JNSS5CFDZZ",
-                        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+                        apiKey: "c8f882473ff42d41158430be09ec2b4e",
                       })
 
                       const timestamp = new Date().getTime()

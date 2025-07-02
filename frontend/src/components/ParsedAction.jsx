@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
+import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { NestedMenuItem } from "mui-nested-menu";
 import { parsedDatatypeImages } from "../components/AppFramework.jsx";
 import { green, yellow, red } from "../views/AngularWorkflow.jsx"
 //import { useAlert 
-
+import { Context } from "../context/ContextApi.jsx";
 import {
 	Chip,
 	ButtonGroup,
@@ -179,6 +179,7 @@ const ParsedAction = (props) => {
 
 		suborgWorkflows,
 		originalWorkflow,
+		runFromHere,
 	} = props;
 
 	let navigate = useNavigate()
@@ -214,6 +215,9 @@ const ParsedAction = (props) => {
 		}
 	}, [expansionModalOpen])
 
+	const {themeMode, supportEmail} = useContext(Context)
+	const theme = getTheme(themeMode)
+
 	/*
 	useEffect(() => {
 		// This will have the OLD selectedAction, not the new one huh?
@@ -233,11 +237,16 @@ const ParsedAction = (props) => {
 		// auth, required, optional
 		var changed = false
 		if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
+			console.log("Returning because no params")
 			return
 		}
 
 		if (selectedApp !== undefined && selectedApp !== null && selectedApp.generated !== true) {
-			return
+
+			if (isAgent || isIntegration) {
+			} else {
+				return
+			}
 		}
 
 		// Fixing required fields with a shitty structure :)
@@ -346,12 +355,22 @@ const ParsedAction = (props) => {
 		// 3. generated fields & all else
 
 
-		const newparams = auth
+		var newparams = auth
 			.concat(bodyfield)
 			.concat(required)
 			.concat(generated_optional)
 			.concat(special_optional)
 			.concat(optional)
+
+		const dedupedParams = []
+		for (var paramKey in newparams) {
+			const param = newparams[paramKey]
+			if (dedupedParams.find(item => item.name === param.name) === undefined) {
+				dedupedParams.push(param)
+			}
+		}
+
+		newparams = dedupedParams
 
 		var newkeyorder = []
 		for (let paramkey in newparams) {
@@ -361,7 +380,7 @@ const ParsedAction = (props) => {
 		}
 
 		if (keyorder.join(",") !== newkeyorder.join(",")) {
-			console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
+			//console.log("KEYORDER CHANGED! DID ACTION AS WELL?", keyorder, newkeyorder)
 
 			setSelectedActionParameters(newparams)
 			selectedAction.parameters = newparams
@@ -666,11 +685,14 @@ const ParsedAction = (props) => {
 
 		// Process workflowExecutions
 		if (workflowExecutions.length > 0) {
+			var appended = false
+			var foundvalue = ""
 			for (let execution of workflowExecutions) {
 				const execArg = execution.execution_argument;
 				if (execArg && execArg.length > 0) {
 					const valid = validateJson(execArg);
 					if (valid.valid) {
+						appended = true 
 						newActionList.push({
 							type: "Runtime Argument",
 							name: "Runtime Argument",
@@ -681,8 +703,22 @@ const ParsedAction = (props) => {
 						})
 
 						break
+					} else {
+						foundvalue = execArg
 					}
 				}
+			}
+
+			if (!appended && foundvalue !== undefined && foundvalue !== "") {
+				newActionList.push({
+					type: "Runtime Argument",
+					name: "Runtime Argument",
+					highlight: "exec",
+					autocomplete: "exec",
+
+					value: foundvalue,
+					example: foundvalue,
+				})
 			}
 		}
 
@@ -772,6 +808,8 @@ const ParsedAction = (props) => {
 					}
 
 					labels.push(parentNode.label);
+
+					var secondaryExample = ""
 					let exampleData = parentNode.example ?? "";
 					if (parentNode?.app_name === "http") {
 						exampleData = ""
@@ -782,9 +820,22 @@ const ParsedAction = (props) => {
 							const foundResult = exec.results?.find(result => result?.action?.id === parentNode?.id);
 							if (foundResult) {
 								const valid = validateJson(foundResult.result);
-								if (valid.valid && valid.result.success !== false) {
-									exampleData = valid.result
-									break
+								if (valid.valid) {
+
+									// Check if array, and if first item is object + success
+									if (Array.isArray(valid.result) && valid.result.length > 0 && typeof valid.result[0] === "object") {
+										if (valid.result[0].success !== false) {
+											exampleData = valid.result
+											break
+										}
+									} else {
+										if (valid.result.success !== false) {
+											exampleData = valid.result
+											break
+										}
+									}
+								} else {
+									secondaryExample = foundResult.result
 								}
 							}
 						}
@@ -818,6 +869,10 @@ const ParsedAction = (props) => {
 								}
 							}
 						}
+					} 
+
+					if (exampleData === "" && secondaryExample !== "") {
+						exampleData = secondaryExample
 					}
 
 					if (parentNode.label === undefined) {
@@ -855,14 +910,48 @@ const ParsedAction = (props) => {
 				if (newActionList?.length > 0) {
 					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
 					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
+					
+					// Extract all variable references from paramvalue
+					// Examples of what it matches:
+					//   - Simple variables: $test, $myVar, $x
+					//   - Variables with underscores: $my_variable, $ok_ok, $testing_nice, $nice_try_man
+					//   - Workflow data access patterns: $not_customer_copy.body.subject.#, $not_customer.body.subject.text
+					//   - Deep nested properties: $email_action.response.items[0].sender.address
+
+					const variablePattern = /\$[a-zA-Z0-9_]+(?=\.|,|;|:|\s|"|'|`|\)|\]|\}|$)/g;
+					const foundVariables = paramvalue.match(variablePattern) || [];
+
 					notPresentAction?.forEach((action) => {
 						action = action.replace(" ", "_");
-						if (paramvalue.includes(action)) {
+						
+						// Check if the exact action is in the foundVariables list
+						if (foundVariables.includes(action)) {
 							errorVars.push(action);
-							// paramvalue = paramvalue.replace(action, "")
-							// paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
 						}
-					})
+					});
+					
+					// Check for variables that don't exist in the workflow at all
+					foundVariables.forEach(variable => {
+						// Skip checking for $ followed by system vars as exec and shuffle_cache.
+						if (variable.match(/\$(exec|shuffle_cache)/)) {
+							return;
+						}
+						// Create list of all valid action variables from newActionList
+						const newActionNames = newActionList?.map(action => "$" + action.name.toLowerCase()) || [];
+						
+						// Extract workflow and execution variables from newActionList
+						const workflowVars = newActionList
+							.filter(item => item.type === "workflow_variable" || item.type === "execution_variable")
+							.map(item => "$" + item.autocomplete.toLowerCase());
+						
+						// If the variable doesn't exist in any workflow actions, parent actions, newActionList, or extracted variables, show error
+						if (!actions.includes(variable) && 
+							!appParentActions.includes(variable) && 
+							!newActionNames.includes(variable) && 
+							!workflowVars.includes(variable.toLowerCase())) {
+							errorVars.push(variable);
+						}
+					});
 				}
 			}
 
@@ -1160,6 +1249,14 @@ const ParsedAction = (props) => {
 
 					selectedActionParameters[1].value = splitparsed[1]
 					selectedAction.parameters[1].value = splitparsed[1]
+
+					if (splitparsed.length >= 2) {
+						toast.warn("Filter list only supports filtering on the first list. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.", {
+							autoClose: 10000,
+						})
+					} else if (selectedAction.parameters[1].value.includes(".#")) {
+						toast.warn("This filter may not work due to using .# indexing. Please use the 'execute python' action and try the 'filter a list' function in the code editor.")
+					}
 				} else {
 					// Remove .# and after
 					const splitparsed = parsedvalue.split(".#")
@@ -1431,7 +1528,7 @@ const ParsedAction = (props) => {
 
 		// Helpertext for openapi fields
 		//if (helperText === "" && name === "body" && selectedApp.generated && selectedApp.activated) {
-		//	helperText = <span style={{color: "white", marginBottom: 5, marginleft: 5}}>
+		//	helperText = <span style={{color: theme.palette.text.primary, marginBottom: 5, marginleft: 5}}>
 		//}
 
 		return helperText
@@ -1500,7 +1597,7 @@ const ParsedAction = (props) => {
 		}
 
 		return <Paper style={{ padding: 10, backgroundColor: theme.palette.surfaceColor, border: "1px solid red", }}>
-			<Typography variant="body" style={{ color: "white", }}>
+			<Typography variant="body" style={{ color: theme.palette.text.primary, }}>
 				<b>Tip:</b> {suggestionText}
 			</Typography>
 		</Paper>
@@ -1566,7 +1663,7 @@ const ParsedAction = (props) => {
 					padding: 8,
 					paddingLeft: 14,
 					paddingBottom: 4,
-					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+					backgroundColor: hover ? theme.palette.hoverColor : theme.palette.textFieldStyle.backgroundColor,
 				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
 					onClick={(event) => {
 						// event.preventDefault()
@@ -1604,7 +1701,7 @@ const ParsedAction = (props) => {
 						<span style={{ marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
 					</div>
 					{extraDescription.length > 0 ?
-						<Typography variant="body2" color="textSecondary" style={{ marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block", }}>
+						<Typography variant="body2" style={{ marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block", color: theme.palette.textPrimary}}>
 							{extraDescription}
 						</Typography>
 						: null}
@@ -1678,14 +1775,14 @@ const ParsedAction = (props) => {
 								}}
 							>
 								<Tooltip title={"App: " + selectedAction.app_name + ". Click to open in new tab"} placement="top">
-									<a href={"/apps/" + selectedAction?.app_id} target="_blank" style={{ textDecoration: "none", color: "white", }}>
+									<a href={"/apps/" + selectedAction?.app_id} target="_blank" style={{ textDecoration: "none", color: theme.palette.textPrimary, }}>
 										<img src={selectedAppIcon} style={{
 											width: 30,
 											height: 30,
 											marginRight: 10,
 											borderRadius: 5,
 											marginTop: 13,
-											border: "2px solid rgba(255,255,255,0.3)",
+											border: themeMode === "dark" ? "2px solid rgba(255,255,255,0.3)" : "2px solid rgba(0, 0, 0, 0.1)",
 										}} />
 									</a>
 								</Tooltip>
@@ -1749,7 +1846,7 @@ const ParsedAction = (props) => {
 										title="See previous results for this action"
 										placement="top"
 									>
-										<ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+										<ArrowLeftIcon style={{ color: theme.palette.textPrimary }} />
 									</Tooltip>
 								</IconButton>
 								<IconButton
@@ -1769,7 +1866,7 @@ const ParsedAction = (props) => {
 										title="Find app documentation"
 										placement="top"
 									>
-										<DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+										<DescriptionIcon style={{ color: theme.palette.textPrimary }} />
 									</Tooltip>
 								</IconButton>
 
@@ -1803,10 +1900,42 @@ const ParsedAction = (props) => {
 										{autoCompleting ?
 											<CircularProgress style={{ height: 20, width: 20, }} />
 											:
-											<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+											<AutoFixHighIcon style={{ color: theme.palette.textPrimary, height: 24, }} />
 										}
 									</Tooltip>
 								</IconButton>
+
+								<Tooltip
+									title={
+										<Typography variant="body2" style={{margin: 3, }}>
+											Rerun this action with results from previous executions. Built for testing individual actions in the middle of workflows.
+										</Typography>
+									}
+									placement="top"
+								>
+									<Button
+										color="secondary"
+										variant="outlined"
+										style={{
+											marginTop: "auto",
+											marginBottom: "auto",
+											height: 30,
+											marginLeft: 98,
+											textTransform: "none",
+										}}
+										disabled={autoCompleting}
+										onClick={() => {
+											if (runFromHere !== undefined) {
+												runFromHere(selectedAction)
+											} else {
+												toast.error(`Function not available. Please contact ${supportEmail}`)
+											}
+										}}
+									>
+										<PlayArrowIcon style={{marginRight: 5, }}/>
+										Rerun	
+									</Button>
+								</Tooltip>
 
 								{(selectedAction?.generated === true && selectedAction?.app_version === "1.0.0") || (selectedAction?.app_name === "Shuffle Tools" && selectedAction?.app_version !== "1.2.0")  ? 
 									<Button
@@ -1847,6 +1976,12 @@ const ParsedAction = (props) => {
 								<Select
 									MenuProps={{
 										disableScrollLock: true,
+										PaperProps: {
+											sx: {
+												"&. MuiList-root": {
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+												}
+											}}
 									}}
 									value={selectedAction.app_version}
 									onChange={(event) => {
@@ -1869,12 +2004,11 @@ const ParsedAction = (props) => {
 										toast.success("Changed version of all nodes to " + event.target.value)
 									}}
 									style={{
-										marginTop: 10,
-										backgroundColor: theme.palette.surfaceColor,
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
+										position: "absolute", 
+										top: 10, right: 10, 
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
 										height: 35,
-										marginleft: 10,
 										borderRadius: theme.palette?.borderRadius,
 									}}
 									SelectDisplayProps={{
@@ -1886,9 +2020,12 @@ const ParsedAction = (props) => {
 										return (
 											<MenuItem
 												key={index}
-												style={{
-													backgroundColor: theme.palette.inputColor,
-													color: "white",
+												sx={{
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													color: theme.palette.textFieldStyle.color,
+													"&:hover": {
+														backgroundColor: theme.palette.hoverColor,
+													},
 												}}
 												value={data.version}
 											>
@@ -1902,12 +2039,16 @@ const ParsedAction = (props) => {
 					</div>
 					<div style={{ display: "flex" }}>
 						<div style={{ flex: 5 }}>
-							<Typography style={{ color: "rgba(255,255,255,0.7)" }}>Name</Typography>
+							<Typography style={{ color: theme.palette.textPrimary,}}>Name</Typography>
 							<TextField
 								style={theme.palette.textFieldStyle}
 								InputProps={{
-									style: theme.palette.innerTextfieldStyle,
 									disableUnderline: true,
+									style: {
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
+										height: 40,
+									},
 								}}
 								fullWidth
 								color="primary"
@@ -2126,10 +2267,10 @@ const ParsedAction = (props) => {
 								placement="top"
 							>
 								<span>
-									<Typography style={{ color: "rgba(255,255,255,0.7)" }}>Delay</Typography>
+									<Typography style={{ color: theme.palette.textPrimary }}>Delay</Typography>
 									<TextField
 										InputProps={{
-											style: theme.palette.innerTextfieldStyle,
+											style: theme.palette.textFieldStyle,
 											disableUnderline: true,
 										}}
 										disabled={selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0}
@@ -2188,7 +2329,7 @@ const ParsedAction = (props) => {
 
 				<div style={{ marginTop: 15, position: "relative", }}>
 					<div style={{display: "flex", }}>
-						<Typography style={{ color: "rgba(255,255,255,0.7)", flex: 10, }}>
+						<Typography style={{ color: theme.palette.textPrimary, flex: 10, }}>
 							Authentication
 						</Typography>
 
@@ -2241,7 +2382,7 @@ const ParsedAction = (props) => {
 						title={
 						workflow?.suborg_distribution?.length > 0 && Object.getOwnPropertyNames(selectedAction?.selectedAuthentication).length !== 0 ? (
 							<React.Fragment>
-								<div style={{padding: 10, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0)"}}>
+								<div style={{padding: 10, backgroundColor: theme.palette.textFieldStyle.backgroundColor, borderRadius: theme.palette.borderRadius, border: theme.palette.defaultBorder}}>
 									<FormControlLabel
 										control={
 											<Checkbox
@@ -2259,10 +2400,18 @@ const ParsedAction = (props) => {
 							</React.Fragment>
 						) : null
 					} placement="left">
-						<div style={{ display: "flex" }}>
+						<div style={{ display: "flex", }}>
 							<Select
 								MenuProps={{
 									disableScrollLock: true,
+									PaperProps: {
+										sx: {
+											'& .MuiList-root': {
+											  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											  color: theme.palette.textFieldStyle.color,
+											},
+										},
+									},
 								}}
 								labelId="select-app-auth"
 								value={
@@ -2344,17 +2493,20 @@ const ParsedAction = (props) => {
 									}
 								}}
 								style={{
-									backgroundColor: theme.palette.inputColor,
-									color: "white",
+									backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+									color: theme.palette.textFieldStyle.color,
 									height: 35,
 									maxWidth: rightsidebarStyle.maxWidth - 80,
 									borderRadius: theme.palette?.borderRadius,
 								}}
 							>
 								<MenuItem
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
+									sx={{ 
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
+										'&:hover': {
+											backgroundColor: theme.palette.textFieldStyle.hoverBackgroundColor, // you define this in your theme
+										  },
 									}}
 									value="No selection"
 								>
@@ -2368,11 +2520,14 @@ const ParsedAction = (props) => {
 									return (
 										<MenuItem
 											key={data.id}
-											style={{
-												backgroundColor: theme.palette.inputColor,
-												color: "white",
+											sx={{
+												backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+												color: theme.palette.textFieldStyle.color,
 												maxWidth: 500,
 												overflowX: "auto",
+												'&:hover': {
+													backgroundColor: theme.palette.hoverColor 
+												},
 											}}
 											value={data}
 										>
@@ -2380,7 +2535,7 @@ const ParsedAction = (props) => {
 											{data?.validation?.valid === true ?
 												<Tooltip title="Authentication has been validated" placement="top">
 													<Chip
-														style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, maxHeight: 25, }}
+														style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, maxHeight: 25, color: theme.palette.chipStyle.color, backgroundColor: theme.palette.chipStyle.backgroundColor }}
 														label={"Valid"}
 														variant="outlined"
 														color="secondary"
@@ -2389,7 +2544,7 @@ const ParsedAction = (props) => {
 												: null}
 											{data?.last_modified === true ?
 												<Chip
-													style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", maxHeight: 25, }}
+													style={{ marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", maxHeight: 25, color: theme.palette.chipStyle.color, backgroundColor: theme.palette.chipStyle.backgroundColor }}
 													label={"Latest"}
 													variant="outlined"
 													color="secondary"
@@ -2411,9 +2566,12 @@ const ParsedAction = (props) => {
 								<Divider style={{ marginTop: 10, marginBottom: 10, }} />
 
 								<MenuItem
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
+									sx={{
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textPrimary,
+										'&:hover': {
+											backgroundColor: theme.palette.hoverColor 
+										},
 									}}
 									value="authgroups"
 									disabled
@@ -2482,7 +2640,7 @@ const ParsedAction = (props) => {
             }}
             style={{
               backgroundColor: theme.palette.inputColor,
-              color: "white",
+              color: theme.palette.text.primary,
               height: "50px",
               borderRadius: theme.palette?.borderRadius,
             }}
@@ -2499,7 +2657,7 @@ const ParsedAction = (props) => {
                   key={data.Name}
                   style={{
                     backgroundColor: theme.palette.inputColor,
-                    color: "white",
+                    color: theme.palette.text.primary,
                   }}
                   value={data.Name}
                 >
@@ -2545,7 +2703,7 @@ const ParsedAction = (props) => {
 
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
 				<div style={{ marginTop: "20px" }}>
-					<Typography>Execution variable (optional)</Typography>
+					<Typography style={{color: theme.palette.textPrimary}}>Runtime variable (optional)</Typography>
 					<Select
 						MenuProps={{
 							disableScrollLock: true,
@@ -2578,7 +2736,7 @@ const ParsedAction = (props) => {
 						}}
 						style={{
 							backgroundColor: theme.palette.inputColor,
-							color: "white",
+							color: theme.palette.text.primary,
 							height: "50px",
 							borderRadius: theme.palette?.borderRadius,
 						}}
@@ -2586,7 +2744,7 @@ const ParsedAction = (props) => {
 						<MenuItem
 							style={{
 								backgroundColor: theme.palette.inputColor,
-								color: "white",
+								color: theme.palette.text.primary,
 							}}
 							value="No selection"
 						>
@@ -2597,7 +2755,7 @@ const ParsedAction = (props) => {
 							<MenuItem
 								style={{
 									backgroundColor: theme.palette.inputColor,
-									color: "white",
+									color: theme.palette.text.primary,
 								}}
 								value={data.name}
 							>
@@ -2650,8 +2808,8 @@ const ParsedAction = (props) => {
 						options={renderedActionOptions}
 						ListboxProps={{
 							style: {
-								backgroundColor: theme.palette.surfaceColor,
-								color: "white",
+								backgroundColor: theme.palette.platformColor,
+								color: theme.palette.textColor,
 							},
 						}}
 						filterOptions={(options, { inputValue }) => {
@@ -2682,7 +2840,7 @@ const ParsedAction = (props) => {
 						}}
 
 						style={{
-							backgroundColor: theme.palette.backgroundColor,
+							backgroundColor: theme.palette.cardBackgroundColor,
 							height: 35,
 							borderRadius: theme.palette?.borderRadius,
 						}}
@@ -2798,7 +2956,8 @@ const ParsedAction = (props) => {
 							const actionDescription = null
 
 							return (
-								<Tooltip title={actionDescription}
+								<Tooltip 
+									title={actionDescription}
 									placement="right"
 									open={!hiddenDescription}
 									PopperProps={{
@@ -2821,10 +2980,18 @@ const ParsedAction = (props) => {
 										dataLPIgnore="true"
 										autoComplete="off"
 
-										color="primary"
+										
 										id="checkbox-search"
-										variant="body1"
-										style={theme.palette.textFieldStyle}
+										style={{
+											...theme.palette.textFieldStyle,
+											border: selectedAction?.parent_controlled === true && workflow?.parentorg_workflow?.length > 0 ? `1px dotted ${theme.palette.distributionColor}` : "inherit",
+										}}
+										inputProps={{
+											...params.inputProps,
+											style: {
+												color: theme.palette.textFieldStyle.color,
+											},
+										}}
 										label={isIntegration ? "Choose a category" : "Find Actions"}
 										variant="outlined"
 										name={`disable_autocomplete_${Math.random()}`}
@@ -2838,12 +3005,12 @@ const ParsedAction = (props) => {
 
 				{selectedAction?.app_name === "Shuffle AI" && selectedAction?.name === "run_llm" ?
 					selectedAction?.environment === "Cloud" && isCloud ? (
-						<Typography color="textSecondary" variant="body2" style={{ paddingTop: 25, }}>
+						<Typography  variant="body2" style={{color: theme.palette.textPrimary, paddingTop: 25, }}>
 							Info: Cloud Inference processing runs with Shuffle's GPUs in EU, Netherlands, and may be unstable. Your data is NOT stored there.
 						</Typography> 
 					)
 					:
-					<Typography color="textSecondary" variant="body2" style={{ paddingTop: 25, color: red, }}>
+					<Typography variant="body2" style={{ paddingTop: 25, color: red, color: theme.palette.textPrimary}}>
 						This action is slow without GPU's. Use Shuffle's Cloud Runtime location for faster processing.
 					</Typography> 
 					:
@@ -2853,7 +3020,7 @@ const ParsedAction = (props) => {
 				<div
 					style={{
 						marginTop: "10px",
-						borderColor: "white",
+						borderColor: theme.palette.text.primary,
 						borderWidth: "2px",
 						marginBottom: hideExtraTypes ? 50 : 200,
 					}}
@@ -2864,7 +3031,6 @@ const ParsedAction = (props) => {
 									apps !== undefined && apps !== null && apps.length > 0 ?
 										<div style={{ display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden", }}>
 											<div onClick={() => {
-
 												selectedAction.example = "noapp"
 												selectedAction.large_image = newimage
 												if (cy !== undefined && cy !== null) {
@@ -2934,7 +3100,13 @@ const ParsedAction = (props) => {
 
 												var found = false
 												for (var key in app.categories) {
-													if (app.categories[key].toLowerCase() !== newactionname) {
+
+													var localnewactionname = newactionname
+													if (newactionname == "comms") {
+														localnewactionname = "communication"
+													}
+
+													if (app.categories[key].toLowerCase() !== localnewactionname) {
 														continue
 													}
 
@@ -3041,7 +3213,7 @@ const ParsedAction = (props) => {
 											ListboxProps={{
 												style: {
 													backgroundColor: theme.palette.inputColor,
-													color: "white",
+													color: theme.palette.text.primary,
 												},
 											}}
 											getOptionLabel={(option) => {
@@ -3609,41 +3781,46 @@ const ParsedAction = (props) => {
 											boxShadow={2}
 											backgroundColor={theme.palette.textFieldStyle}
 											display="flex"
+											height={"100%"}
 											flexDirection="column"
 										>
 											<Box display="flex" alignItems="center" justifyContent="space-between">
-												<Typography variant="body1" style={{ flexGrow: 1 }}>
+												<Typography sx={{fontSize: "16px"}} style={{ flexGrow: 1 }}>
 													{tmpitem.charAt(0).toUpperCase() + tmpitem.slice(1)}
 												</Typography>
-												<IconButton size="small"
+												{/* <IconButton size="small"
 													onClick={() => {
 														setUiBox("closed")
 													}}
 												>
 													<CloseIcon fontSize="small" />
-												</IconButton>
+												</IconButton> */}
 											</Box>
-											<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom: "10px", height: "3px" }} />
+											<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom: "10px", height: "1px" }} />
 											<Box display="flex" flexDirection="column">
-												<Typography variant="body2" mb={0.5}>
+												<Typography sx={{fontSize: "14px"}} mb={0.5}>
 													<strong>Required:</strong> {data.required === true || data.configuration === true ? "True" : "False"}
 												</Typography>
-												<Typography variant="body2" mb={0.5}>
-													<strong>Description:</strong> {description}
-												</Typography>
-												<Typography variant="body2">
+												{
+													data.description !== undefined && data.description !== null && data.description.length > 0 ?
+														<Typography sx={{fontSize: "14px"}} mb={0.5}>
+															<strong>Description:</strong> {description}
+														</Typography>
+														: null
+												}
+												<Typography sx={{fontSize: "14px"}}>
 													<strong>Ex. :</strong> {data?.example?.length > 0 ? data.example : "No example available"}
 												</Typography>
 												{
 													data?.configuration === true ?
 														(
-															<Typography variant="body2" mt={0.5}>
+															<Typography sx={{fontSize: "14px"}} mt={0.5}>
 																<strong>Auth: </strong>Use "\$" instead of "$"
 															</Typography>
 														) : null
 												}
 
-												<div onClick={(e) => {
+												{/* <div onClick={(e) => {
 													e.preventDefault()
 													e.stopPropagation()
 
@@ -3653,10 +3830,16 @@ const ParsedAction = (props) => {
 													<Typography style={{ marginTop: 10, color: "#FF8544", cursor: "pointer", }} variant="body2">
 														Don't show again
 													</Typography>
-												</div>
+												</div> */}
 											</Box>
 										</Box>
 									);
+
+									if (selectedApp.name === "email") {
+										//hideBody = false
+										showButtonField = false
+										hideBodyButtonValue = null
+									}
 
 
 									if ((multiline === undefined || multiline === false) && ((data?.autocompleted === true || data?.field_active === true) || data.name.startsWith("${") && data.name.endsWith("}"))) {
@@ -3693,8 +3876,8 @@ const ParsedAction = (props) => {
 												id={clickedFieldId}
 												disabled={disabled}
 												style={{
-													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette?.borderRadius,
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													borderRadius: theme.palette?.textFieldStyle.borderRadius,
 													width: "100%",
 													maxHeight: multiline === true ? undefined : 40,
 													minHeight: 40,
@@ -3715,7 +3898,7 @@ const ParsedAction = (props) => {
 															<ButtonGroup color="secondary" orientation={multiline ? "vertical" : "horizontal"}>
 																<Tooltip title="Autocomplete text" placement="bottom">
 																	<AddCircleOutlineIcon
-																		style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, }}
+																		style={{ color: theme.palette.textPrimary, cursor: "pointer", margin: multiline ? 5 : 0, }}
 																		onClick={(event) => {
 																			event.preventDefault()
 
@@ -4031,15 +4214,15 @@ const ParsedAction = (props) => {
 										datafield = (
 											<TextField
 												style={{
-													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette?.borderRadius,
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													borderRadius: theme.palette?.textFieldStyle.borderRadius,
 												}}
 												InputProps={{
 													endAdornment: hideExtraTypes ? null : (
 														<InputAdornment position="end">
 															<Tooltip title="Autocomplete text" placement="top">
 																<AddCircleOutlineIcon
-																	style={{ cursor: "pointer" }}
+																	style={{ cursor: "pointer", color: theme.palette.textPrimary }}
 																	onClick={(event) => {
 																		setMenuPosition({
 																			top: event.pageY + 10,
@@ -4098,6 +4281,14 @@ const ParsedAction = (props) => {
 											<Select
 												MenuProps={{
 													disableScrollLock: true,
+													PaperProps: {
+														sx: {
+															'& .MuiList-root': {
+																backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+																color: theme.palette.textFieldStyle.color,
+															},
+														},
+													},
 												}}
 												SelectDisplayProps={{
 													style: {
@@ -4108,15 +4299,12 @@ const ParsedAction = (props) => {
 												fullWidth
 												id={"rightside_field_" + count}
 												onChange={(e) => {
-													console.log("MULTI SELECT: ", multi, e.target.value)
-
 													changeActionParameter(e, count, data);
 													setUpdate(Math.random());
 												}}
 												style={{
-													backgroundColor: theme.palette.surfaceColor,
-													color: "white",
-													height: "50px",
+													backgroundColor: theme.palette.platformColor,
+													height: 40,
 													borderRadius: theme.palette?.borderRadius,
 												}}
 											>
@@ -4139,9 +4327,12 @@ const ParsedAction = (props) => {
 														return (
 															<MenuItem
 																key={data}
-																style={{
+																sx={{
 																	backgroundColor: selected ? theme.palette.backgroundColor : theme.palette.inputColor,
-																	color: "white",
+																	color: theme.palette.textFieldStyle.color,
+																	"&:hover": {
+																		backgroundColor: theme.palette.hoverColor 
+																	},
 																}}
 																value={data}
 															>
@@ -4267,7 +4458,7 @@ const ParsedAction = (props) => {
 												}}
 												open={!!menuPosition}
 												style={{
-													color: "white",
+													color: theme.palette.text.primary,
 													marginTop: 2,
 													maxHeight: 650,
 												}}
@@ -4395,7 +4586,7 @@ const ParsedAction = (props) => {
 															}
 															parentMenuOpen={!!menuPosition}
 															style={{
-																color: "white",
+																color: theme.palette.text.primary,
 																minWidth: 250,
 																maxWidth: 250,
 																maxHeight: 50,
@@ -4411,7 +4602,7 @@ const ParsedAction = (props) => {
 																	key={innerdata.name}
 																	style={{
 																		marginLeft: 15,
-																		color: "white",
+																		color: theme.palette.text.primary,
 																		minWidth: 250,
 																		maxWidth: 250,
 																		padding: 0,
@@ -4452,7 +4643,7 @@ const ParsedAction = (props) => {
 																		<MenuItem
 																			key={pathdata.name}
 																			style={{
-																				color: "white",
+																				color: theme.palette.text.primary,
 																				minWidth: 250,
 																				maxWidth: 250,
 																				padding: boxPadding,
@@ -4509,10 +4700,11 @@ const ParsedAction = (props) => {
 															key={innerdata.name}
 															style={{
 																backgroundColor: theme.palette.inputColor,
-																color: "white",
+																color: theme.palette.text.primary,
 																minWidth: 250,
 																maxWidth: 250,
 																marginRight: 0,
+																paddingLeft: 12, 
 															}}
 															value={innerdata}
 															onMouseOver={() => handleMouseover()}
@@ -4578,8 +4770,9 @@ const ParsedAction = (props) => {
 											{isFirstOptional ? <Divider style={{ backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 20, }} /> : null}
 											{showButtonField === true ? hideBodyButtonValue : null}
 											<div
-												style={{ marginTop: 18, marginBottom: 0, display: "flex" }}
+												style={{ marginTop: 18, marginBottom: "4px", display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center"}}
 											>
+												<div style={{display: "flex", alignItems: "center", justifyContent: "flex-start"}}>
 												{data.configuration === true ? (
 													<Tooltip
 														title={buttonTitle}
@@ -4591,7 +4784,7 @@ const ParsedAction = (props) => {
 																width: 24,
 																height: 24,
 																marginRight: 10,
-																color: "rgba(255,255,255,0.6)",
+																color: theme.palette.textPrimary,
 															}}
 															onClick={() => {
 																setAuthenticationModalOpen(true);
@@ -4609,7 +4802,7 @@ const ParsedAction = (props) => {
 														>
 															<PriorityHighIcon
 																style={{
-																	color: "rgba(255,255,255,0.5)",
+																	color: theme.palette.textPrimary,
 																	marginRight: 0,
 																}} />
 														</Tooltip>
@@ -4621,7 +4814,7 @@ const ParsedAction = (props) => {
 															placement="top"
 														>
 															<AutoFixHighIcon style={{
-																color: "rgba(255,255,255,0.7)",
+																color: theme.palette.textPrimary,
 																marginRight: 10,
 															}} />
 														</Tooltip>
@@ -4638,28 +4831,59 @@ const ParsedAction = (props) => {
 															<StorageIcon style={{
 																color: "#FF8544",
 																marginRight: 10,
+																marginBottom: "-5px",
 															}} />
 														</a>
 													</Tooltip>
 													: null}
 
-												<div
-													style={{
-														flex: "10",
-														marginTop: "auto",
-														marginBottom: "auto",
-														color: "#C5C5C5",
+												<Tooltip
+													title={tooltipDescription}
+													placement="left"
+													sx={{
+														zIndex: 0,
+													}}
+													PopperProps={{
+														sx: {
+															'& .MuiTooltip-tooltip': {
+																backgroundColor: 'transparent',
+																boxShadow: 'none',
+															},
+															'& .MuiTooltip-arrow': {
+																color: 'transparent',
+															},
+														},
+														modifiers: [
+															{
+																name: 'offset',
+																options: {
+																	offset: (data?.configuration || showCacheConfig || hasAutocomplete) ? [0, 31] : [0,0]
+																},
+															},
+														],
 													}}
 												>
-													{tmpitem} <span style={{ color: theme.palette.main }}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
-												</div>
+													<Typography
+														sx={{
+															marginTop: "auto",
+															width: "fit-content",
+															cursor: "pointer",
+															color: theme.palette.textPrimary,
+															fontFamily: theme.typography.fontFamily,
+															"&:hover": {
+																color: theme.palette.main,
+															},
+														}}
+													>
+														{tmpitem} <span style={{ color: theme.palette.main }}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
+													</Typography>
+												</Tooltip>
 
 												{parentParamValue !== undefined && parentParamValue !== null && parentParamValue !== "" && parentParamValue !== data.value ?
 													<Tooltip title={`Parent value is different. Click to reset.`} placement="top" arrow>
 														<RestoreIcon 
 															style={{
 																marginRight: 10, 
-																marginBottom: 5, 
 																cursor: "pointer", 
 																color: theme.palette.distributionColor,
 															}}
@@ -4672,23 +4896,28 @@ const ParsedAction = (props) => {
 														/>
 													</Tooltip>
 												: null}
+												</div>
 
+												{((data.options !== undefined && data.options !== null && data.options.length > 0) || (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0)) ? null : 
 												<Tooltip title="Expand editor window" placement="top">
-
 													<OpenInFullIcon
-														style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
+														style={{ color: theme.palette.textPrimary, cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
 														onMouseOver={(event) => {
-															const clickedField = document.getElementById(clickedFieldId)
-															if (clickedField !== null) {
-																clickedField.focus()
+															if(selectedAction?.name !== "filter_list"){
+																const clickedField = document.getElementById(clickedFieldId)
+																if (clickedField !== null) {
+																	clickedField.focus()
+																}
 															}
 														}}
 														onClick={(event) => {
 															// Set focus to the Textfield we just clicked
 															// This is to ensure focus is set correctly at all times with blur
-															const clickedField = document.getElementById(clickedFieldId)
-															if (clickedField !== null) {
-																clickedField.focus()
+															if(selectedAction?.name !== "filter_list"){
+																const clickedField = document.getElementById(clickedFieldId)
+																if (clickedField !== null) {
+																	clickedField.focus()
+																}
 															}
 
 															event.preventDefault()
@@ -4716,6 +4945,7 @@ const ParsedAction = (props) => {
 														}}
 													/>
 												</Tooltip>
+											}
 
 
 											</div>
@@ -4725,10 +4955,11 @@ const ParsedAction = (props) => {
 												showDropdownNumber === count &&
 												data.variant === "STATIC_VALUE" &&
 												jsonList.length > 0 ? (
+
 												<FormControl fullWidth style={{ marginTop: 0 }}>
 													<InputLabel
 														id="action-autocompleter"
-														style={{ marginLeft: 10, color: "white" }}
+														style={{ marginLeft: 10, color: theme.palette.text.primary }}
 													>
 														Autocomplete
 													</InputLabel>
@@ -4756,7 +4987,7 @@ const ParsedAction = (props) => {
 														fullWidth
 														open={showAutocomplete}
 														style={{
-															color: "white",
+															color: theme.palette.text.primary,
 															height: 35,
 															marginTop: 2,
 															borderRadius: theme.palette?.borderRadius,
@@ -4795,7 +5026,7 @@ const ParsedAction = (props) => {
 																	key={data.name}
 																	style={{
 																		backgroundColor: theme.palette.inputColor,
-																		color: "white",
+																		color: theme.palette.text.primary,
 																	}}
 																	value={data}
 																	onMouseOver={() => { }}

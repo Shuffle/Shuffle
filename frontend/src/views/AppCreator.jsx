@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { makeStyles } from "@mui/styles";
 import { BrowserView, MobileView } from "react-device-detect";
-import theme from '../theme.jsx';
+import { getTheme } from '../theme.jsx';
 
 import {
   Paper,
@@ -57,6 +57,7 @@ import { ToastContainer, toast } from "react-toastify"
 import words from "shellwords";
 
 import AvatarEditor from "react-avatar-editor";
+import { Context } from "../context/ContextApi.jsx";
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -67,33 +68,7 @@ const bodyDivStyle = {
   zoom: 0.8,
 };
 
-const actionListStyle = {
-  paddingLeft: "10px",
-  paddingRight: "10px",
-  paddingBottom: "10px",
-  paddingTop: "10px",
-  marginTop: "5px",
-  display: "flex",
-  color: "white",
-  position: "relative",
 
-  backgroundColor: theme.palette.platformColor,
-};
-
-const boxStyle = {
-  color: "white",
-  flex: "1",
-  marginLeft: "10px",
-  marginRight: "10px",
-  paddingLeft: "30px",
-  paddingRight: "30px",
-  paddingBottom: "30px",
-  paddingTop: "30px",
-  display: "flex",
-  flexDirection: "column",
-
-  backgroundColor: theme.palette.backgroundColor,
-};
 
 const dividerStyle = {
   marginBottom: "10px",
@@ -427,8 +402,39 @@ const AppCreator = (defaultprops) => {
   const [actionAmount, setActionAmount] = useState(increaseAmount);
   const [newAppGroup, setNewAppGroup] = useState("")
 
+  const { themeMode, supportEmail, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
+
   const [oauth2Scopes, setOauth2Scopes] = useState([]);
   const [oauth2Type, setOauth2Type] = useState("delegated");
+
+  const actionListStyle = {
+    paddingLeft: "10px",
+    paddingRight: "10px",
+    paddingBottom: "10px",
+    paddingTop: "10px",
+    marginTop: "5px",
+    display: "flex",
+    color: theme.palette.text.primary,
+    position: "relative",
+  
+    backgroundColor: theme.palette.platformColor,
+  };
+  
+  const boxStyle = {
+    color: theme.palette.text.primary,
+    flex: "1",
+    marginLeft: "10px",
+    marginRight: "10px",
+    paddingLeft: "30px",
+    paddingRight: "30px",
+    paddingBottom: "30px",
+    paddingTop: "30px",
+    display: "flex",
+    flexDirection: "column",
+  
+    backgroundColor: theme.palette.platformColor,
+  };
 
   //client_credentials
   const [oauth2GrantType, setOauth2GrantType] = useState("");
@@ -739,7 +745,7 @@ const AppCreator = (defaultprops) => {
     }
 
     setBasedata(data);
-		console.log("Info: ", data)
+		console.log("Loaded Info: ", data)
 
 		try { 
 			if (data.info !== null && data.info !== undefined) {
@@ -753,7 +759,12 @@ const AppCreator = (defaultprops) => {
 					if (data.info.title.length > 29) {
 						setName(data.info.title.slice(0, 29));
 					} else {
-						setName(data.info.title);
+						// Check if fork=true in URL
+						if (window.location.search.includes("fork=true")) {
+							setName(data.info.title + " Fork");
+						} else {
+							setName(data.info.title)
+						}
 					}
 				}
 
@@ -943,8 +954,8 @@ const AppCreator = (defaultprops) => {
 			if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 				//const regex = /_shuffle_replace_\d/i;
 				const regex = /_shuffle_replace_\d+/i
-				
-				newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+				const newurl = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+				newaction.url = newurl
 			}
 
           // Finding category
@@ -956,7 +967,6 @@ const AppCreator = (defaultprops) => {
 				if (pathsplit[splitkey].includes("_shuffle_replace_")) {
 					//const regex = /_shuffle_replace_\d/i;
 					const regex = /_shuffle_replace_\d+/i
-					//console.log("NEW: ", 
 					pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
 				}
 
@@ -1968,7 +1978,7 @@ const AppCreator = (defaultprops) => {
   // Saving the app that's been configured.
 	// Save SAVE app
   const submitApp = () => {
-    toast("Uploading and building app " + name);
+    toast.info("Uploading and building app " + name + ". This may take a minute or two.");
     setAppBuilding(true);
     setErrorCode("");
 
@@ -1978,6 +1988,8 @@ const AppCreator = (defaultprops) => {
     const schemes = [splitBase[0]];
     const basePath = "/" + splitBase.slice(3).join("/");
 
+	const newBaseUrl = baseUrl.replaceAll("http//", "http://").replaceAll("https//", "https://")
+
     const data = {
       openapi: "3.0.0",
       info: {
@@ -1986,7 +1998,7 @@ const AppCreator = (defaultprops) => {
         version: "1.0",
         "x-logo": fileBase64,
       },
-      servers: [{ url: baseUrl }],
+      servers: [{ url: newBaseUrl }],
       host: host,
       basePath: basePath,
       schemes: schemes,
@@ -2037,7 +2049,7 @@ const AppCreator = (defaultprops) => {
     for (let actionkey in actions) {
       var item = JSON.parse(JSON.stringify(actions[actionkey]))
       if (item.errors.length > 0) {
-        toast("Saving with error in action " + item.name);
+        //toast("Saving with error in action " + item.name);
       }
 
       if (item.name === undefined && item.description !== undefined) {
@@ -2595,14 +2607,22 @@ const AppCreator = (defaultprops) => {
     }
 
     if (setExtraAuth.length > 0) {
+	  const invalidfieldnames = ["apikey", "username", "password", "username_basic", "password_basic", "url", "access_token"]
       for (let authkey in extraAuth) {
         const curauth = extraAuth[authkey];
-
         if (curauth.name.length === 0 || curauth.name.toLowerCase() == "url") {
           toast("Can't add extra auth with empty name or Name URL");
           setAppBuilding(false);
           return;
         }
+
+		// Additional comparisonchecks
+    	if (authenticationOption !== "No authentication" && authenticationOption !== "") {
+			if (invalidfieldnames.includes(curauth.name.toLowerCase())) {
+				toast.warn("Skipping extra auth field: " + curauth.name + ". This is not valid.")
+				continue
+			}
+		}
 
         data.components.securitySchemes[curauth.name] = {
           type: "apiKey",
@@ -2624,12 +2644,17 @@ const AppCreator = (defaultprops) => {
       credentials: "include",
     })
       .then((response) => {
+		setAppBuilding(false)
         if (response.status === 403) {
+
+
     		var urlParams = new URLSearchParams(window.location.search)
 			if (urlParams.has("id")) {
-				toast.error("Please log in to build this app. If this error persists, please contact support@shuffler.io")
+				toast.error(`Please log in to build this app. If this error persists, please contact ${supportEmail}`)
 			} else {
-				toast.error("Failed to save the app as you are not the owner. Redirecting you to the forking page. When there, save again.")
+				toast.error("Failed to save the app as you are not the owner. Redirecting you to the forking page. If this does not load, please download and re-import the app.", {
+					autoClose: 10000
+				})
 				if (props.match.params.appid !== undefined && props.match.params.appid !== null && props.match.params.appid.length > 0) {
 					setTimeout(() => {
 						window.open(`/apps/new?id=${props.match.params.appid}`, "_blank")
@@ -2645,24 +2670,28 @@ const AppCreator = (defaultprops) => {
         	//throw new Error("NOT 200 :O")
         }
 
-        setAppBuilding(false);
         return response.json();
       })
       .then((responseJson) => {
-        if (!responseJson.success) {
-		  if (responseJson.extra !== undefined && responseJson.extra !== null) {
+        if (responseJson?.success !== true) {
+		  if (responseJson?.extra !== undefined && responseJson?.extra !== null) {
 			toast("Failed building: " + responseJson.extra);
-		  }
-
-          if (responseJson.reason !== undefined) {
+		  } else if (responseJson?.reason !== undefined) {
             setErrorCode(responseJson.reason);
 
-			if (responseJson.extra === undefined && responseJson.extra === null) {
-            	toast("Failed to verify: " + responseJson.reason);
+			if (responseJson?.details !== undefined && responseJson?.details !== null) {
+				toast.error("Failed to build - contact support@shuffler.io: " + responseJson.details, {
+					autoClose: 60000 
+				})
+			} else {
+				toast.error("Failed to build: " + responseJson.reason, {
+					autoClose: 10000
+				})
 			}
-          }
+          } else {
+		  }
         } else {
-          toast("Successfully uploaded openapi");
+          toast.success("Successfully built openapi app! Added job to rebuild it in your hybrid runtime locations (Orborus).");
           if (window.location.pathname.includes("/new")) {
             if (responseJson.id !== undefined && responseJson.id !== null) {
               window.location = `/apps/edit/${responseJson.id}`;
@@ -2673,18 +2702,18 @@ const AppCreator = (defaultprops) => {
       .catch((error) => {
         setAppBuilding(false);
         setErrorCode(error.toString());
-        toast(error.toString());
+        toast.error(error.toString());
       });
   };
 
   const bearerAuth =
     authenticationOption === "Bearer auth" ? (
-      <div style={{ color: "white" }}>
+      <div style={{ color: theme.palette.text.primary }}>
         <h4>
           <a
             target="_blank"
             href="https://swagger.io/docs/specification/authentication/bearer-authentication/"
-            style={{ textDecoriation: "none", color: "#f85a3e" }}
+            style={{ textDecoriation: "none", color: theme.palette.linkColor }}
           >
             Bearer auth
           </a>
@@ -2697,12 +2726,12 @@ const AppCreator = (defaultprops) => {
   // Basicauth
   const basicAuth =
     authenticationOption === "Basic auth" ? (
-      <div style={{ color: "white" }}>
+      <div style={{ color: theme.palette.text.primary }}>
         <h4>
           <a
             target="_blank"
             href="https://swagger.io/docs/specification/authentication/basic-authentication/"
-            style={{ textDecoriation: "none", color: "#f85a3e" }}
+            style={{ textDecoriation: "none", color: theme.palette.linkColor }}
           >
             Basic authentication
           </a>
@@ -2796,7 +2825,7 @@ const AppCreator = (defaultprops) => {
                 flex: 2,
                 marginTop: 0,
                 marginBottom: 0,
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                 marginRight: 5,
               }}
               fullWidth={true}
@@ -2805,16 +2834,28 @@ const AppCreator = (defaultprops) => {
               margin="normal"
               variant="outlined"
               defaultValue={extraAuth[index].name}
+			  helperText={
+				  <Typography variant="caption" style={{ color: theme.palette.error.main, marginTop: 10, marginBottom: 10, }}>
+				  	{extraAuth[index]?.name?.toLowerCase() === "url" 
+					  || extraAuth[index]?.name?.toLowerCase() === "apikey"
+					  ? `ERROR: Invalid key: ${extraAuth[index].name}. ` : ""}
+					</Typography>
+			  }
               onChange={(e) => {
                 extraAuth[index].name = e.target.value;
                 setExtraAuth(extraAuth);
               }}
+			  onBlur={(e) => {
+				  // Forcerender
+				  setUpdate(Math.random());
+			  }}
               InputProps={{
                 classes: {
                   notchedOutline: classes.notchedOutline,
                 },
                 style: {
-                  color: "white",
+                  color: theme.palette.textFieldStyle.color,
+                  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                   minHeight: 50,
                   marginLeft: 5,
                   maxWidth: "95%",
@@ -2829,7 +2870,7 @@ const AppCreator = (defaultprops) => {
                 marginTop: 0,
                 marginBottom: 0,
                 flex: 2,
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                 marginRight: 5,
               }}
               fullWidth={true}
@@ -2844,7 +2885,8 @@ const AppCreator = (defaultprops) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
+                  color: theme.palette.textFieldStyle.color,
+                  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                   minHeight: 50,
                   marginLeft: 5,
                   maxWidth: "95%",
@@ -2862,9 +2904,9 @@ const AppCreator = (defaultprops) => {
               value={extraAuth[index].type}
               style={{
                 flex: 1,
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.backgroundColor,
                 paddingLeft: "10px",
-                color: "white",
+                color: theme.palette.text.primary,
                 height: 50,
                 borderRadius: theme.shape.borderRadius,
               }}
@@ -2875,14 +2917,14 @@ const AppCreator = (defaultprops) => {
             >
               <MenuItem
                 key={index}
-                style={{ backgroundColor: inputColor, color: "white" }}
+                style={{ backgroundColor: theme.palette.backgroundColor, color: theme.palette.text.primary }}
                 value={"header"}
               >
                 Header
               </MenuItem>
               <MenuItem
                 key={index}
-                style={{ backgroundColor: inputColor, color: "white" }}
+                style={{ backgroundColor: theme.palette.backgroundColor, color: theme.palette.text.primary }}
                 value={"query"}
               >
                 Query
@@ -2930,7 +2972,7 @@ const AppCreator = (defaultprops) => {
 
   const jwtAuth =
     authenticationOption === "JWT" ? (
-      <div style={{ color: "white", marginTop: 20 }}>
+      <div style={{ color: theme.palette.text.primary, marginTop: 20 }}>
         <Typography variant="body1">JWT authentication</Typography>
         <Typography
           variant="body2"
@@ -2949,7 +2991,7 @@ const AppCreator = (defaultprops) => {
           variant="outlined"
           defaultValue={parameterName}
           helperText={
-            <span style={{ color: "white", marginBottom: "2px" }}>
+            <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
               Must start with / and be a valid path
             </span>
           }
@@ -2959,7 +3001,7 @@ const AppCreator = (defaultprops) => {
               notchedOutline: classes.notchedOutline,
             },
             style: {
-              color: "white",
+              color: theme.palette.text.primary,
             },
           }}
         />
@@ -2980,7 +3022,7 @@ const AppCreator = (defaultprops) => {
           variant="outlined"
           defaultValue={parameterName}
           helperText={
-            <span style={{ color: "white", marginBottom: "2px" }}>
+            <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
 			  Must use 'key=value&key=value' format
             </span>
           }
@@ -2992,7 +3034,7 @@ const AppCreator = (defaultprops) => {
               notchedOutline: classes.notchedOutline,
             },
             style: {
-              color: "white",
+              color: theme.palette.text.primary,
             },
           }}
         />
@@ -3002,7 +3044,7 @@ const AppCreator = (defaultprops) => {
 
   const oauth2Auth =
     authenticationOption === "Oauth2" ? (
-      <div style={{ color: "white", marginTop: 20 }}>
+      <div style={{ color: theme.palette.text.primary, marginTop: 20 }}>
         <Typography variant="body1">Oauth2 authentication</Typography>
         <Typography
           variant="body2"
@@ -3061,7 +3103,7 @@ const AppCreator = (defaultprops) => {
         		      notchedOutline: classes.notchedOutline,
         		    },
         		    style: {
-        		      color: "white",
+        		      color: theme.palette.text.primary,
         		    },
         		  }}
         		/>
@@ -3112,7 +3154,7 @@ const AppCreator = (defaultprops) => {
               notchedOutline: classes.notchedOutline,
             },
             style: {
-              color: "white",
+              color: theme.palette.text.primary,
             },
           }}
         />
@@ -3161,7 +3203,7 @@ const AppCreator = (defaultprops) => {
 							}}
         		  InputProps={{
         		    style: {
-        		      color: "white",
+        		      color: theme.palette.text.primary,
         		    },
         		  }}
         		/>
@@ -3178,7 +3220,7 @@ const AppCreator = (defaultprops) => {
 		  required
 		  InputProps={{
 			style: {
-			  color: "white",
+			  color: theme.palette.text.primary,
 			  maxHeight: 160,
 			},
 		  }}
@@ -3203,7 +3245,7 @@ const AppCreator = (defaultprops) => {
 
   const apiKey =
     authenticationOption === "API key" ? (
-      <div style={{ color: "white", marginTop: 20 }}>
+      <div style={{ color: theme.palette.text.primary, marginTop: 20 }}>
         <Typography variant="body1">API key authentication</Typography>
         <Typography variant="body2" color="textSecondary">
           <b>Do NOT put your actual API-key.</b> Add the name of the field used for authentication, e.g. "X-APIKEY". 
@@ -3222,7 +3264,7 @@ const AppCreator = (defaultprops) => {
 							variant="outlined"
 							value={parameterName}
 							helperText={
-								<span style={{ color: "white", marginBottom: "2px" }}>
+								<span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
 									Can't be empty or contain any of the following: !#$%&'^"+-._~|]+$:=
 								</span>
 							}
@@ -3239,7 +3281,7 @@ const AppCreator = (defaultprops) => {
 									notchedOutline: classes.notchedOutline,
 								},
 								style: {
-									color: "white",
+									color: theme.palette.text.primary,
 								},
 							}}
 						/>
@@ -3256,7 +3298,7 @@ const AppCreator = (defaultprops) => {
         		    borderRadius: theme.shape.borderRadius,
         		    backgroundColor: inputColor,
         		    paddingLeft: 10,
-        		    color: "white",
+        		    color: theme.palette.text.primary,
         		    height: 57,
         		  }}
         		  inputProps={{
@@ -3272,7 +3314,7 @@ const AppCreator = (defaultprops) => {
         		    return (
         		      <MenuItem
         		        key={index}
-        		        style={{ backgroundColor: inputColor, color: "white" }}
+        		        style={{ backgroundColor: inputColor, color: theme.palette.text.primary }}
         		        value={data}
         		      >
         		        {data}
@@ -3464,15 +3506,14 @@ const AppCreator = (defaultprops) => {
     		  <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
     		    <Chip
     		      style={{
-    		        backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43",
+    		        backgroundColor: chipRequired ? "#f86a3e" : theme.palette.chipStyle.backgroundColor,
     		        height: 30,
     		        margin: 3,
     		        paddingLeft: 5,
     		        paddingRight: 5,
-    		        height: 28,
     		        cursor: "pointer",
-    		        borderColor: "#3d3f43",
-    		        color: "white",
+    		        borderColor: theme.palette.chipStyle.borderColor,
+    		        color: theme.palette.chipStyle.color,
     		      }}
     		      label={parsedChip}
     		      onClick={() => {
@@ -3558,7 +3599,7 @@ const AppCreator = (defaultprops) => {
 										placeholder={"Query name (key)"}
 										label={"Query Key"}
 										helperText={
-											<span style={{ color: "white", marginBottom: "2px" }}>
+											<span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
 												Click required to flip 
 											</span>
 										}
@@ -3570,7 +3611,7 @@ const AppCreator = (defaultprops) => {
 										style={{flex: 3}}
 										InputProps={{
 											style: {
-												color: "white",
+												color: theme.palette.text.primary,
 											},
 										}}
 									/>
@@ -3590,7 +3631,7 @@ const AppCreator = (defaultprops) => {
 										style={{flex: 2}}
 										InputProps={{
 											style: {
-												color: "white",
+												color: theme.palette.text.primary,
 											},
 										}}
 									/>
@@ -3663,7 +3704,7 @@ const AppCreator = (defaultprops) => {
   	    )}
   	    <TextField
   	      required
-  	      style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
+  	      style={{ flex: "1", marginRight: "15px", backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
   	      fullWidth={true}
   	      placeholder={
   	        '{\n\t"example": "${example}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"\n}'
@@ -3679,7 +3720,7 @@ const AppCreator = (defaultprops) => {
   	      }}
   	      key={currentAction}
   	      helperText={
-  	        <span style={{ color: "white", marginBottom: "2px" }}>
+  	        <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
   	          Shows an example body to the user. ${} creates variables.
   	        </span>
   	      }
@@ -3688,7 +3729,8 @@ const AppCreator = (defaultprops) => {
   	          notchedOutline: classes.notchedOutline,
   	        },
   	        style: {
-  	          color: "white",
+  	          color: theme.palette.textFieldStyle.color,
+              backgroundColor: theme.palette.textFieldStyle.backgroundColor,
   	        },
   	      }}
   	    />
@@ -3701,7 +3743,7 @@ const AppCreator = (defaultprops) => {
   	    <b>Example success response</b>
   	    <TextField
   	      required
-  	      style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
+  	      style={{ flex: "1", marginRight: "15px", backgroundColor: theme.palette.textFieldStyle.backgroundColor }}
   	      fullWidth={true}
   	      placeholder={
   	        '{\n\t"email": "testing@test.com",\n\t"firstname": "testing"\n}'
@@ -3713,14 +3755,15 @@ const AppCreator = (defaultprops) => {
   	      defaultValue={currentAction["example_response"]}
   	      onChange={(e) => setActionField("example_response", e.target.value)}
   	      helperText={
-  	        <span style={{ color: "white", marginBottom: "2px" }}>
+  	        <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
   	          Helps with autocompletion and understanding of the endpoint
   	        </span>
   	      }
   	      key={currentAction}
   	      InputProps={{
   	        style: {
-  	          color: "white",
+  	          color: theme.palette.textFieldStyle.color,
+  	          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
   	        },
   	      }}
   	    />
@@ -3795,8 +3838,8 @@ const AppCreator = (defaultprops) => {
     		  fullWidth
 			  PaperProps={{
     		    style: {
-    		      backgroundColor: surfaceColor,
-    		      color: "white",
+    		      backgroundColor: theme.palette.drawer.backgroundColor,
+    		      color: theme.palette.text.primary,
     		      minWidth: 700,
     		      maxWidth: 700,
     		    },
@@ -3813,15 +3856,15 @@ const AppCreator = (defaultprops) => {
 			    setFileUploadEnabled(false);
     		  }}
     		>
-    		  <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
+    		  <FormControl style={{ backgroundColor: theme.palette.drawer.backgroundColor, color: theme.palette.text.primary }}>
     		    <DialogTitle style={{marginTop: 45, }}>
-    		      <div style={{ color: "white" }}>New action</div>
+    		      <div style={{ color: theme.palette.text.primary }}>New action</div>
     		    </DialogTitle>
     		    <DialogContent style={{paddingBottom: 100, }}>
     		      <a
     		        target="_blank"
     		        href="https://shuffler.io/docs/app_creation#actions"
-    		        style={{ textDecoration: "none", color: "#f85a3e" }}
+    		        style={{ textDecoration: "none", color: theme.palette.linkColor }}
     		      >
     		        Learn more about actions
     		      </a>
@@ -3833,7 +3876,8 @@ const AppCreator = (defaultprops) => {
     		          flex: "1",
     		          marginTop: 5,
     		          marginRight: 15,
-    		          backgroundColor: inputColor,
+    		          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                  color: theme.palette.textFieldStyle.color,
     		        }}
     		        fullWidth={true}
     		        placeholder="Name"
@@ -3858,7 +3902,7 @@ const AppCreator = (defaultprops) => {
 					  if (currentAction.url === "" && actions !== undefined && actions !== null && actions.length > 0) { 
 					    for (var i = 0; i < actions.length; i++) {
 						  if (actions[i].name.toLowerCase() === e.target.value.toLowerCase()) {
-						    toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
+						    //toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
 						    break
 						  }
 					    }
@@ -3872,7 +3916,8 @@ const AppCreator = (defaultprops) => {
     		            notchedOutline: classes.notchedOutline,
     		          },
     		          style: {
-    		            color: "white",
+    		            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    color: theme.palette.textFieldStyle.color,
     		          },
     		        }}
     		      />
@@ -3884,7 +3929,8 @@ const AppCreator = (defaultprops) => {
     		          flex: "1",
     		          marginTop: 5,
     		          marginRight: "15px",
-    		          backgroundColor: inputColor,
+    		          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                  color: theme.palette.textFieldStyle.color,
     		        }}
     		        fullWidth={true}
     		        placeholder="Description"
@@ -3896,7 +3942,8 @@ const AppCreator = (defaultprops) => {
     		        onChange={(e) => setActionField("description", e.target.value)}
     		        InputProps={{
     		          style: {
-    		            color: "white",
+    		            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    color: theme.palette.textFieldStyle.color,
     		          },
     		        }}
     		      />
@@ -3918,14 +3965,18 @@ const AppCreator = (defaultprops) => {
     		        }}
     		        value={currentActionMethod}
     		        style={{
-    		          backgroundColor: inputColor,
     		          paddingLeft: "10px",
-    		          color: "white",
+    		          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                  color: theme.palette.textFieldStyle.color,
     		          height: "50px",
     		        }}
     		        inputProps={{
     		          name: "Method",
     		          id: "method-option",
+                  style: {
+                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    color: theme.palette.textFieldStyle.color,
+                  },
     		        }}
     		      >
 
@@ -3940,7 +3991,7 @@ const AppCreator = (defaultprops) => {
     		            >
 						  <Chip
 						  	style={{
-						  		color: "white",
+						  		color: theme.palette.text.primary,
 						  		borderRadius: theme.shape.borderRadius,
 						  		minWidth: 80,
 						  		marginRight: 10,
@@ -3964,7 +4015,8 @@ const AppCreator = (defaultprops) => {
     		          flex: "1",
     		          marginRight: "15px",
     		          marginTop: "5px",
-    		          backgroundColor: inputColor,
+    		          backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                  color: theme.palette.textFieldStyle.color,
     		        }}
     		        fullWidth={true}
     		        placeholder="URL path"
@@ -3977,7 +4029,7 @@ const AppCreator = (defaultprops) => {
     		          setUrlPath(e.target.value);
     		        }}
     		        helperText={
-    		          <span style={{ color: "white", marginBottom: "2px" }}>
+    		          <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
     		            The path to use. Must start with /. Use {"{variablename}"} to
     		            have path variables
     		          </span>
@@ -3988,7 +4040,8 @@ const AppCreator = (defaultprops) => {
     		            input: classes.input,
     		          },
     		          style: {
-    		            color: "white",
+    		            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    color: theme.palette.textFieldStyle.color,
     		          },
     		        }}
     		        onBlur={(event) => {
@@ -4271,7 +4324,7 @@ const AppCreator = (defaultprops) => {
     		          defaultValue={currentAction["file_field"]}
     		          onChange={(e) => setActionField("file_field", e.target.value)}
     		          helperText={
-    		            <span style={{ color: "white", marginBottom: "2px" }}>
+    		            <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
     		              The File field to interact with
     		            </span>
     		          }
@@ -4280,7 +4333,7 @@ const AppCreator = (defaultprops) => {
     		              notchedOutline: classes.notchedOutline,
     		            },
     		            style: {
-    		              color: "white",
+    		              color: theme.palette.text.primary,
     		            },
     		          }}
     		        />
@@ -4295,7 +4348,8 @@ const AppCreator = (defaultprops) => {
 											flex: "1",
 											marginRight: "15px",
 											marginTop: "5px",
-											backgroundColor: inputColor,
+											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                      color: theme.palette.textFieldStyle.color,
 										}}
 										fullWidth={true}
 										placeholder={
@@ -4309,13 +4363,14 @@ const AppCreator = (defaultprops) => {
 										minRows="2"
 										onChange={(e) => setActionField("headers", e.target.value)}
 										helperText={
-											<span style={{ color: "white", marginBottom: "2px" }}>
+											<span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
 												Headers that are part of the request. Default: EMPTY
 											</span>
 										}
 										InputProps={{
 											style: {
-												color: "white",
+												backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        color: theme.palette.textFieldStyle.color,
 											},
 										}}
 									/>
@@ -4324,14 +4379,14 @@ const AppCreator = (defaultprops) => {
     		      {bodyInfo}
     		      <Divider
     		        style={{
-    		          backgroundColor: "rgba(255,255,255,0.5)",
+    		          backgroundColor: theme.palette.defaultBorder,
     		          marginTop: 15,
     		          marginBottom: 15,
     		        }}
     		      />
     		      {exampleResponse}
     		    </DialogContent>
-    		    <div style={{position: "fixed", backgroundColor: theme.palette.surfaceColor, bottom: 0, width: "100%", padding: 25, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+    		    <div style={{position: "fixed", backgroundColor: theme.palette.drawer.backgroundColor, bottom: 0, width: "100%", padding: 25, borderTop: theme.palette.defaultBorder, }}>
     		      <Button
     		        color="primary"
     		        variant={urlPath.length > 0 ? "contained" : "outlined"}
@@ -4450,7 +4505,7 @@ const AppCreator = (defaultprops) => {
 							<Chip
 								style={{
 									backgroundColor: bgColor,
-									color: "white",
+									color: theme.palette.text.primary,
 									borderRadius: theme.shape.borderRadius,
 									minWidth: 80,
 									marginRight: 10,
@@ -4502,9 +4557,9 @@ const AppCreator = (defaultprops) => {
 							style={{
 								border: data.action_label === undefined || data.action_label === "No Label" ? "" : `2px solid ${bgColor}`,
 								borderRadius: theme.shape.borderRadius,
-								backgroundColor: inputColor,
+								backgroundColor: theme.palette.backgroundColor,
 								paddingLeft: 10,
-								color: "white",
+								color: theme.palette.text.primary,
 								height: 30,
 								maxWidth: 35, 
 								marginLeft: 10, 
@@ -4621,13 +4676,13 @@ const AppCreator = (defaultprops) => {
 
 
   const tagView = (
-    <div style={{ color: "white" }}>
+    <div style={{ color: theme.palette.text.primary }}>
       {/*
 			<ChipInput
 				style={{marginTop: 10}}
 				InputProps={{
 					style:{
-						color: "white",
+						color: theme.palette.text.primary,
 					},
 				}}
 				placeholder="Categories"
@@ -4662,7 +4717,7 @@ const AppCreator = (defaultprops) => {
 				}}
 				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
 				
-				style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
+				style={{ backgroundColor: theme.palette.backgroundColor, color: theme.palette.text.primary, height: "50px" }}
 			  >
 				{categories.map((data, index) => {
 					if (data === undefined || data === null || data === "" || data === undefined || data === null || data === "") {
@@ -4672,7 +4727,7 @@ const AppCreator = (defaultprops) => {
 					return (
 						<MenuItem
 							key={index}
-							style={{ backgroundColor: inputColor, color: "white" }}
+							sx={{ backgroundColor: theme.palette.backgroundColor, color: theme.palette.text.primary, "&:hover" : { backgroundColor:  theme.palette.hoverColor} }}
 							value={data.name}
 						>
 							{data.name}
@@ -4702,7 +4757,7 @@ const AppCreator = (defaultprops) => {
 	  			}}
 	  			InputProps={{
 	  				style: {
-	  					color: "white",
+	  					color: theme.palette.text.primary,
 	  				},
 	  			}}
 	  		/>
@@ -4714,7 +4769,7 @@ const AppCreator = (defaultprops) => {
         style={{ marginTop: 10 }}
         InputProps={{
           style: {
-            color: "white",
+            color: theme.palette.text.primary,
           },
         }}
         placeholder="Tags"
@@ -4787,7 +4842,7 @@ const AppCreator = (defaultprops) => {
             }}
             InputProps={{
               style: {
-                color: "white",
+                color: theme.palette.text.primary,
                 height: 50,
                 fontSize: "1em",
               },
@@ -5102,7 +5157,7 @@ const AppCreator = (defaultprops) => {
 
         /*
 					{selectedAction.authentication.map(data => (
-					<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+					<MenuItem key={data.id} style={{backgroundColor: inputColor, color: theme.palette.text.primary}} value={data}>
 				*/
       };
 
@@ -5121,7 +5176,7 @@ const AppCreator = (defaultprops) => {
               target="_blank"
               rel="norefferer"
               href="https://shuffler.io/docs/app_creation#authentication"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
+              style={{ textDecoration: "none", color: theme.palette.linkColor }}
             >
               What is this?
             </a>
@@ -5136,7 +5191,7 @@ const AppCreator = (defaultprops) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
+                  color: theme.palette.text.primary,
                   marginLeft: "5px",
                   maxWidth: "95%",
                   height: 50,
@@ -5176,7 +5231,7 @@ const AppCreator = (defaultprops) => {
                     }}
                     InputProps={{
                       style: {
-                        color: "white",
+                        color: theme.palette.text.primary,
                         marginLeft: "5px",
                         maxWidth: "95%",
                         height: 50,
@@ -5226,7 +5281,7 @@ const AppCreator = (defaultprops) => {
   };
 
   const actionView = (
-    <div style={{ color: "white", position: "relative" }}>
+    <div style={{ color: theme.palette.text.primary, position: "relative" }}>
       <div style={{ position: "absolute", right: 0, top: 0 }}>
         {actionAmount > 0 && actionAmount < filteredActions.length ? (
           <Button
@@ -5278,15 +5333,14 @@ const AppCreator = (defaultprops) => {
                 key={index}
                 style={{
                   backgroundColor:
-                    tag === selectedCategory ? "#f86a3e" : "#3d3f43",
+                    tag === selectedCategory ? "#f86a3e" : theme.palette.chipStyle.backgroundColor,
                   height: 30,
                   margin: 3,
                   paddingLeft: 5,
                   paddingRight: 5,
-                  height: 28,
                   cursor: "pointer",
-                  borderColor: "#3d3f43",
-                  color: "white",
+                  borderColor: theme.palette.chipStyle.borderColor,
+                  color: theme.palette.chipStyle.color,
                 }}
                 label={newname}
                 onClick={() => {
@@ -5412,13 +5466,13 @@ const AppCreator = (defaultprops) => {
   );
 
   const testView = (
-    <div style={{ color: "white" }}>
+    <div style={{ color: theme.palette.text.primary }}>
       <h2>Test</h2>
       Test an action to see whether it performs in an expected way.
       <a
         target="_blank"
         href="https://shuffler.io/docs/app_creation#testing"
-        style={{ textDecoration: "none", color: "#f85a3e" }}
+        style={{ textDecoration: "none", color: theme.palette.linkColor }}
       >
         &nbsp;TBD: Click here to learn more about testing
       </a>
@@ -5573,7 +5627,7 @@ const AppCreator = (defaultprops) => {
       PaperProps={{
         style: {
           backgroundColor: surfaceColor,
-          color: "white",
+          color: theme.palette.text.primary,
           minWidth: "300px",
           minHeight: "300px",
         },
@@ -5722,7 +5776,7 @@ const AppCreator = (defaultprops) => {
       PaperProps={{
         style: {
           backgroundColor: surfaceColor,
-          color: "white",
+          color: theme.palette.text.primary,
           minWidth: "800px",
           minHeight: "320px",
         },
@@ -5742,7 +5796,7 @@ const AppCreator = (defaultprops) => {
             margin="normal"
             InputProps={{
               style: {
-                color: "white",
+                color: theme.palette.text.primary,
                 height: "50px",
                 fontSize: "1em",
               },
@@ -5769,7 +5823,7 @@ const AppCreator = (defaultprops) => {
               setOpenApi(e.target.value);
             }}
             helperText={
-              <span style={{ color: "white", marginBottom: "2px" }}>
+              <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
                 Must point to a version 2 or 3 OpenAPI specification.
               </span>
             }
@@ -5833,20 +5887,22 @@ const AppCreator = (defaultprops) => {
 
   // Random names for type & autoComplete. Didn't research :^)
   const landingpageDataBrowser = (
-    <div style={{ paddingBottom: 100, color: "white" }}>
+    <div style={{ paddingBottom: 100, color: theme.palette.text.primary, }}>
       <Breadcrumbs
         aria-label="breadcrumb"
         separator="›"
-        style={{ color: "white" }}
+        style={{ color: theme.palette.text.primary }}
       >
         <Link to="/apps" style={{ textDecoration: "none", color: "inherit" }}>
-          <h2 style={{ color: "rgba(255,255,255,0.5)" }}>
+          <h2 style={{ color: theme.palette.textColor }}>
             <AppsIcon style={{ marginRight: 10 }} />
             Apps
           </h2>
         </Link>
         <h2>
-          {name}{" "}
+	  	  <Link to={props?.match?.params?.appid !== undefined && props?.match?.params?.appid !== null && props?.match?.params?.appid.length > 0 ? `/apps/${props?.match?.params?.appid}` : "/apps" } style={{ textDecoration: "none", color: theme.palette.text.primary }}>
+          	{name}{" "}
+	  	  </Link>
           {actions === null ||
           actions === undefined ||
           actions.length === 0 ? null : (
@@ -5861,10 +5917,10 @@ const AppCreator = (defaultprops) => {
         ref={(ref) => (upload = ref)}
         onChange={editHeaderImage}
       />
-      <Paper style={boxStyle}>
+      <div style={boxStyle}>
 	  	<div style={{display: "flex", }}>
 			<div style={{flex: 1, }}>
-				<h2 style={{ marginBottom: "10px", color: "white" }}>
+				<h2 style={{ marginBottom: "10px", color: theme.palette.text.primary }}>
 				  General information
 				</h2>
 			</div>
@@ -5908,13 +5964,13 @@ const AppCreator = (defaultprops) => {
         <a
           target="_blank"
           href="https://shuffler.io/docs/app_creation#app-creator-instructions"
-          style={{ textDecoration: "none", color: "#f85a3e" }}
+          style={{ textDecoration: "none", color: theme.palette.linkColor }}
         >
           Click to learn more about app creation
         </a>
         <div
           style={{
-            color: "white",
+            color: theme.palette.text.primary,
             flex: "1",
             display: "flex",
             flexDirection: "row",
@@ -5945,7 +6001,7 @@ const AppCreator = (defaultprops) => {
               />
             </div>
           </Tooltip>
-          <div style={{ flex: "3", color: "white", marginLeft: 20, }}>
+          <div style={{ flex: "3", color: theme.palette.text.primary, marginLeft: 20, }}>
             <div style={{ marginTop: "10px" }} />
             Name
             <TextField
@@ -5954,7 +6010,7 @@ const AppCreator = (defaultprops) => {
                 flex: "1",
                 marginTop: "5px",
                 marginRight: "15px",
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
               }}
               fullWidth={true}
               placeholder="Name"
@@ -5990,7 +6046,8 @@ const AppCreator = (defaultprops) => {
               color="primary"
               InputProps={{
                 style: {
-                  color: "white",
+                  color: theme.palette.textFieldStyle.color,
+                  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                   height: "50px",
                   fontSize: "1em",
                 },
@@ -6006,13 +6063,19 @@ const AppCreator = (defaultprops) => {
               style={{
 				marginTop: 5, 
                 marginRight: 15,
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 				maxHeight: 250,
 				overflowY: "auto"
               }}
               fullWidth={true}
               type="name"
               id="outlined-with-placeholder"
+              inputProps={{
+                style: {
+                  color: theme.palette.textFieldStyle.color,
+                  backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                }
+              }}
               margin="normal"
 			  multiline
               variant="outlined"
@@ -6034,7 +6097,7 @@ const AppCreator = (defaultprops) => {
         />
         <Typography
           variant="h6"
-          style={{ marginTop: 10, marginBottom: 10, color: "white" }}
+          style={{ marginTop: 10, marginBottom: 10, color: theme.palette.text.primary }}
         >
           API information
         </Typography>
@@ -6043,14 +6106,15 @@ const AppCreator = (defaultprops) => {
         </Typography>
         <TextField
           color="primary"
-          style={{ backgroundColor: inputColor, marginTop: "5px" }}
+          style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, marginTop: "5px" }}
           InputProps={{
             classes: {
               notchedOutline: classes.notchedOutline,
             },
             style: {
               height: "50px",
-              color: "white",
+              color: theme.palette.textFieldStyle.color,
+              backgroundColor: theme.palette.textFieldStyle.backgroundColor,
               fontSize: "1em",
             },
           }}
@@ -6062,8 +6126,8 @@ const AppCreator = (defaultprops) => {
           variant="outlined"
           value={baseUrl}
           helperText={
-            <span style={{ color: "white", marginBottom: "2px" }}>
-              Must start with http(s):// and CANT end with /.{" "}
+            <span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
+              Must start with http(s):// and can NOT end with /.{" "}
             </span>
           }
           placeholder="https://api.example.com"
@@ -6082,12 +6146,12 @@ const AppCreator = (defaultprops) => {
               toast("URL must start with http(s)://");
             }
 
-						if (tmpstring.includes("?")) {
-							var newtmp = tmpstring.split("?")
-							if (tmpstring.length > 1) {
-								tmpstring = newtmp[0]
-							}
-						}
+			if (tmpstring.includes("?")) {
+				var newtmp = tmpstring.split("?")
+				if (tmpstring.length > 1) {
+					tmpstring = newtmp[0]
+				}
+			}
 
             setBaseUrl(tmpstring);
           }}
@@ -6099,7 +6163,7 @@ const AppCreator = (defaultprops) => {
 						<a
 							target="_blank"
 							href="https://shuffler.io/docs/app_creation#authentication"
-							style={{ textDecoration: "none", color: "#f85a3e" }}
+							style={{ textDecoration: "none", color: theme.palette.linkColor }}
 						>
 							Learn more about app authentication
 						</a>
@@ -6123,15 +6187,15 @@ const AppCreator = (defaultprops) => {
 							}}
 							value={authenticationOption}
 							style={{
-								backgroundColor: inputColor,
-								color: "white",
+								backgroundColor: theme.palette.backgroundColor,
+								color: theme.palette.text.primary,
 								height: "50px",
 							}}
 						>
 							{authenticationOptions.map((data, index) => (
 								<MenuItem
 									key={index}
-									style={{ backgroundColor: inputColor, color: "white" }}
+									sx={{ backgroundColor: theme.palette.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.backgroundColor} }}
 									value={data}
 								>
 									{data}
@@ -6166,14 +6230,14 @@ const AppCreator = (defaultprops) => {
 									value={oauth2Type}
 									style={{
 										backgroundColor: inputColor,
-										color: "white",
+										color: theme.palette.text.primary,
 										height: "50px",
 									}}
 								>
 									{["delegated", "application"].map((data, index) => (
 										<MenuItem
 											key={index}
-											style={{ backgroundColor: inputColor, color: "white" }}
+											style={{ backgroundColor: inputColor, color: theme.palette.text.primary }}
 											value={data}
 										>
 											{data}
@@ -6194,14 +6258,14 @@ const AppCreator = (defaultprops) => {
 										value={oauth2GrantType}
 										style={{
 											backgroundColor: inputColor,
-											color: "white",
+											color: theme.palette.text.primary,
 											height: "50px",
 										}}
 									>
 										{["client_credentials", "password"].map((data, index) => (
 											<MenuItem
 												key={index}
-												style={{ backgroundColor: inputColor, color: "white" }}
+												style={{ backgroundColor: inputColor, color: theme.palette.text.primary }}
 												value={data}
 											>
 												{data}
@@ -6226,8 +6290,8 @@ const AppCreator = (defaultprops) => {
 
         {/*authenticationOption === "No authentication" ? null :
 						<FormControlLabel
-							style={{color: "white", marginBottom: 0, marginTop: 20}}
-							label=<div style={{color: "white"}}>Authentication required (default true)</div>
+							style={{color: theme.palette.text.primary, marginBottom: 0, marginTop: 20}}
+							label=<div style={{color: theme.palette.text.primary}}>Authentication required (default true)</div>
 							control={<Switch checked={authenticationRequired} onChange={() => {
 								setAuthenticationRequired(!authenticationRequired)
 							}} />}
@@ -6322,7 +6386,7 @@ const AppCreator = (defaultprops) => {
 		  {errorCode.length > 0 ? `Upload Error: ${errorCode}` : null}
 		</Typography>
 
-      </Paper>
+      </div>
     </div>
   );
 

@@ -211,7 +211,7 @@ func fixTags(tags []string) []string {
 func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
-        defer client.Close()
+	defer client.Close()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 		return err
@@ -473,73 +473,84 @@ func buildImage(tags []string, dockerfileLocation string) error {
 				}
 			}
 		}
-	} else {
 
-		ctx := context.Background()
-		client, err := client.NewEnvClient()
-                defer client.Close()
-		if err != nil {
-			log.Printf("Unable to create docker client: %s", err)
-			return err
-		}
-
-		log.Printf("[INFO] Docker Tags: %s", tags)
-		dockerfileSplit := strings.Split(dockerfileLocation, "/")
-
-		// Create a buffer
-		buf := new(bytes.Buffer)
-		tw := tar.NewWriter(buf)
-		defer tw.Close()
-		baseDir := strings.Join(dockerfileSplit[0:len(dockerfileSplit)-1], "/")
-
-		// Builds the entire folder into buf
-		err = getParsedTar(tw, baseDir, "")
-		if err != nil {
-			log.Printf("Tar issue: %s", err)
-		}
-
-		dockerFileTarReader := bytes.NewReader(buf.Bytes())
-		buildOptions := types.ImageBuildOptions{
-			Remove:    true,
-			Tags:      tags,
-			BuildArgs: map[string]*string{},
-		}
-		//NetworkMode: "host",
-
-		httpProxy := os.Getenv("HTTP_PROXY")
-		if len(httpProxy) > 0 {
-			buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
-		}
-		httpsProxy := os.Getenv("HTTPS_PROXY")
-		if len(httpProxy) > 0 {
-			buildOptions.BuildArgs["https_proxy"] = &httpsProxy
-		}
-
-		// Build the actual image
-		imageBuildResponse, err := client.ImageBuild(
-			ctx,
-			dockerFileTarReader,
-			buildOptions,
-		)
-
-		if err != nil {
-			return err
-		}
-
-		// Read the STDOUT from the build process
-		defer imageBuildResponse.Body.Close()
-		buildBuf := new(strings.Builder)
-		_, err = io.Copy(buildBuf, imageBuildResponse.Body)
-		if err != nil {
-			return err
-		} else {
-			if strings.Contains(buildBuf.String(), "errorDetail") {
-				log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
-				return errors.New(fmt.Sprintf("Failed building %s. Check backend logs for details. Most likely means you have an old version of Docker.", strings.Join(tags, ",")))
-			}
-		}
-
+		return nil
 	}
+
+	ctx := context.Background()
+	client, err := client.NewEnvClient()
+	defer client.Close()
+	if err != nil {
+		log.Printf("Unable to create docker client: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Docker Tags: %s", tags)
+	dockerfileSplit := strings.Split(dockerfileLocation, "/")
+
+	// Create a buffer
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+	defer tw.Close()
+	baseDir := strings.Join(dockerfileSplit[0:len(dockerfileSplit)-1], "/")
+
+	// Builds the entire folder into buf
+	err = getParsedTar(tw, baseDir, "")
+	if err != nil {
+		log.Printf("[ERROR] Tar issue during app build: %s", err)
+	}
+
+	dockerFileTarReader := bytes.NewReader(buf.Bytes())
+	buildOptions := types.ImageBuildOptions{
+		Remove:    true,
+		Tags:      tags,
+		BuildArgs: map[string]*string{},
+	}
+	//NetworkMode: "host",
+
+	httpProxy := os.Getenv("HTTP_PROXY")
+	if len(httpProxy) > 0 {
+		buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
+	}
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	if len(httpProxy) > 0 {
+		buildOptions.BuildArgs["https_proxy"] = &httpsProxy
+	}
+
+	// Print the actual file content from dockerFileTarReader
+	/*
+		data, err := ioutil.ReadAll(dockerFileTarReader)
+		if err != nil {
+			log.Printf("[ERROR] Failed reading Dockerfile TAR reader: %s", err)
+		} else {
+			log.Printf("[DEBUG] Dockerfile TAR reader content: %s", string(data))
+		}
+	*/
+
+	// Build the actual image
+	imageBuildResponse, err := client.ImageBuild(
+		ctx,
+		dockerFileTarReader,
+		buildOptions,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	// Read the STDOUT from the build process
+	defer imageBuildResponse.Body.Close()
+	buildBuf := new(strings.Builder)
+	_, err = io.Copy(buildBuf, imageBuildResponse.Body)
+	if err != nil {
+		return err
+	} else {
+		if strings.Contains(buildBuf.String(), "errorDetail") {
+			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+			return errors.New(fmt.Sprintf("Failed building %s. Check backend logs for details. Most likely means you have an old version of Docker.", strings.Join(tags, ",")))
+		}
+	}
+
 	return nil
 }
 
@@ -604,11 +615,27 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
-		return
+	var err error
+	body := []byte{}
+	//log.Printf("IMAGE REQUEST BODY: %#v", request.Body)
+	if request.Body == nil || request.Body == http.NoBody {
+		// Check for the image query, otherwise we skip everything
+		imageQuery := request.URL.Query().Get("image")
+		if len(imageQuery) == 0 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "No image query found"}`))
+			return
+		}
+
+		body = []byte(fmt.Sprintf(`{"name": "%s"}`, imageQuery))
+
+	} else {
+		body, err = ioutil.ReadAll(request.Body)
+		if err != nil {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+			return
+		}
 	}
 
 	// This has to be done in a weird way because Datastore doesn't
@@ -630,28 +657,48 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	img := image.Summary{}
+	img2 := image.Summary{}
+	tagFound := ""
+	tagFound2 := ""
+
+	// Old way of doing it
+	//alternativeNameSplit := strings.Split(version.Name, "/")
+	//alternativeName := version.Name
+	//if len(alternativeNameSplit) == 3 {
+	//	alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
+	//}
+
+	appname, baseAppname, appnameSplit2, err := shuffle.GetAppNameSplit(version)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting appname split: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't get the right docker image name"}`)))
+		return
+	}
+
+	if len(version.Name) == 0 {
+		log.Printf("[ERROR] No image name provided for download: %s", version.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "No image name"}`)))
+		return
+
+	}
+
+	log.Printf("[INFO] Trying to download image: '%s'. Appname: '%s'. BaseAppname: '%s', Split2: %s", version.Name, appname, baseAppname, appnameSplit2)
+
+	alternativeName := appname
 	ctx := context.Background()
 	images, err := dockercli.ImageList(ctx, image.ListOptions{
 		All: true,
 	})
 
-	img := image.Summary{}
-	tagFound := ""
-
-	img2 := image.Summary{}
-	tagFound2 := ""
-
-	alternativeNameSplit := strings.Split(version.Name, "/")
-	alternativeName := version.Name
-	if len(alternativeNameSplit) == 3 {
-		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
-	}
-
-	log.Printf("[INFO] Trying to download image: %s. Alt: %s", version.Name, alternativeName)
-
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			//log.Printf("[DEBUG] Tag: %s", tag)
+			if strings.Contains(tag, "<none>") {
+				continue
+			}
+
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
 				tagFound = tag
@@ -834,7 +881,7 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 		type tmpapp struct {
 			Success bool   `json:"success"`
 			OpenAPI string `json:"openapi"`
-			App 	string `json:"app"`
+			App     string `json:"app"`
 		}
 
 		app := tmpapp{}
@@ -984,11 +1031,4 @@ func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) 
 
 	log.Printf("[INFO] User %s (%s) is activating %s. Public: %t, Shared: %t", user.Username, user.Id, app.Name, app.Public, app.Sharing)
 	buildSwaggerApp(resp, []byte(openApiApp.Body), user, true)
-
-	//app.Active = true
-	//app.Generated = true
-	//app, err := shuffle.SetApp(ctx, app)
-
-	//resp.WriteHeader(200)
-	//resp.Write([]byte(`{"success": true}`))
 }

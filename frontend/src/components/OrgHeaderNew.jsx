@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import theme from "../theme.jsx";
+import React, { useEffect, useState, useContext } from "react";
+import {getTheme} from "../theme.jsx";
 import { makeStyles } from "@mui/styles";
 import { toast } from 'react-toastify';
-
+import { Context } from "../context/ContextApi.jsx";
 import {
   Tooltip,
   TextField,
@@ -69,6 +69,8 @@ const OrgHeader = (props) => {
     selectedOrganization.description
   );
 
+  const { themeMode } = useContext(Context)
+  const {theme} = getTheme(themeMode)
 
   const [file, setFile] = React.useState("");
   const [fileBase64, setFileBase64] = React.useState(
@@ -364,10 +366,10 @@ const OrgHeader = (props) => {
     >
       <FormControl>
         <DialogTitle>
-          <div style={{ color: "rgba(255, 255, 255, 0.9)" }}>Upload Organization Image</div>
+          <div style={{ color: theme?.palette?.textColor}}>Upload Organization Image</div>
         </DialogTitle>
         {errorText}
-        <DialogContent style={{ color: "rgba(255, 255, 255, 0.65)" }}>
+        <DialogContent style={{ color: theme?.palette?.textColor }}>
           <AvatarEditor
             ref={setEditorRef}
             image={croppedData}
@@ -389,7 +391,7 @@ const OrgHeader = (props) => {
                 style={appIconStyle}
                 onClick={() => { upload.click(); }}
               >
-                <AddAPhotoOutlinedIcon style={{ color: "rgba(255, 255, 255, 0.9)" }} />
+                <AddAPhotoOutlinedIcon style={{ color: theme?.palette?.textColor }} />
               </Button>
             </Tooltip>
             <Tooltip title="Zoom In">
@@ -399,7 +401,7 @@ const OrgHeader = (props) => {
                 style={appIconStyle}
                 onClick={zoomIn}
               >
-                <ZoomInOutlinedIcon style={{ color: "rgba(255, 255, 255, 0.9)" }} />
+                <ZoomInOutlinedIcon style={{ color: theme?.palette?.textColor }} />
               </Button>
             </Tooltip>
             <Tooltip title="Zoom Out">
@@ -409,7 +411,7 @@ const OrgHeader = (props) => {
                 style={appIconStyle}
                 onClick={zoomOut}
               >
-                <ZoomOutOutlinedIcon style={{ color: "rgba(255, 255, 255, 0.9)" }} />
+                <ZoomOutOutlinedIcon style={{ color: theme?.palette?.textColor }} />
               </Button>
             </Tooltip>
             <Tooltip title="Rotate">
@@ -419,7 +421,7 @@ const OrgHeader = (props) => {
                 style={appIconStyle}
                 onClick={rotation}
               >
-                <LoopIcon style={{ color: "rgba(255, 255, 255, 0.9)" }} />
+                <LoopIcon style={{ color: theme?.palette?.textColor }} />
               </Button>
             </Tooltip>
           </div>
@@ -427,7 +429,7 @@ const OrgHeader = (props) => {
         </DialogContent>
         <DialogActions>
           <Button
-            style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: "rgba(255, 255, 255, 0.9)" }}
+            style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: theme?.palette?.textColor }}
             onClick={onCancelSaveAppIcon}
           >
             Cancel
@@ -491,7 +493,7 @@ const OrgHeader = (props) => {
         <div style={{ marginLeft: 16, alignContent: "center" }}>
           <div >
             <Button
-              style={{ backgroundColor: '#ff8544', fontSize: 16, textTransform: 'capitalize', color: "#212121", boxShadow: "none", borderRadius: 4, width: 128, height: 40 }}
+              style={{ fontSize: 16, textTransform: 'capitalize',  boxShadow: "none", borderRadius: 4, width: 128, height: 40 }}
               variant="contained"
               color="primary"
               onClick={() => {
@@ -503,9 +505,9 @@ const OrgHeader = (props) => {
           </div>
           <div>
             <Button
-              style={{ backgroundColor: '#494949', fontSize: 16, textTransform: 'capitalize', color: "#ffffff", boxShadow: "none", marginTop: 20, borderRadius: 4, width: 128, height: 40 }}
               variant="contained"
-              color="primary"
+              color="secondary"
+              style={{ fontSize: 16, textTransform: 'capitalize', boxShadow: "none", marginTop: 20, borderRadius: 4, width: 128, height: 40 }}
               onClick={() => removeImage()}
             >
               Remove

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import ReactGA from "react-ga4";
 import Markdown from "react-markdown";
 import algoliasearch from "algoliasearch/lite";
@@ -86,53 +86,6 @@ import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { v4 as uuidv4 } from "uuid";
 import aa from "search-insights";
 
-const surfaceColor = "#27292D";
-const inputColor = "#383B40";
-
-const chipStyle = {
-  marginTop: 5,
-  backgroundColor: "#3d3f43",
-  height: 30,
-  marginRight: 5,
-  paddingLeft: 5,
-  paddingRight: 5,
-  height: 28,
-  cursor: "pointer",
-  borderColor: "#3d3f43",
-  color: "white",
-};
-
-const actionListStyle = {
-  paddingLeft: 10,
-  paddingRight: 10,
-  paddingTop: 10,
-  marginTop: 5,
-  backgroundColor: inputColor,
-  display: "flex",
-  color: "white",
-  maxWidth: 350,
-  minWidth: 350,
-  maxHeight: 54,
-  overflow: "hidden",
-};
-
-const boxStyle = {
-  color: "white",
-  flex: "3",
-  margin: 10,
-  paddingLeft: 30,
-  paddingRight: 30,
-  paddingBottom: 30,
-  paddingTop: 30,
-  display: "flex",
-  flexDirection: "column",
-  position: "relative",
-  maxHeight: 180,
-  overflow: "hidden",
-};
-
-const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
-
 
 // AppTypes:
 // 0 = OpenAPI (VALID)
@@ -140,7 +93,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 // 2 = OpenAPI (Invalid)
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "db08e40265e2941b9a7d8f644b6e5240"
+  "c8f882473ff42d41158430be09ec2b4e"
 )
 
 const AppExplorer = (props) => {
@@ -162,7 +115,54 @@ const AppExplorer = (props) => {
   const classes = useStyles()
   let navigate = useNavigate()
 
-  const { leftSideBarOpenByClick, } = useContext(Context);
+  const { leftSideBarOpenByClick, themeMode, supportEmail } = useContext(Context);
+  const theme = getTheme(themeMode);
+
+  const surfaceColor = "#27292D";
+const inputColor = theme.palette.textFieldStyle.backgroundColor;
+
+const chipStyle = {
+  marginTop: 5,
+  backgroundColor: theme.palette.chipStyle.backgroundColor,
+  height: 30,
+  marginRight: 5,
+  paddingLeft: 5,
+  paddingRight: 5,
+  cursor: "pointer",
+  borderColor: theme.palette.chipStyle.borderColor,
+  color: theme.palette.chipStyle.color,
+};
+
+const actionListStyle = {
+  paddingLeft: 10,
+  paddingRight: 10,
+  paddingTop: 10,
+  marginTop: 5,
+  backgroundColor: inputColor,
+  display: "flex",
+  color: theme.palette.text.primary,
+  maxWidth: 350,
+  minWidth: 350,
+  maxHeight: 54,
+  overflow: "hidden",
+};
+
+const boxStyle = {
+  color: theme.palette.text.primary,
+  flex: "3",
+  margin: 10,
+  paddingLeft: 30,
+  paddingRight: 30,
+  paddingBottom: 30,
+  paddingTop: 30,
+  display: "flex",
+  flexDirection: "column",
+  position: "relative",
+  maxHeight: 180,
+  overflow: "hidden",
+};
+
+const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 
   const params = useParams();
   //var props = JSON.parse(JSON.stringify(defaultprops))
@@ -385,9 +385,9 @@ const AppExplorer = (props) => {
       extraInfo = (
         <div
           style={{
-            backgroundColor: theme.palette.inputColor,
+            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
             padding: 15,
-            borderRadius: theme.palette?.borderRadius,
+            borderRadius: theme.palette?.textFieldStyle.borderRadius,
             marginBottom: 30,
             display: "flex",
           }}
@@ -555,7 +555,9 @@ const AppExplorer = (props) => {
 									}}
 									style={{
 										cursor: "pointer", 
-										color: "white",
+                    backgroundColor: theme.palette.chipStyle.backgroundColor,
+                    borderColor: theme.palette.chipStyle.borderColor,
+										color: theme.palette.chipStyle.color,
 										borderRadius: 40,
 										minWidth: 80,
 										marginRight: 10,
@@ -586,7 +588,9 @@ const AppExplorer = (props) => {
 									disabled={included === false}
 									style={{
 										cursor: included ? "pointer" : "default",
-										color: "white",
+										color: theme.palette.chipStyle.color,
+                    borderColor: theme.palette.chipStyle.borderColor,
+                    backgroundColor: theme.palette.chipStyle.backgroundColor,
 										borderRadius: 40,
 										minWidth: 80,
 										marginRight: 10,
@@ -776,7 +780,7 @@ const AppExplorer = (props) => {
 				if (responseJson.reason !== undefined) {
 					toast("Failed to perform action: "+responseJson.reason);
 				} else {
-					toast("Failed to perform action. Please try again or contact support@shuffler.io");
+					toast(`Failed to perform action. Please try again or contact ${supportEmail}`);
 				}
 			}
       } else {
@@ -1088,14 +1092,13 @@ const AppExplorer = (props) => {
       setNewWorkflowTags(newWorkflowTags);
     }
 
-    // This is annoying (:
-    var securitySchemes = data.components.securityDefinitions;
+    var securitySchemes = data?.components?.securityDefinitions;
     if (securitySchemes === undefined) {
-      securitySchemes = data.securitySchemes;
+      securitySchemes = data?.securitySchemes;
     }
 
     if (securitySchemes === undefined) {
-      securitySchemes = data.components.securitySchemes;
+      securitySchemes = data?.components?.securitySchemes;
     }
 
     const allowedfunctions = [
@@ -1681,7 +1684,7 @@ const AppExplorer = (props) => {
           setExecutionResult({
             valid: false,
             result:
-              "Couldn't finish execution (2). Please fill all the required fields, and validate the execution.",
+              "Couldn't finish execution OR no result was returned (2). Please fill all the required fields, and validate the execution.",
           });
         }
 
@@ -3094,7 +3097,7 @@ const AppExplorer = (props) => {
               margin: 10,
               padding: 30,
               backgroundColor: boxStyle.backgroundColor,
-              color: "white",
+              color: theme.palette.text.primary,
               textAlign: "left",
               paddingBottom: 50,
               overflow: "hidden",
@@ -3118,12 +3121,12 @@ const AppExplorer = (props) => {
               style={{ marginBottom: 0, marginLeft: 0, marginRight: 0, minWidth: 800, maxWidth: 800, margin: "auto", }}
               aria-label="disabled tabs example"
             >
-              <Tab style={{marginLeft: 0, }} icon={<DescriptionIcon />} label="Docs" />
-              <Tab icon={appType === 0 || appType === 2 ? <OpenInNewIcon /> : <AppsIcon />} label={appType === 0 || appType === 2 ? "Explore the API" : "Try it out"} />
+              <Tab style={{marginLeft: 0, color: theme.palette.text.primary, textTransform: "none",}} icon={<DescriptionIcon />} label="Docs" />
+              <Tab style={{color: theme.palette.text.primary, textTransform: "none", }} icon={appType === 0 || appType === 2 ? <OpenInNewIcon /> : <AppsIcon />} label={appType === 0 || appType === 2 ? "Try the API" : "Try it out"} />
 
-              <Tab icon={<ShowChartIcon />} label="Stats" />
-              <Tab icon={<PolylineIcon />} disabled label="Integrations" />
-              <Tab icon={<PersonIcon />} disabled={userdata.support !== true} label="Creator" value={4}  />
+              <Tab icon={<ShowChartIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} label="Stats & Downloads" />
+              <Tab icon={<PolylineIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} disabled style={{color: theme.palette.text.secondary}} label="Integrations" />
+              <Tab icon={<PersonIcon />} disabled={userdata.support !== true} style={{color: userdata.support !== true ? theme.palette.text.secondary: theme.palette.text.primary, textTransform: "none", }} label="Creator" value={4}  />
             </Tabs>
             <div style={{ marginTop: 25 }}>
               {selectedTab === 1 && app.skipped_build == false ? (
@@ -3132,8 +3135,8 @@ const AppExplorer = (props) => {
                     <SelectedActionView action={currentAction} />
                   </div>
                   <div style={{ marginLeft: 25, maxWidth: 350 }}>
-										{currentAction.description !== undefined && currentAction.description !== null && currentAction.description !== "" ? 
-											<div
+					{currentAction.description !== undefined && currentAction.description !== null && currentAction.description !== "" ? 
+						<div
                         style={{
                           maxHeight: 175,
                           overflowX: "hidden",
@@ -3250,11 +3253,11 @@ const AppExplorer = (props) => {
 				  	Use the App onprem (hybrid)
 				  </Typography> 
 				  <Typography variant="body2" color="textSecondary" style={{marginTop: 5, }}>
-				  	Due to using docker containers with privately uploaded containers, we had to use a custom registry. Use the command below to download the image to the server if it fails to run.
+				  	Custom uses a custom Docker registry for private containers. Use the command below to download the app image to a server if it fails to do so automatically.
 
-				  	It will authenticate and authorize you, before redirecting to a Signed URL on https://storage.googleapis.com
+				  	The downloadable image may not be ready until 5 minutes after the app was built.
 
-				  	<b>&nbsp;Now also works for ARM containers!</b>
+				  	<b>&nbsp;Now also works for ARM containers (?arch=arm)!</b>
 				  </Typography> 
 
 				  <div
@@ -3866,13 +3869,13 @@ const AppExplorer = (props) => {
         }
       }}
     >
-      <DialogTitle style={{ marginBottom: 0 }}>
+      <DialogTitle style={{ marginBottom: 0, padding: 50,  paddingBottom: 0, }}>
         <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
           Are you sure you want to PUBLISH this app?
         </div>
       </DialogTitle>
       <DialogContent
-        style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+        style={{ color: "rgba(255,255,255,0.65)", textAlign: "center", padding: 50, }}
       >
         <div>
           <Typography variant="body1" style={{ marginBottom: 20 }}>
@@ -3884,12 +3887,12 @@ const AppExplorer = (props) => {
         </div>
         <Button
           variant="contained"
-          style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544" }}
+          color="primary"
+          style={{ borderRadius: "2px", textTransform: 'none', fontSize:16,  }}
           onClick={() => {
 			updateAppField(selectedApp.id, "sharing", true);
             setPublishModalOpen(false);
           }}
-          color="primary"
         >
           Yes
         </Button>
@@ -3920,13 +3923,13 @@ const AppExplorer = (props) => {
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
-            style={{ color: "white", marginLeft: 15, flex: 100 }}
+            style={{ color: theme.palette.text.primary, marginLeft: 15, flex: 100 }}
           >
             <Link
               to="/search"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <h2 style={{ color: "rgba(255,255,255,0.5)" }}>
+              <h2 style={{ color: theme.palette.text.primary }}>
                 <AppsIcon style={{ marginRight: 10 }} />
                 Apps
               </h2>
@@ -3972,9 +3975,7 @@ const AppExplorer = (props) => {
           ) : null}
           {appType === 0 || appType === 2 ? (
             <IconButton
-              color="primary"
               style={{ marginRight: 20 }}
-              variant="contained"
               onClick={() => {
                 const data = openapi;
                 let exportFileDefaultName = name + ".json";
@@ -3995,7 +3996,7 @@ const AppExplorer = (props) => {
                 if (queryID !== undefined && queryID !== null) {
                   aa("init", {
                     appId: "JNSS5CFDZZ",
-                    apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+                    apiKey: "c8f882473ff42d41158430be09ec2b4e",
                   });
 
                   const timestamp = new Date().getTime();
@@ -4021,12 +4022,12 @@ const AppExplorer = (props) => {
               }}
             >
               <Tooltip title="Download OpenAPI" placement="top">
-                <CloudDownloadIcon color="secondary" />
+                <CloudDownloadIcon color={theme.palette.text.primary} />
               </Tooltip>
             </IconButton>
           ) : null}
 
-	  	  {selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.id !== undefined && userdata.support === true ?
+	  	  {selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.id !== undefined  ?
 			// Iconbutton for authentication with just an icon. Link to /apps/authentication?app_id=app.id
 			<IconButton
 				color="secondary"
@@ -4037,7 +4038,7 @@ const AppExplorer = (props) => {
 				}}
 			>
 				<Tooltip title="Public Authentication link for the current Organization. Times out every 24 hours." placement="top">
-				  	<LockOpenIcon />
+				  	<LockOpenIcon color={theme.palette.text.primary}/>
 				</Tooltip>
 			</IconButton>
 		  : null}
@@ -4065,7 +4066,7 @@ const AppExplorer = (props) => {
             </Button>
           }
 
-          {isMobile ? null : (
+          {isMobile || app?.reference_org === userdata?.active_org?.id ? null : (
             <Button
 			  variant={userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ? "outlined": "contained"}
               component="label"
@@ -4084,7 +4085,7 @@ const AppExplorer = (props) => {
                 if (queryID !== undefined && queryID !== null) {
                   aa("init", {
                     appId: "JNSS5CFDZZ",
-                    apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+                    apiKey: "c8f882473ff42d41158430be09ec2b4e",
                   });
 
                   const timestamp = new Date().getTime();
@@ -4120,7 +4121,7 @@ const AppExplorer = (props) => {
             </Button>
           )}
 			{appType === 1 ? null : 
-				creatorProfile.self === true || userdata.support === true ? 
+  				userdata?.support || userdata?.id === app?.owner || (userdata?.admin === "true" && userdata?.active_org?.id === app?.reference_org) || app?.contributors?.includes(userdata?.id) || creatorProfile?.self === true ?
 				<Tooltip title="Edit App" placement="top">
 					<Button
 						variant="outlined"
@@ -4141,7 +4142,7 @@ const AppExplorer = (props) => {
 						component="label"
 						color="secondary"
 						onClick={() => {
-							navigate(`/apps/new?id=${appId}`)
+							navigate(`/apps/new?id=${appId}&fork=true`)
 						}}
 						style={{ height: 40, marginTop: 5, marginLeft: 5, }}
 					>
@@ -4164,12 +4165,12 @@ const AppExplorer = (props) => {
 			  		style={{ height: 40, marginTop: 5, marginLeft: 5, }}
 				  >
   					<OpenInNewIcon style={{marginRight: 5, }}/>
-					Explore API
+					Try the API
 				  </Button>
 				</a>
-        {(appdata?.owner === userdata?.id) ? (
                 <Select
                   value={sharingConfiguration}
+			  	  disabled={!isCloud}
                   onChange={(event) => {
                     if ((appdata.owner !== userdata.id) && (!userdata.support)) {
                       toast("You're not the owner of this app. You can't update it.");
@@ -4198,8 +4199,8 @@ const AppExplorer = (props) => {
                   }}
                   style={{
                     width: 150,
-                    backgroundColor: theme.palette.surfaceColor,
-                    color: "white",
+                    backgroundColor: theme.palette.backgroundColor,
+                    color: theme.palette.text.primary,
                     height: 40,
                     marginTop: 5
                   }}
@@ -4214,7 +4215,7 @@ const AppExplorer = (props) => {
                     return (
                       <MenuItem
                         key={data}
-                        style={{ backgroundColor: inputColor, color: "white", display: 'flex' }}
+                        sx={{ backgroundColor: inputColor, color: theme.palette.text.primary, display: 'flex', "&:hover": { backgroundColor: theme.palette.hoverColor } }}
                         value={data}
                       >
                         {data}
@@ -4222,7 +4223,6 @@ const AppExplorer = (props) => {
                     );
                   })}
                 </Select>
-        ): null }
 			</div>
           ) : (
             <a
@@ -4375,8 +4375,8 @@ const AppExplorer = (props) => {
                       style={{
                         borderRadius: 25,
                         fontSize: 11,
-                        color: "white",
-                        backgroundColor: "rgba(255,255,255,0)",
+                        color: theme.palette.text.primary,
+                        backgroundColor: theme.palette.platformColor,
                         border: "1px solid #ddf4e1",
                         textTransform: "none",
                         marginLeft: 4,
@@ -4468,6 +4468,11 @@ const AppExplorer = (props) => {
             color: "white",
             textAlign: "center",
           }}
+          sx={{
+            "&:hover": {
+              backgroundColor: theme.palette.hoverColor,
+            },
+          }}
         >
           <CardActionArea
             component={Link}
@@ -4554,6 +4559,11 @@ const AppExplorer = (props) => {
               backgroundColor: boxStyle.backgroundColor,
               color: "white",
               textAlign: "center",
+            }}
+            sx={{
+              "&:hover": {
+                backgroundColor: theme.palette.hoverColor,
+              },
             }}
           >
             <CardActionArea

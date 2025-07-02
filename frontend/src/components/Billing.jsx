@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useContext, memo, useMemo } from "react";
+import React, { useState, useEffect, memo, useMemo, useContext } from "react";
 import ReactGA from 'react-ga4';
-
-import theme from "../theme.jsx";
+import { getTheme } from "../theme.jsx";
 import countries from "../components/Countries.jsx";
+
 import {
 	Box,
 	Paper,
@@ -26,7 +26,10 @@ import {
 	DialogContentText,
 	DialogActions,
 	LinearProgress,
-	Slider
+	Slider,
+	Tabs,
+	Tab,
+	CircularProgress,
 } from "@mui/material";
 
 import { useNavigate, Link, json } from "react-router-dom";
@@ -43,20 +46,27 @@ import {
 	Cloud,
 	CheckCircle,
 	Padding,
+	Edit,
+	Search as SearchIcon
 } from "@mui/icons-material";
 
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
-import BillingStats from "./BillingStats.jsx";
+import BillingStats from "../components/BillingStats.jsx";
+import LicencePopup from "../components/LicencePopup.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
-import DeleteIcon from '@mui/icons-material/Delete';
+
 import { Context } from "../context/ContextApi.jsx";
-import LicencePopup from "./LicencePopup.jsx";
+
+import DeleteIcon from '@mui/icons-material/Delete';
+import { DataGrid } from "@mui/x-data-grid";
 
 const Billing = memo((props) => {
 	const { globalUrl, userdata, serverside, billingInfo, stripeKey,isLoaded, selectedOrganization, handleGetOrg, clickedFromOrgTab, removeCookie} = props;
 	//const alert = useAlert();
 	let navigate = useNavigate();
+	const { themeMode, brandColor,supportEmail } = useContext(Context);
+	const theme = getTheme(themeMode, brandColor);
 	const [isLoggedIn, setIsLoggedIn] = useState(false)
 	const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
 	const [dealList, setDealList] = React.useState([]);
@@ -77,18 +87,35 @@ const Billing = memo((props) => {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [deleteAlertIndex, setDeleteAlertIndex] = useState(-1);
 	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
+	const [isScale, setIsScale] = useState(false);
+	const [currentTab, setCurrentTab] = useState(0)
+	const [allChildOrgs, setAllChildOrgs] = useState([])
+	const [allChildOrgsStats, setAllChildOrgsStats] = useState([])
+
 	useEffect(() => {
 		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
 			const percentage = (userdata.app_execution_usage / userdata.app_execution_limit) * 100;
 			setCurrentAppRunsInPercentage(Math.round(percentage));
 			setCurrentAppRunsInNumber(userdata.app_execution_limit - userdata.app_execution_usage);
 		}
+
 		if (userdata?.id?.length > 0 && isLoggedIn === false){
 			setIsLoggedIn(true)
 		}
 	}, [userdata]);
 
 	const [BillingEmail, setBillingEmail] = useState(selectedOrganization?.Billing?.Email);
+
+	useEffect(() => {
+		const urlIncludesProfessionalServices = window.location.href.includes("professional-services");
+		if (props?.isCloud && urlIncludesProfessionalServices) {
+			const professionalServicesSection =
+			document.getElementById("professional-services");
+			if (professionalServicesSection) {
+				professionalServicesSection.scrollIntoView({ behavior: "smooth" });
+			}
+		}
+	}, []);
 
 	useEffect(() => {
 		if (BillingEmail !== selectedOrganization?.Billing?.Email) {
@@ -176,11 +203,10 @@ const Billing = memo((props) => {
 		padding: 20,
 		// maxWidth: 400,
 		width: 340,
-		height: 480,
+		height: 'auto',
 		// width: "100%",
-		backgroundColor: theme.palette.backgroundColor,
-		borderRadius: theme.palette?.borderRadius * 2,
-		border: "1px solid rgba(255,255,255,0.3)",
+		backgroundColor: "#1e1e1e",
+		borderRadius: 10,
 		marginRight: 10,
 		marginTop: 15,
 	}
@@ -336,6 +362,7 @@ const Billing = memo((props) => {
 		const [tosChecked, setTosChecked] = React.useState(subscription.eula_signed)
 		const [hovered, setHovered] = React.useState(false)
 		const [newBillingEmail, setNewBillingEmail] = useState('');
+		const {supportEmail} = useContext(Context);
 
 		var top_text = "Base Cloud Access"
 		if (subscription.limit === undefined && subscription.level === undefined || subscription.level === null || subscription.level === 0) {
@@ -361,7 +388,7 @@ const Billing = memo((props) => {
 		var showSupport = false
 		if (subscription.name.includes("default")) {
 			top_text = "Custom Contract"
-			newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
+			// newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
 			showSupport = true
 		}
 
@@ -377,16 +404,17 @@ const Billing = memo((props) => {
 
 		if (subscription.name.includes("Scale")) {
 			top_text = "Scale access"
+			setIsScale(true)
 		}
 
 		if (highlight === true) {
 			// Add an "Upgrade now" button
-			newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
+			// newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
 		}
 
-		if (hovered) {
-			newPaperstyle.backgroundColor = "#2b2b2b"
-		}
+		// if (hovered) {
+		// 	newPaperstyle.backgroundColor = "#2b2b2b"
+		// }
 
 		const handleClickOpen = () => {
 			setOpenChangeEmailBox(true);
@@ -535,7 +563,7 @@ const Billing = memo((props) => {
 							Accept
 						</Typography>
 						<Typography variant="body2" style={{ display: "inline-block", marginLeft: 10, }} color="textSecondary">
-							By clicking the “accept” button, you are signing the document, electronically agreeing that it has the same legal validity and effects as a handwritten signature, and that you have the competent authority to represent and sign on behalf an entity. Need support or have questions? Contact us at support@shuffler.io.
+							By clicking the “accept” button, you are signing the document, electronically agreeing that it has the same legal validity and effects as a handwritten signature, and that you have the competent authority to represent and sign on behalf an entity. Need support or have questions? Contact us at {supportEmail}
 						</Typography>
 
 						<div style={{ display: "flex", marginTop: 25, }}>
@@ -556,6 +584,7 @@ const Billing = memo((props) => {
 						</div>
 					</DialogContent>
 				</Dialog>
+				<Button style={{ backgroundColor: '#2F2F2F', color: "white", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', width: 144, height: 40 }}>Current Plan</Button>
 				<div style={{ display: "flex", width: 340 }}>
 					{top_text === "Base Cloud Access" && userdata.has_card_available === true ?
 						<Chip
@@ -659,8 +688,8 @@ const Billing = memo((props) => {
 											<TextField
 												value={feature.split("Worker License: ")[1]}
 												style={{
-													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette?.borderRadius,
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													borderRadius: theme.palette?.textFieldStyle.borderRadius,
 												}}
 												id={fieldId}
 												onClick={() => { }}
@@ -857,6 +886,7 @@ const Billing = memo((props) => {
 								"Add Card Details"
 							}
 						</Button>
+
 						{userdata.has_card_available === true ?
 							<Button
 								fullWidth
@@ -885,8 +915,9 @@ const Billing = memo((props) => {
 							: null}
 
 					</span>
-					: null}
-				{showSupport ?
+				: null}
+
+				{/* {showSupport ?
 					<Button variant="outlined" color="primary" style={{ marginTop: 20, marginBottom: 10, }} onClick={() => {
 						if (window.drift !== undefined) {
 							//window.drift.api.startInteraction({ interactionId: 340045 })
@@ -897,7 +928,7 @@ const Billing = memo((props) => {
 					}}>
 						Get Support
 					</Button>
-					: null}
+					: null} */}
 			</div>
 		)
 	}
@@ -1061,12 +1092,12 @@ const Billing = memo((props) => {
 				padding: 20,
 				// maxWidth: 400,
 				width: "100%",
-				height: 480,
-				backgroundColor: hovered ? "#2b2b2b" : "#1e1e1e",
+				height: 500,
+				backgroundColor: hovered ? theme.palette.cardHoverColor : theme.palette.cardBackgroundColor,
 				borderRadius: theme.palette?.borderRadius * 2,
 				border: "1px solid rgba(255,255,255,0.3)",
 				marginRight: 10,
-				marginTop: 15,
+					marginTop: 15,
 			}}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={() => setHovered(false)}>
@@ -1133,12 +1164,12 @@ const Billing = memo((props) => {
 						Features
 					</Typography>
 					<ul>
-						<li>
+						<li style={{color : theme.palette.text.primary}}>
 							<Typography variant="body2" color="textPrimary" style={{}}>
 								Build custom apps, integrations, and worklows for your specific use cases or applications
 							</Typography>
 						</li>
-						<li>
+						<li style={{color : theme.palette.text.primary}}>
 							<Typography variant="body2" color="textPrimary" style={{}}>
 								Help solve / debug / update / add features and capabilities of the platform
 							</Typography>
@@ -1149,15 +1180,13 @@ const Billing = memo((props) => {
 					<Button
 						fullWidth
 						disabled={false}
-						variant="outlined"
+						variant="contained"
 						color="primary"
 						style={{
-							marginTop: userdata.support ? 0 : 10,
+							marginTop: userdata.support ? 3 : 15,
 							borderRadius: 4,
 							height: 40,
 							fontSize: 16,
-							color: "#1A1A1A",
-							backgroundColor: "#FF8544",
 							textTransform: 'none',
 						}}
 						onClick={() => {
@@ -1201,12 +1230,13 @@ const Billing = memo((props) => {
 										ReactGA.event({
 											category: "Billing",
 											action: "Buy_consultation_hours",
-										});
+										})
 									}
+
 									const url = userdata.licensed === true
-										? "https://book.stripe.com/6oEeY23fw2T84M06oq"
-										: "https://book.stripe.com/00g6rw3fw9hwguI289";
-									window.open(url, "_blank");
+										? "https://buy.stripe.com/aEU3fk17o0L092g5kt"
+										: "https://buy.stripe.com/aEU3fk17o0L092g5kt"
+									window.open(url, "_blank")
 								}}
 							>
 								Book Professional Service Hours
@@ -1222,7 +1252,7 @@ const Billing = memo((props) => {
 								variant="outlined"
 								color="primary"
 								style={{
-									marginTop: userdata.support ? 5 : 10,
+									marginTop: userdata.support ? 10 : 15,
 									borderRadius: 4,
 									height: 40,
 									fontSize: 16,
@@ -1348,7 +1378,7 @@ const Billing = memo((props) => {
 					toast.success("Your request for private training has been submitted successfully. We will get back to you soon.")
 					setOpenPrivateTraining(false)
 				} else {
-					toast.error("Failed sending request for private training. Please try again later or contact support@shuffler.io for help.")
+					toast.error(`Failed sending request for private training. Please try again later or contact support@shuffler.io for help.`)
 				}
 			})
 		}
@@ -1357,10 +1387,10 @@ const Billing = memo((props) => {
 			<div
 				style={{
 					padding: 20,
-					height: 480,
+					height: 500,
 					// maxWidth: 400,
 					width: "100%",
-					backgroundColor: hovered ? "#2b2b2b" : "#1e1e1e",
+					backgroundColor: hovered ? theme.palette.cardHoverColor : theme.palette.cardBackgroundColor,
 					borderRadius: theme.palette?.borderRadius * 2,
 					border: "1px solid rgba(255,255,255,0.3)",
 					marginRight: 10,
@@ -1381,12 +1411,12 @@ const Billing = memo((props) => {
 						Public Training
 					</Typography>
 					<ul>
-						<li>
+						<li style={{color : theme.palette.text.primary}}>
 							<Typography variant="body2" color="textPrimary">
 								Public course on Automation for Security Professionals
 							</Typography>
 						</li>
-						<li>
+						<li style={{color : theme.palette.text.primary}}>
 							<Typography variant="body2" color="textPrimary">
 								Covers Shuffle Platform, Apps, Workflows, Usecases, JSON, Liquid Formatting, and more.
 							</Typography>
@@ -1396,12 +1426,12 @@ const Billing = memo((props) => {
 						Private Training
 					</Typography>
 					<ul>
-						<li>
+						<li style={{color : theme.palette.text.primary}}>
 							<Typography variant="body2" color="textPrimary">
 								Everything from Public Training
 							</Typography>
 						</li>
-						<li>
+						<li style={{color : theme.palette.text.primary}}>
 							<Typography variant="body2" color="textPrimary" >
 								Customized for your team’s usecases, date and time, location, and more.
 							</Typography>
@@ -1419,9 +1449,7 @@ const Billing = memo((props) => {
 							borderRadius: 4,
 							height: 40,
 							fontSize: 16,
-							color: "#1A1A1A",
 							textTransform: 'none',
-							backgroundColor: "#FF8544",
 							width: "100%",
 						}}
 						onClick={() => {
@@ -1965,16 +1993,18 @@ const Billing = memo((props) => {
 				<div style={{ width: "100%",}}>
 				{addDealModal}
 			{clickedFromOrgTab ?
-				<Typography style={{fontSize: 24, fontWeight: "bold", marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Billing & Licensing</Typography> :
+				<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, marginTop: 0, }}>Billing & Licensing</Typography> :
 				<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
 					Billing	& Licensing
 				</Typography>}
-			{clickedFromOrgTab ?
-				<span style={{ color: "#9E9E9E", fontSize: 16 }}>{isCloud ?
+			{userdata?.org_status?.includes("integration_partner") && userdata?.org_status?.includes("sub_org") ? null : 
+			<>
+				{clickedFromOrgTab ?
+				<Typography variant="body2" color="textSecondary" style={{ fontSize: 16 }}>{isCloud ?
 					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
 					"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
-				}</span> :
+				}</Typography> :
 				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10, fontSize: 16 }}>
 					{isCloud ?
 						"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
@@ -1982,9 +2012,10 @@ const Billing = memo((props) => {
 						"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
 					}
 				</Typography>}
+			</>  }
 
 			{userdata.support === true ?
-				<div style={{ marginBottom: 10, marginTop: clickedFromOrgTab ? 16 : null, color: clickedFromOrgTab ? "#F1F1F1" : null }}>
+				<Typography style={{ marginBottom: 10, marginTop: clickedFromOrgTab ? 16 : null, color: clickedFromOrgTab ? theme.palette.text.primary : null }}>
 					For sales: Create&nbsp;
 					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
 						EU contract
@@ -2001,7 +2032,7 @@ const Billing = memo((props) => {
 					<a href={"https://github.com/Shuffle/Shuffle-docs/tree/master/handbook/Sales"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
 						Sales Process (old)
 					</a>
-				</div>
+				</Typography>
 				:
 				null
 			}
@@ -2009,11 +2040,37 @@ const Billing = memo((props) => {
 
 			{isChildOrg ?
 				<Typography variant="h6" style={{ marginBottom: 50, }}>
-					Licensing is handled by your parent organisation. Reach out to support@shuffler.io if you have questions about this.
+					Licensing is handled by your parent organisation. Reach out to {supportEmail} if you have questions about this.
 				</Typography>
 				: null}
 
-			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : "100%", maxWidth: 860, marginTop: 20}} >
+			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: theme.palette.scrollbarColor, height: isChildOrg ? 0 : "100%", marginTop: 20}} >
+				<div style={{ display: "flex", flexDirection: "column", width: "100%",  }}>
+				{/* {isCloud &&
+					selectedOrganization.subscriptions !== undefined &&
+					selectedOrganization.subscriptions !== null &&
+					selectedOrganization.subscriptions.length > 0 &&
+					!isChildOrg ?
+					selectedOrganization.subscriptions
+						.reverse()
+						.map((sub, index) => {
+							return (
+									<SubscriptionObject
+									index={index + 1}
+									globalUrl={globalUrl}
+									userdata={userdata}
+									serverside={serverside}
+									billingInfo={billingInfo}
+									stripeKey={stripeKey}
+									selectedOrganization={selectedOrganization}
+									subscription={sub}
+									highlight={true}
+								/>
+							)
+						})
+					: null} */}
+				
+				<div style={{ display: "flex", flexDirection: "row", width: "100%", marginTop: 20, marginBottom: 20, maxWidth: 860, }}>
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
 					<LicencePopup
 					serverside={serverside}
@@ -2026,6 +2083,8 @@ const Billing = memo((props) => {
 					isCloud={isCloud}
 					userdata={userdata}
 					stripeKey={stripeKey}
+					isScale={isScale}
+					features={selectedOrganization?.sync_features}
 					{...props}
 					/>
 					: !isCloud ?
@@ -2060,7 +2119,9 @@ const Billing = memo((props) => {
 								billingInfo={billingInfo}
 								isCloud={isCloud}
 								userdata={userdata}
+								features={selectedOrganization?.sync_features}
 								stripeKey={stripeKey}
+								isScale={isScale}
 							/>	
 
 							{/* <SubscriptionObject
@@ -2084,30 +2145,9 @@ const Billing = memo((props) => {
 							/> */}
 						</span>
 						: null}
+						</div>
+				</div>
 
-				{isCloud &&
-					selectedOrganization.subscriptions !== undefined &&
-					selectedOrganization.subscriptions !== null &&
-					selectedOrganization.subscriptions.length > 0 &&
-					!isChildOrg ?
-					selectedOrganization.subscriptions
-						.reverse()
-						.map((sub, index) => {
-							return (
-								<SubscriptionObject
-									index={index + 1}
-									globalUrl={globalUrl}
-									userdata={userdata}
-									serverside={serverside}
-									billingInfo={billingInfo}
-									stripeKey={stripeKey}
-									selectedOrganization={selectedOrganization}
-									subscription={sub}
-									highlight={true}
-								/>
-							)
-						})
-					: null}
 				{/*
 									<Grid item key={index} xs={12/selectedOrganization.subscriptions.length}>
 										<Card
@@ -2152,7 +2192,6 @@ const Billing = memo((props) => {
 									</Grid>
 									*/}
 			</div>
-
 
 			{/*isCloud &&
 						selectedOrganization.partner_info !== undefined &&
@@ -2340,13 +2379,13 @@ const Billing = memo((props) => {
 			  </div>
             ) : null*/}
 			{!isChildOrg && isCloud && (
-				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }}>
-					<Typography style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}>
+				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }} id="professional-services">
+					<Typography variant="h6" style={{ marginBottom: 5, fontSize: 24, fontWeight: 500 }}>
 						Professional Services
 					</Typography>
-					<Typography color="textSecondary" style={{fontSize: 16,}}>
-						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at support@shuffler.io.
-					</Typography>
+					<Typography variant="body2" color="textSecondary" style={{fontSize: 16,}}>
+						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at {supportEmail}.
+					</Typography>We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at
 					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5, }}>
 						{billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
 							isChildOrg ? null : (
@@ -2412,14 +2451,16 @@ const Billing = memo((props) => {
 							 <TextField
 								style={{
 								marginTop: 10,
-								backgroundColor: "#212121",
+								backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										color: theme.palette.textFieldStyle.color,
+								borderRadius: theme.palette.textFieldStyle.borderRadius,
 								width: 250,
 								height: 50,
 								}}
 								InputProps={{
 								style: {
 									height: 50,
-									color: 'white',
+									color: theme.palette.textFieldStyle.color,
 								},
 								endAdornment: '%',
 								}}
@@ -2442,14 +2483,16 @@ const Billing = memo((props) => {
 									style={{
 									marginTop: 10,
 									height: 50,
-									backgroundColor: "#212121",
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+									color: theme.palette.textFieldStyle.color,
 									width: 250,
-									marginLeft: 15,
+										marginLeft: 15,
+									borderRadius: theme.palette.textFieldStyle.borderRadius,
 									}}
 									InputProps={{
 									style: {
 										height: 50,
-										color: 'white',
+										color: theme.palette.textFieldStyle.color,
 									},
 									}}
 									InputLabelProps={{
@@ -2491,7 +2534,7 @@ const Billing = memo((props) => {
 								  setDeleteAlertIndex(index);
 								}}
 							  >
-								<DeleteIcon sx={{ color: theme.palette.secondary.main }} />
+								<DeleteIcon sx={{ color: themeMode === "dark" ? "rgba(255,255,255,0.7)" : "#666666" }} />
 							  </Button>
 							)}
 							<Dialog
@@ -2511,8 +2554,9 @@ const Billing = memo((props) => {
 								  Cancel
 								</Button>
 								<Button
-								  style={{ textTransform: 'none', fontSize: 16 }}
-								  color="secondary"
+								style={{ textTransform: 'none', fontSize: 16 }}
+								variant="outlined"
+								  color="primary"
 								  onClick={() => {
 									handleDeleteAlertThreshold(deleteAlertIndex);
 									setDeleteAlertVerification(false);
@@ -2555,13 +2599,87 @@ const Billing = memo((props) => {
 					Utilization & Stats
 				</Typography>
 			</div>
-			<BillingStats
-				isCloud={isCloud}
-				clickedFromOrgTab={clickedFromOrgTab}
-				globalUrl={globalUrl}
-				selectedOrganization={selectedOrganization}
-				userdata={userdata}
-			/>	
+				<span>
+					<Tabs
+					value={currentTab}
+					onChange={(event, newValue) => {
+						setCurrentTab(-1)
+
+						// Force re-render
+						setTimeout(() => {
+							setCurrentTab(newValue)
+						}, 100);
+					}}
+					style={{ marginTop: 20 }}
+					TabIndicatorProps={{
+						style: {
+							height: 3,
+							backgroundColor: theme.palette.primary.main,
+							marginLeft: 12,
+							marginRight: 12,
+						}
+					}}
+					>
+						<Tab
+							label="Parent Organization"
+							style={{ textTransform: 'none',}}
+							value={0}
+						/>
+
+						{isCloud ? 
+							<Tab
+								label="Cloud-Synced Stats"
+								style={{ textTransform: 'none', }}
+								value={1}
+							/>
+						: null}
+
+						<Tab
+							label="Child Organization Stats"
+							disabled={isChildOrg}
+							style={{ textTransform: 'none', }}
+							value={2}
+						/>
+					</Tabs>
+
+					<div style={{paddingBottom: 200, minHeight: 750, }}>
+						{currentTab === 0 ? 
+							<div style={{ marginTop: 30,}}>
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+								/>
+							</div>
+						: currentTab === 1 ? 
+							<div style={{ marginTop: 30,}}>
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+
+									syncStats={true}
+								/>
+							</div>
+						: 
+							<BillingStatsChildOrg
+								isCloud={isCloud}
+								clickedFromOrgTab={clickedFromOrgTab}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								userdata={userdata}
+								allChildOrgs={allChildOrgs}
+								setAllChildOrgs={setAllChildOrgs}
+								allChildOrgsStats={allChildOrgsStats}
+								setAllChildOrgsStats={setAllChildOrgsStats}
+							/>
+						}
+					</div>
+				</span>
 			</div>
 		</Wrapper>
 	)
@@ -2569,19 +2687,473 @@ const Billing = memo((props) => {
 
 export default memo(Billing);
 
-const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
+const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, allChildOrgs, setAllChildOrgs, allChildOrgsStats, setAllChildOrgsStats }) => {
+	const [subOrgStats, setSubOrgStats] = useState([]);
+	const [subOrgs, setSubOrgs] = useState([]);
+	const [subOrgStatsRows, setSubOrgStatsRows] = useState([]);
+	const [subOrgStatsColumns, setSubOrgStatsColumns] = useState([]);
+	const [allOrgLoaded, setAllOrgLoaded] = useState(false);
+	const [allOrgStatsLoaded, setAllOrgStatsLoaded] = useState(false);
+	const [page, setPage] = useState(0);
+	const [rowsPerPage, setRowsPerPage] = useState(10);
+	const [open, setOpen] = useState(false);
+	const [editing, setEditing] = useState("")
+	const [editingOrgId, setEditingOrgId] = useState("")
+	const [limit, setLimit] = useState("")
+	const [tableCreated, setTableCreated] = useState(false)
+	const [searchQuery, setSearchQuery] = useState("");
+	const [filteredRows, setFilteredRows] = useState([]);
+	const { themeMode, brandColor, supportEmail } = useContext(Context);
+	const theme = getTheme(themeMode, brandColor);
+
+	// Handle page change
+	const handleChangePage = (event, newPage) => {
+	  setPage(newPage);
+	};
   
+	const handleChangeRowsPerPage = (event) => {
+	  setRowsPerPage(parseInt(event.target.value, 10));
+	  setPage(0);
+	};
+  
+	const HanldeLoadStats = async () => {
+		const childOrgs = selectedOrganization.child_orgs;
+		if (allChildOrgsStats.length > 0){
+			setSubOrgStats(allChildOrgsStats)
+			setAllOrgStatsLoaded(true)
+			if (allChildOrgsStats.length > 0 && allChildOrgs.length > 0 && subOrgStatsRows.length === 0 && subOrgStatsColumns.length === 0) {
+				HandleCreateTable(allChildOrgsStats, allChildOrgs)
+			}
+			return
+		}
+		const promises = childOrgs.map((org) => {
+			// get org stats base on region url
+			const baseUrl = org?.region_url?.length > 0 && !window?.location?.origin?.includes("localhost") ? org?.region_url : globalUrl;
+			const url = `${baseUrl}/api/v1/orgs/${org.id}/stats`;
+			return fetch(url, {
+				method: "GET",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}).then((res) => res.json());
+		});
+	
+		try {
+			const responses = await Promise.all(promises);
+			setSubOrgStats(responses);
+			setAllChildOrgsStats(responses);
+			setAllOrgStatsLoaded(true);
+		} catch (error) {
+			console.error("Error loading stats:", error);
+		}
+	};
+	
+	
+
+	const HandleGetSuborg = async () => {
+		const childOrgs = selectedOrganization.child_orgs
+
+		if (allChildOrgs.length > 0){
+			setSubOrgs(allChildOrgs)
+			setAllOrgLoaded(true)
+			if (allChildOrgsStats.length > 0 && allChildOrgs.length > 0 && subOrgStatsRows.length === 0 && subOrgStatsColumns.length === 0) {
+				HandleCreateTable(allChildOrgsStats, allChildOrgs)
+			}
+			return
+		}
+
+		const promises = childOrgs.map((org) => {
+			const baseUrl = org?.region_url?.length > 0 && !window?.location?.origin?.includes("localhost") ? org?.region_url : globalUrl;
+			const url = `${baseUrl}/api/v1/orgs/${org.id}`;
+			return fetch(url, {
+				method: "GET",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}).then((res) => res.json());
+		});
+		try {
+			const responses = await Promise.all(promises);
+			setSubOrgs(responses);
+			setAllChildOrgs(responses);
+			setAllOrgLoaded(true);
+		} catch (error) {
+			console.error("Error loading suborgs:", error);
+		}
+	};
+
+	useEffect(() => {
+		if (subOrgStats.length === 0 && selectedOrganization && selectedOrganization?.child_orgs?.length > 0) {
+			HanldeLoadStats()
+		}
+		if (subOrgs.length === 0 && selectedOrganization && selectedOrganization?.child_orgs?.length > 0) {
+			HandleGetSuborg()
+		}
+
+	}, [selectedOrganization?.child_orgs]);
+
+
+	useEffect(() => {
+
+		if (allOrgLoaded && allOrgStatsLoaded && !tableCreated) {
+			HandleCreateTable(subOrgStats, subOrgs)
+		}
+	}
+	, [allOrgLoaded, allOrgStatsLoaded, tableCreated])
+
+	
+	const HandleCreateTable = (subOrgStats, subOrgs) => {
+		
+		if (subOrgStats.length === 0 || subOrgs.length === 0) return;
+
+		// check whether all of the suborg.success is false
+		const allSubOrgStatsSuccess = subOrgStats.every((stat) => stat.success === false);
+		const allSubOrgsSuccess = subOrgs.every((org) => org.success === false);
+
+		if (allSubOrgStatsSuccess || allSubOrgsSuccess) {
+			setSubOrgStats([])
+			setSubOrgs([])
+			setTableCreated(true)
+			return
+		}
+
+		const rows = subOrgStats.map((stat, index) => {
+			const subOrg = subOrgs[index]
+			if (!subOrg) return null;
+			return {
+				id: index,
+				name: subOrg.name,
+				orgId: subOrg.id,
+				limit: subOrg?.sync_features?.app_executions?.limit || "N/A",
+				usage: stat?.monthly_app_executions || "N/A",
+				workflows_usage: stat?.total_workflow_executions || "N/A",
+				workflow_usage_limit: subOrg?.sync_features?.workflow_executions?.limit || "N/A",
+			}
+		})
+
+		setSubOrgStatsRows(rows)
+
+		const columns = [
+			{ field: "id", headerName: "ID", width: 100 },
+			{ field: "name", headerName: "Name", width: 200 },
+			{ field: "usage", headerName: "App Execution Usage", width: 200 },
+			{ 
+				field: "limit", headerName: "App Execution Limit", width: 200, renderCell: (params) => {
+					return (
+						<>
+						<Typography style={{ fontSize: 16 }}>
+						{params.value}
+						<IconButton
+							style={{ color: theme.palette.primary.main }}
+							onClick={() => {
+								setOpen(true)
+								setEditingOrgId(params.row.orgId)
+								setEditing("app_executions")
+								if (params.value === "N/A") {
+									setLimit("")
+								} else {
+									setLimit(params.value)
+								}
+							}}
+						>
+							<Edit/>
+						</IconButton>
+						</Typography>
+						</>
+					)
+				}
+				},
+				{ field: "workflows_usage", headerName: "Workflow Execution Usage", width: 200 },
+				{ field: "workflow_usage_limit", headerName: "Workflow Execution Limit", width: 200, renderCell: (params) => {
+				return (
+					<>
+						<Typography style={{ fontSize: 16 }}>
+						{params.value}
+						</Typography>
+						<IconButton
+							style={{ color: theme.palette.primary.main }}
+							onClick={() => {
+								setOpen(true)
+								setEditingOrgId(params.row.orgId)
+								setEditing("workflow_executions")
+								if (params.value === "N/A") {
+									setLimit("")
+								} else {
+									setLimit(params.value)
+								}
+							}}
+						>
+							<Edit/>
+						</IconButton>
+					</>
+				)}
+			},
+		]
+
+		setSubOrgStatsColumns(columns)
+
+		if (allOrgLoaded && allOrgStatsLoaded && !tableCreated) {
+			setTableCreated(true)
+		}
+	}
+
+	
+
+	const HandleEditLimit = (orgId, editing, limit) => {
+
+
+		// change limit as number if string
+		if (typeof limit === "string") {
+			limit = parseInt(limit, 10)
+		}
+		if (isNaN(limit)) {
+			toast.error("Please enter a valid number")
+			return
+		}
+
+		if (selectedOrganization.sync_features.app_executions.limit <= 10000) {
+			toast.error("Insufficient app execution limit to increase child org limit")
+			return
+		}
+
+		// check whether limit is greater than than parent org limit
+		if (editing === "app_executions" && limit > selectedOrganization.sync_features.app_executions.limit && !userdata.support) {
+			toast.error("App execution limit cannot be greater than parent org limit")
+			return
+		}
+
+
+		if (editing === "workflow_executions" && limit > selectedOrganization.sync_features.workflow_executions.limit && !userdata.support) {
+			toast.error("Workflow execution limit cannot be greater than parent org limit")
+			return
+		}
+
+		// find the org in the subOrgs array
+		const orgIndex = subOrgs.findIndex((org) => org.id === orgId)
+		if (orgIndex === -1) {
+			toast.error("Organization not found")
+			return
+		}
+
+		const org = subOrgs[orgIndex]
+
+		org.sync_features[editing].limit = limit
+		org.sync_features.editing = true
+		const sync_features = org.sync_features
+		const data = {
+			org_id: orgId,
+            sync_features: sync_features,
+		}
+
+		const url = `${globalUrl}/api/v1/orgs/${orgId}`;
+		fetch(url, {
+			method: "POST",
+			credentials: "include",
+			crossDomain: true,
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(data),
+		}).then((response) =>
+				response.json().then((responseJson) => {
+					if (responseJson["success"] === false) {
+						toast("Failed updating org: ", responseJson.reason);
+					} else {
+						toast("Successfully change suborg limit!");
+						if (editing === "app_executions") {
+							setSubOrgStatsRows((prevRows) => {
+								const newRows = [...prevRows];
+								newRows[orgIndex].limit = limit;
+								return newRows;
+							});
+						}else if (editing === "workflow_executions") {
+							setSubOrgStatsRows((prevRows) => {
+								const newRows = [...prevRows];
+								newRows[orgIndex].workflow_usage_limit = limit;
+								return newRows;
+							});
+						}
+					}
+				})
+			)
+			.catch((error) => {
+				toast("Err: " + error.toString());
+		});
+
+	}
+
+	const HandleClosePopUP = () => {
+		setOpen(false)
+		setEditing("")
+		setEditingOrgId("")
+		setLimit("")
+	}
+
+	return (
+		<div style={{ display: "flex", flexDirection: "column", marginTop: 30, minHeight: 300, marginBottom: 200,  }}>
+			{open && (
+				<IncreaseLimitPopUp open={open} onClose={HandleClosePopUP} limit={limit} HandleEditLimit={HandleEditLimit} setLimit={setLimit} editing={editing} setEditing={setEditing} editingOrgId={editingOrgId} setEditingOrgId={setEditingOrgId}/>
+			)}
+			<Typography style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}>
+				Child Organizations
+			</Typography>
+			<div style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+				<Typography color="textSecondary" style={{ marginTop: 10, fontSize: 16 }}>
+					View and configure execution limits for child organizations. Click the edit icon to modify app and workflow execution limits.
+				</Typography>      
+			</div>
+			{tableCreated ? (
+				subOrgStatsRows.length > 0 && subOrgStatsColumns.length > 0 ? (
+					<>
+						<TextField 
+							style={{ marginBottom: 10, width: 500, marginTop: 20 }} 
+							variant="outlined" 
+							placeholder="Search organizations by name or ID" 
+							value={searchQuery}
+							fullWidth
+							InputProps={{
+								style: {
+									fontSize: "1em",
+									height: 51,
+									width: 693,
+									borderRadius: 4,
+								},
+								startAdornment: (
+									<InputAdornment position="start">
+										<SearchIcon style={{ marginLeft: 5}} />
+									</InputAdornment>
+								),
+							}}
+							onChange={(e) => {
+								setSearchQuery(e.target.value.toLowerCase());
+								const filtered = subOrgStatsRows.filter((row) =>
+									row.name.toLowerCase().includes(e.target.value.toLowerCase().trim()) ||
+									row.orgId.toLowerCase().includes(e.target.value.toLowerCase().trim())
+								);
+								setFilteredRows(filtered);
+							}}
+						/>
+						<DataGrid
+							rows={searchQuery ? filteredRows : subOrgStatsRows}
+							columns={subOrgStatsColumns}
+							pageSize={rowsPerPage}
+							rowsPerPageOptions={[5, 10, 25, 50]}
+							onPageChange={handleChangePage}
+							onPageSizeChange={handleChangeRowsPerPage}
+							autoHeight
+							style={{ height: "300px", width: "100%", backgroundColor: theme.palette.platformColor, color: theme.palette.text.primary }}
+						/>
+					</>
+				) : (
+					<Typography variant="h6" color="secondary" style={{ margin: "auto",}}>
+						{selectedOrganization.child_orgs.length === 0 ? "No child organizations exist." : "Unable to load child organization stats. Statistics may not be initialized yet." }
+					</Typography>
+				)
+			) : (
+				<div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", margin: 'auto'}}>
+					<CircularProgress style={{ color: "#FF8444" }} />
+				</div>
+			)}
+		</div>
+	);
+});
+
+const IncreaseLimitPopUp = memo(({ open, onClose, limit, setLimit, HandleEditLimit, editingOrgId, editing}) => {
+	const [currentLimit, setCurrentLimit] = useState(limit)
+
+	const { themeMode, brandColor } = useContext(Context);
+	const theme = getTheme(themeMode, brandColor);
+
+	return(
+		<Dialog open={open} onClose={onClose}
+		 PaperProps={{
+			sx: {
+			borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+			border: theme?.palette?.DialogStyle?.border,
+			fontFamily: theme?.typography?.fontFamily,
+			backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+			zIndex: 1000,
+			'& .MuiDialogContent-root': {
+				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+			},
+			'& .MuiDialogTitle-root': {
+				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+			},
+			'& .MuiDialogActions-root': {
+				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+			},
+			}
+		}}
+	>
+			<DialogTitle style={{ fontSize: 24, fontWeight: "bold" }}>
+				Increase {editing.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase())} Limit
+			</DialogTitle>
+			<DialogContent>
+			<TextField 
+				value={currentLimit}
+				onChange={(e) => setCurrentLimit(e.target.value)}
+				label={`${editing.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase())} Limit`}
+				type="string"
+				variant="outlined"
+				fullWidth
+				InputProps={{
+					style: {
+						color: theme.palette.text.primary,
+					},
+				}}
+				InputLabelProps={{
+					style: {
+						color: theme.palette.text.primary,
+					},
+				}}
+				margin="normal"
+				onKeyUp={(e) => {
+					if (e.key === "Enter") {
+						HandleEditLimit(editingOrgId, editing, currentLimit)
+						setLimit(currentLimit)
+						onClose()
+					}}
+				}
+			></TextField>
+			 </DialogContent>
+			<DialogActions>
+				<Button onClick={onClose} style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginRight: 5, color: theme.palette.primary.main  }}>
+					Cancel
+				</Button>
+				<Button variant="contained" color="primary" onClick={() => {
+					HandleEditLimit(editingOrgId, editing, currentLimit)
+					setLimit(currentLimit)
+					onClose()
+				}} style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginRight: 10 }}>
+					Save
+				</Button>
+			</DialogActions>
+		</Dialog>
+	)
+})
+
+
+const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
+	
+	const { themeMode, brandColor } = useContext(Context);
+	const theme = getTheme(themeMode, brandColor);
+
 	const wrapperStyle = useMemo(() => ({
 	  width: clickedFromOrgTab 
 		? "100%"
 		: "auto",
 	  padding: "27px 10px 19px 27px", 
-	  backgroundColor: '#212121', 
+	  backgroundColor: theme.palette.platformColor, 
 	  height: '100%',
 	  boxSizing: 'border-box',
 	  overflow: 'hidden',
-	  maxHeight: "1700px", overflowY: "auto",scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'
-	}), [clickedFromOrgTab]);
+		maxHeight: "1700px",
+		overflowY: "auto",
+		scrollbarColor: theme.palette.scrollbarColorTransparent,
+		scrollbarWidth: 'thin'
+	}), [clickedFromOrgTab, theme]);
   
 	return (
 	  <div style={wrapperStyle}>
@@ -2590,9 +3162,9 @@ const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
 	);
   });
   
-  const Wrapper = memo(({ children, clickedFromOrgTab }) => {
+const Wrapper = memo(({ children, clickedFromOrgTab }) => {
 	return (
-	  <PaddingWrapper clickedFromOrgTab={clickedFromOrgTab}>
+	  <PaddingWrapper  clickedFromOrgTab={clickedFromOrgTab}>
 		{children}
 	  </PaddingWrapper>
 	);

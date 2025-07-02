@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Billing from "../components/Billing.jsx";
 import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
-import AnalyticsTab from '../components/AnalyticsTab.jsx';
 import EditOrgTab from '../components/EditOrgTab.jsx';
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
 import   SSOTab from "../components/ssoTab.jsx"
 import { ToastContainer, toast } from "react-toastify";
 import { Button, Tooltip } from '@mui/material';
-
+import { getTheme } from '../theme.jsx';
+import { Context } from '../context/ContextApi.jsx';
 const OrganizationTab = (props) => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -26,7 +26,9 @@ const OrganizationTab = (props) => {
         selectedOrganization, handleGetOrg, 
         handleStatusChange, handleEditOrg,
         isLoaded,
-        removeCookie
+        removeCookie,
+        isIntegrationPartner, isChildOrg,
+        isGlobalUser
     } = props;
 
     const [selectedTab, setSelectedTab] = useState('org_config');
@@ -34,9 +36,27 @@ const OrganizationTab = (props) => {
     const [billingInfo, setBillingInfo] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [curIndex, setCurIndex] = React.useState(0);
+    const items = ['Org Configuration', "SSO", "Notifications", 'Billing & Stats', 'Branding'];
+    const [visibleTabs, setVisibleTabs] = useState(items);
     const [unreadNotifications, setUnreadNotifications] = React.useState(
         notifications?.filter((notification) => notification.read === false)?.length
     );
+
+    const { themeMode, brandColor, brandName } = useContext(Context);
+    const theme = getTheme(themeMode, brandColor); 
+
+
+    useEffect(() => {
+        if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
+            setVisibleTabs(items.filter((item) => item !== 'Branding' && item !== 'SSO'));
+        }else {
+            if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
+                setVisibleTabs(items);
+            }else {
+                setVisibleTabs(items.filter((item) => item !== 'SSO'));
+            }
+        }
+    },[isIntegrationPartner, isChildOrg, isGlobalUser, userdata]);
 
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
@@ -49,10 +69,26 @@ const OrganizationTab = (props) => {
             } else if(decodedTabName === 'sso'){
                 setCurIndex(1)
             }else if (decodedTabName === 'notifications' || decodedTabName === 'priorities') {
-                setCurIndex(2);
+                if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
+                    setCurIndex(1);
+                }else {
+                    if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
+                        setCurIndex(2);
+                    }else {
+                        setCurIndex(1);
+                    }
+                }
             } else if (decodedTabName === 'billingstats' || decodedTabName === 'billing') {
-                setCurIndex(3);
-            } else if (decodedTabName === 'branding(beta)') {
+                if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
+                    setCurIndex(2);
+                } else {
+                    if (userdata && userdata?.active_org && userdata?.active_org?.role === 'admin') {
+                        setCurIndex(3);
+                    } else {
+                        setCurIndex(2);
+                    }
+                }
+            } else if (decodedTabName === 'branding') {
                 setCurIndex(4);
             }
             //  else if (decodedTabName === 'analytics') {
@@ -65,7 +101,7 @@ const OrganizationTab = (props) => {
         const formattedTabName = tabName.toLowerCase().replace(/[\s&]+/g, '');
         const encodedTabName = encodeURIComponent(formattedTabName);
         setSelectedTab(formattedTabName);
-        document.title = `Shuffle - admin - ${formattedTabName}`;
+        document.title = brandName?.length > 0 ? `${brandName} - admin - ${formattedTabName}` : `Shuffle - admin - ${formattedTabName}`;
         navigate(`?admin_tab=${encodedTabName}`);
     };
 
@@ -121,7 +157,7 @@ const OrganizationTab = (props) => {
                         isLoaded={isLoaded}
                     />
                 );
-            case 'branding(beta)':
+            case 'branding':
                 return <Branding
                     isCloud={isCloud}
                     userdata={userdata}
@@ -137,11 +173,12 @@ const OrganizationTab = (props) => {
                 return <EditOrgTab isCloud={isCloud} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} />;
         }
     };
-   
+    
+
     return (
-        <div style={{ height: "100%", width: "100%", color: '#FFFFFF', backgroundColor: '#212121', borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-around', width: "100%", borderBottom: '1px solid #494949' ,boxSizing: 'border-box' }}>
-                {['Org Configuration', "sso", "Notifications", 'Billing & Stats', 'Branding (Beta)'].map((tabName, index) => (
+        <div style={{ height: "100%", width: "100%", color: theme.palette.platformColor, backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-around', width: "100%", borderBottom: theme.palette.defaultBorder ,boxSizing: 'border-box' }}>
+                {visibleTabs.map((tabName, index) => (
                     <Tooltip
                         key={index}
                         title={
@@ -162,10 +199,10 @@ const OrganizationTab = (props) => {
                                 sx={{
                                     "&.MuiButton-root": {
                                         padding: '28px 0',
-                                        borderBottom: index === curIndex ? '2px solid #FF8444' : 'none',
+                                        borderBottom: index === curIndex ? `2px solid ${theme.palette.primary.main}`: 'none',
                                         cursor: 'pointer',
                                         fontWeight: index === curIndex ? 'bold' : 'normal',
-                                        color: index === curIndex ? "#FF8444" : "#FFFFFF",
+                                        color: index === curIndex ? theme.palette.primary.main : theme.palette.text.primary,
                                         textTransform: 'none',
                                         fontSize: 16,
                                         width: "100%",
@@ -173,7 +210,7 @@ const OrganizationTab = (props) => {
                                         borderRadius: 0,
                                     },
                                     "&: hover": {
-                                        backgroundColor: "#323232"
+                                        backgroundColor: theme.palette.hoverColor
                                     },
                                     "&.Mui-disabled": {
                                         color: "#6F6F6F",
@@ -183,7 +220,7 @@ const OrganizationTab = (props) => {
                                     ((tabName === "sso")) && !(userdata?.support || userdata?.active_org?.role === "admin")
                                 }
                             >
-                                {index === 2 && unreadNotifications > 0 ? (
+                                {tabName.toLowerCase() === "notifications" && unreadNotifications > 0 ? (
                                     <div style={{ position: 'relative' }}>
                                         <div style={{
                                             position: 'absolute',
@@ -192,7 +229,7 @@ const OrganizationTab = (props) => {
                                             width: 20,
                                             height: 20,
                                             borderRadius: 10,
-                                            backgroundColor: '#FF8444',
+                                            backgroundColor: theme.palette.primary.main,
                                             color: '#FFFFFF',
                                             fontSize: 12,
                                             display: 'flex',
@@ -204,7 +241,7 @@ const OrganizationTab = (props) => {
                                         {tabName}
                                     </div>
                                 ) : (
-                                    <>{index === 1 ? "SSO" : tabName}</>
+                                    <>{tabName}</>
                                 )}
                             </Button>
                         </div>

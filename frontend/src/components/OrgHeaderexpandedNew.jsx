@@ -1,8 +1,9 @@
-import React, { memo, useEffect, useState } from "react";
+import React, { memo, useEffect, useState, useContext } from "react";
 
 import { makeStyles } from "@mui/styles";
 import { toast } from "react-toastify"
-import theme from '../theme.jsx';
+import { getTheme } from '../theme.jsx';
+import { Context } from "../context/ContextApi.jsx";
 //import { useAlert 
 
 import {
@@ -89,6 +90,8 @@ const OrgHeaderexpandedNew = (props) => {
 	);
 
 	const [openNotification, setOpenNotification] = React.useState(false);
+	const { themeMode, supportEmail, brandColor } = useContext(Context);
+	const theme = getTheme(themeMode, brandColor);
 
 	const handleStatusChange = (event) => {
 		const { value } = event.target;
@@ -178,7 +181,7 @@ const OrgHeaderexpandedNew = (props) => {
 	const [uploadRepo, setUploadRepo] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_repo === undefined || selectedOrganization.defaults.workflow_upload_repo.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_repo)
 	const [uploadBranch, setUploadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.workflow_upload_branch === undefined || selectedOrganization.defaults.workflow_upload_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.workflow_upload_branch)
 	const [uploadUsername, setUploadUsername] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_username === undefined || selectedOrganization.defaults.workflow_upload_username.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_username)
-	const [uploadToken, setUploadToken] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_token === undefined || selectedOrganization.defaults.workflow_upload_token.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_token)
+	const [uploadToken, setUploadToken] = React.useState("")
 	const [regionStatus, setRegionStatus] = useState();
 
 	useEffect(() => {
@@ -199,9 +202,10 @@ const OrgHeaderexpandedNew = (props) => {
 			setUploadUsername(selectedOrganization?.defaults?.workflow_upload_username)
 		}
 
-		if (uploadToken !== selectedOrganization?.defaults?.workflow_upload_token) {
-			setUploadToken(selectedOrganization?.defaults?.workflow_upload_token)
-		}
+		// Not showing the token in the UI (cause it's in plain text)
+		// if (uploadToken !== selectedOrganization?.defaults?.workflow_upload_token) {
+		// 	setUploadToken(selectedOrganization?.defaults?.workflow_upload_token)
+		// }
 	}, [selectedOrganization])
 
 	useEffect(() => {
@@ -264,7 +268,7 @@ const OrgHeaderexpandedNew = (props) => {
 
 	const handleSendChangeRegionMail = (region) => {
 		if (selectedOrganization === undefined || selectedOrganization === null) {
-			toast.error("Failed to send request for changing region. Please contact support@shuffler.io.")
+			toast.error(`Failed to send request for changing region. Please contact ${supportEmail}`)
 			return
 		}
 
@@ -294,30 +298,29 @@ const OrgHeaderexpandedNew = (props) => {
 			body: JSON.stringify(data),
 		}).then((response) => {
 			if (response.status !== 200) {
-				toast.error("Failed to send request for changing region. Please contact support@shuffler.io.")
+				toast.error(`Failed to send request for changing region. Please contact ${supportEmail}`)
 			} else {
 				toast.success("Successfully sent request for region change. We will process the move and contact you shortly.")
 			}
 		}).catch((err) => {
 			console.log(err)
-			toast.error("Failed to send request for changing region. Please contact support@shuffler.io.")
+			toast.error(`Failed to send request for changing region. Please contact ${supportEmail}`)
 		})
 	}
 
 	const setSelectedRegion = (region) => {
 
 		// send a POST request to /api/v1/orgs/{org_id}/region with the region as the body
-		if (region === "US") {
-			region = "us-west2"
-		} else if (region === "EU") {
-			region = "europe-west2"
-		} else if (region === "CA") {
-			region = "northamerica-northeast1"
-		} else if (region === "UK") {
-			region = "europe-west2"
-		} else if (region === "EU-2") {
-			region = "europe-west3"
-		}
+		const regionMap = {
+			"US": "us-west2",
+			"EU": "europe-west2",
+			"CA": "northamerica-northeast1",
+			"UK": "europe-west2",
+			"EU-2": "europe-west3",
+			"AUS": "australia-southeast1"
+		  };
+
+		region = regionMap[region] || region;
 
 		var data = {
 			dst_region: region
@@ -336,7 +339,11 @@ const OrgHeaderexpandedNew = (props) => {
 			timeOut: 1000
 		}).then((response) => {
 			if (response.status !== 200) {
-				toast("Failed to change region!")
+				response.json().then((reason) => {
+					toast.error("Failed to change region: " + reason.reason)
+				}).catch((err) => {
+					toast.error("Failed to change region")
+				});
 			}
 			else {
 				toast("Region changed successfully! Reloading in 5 seconds..")
@@ -347,7 +354,7 @@ const OrgHeaderexpandedNew = (props) => {
 
 			}
 
-			return response.json();
+			// return responseJson
 		})
 	}
 
@@ -355,7 +362,7 @@ const OrgHeaderexpandedNew = (props) => {
 	const orgSaveButton = (
 		<Tooltip title="Save any unsaved data" placement="bottom">
 			<Button
-				style={{ width: 244, height: 51, display: 'flex', justifyContent: 'center', textTransform: 'capitalize', padding: "16px, 24px, 16px, 24px", borderRadius: 4, backgroundColor: "#ff8544", color: "#1a1a1a", fontSize: 16, }}
+				style={{ width: 244, height: 51, display: 'flex', justifyContent: 'center', textTransform: 'capitalize', padding: "16px, 24px, 16px, 24px", borderRadius: 4, fontSize: 16, }}
 				variant="contained"
 				color="primary"
 				disabled={
@@ -441,11 +448,11 @@ const OrgHeaderexpandedNew = (props) => {
 				<Grid item xs={12} style={{}}>
 					<span>
 						<div style={{}}>
-							<div style={{ flex: "3", color: "white" }}>
+							<div style={{ flex: "3", color: theme.palette.text.primary }}>
 								<div style={{ marginTop: 8, display: "flex" }} />
 								<div style={{ display: "flex" }}>
 									<div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
-										Name
+										<Typography variant="text" style={{color: theme.palette.text.primary}}>Name</Typography>
 										<TextField
 											required
 											style={{
@@ -456,7 +463,8 @@ const OrgHeaderexpandedNew = (props) => {
 												maxWidth: 434,
 												marginTop: "5px",
 												marginRight: "15px",
-												backgroundColor: isEditOrgTab ? "#212121" : theme.palette.inputColor,
+												color: theme.palette.textFieldStyle.color,
+												backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 											}}
 											fullWidth={true}
 											placeholder="Name"
@@ -510,10 +518,11 @@ const OrgHeaderexpandedNew = (props) => {
 											color="primary"
 											InputProps={{
 												style: {
-													color: "white",
+													color: theme.palette.textFieldStyle.color,
 													height: "35px",
 													fontSize: "1em",
 													borderRadius: 4,
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 												},
 												classes: {
 													notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
@@ -523,10 +532,10 @@ const OrgHeaderexpandedNew = (props) => {
 									</div>
 									{userdata?.support ? (
 										<div style={{ alignItems: 'center' }}>
-											<div style={{ marginRight: '12px', color: 'white' }}>Status</div>
+											<div style={{ marginRight: '12px', color: theme.palette.text.primary }}>Status</div>
 											<FormControl style={{ width: 220, height: 35 }}>
 												<Select
-													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4 }}
+													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
 													id="multiselect-status"
 													multiple
 													value={selectedStatus}
@@ -535,7 +544,7 @@ const OrgHeaderexpandedNew = (props) => {
 													renderValue={(selected) => selected.join(', ')}
 													MenuProps={MenuProps}
 												>
-													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead"].map((name) => (
+													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "integration partner", "distribution partner", "service partner", "old customer", "old lead"].map((name) => (
 														<MenuItem key={name} value={name}>
 															<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 															<ListItemText primary={name} />
@@ -549,13 +558,13 @@ const OrgHeaderexpandedNew = (props) => {
 
 									{isCloud ? (
 										<div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }} >
-											Change Region
+											<Typography variant="text" style={{color: theme.palette.text.primary}}>Change Region</Typography>
 											<RegionChangeModal selectedOrganization={selectedOrganization} setSelectedRegion={setSelectedRegion} userdata={userdata} handleSendChangeRegionMail={handleSendChangeRegionMail} />
 										</div>
 									) : null}
 								</div>
 								<div style={{ marginTop: "10px" }} />
-								About
+								<Typography variant="text" style={{color: theme.palette.text.primary}}>Description</Typography>
 								<div style={{ display: "flex" }}>
 									<TextField
 										required
@@ -565,7 +574,8 @@ const OrgHeaderexpandedNew = (props) => {
 											flex: "1",
 											marginTop: "5px",
 											marginRight: "15px",
-											backgroundColor: isEditOrgTab ? "#212121" : theme.palette.inputColor,
+											color: theme.palette.textFieldStyle.color,
+											backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 											height: 89,
 											borderRadius: 4,
 										}}
@@ -618,7 +628,7 @@ const OrgHeaderexpandedNew = (props) => {
 												notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 											},
 											style: {
-												color: "white",
+												color: theme.palette.textFieldStyle.color,
 												height: 89,
 												borderRadius: 4,
 											},
@@ -629,7 +639,7 @@ const OrgHeaderexpandedNew = (props) => {
 
 								</div>
 							</div>
-							<Typography variant="h5" style={{ color: "rgba(241, 241, 241, 1)", fontSize: 24, fontWeight: 600, marginTop: 40, textAlign: "left" }}>
+							<Typography variant="h5" style={{ fontSize: 24, fontWeight: 500, marginTop: 40, textAlign: "left" }}>
 								Preferences
 							</Typography>
 
@@ -650,7 +660,7 @@ const OrgHeaderexpandedNew = (props) => {
 				</Grid>
 				<Grid item xs={12}>
 					<span>
-						<Typography style={{ fontWeight: 400, fontSize: 16 }}>Org Documentation reference</Typography>
+						<Typography style={{ fontWeight: 400, fontSize: 18, color: theme.palette.text.primary }}>Org Documentation reference</Typography>
 
 						<Typography variant="body2" color="textSecondary" style={{ fontWeight: 400, fontSize: 16, marginTop: 8 }}>
 							Add a URL that is added as a link, pointing to any external documentation page you want.
@@ -665,7 +675,8 @@ const OrgHeaderexpandedNew = (props) => {
 								height: 35,
 								fontSize: 16,
 								borderRadius: 4,
-								backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+								color: theme.palette.textFieldStyle.color,
+								backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 							}}
 							fullWidth={true}
 							type="name"
@@ -706,6 +717,13 @@ const OrgHeaderexpandedNew = (props) => {
 											auto_provision: selectedOrganization?.sso_config?.auto_provision,
 										}
 									)
+									
+									if (userdata.org_status.includes("integration_partner")) {
+										toast.info("Reloading page to update the changes everywhere")
+										setTimeout(() => {
+											window.location.reload()
+										}, 5000)
+									}
 								}
 							}}
 							onChange={(e) => {
@@ -716,8 +734,7 @@ const OrgHeaderexpandedNew = (props) => {
 									notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 								},
 								style: {
-									color: "white",
-
+									color: theme.palette.textFieldStyle.color,
 									fontWeight: 400,
 									fontSize: 16,
 									borderRadius: 4,
@@ -733,9 +750,9 @@ const OrgHeaderexpandedNew = (props) => {
 					serverside={false}
 				/>
 				<Grid item xs={12} style={{ marginTop: 20, }}>
-					<Typography variant="h4" style={{ textAlign: "left", color: "rgba(241, 241, 241, 1)", fontSize: 24, fontWeight: 600, }}>Workflow Backup Repository</Typography>
-					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: "#9E9E9E", fontSize: 16, fontWeight: 400 }}>
-						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflow-status/workflowId.json format. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: "#f86a3e" }} target="_blank">Credentials are encrypted.</a>
+					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Workflow Backup Repository</Typography>
+					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400 }}>
+						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflow-status/workflowId.json format. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: theme.palette.linkColor }} target="_blank">Credentials are encrypted.</a>
 					</Typography>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
@@ -748,7 +765,7 @@ const OrgHeaderexpandedNew = (props) => {
 										marginTop: "8px",
 										marginRight: "16px",
 										height: 35,
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
 									type="name"
@@ -767,7 +784,7 @@ const OrgHeaderexpandedNew = (props) => {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 
 											fontWeight: 400,
 											fontSize: 16,
@@ -788,7 +805,7 @@ const OrgHeaderexpandedNew = (props) => {
 										marginTop: "8px",
 										marginRight: "16px",
 										height: 35,
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
 									type="name"
@@ -807,7 +824,7 @@ const OrgHeaderexpandedNew = (props) => {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 
 											fontWeight: 400,
 											fontSize: 16,
@@ -830,7 +847,7 @@ const OrgHeaderexpandedNew = (props) => {
 										marginTop: "8px",
 										marginRight: "16px",
 										height: 35,
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
 									type="name"
@@ -849,8 +866,7 @@ const OrgHeaderexpandedNew = (props) => {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
-
+											color: theme.palette.textFieldStyle.color,
 											fontWeight: 400,
 											fontSize: 16,
 											borderRadius: 4,
@@ -862,7 +878,7 @@ const OrgHeaderexpandedNew = (props) => {
 						</Grid>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Git token/password</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>New Git token/password</Typography>
 								<TextField
 									required
 									style={{
@@ -870,7 +886,7 @@ const OrgHeaderexpandedNew = (props) => {
 										marginTop: "8px",
 										marginRight: "16px",
 										height: 35,
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
 									id="outlined-with-placeholder"
@@ -888,7 +904,7 @@ const OrgHeaderexpandedNew = (props) => {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 
 											fontWeight: 400,
 											fontSize: 16,
@@ -915,7 +931,7 @@ const OrgHeaderexpandedNew = (props) => {
 									marginTop: "8px",
 									marginRight: "16px",
 									height: 35,
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 								}}
 								fullWidth={true}
 								type="name"
@@ -932,7 +948,8 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -954,7 +971,7 @@ const OrgHeaderexpandedNew = (props) => {
 									flex: "1",
 									marginTop: "8px",
 									marginRight: "15px",
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									height: 35,
 								}}
 								fullWidth={true}
@@ -972,7 +989,7 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -994,7 +1011,7 @@ const OrgHeaderexpandedNew = (props) => {
 									flex: "1",
 									marginTop: "5px",
 									marginRight: "15px",
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									height: 35,
 								}}
 								fullWidth={true}
@@ -1012,7 +1029,7 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -1034,7 +1051,7 @@ const OrgHeaderexpandedNew = (props) => {
 									flex: "1",
 									marginTop: "5px",
 									marginRight: "15px",
-									backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									height: 35,
 								}}
 								fullWidth={true}
@@ -1052,7 +1069,7 @@ const OrgHeaderexpandedNew = (props) => {
 										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 									},
 									style: {
-										color: "white",
+										color: theme.palette.textFieldStyle.color,
 
 										fontWeight: 400,
 										fontSize: 16,
@@ -1091,6 +1108,7 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		"EU-2": "eu",
 		"CA": "ca",
 		"UK": "gb",
+		"AUS": "au",
 	};
 
 	//let regiontag = "UK";
@@ -1112,6 +1130,9 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		} else if (regiontag === "ca") {
 			regiontag = "CA";
 			regionCode = "ca";
+		} else if (regiontag === "au") {
+			regiontag = "AUS";
+			regionCode = "au"
 		}
 	}
 
@@ -1124,11 +1145,12 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 				value={regiontag}
 				style={{ minWidth: 120, height: 35, borderRadius: 4 }}
 				onChange={(e) => {
-					if (userdata?.support) {
-						setSelectedRegion(e.target.value)
-					} else {
-						handleSendChangeRegionMail(e.target.value)
-					}
+					// if (userdata?.support) {
+					// 	setSelectedRegion(e.target.value)
+					// } else {
+					// 	handleSendChangeRegionMail(e.target.value)
+					// }
+					setSelectedRegion(e.target.value)
 				}}
 			>
 				{Object.keys(regionMapping).map((region, index) => {
@@ -1138,6 +1160,7 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 						selectedOrganization.region = "europe-west2";
 					}
 
+
 					// Check if the current region matches the selected region
 					if (region === selectedOrganization.region) {
 						// If the region matches, set the MenuItem as selected
@@ -1145,7 +1168,7 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 							<MenuItem value={region} key={index} disabled>
 								{/* show region image through cdn */}
 								<img src={`https://flagcdn.com/48x36/${regionImageCode}.png`} alt={region} style={{ marginRight: 10 }} />
-								{region}
+								{region === "AUS" ? "AUS (test)" : region}
 							</MenuItem>
 						);
 					} else {
@@ -1155,7 +1178,7 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 								alt={region}
 								style={{ marginRight: 10, width: 20, height: 18, }}
 							/>
-							{region}
+							{region === "AUS" ? "AUS (test)" : region}
 						</MenuItem>;
 					}
 				})}

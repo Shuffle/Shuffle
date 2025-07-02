@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 
 import { 
 	TextField,
@@ -17,10 +17,11 @@ import {
 	IconButton,
 	Switch,
 } from '@mui/material';
+import { Context } from '../context/ContextApi.jsx';
 
 import { toast } from "react-toastify" 
 import { makeStyles } from "@mui/styles";
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import dayjs from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import Pagination from '@mui/material/Pagination';
@@ -39,7 +40,8 @@ import {
 	EditNote as EditNoteIcon,
 	AccountTree as AccountTreeIcon,
 	Cached as CachedIcon,
-	FilterAltOff as FilterAltOffIcon 
+	FilterAltOff as FilterAltOffIcon,
+	Send as SendIcon, 
 } from '@mui/icons-material';
 
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -69,6 +71,8 @@ const RuntimeDebugger = (props) => {
 	const [endTime, setEndTime] = useState("")
 	const [startTime, setStartTime] = useState("")
 	const [totalCount, setTotalCount] = useState(0)
+	const {themeMode, supportEmail} = useContext(Context)
+	const theme = getTheme(themeMode)
 
 	const [workflow, setWorkflow] = useState({})
 	const [ignoreOrg, setIgnoreOrg] = useState(false)
@@ -107,7 +111,7 @@ const RuntimeDebugger = (props) => {
 
 		var maxworkflows = 5
 
-		console.log("Looking for MAX this amount of workflows: ", maxworkflows)
+		//console.log("Looking for MAX this amount of workflows: ", maxworkflows)
 		for (let key in workflows) {
 			if (key > maxworkflows) {
 				break
@@ -347,6 +351,9 @@ const RuntimeDebugger = (props) => {
 					source = "rerun of a previous run"
 				} else if (source === "form") { 
 					foundSource = <EditNoteIcon style={{color: theme.palette.primary.secondary, height: imageSize, width: imageSize, }} />
+				} else if (source === "single_action" || source == "single_api" || source === "direct_api") { 
+					foundSource = <SendIcon color="secondary" style={{height: imageSize-5, }} />
+					source = "Single API call"
 				} else {
 					source = "manual"
 				}
@@ -354,12 +361,12 @@ const RuntimeDebugger = (props) => {
 				var imageSource = "";
 				if (params?.row?.org?.id?.length > 0) {
 					if (params?.row?.org?.image?.length > 0){
-						imageSource = params?.row.org?.image
+						imageSource = params?.row?.org?.image
 					}else {
 						imageSource = "/images/no_image.png"
 					}
-				}else {
-					if (userdata.active_org.image?.length > 0){
+				} else {
+					if (userdata?.active_org?.image?.length > 0){
 						imageSource = userdata?.active_org?.image
 					}else {
 						imageSource = "/images/no_image.png"
@@ -629,7 +636,7 @@ const RuntimeDebugger = (props) => {
 						  </Link>
 						</span>
 						</Tooltip>
-						<Tooltip arrow title="Force continue workflow. Only workflows for workflows in EXECUTING state. This is NOT a rerun, but way for Shuffle to figure out the next steps automatically. If the execution doesn't finish even after trying this, please contact support@shuffler.io"> 
+						<Tooltip arrow title={`Force continue workflow. Only workflows for workflows in EXECUTING state. This is NOT a rerun, but way for Shuffle to figure out the next steps automatically. If the execution doesn't finish even after trying this, please contact ${supportEmail}`}> 
 						  <IconButton
 							style={{marginLeft: 5, }}
 							disabled={params.row.status !== "EXECUTING"}
@@ -812,7 +819,7 @@ const RuntimeDebugger = (props) => {
 			<div style={{display: "flex", paddingTop: 50, }}>
 				<div style={{display: 'flex', flexDirection: 'column'}}>
 					<div style={{display: "flex", width: "100%", }}>
-							<h1 style={{flex: 3, whiteSpace: "nowrap" }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</h1>
+							<Typography  variant="h3" style={{flex: 3, whiteSpace: "nowrap" }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</Typography>
 					{selectedWorkflowExecutions.length > 0 ?
 					<ButtonGroup>
 						<Tooltip title="Reruns ALL selected workflows. This will make a new execution for them, and not continue the existing.">
@@ -890,7 +897,8 @@ const RuntimeDebugger = (props) => {
 						fullWidth
 						value={searchQuery}
 						style={{
-							backgroundColor: "#1a1a1a",
+							backgroundColor: theme.palette.backgroundColor,
+						  color: theme.palette.textColor,
 							marginTop: 20,
 							marginLeft: 10,
 							marginRight: 12,
@@ -901,7 +909,8 @@ const RuntimeDebugger = (props) => {
 						}}
 						InputProps={{
 							style: {
-							backgroundColor: "#1a1a1a",
+							backgroundColor: theme.palette.backgroundColor,
+							color: theme.palette.textColor,
 							fontSize: "1em",
 							height: 51,
 							width: 693,
@@ -951,7 +960,7 @@ const RuntimeDebugger = (props) => {
 							}
 							color="secondary"
 						/>
-						<Typography variant="body2" style={{color: "white", }}>Show workflow runs from suborgs</Typography>
+						<Typography variant="body2">Show workflow runs from suborgs</Typography>
 					</div>
 					) : null}
 					</div>
@@ -999,8 +1008,8 @@ const RuntimeDebugger = (props) => {
 				  classes={{ inputRoot: classes.inputRoot }}
 				  ListboxProps={{
 					style: {
-					  backgroundColor: "#1a1a1a",
-					  color: "white",
+					  backgroundColor: theme.palette.backgroundColor,
+					  color: theme.palette.textColor,
 					},
 				  }}
 				  getOptionLabel={(option) => {
@@ -1018,7 +1027,7 @@ const RuntimeDebugger = (props) => {
 				  options={workflows}
 				  fullWidth
 				  style={{
-					backgroundColor: "#1a1a1a",
+					backgroundColor: theme.palette.backgroundColor,
 					height: 50,
 					borderRadius: 4,
 					marginLeft: 5,
@@ -1063,8 +1072,13 @@ const RuntimeDebugger = (props) => {
 					  }>
 						<MenuItem
 						  style={{
-							backgroundColor: "#1a1a1a",
-							color: data.id === workflow.id ? "red" : "white",
+							backgroundColor: theme.palette.backgroundColor,
+							color: data.id === workflow.id ? "red" : theme.palette.textColor,
+						  }}
+						  sx={{
+							"&:hover": {
+								backgroundColor: theme.palette.hoverColor,
+							},
 						  }}
 						  value={data}
 						  onClick={(e) => {
@@ -1082,8 +1096,15 @@ const RuntimeDebugger = (props) => {
 					return (
 					  <TextField
 						style={{
-						  backgroundColor: "#1a1a1a",
+						  backgroundColor: theme.palette.backgroundColor,
+						  color: theme.palette.textColor,
 						  borderRadius: 4,
+						}}
+						inputProps={{
+							style: {
+							backgroundColor: theme.palette.backgroundColor,
+							color: theme.palette.textColor,
+							},
 						}}
 						{...params}
 						label="Workflow"
@@ -1128,9 +1149,7 @@ const RuntimeDebugger = (props) => {
 
 				<Tooltip title="Clear all filters and search parameters">
 					<Button
-						style={{ marginLeft: 10, minHeight: 60, marginTop: 10, backgroundColor: "#1a1a1a", border: "1px solid #424242", boxShadow: 'none', borderRadius: 4, width: 81, height: 51, marginRight: 15 }}
-						variant="contained"
-						color="primary"
+						style={{ marginLeft: 10, minHeight: 60, marginTop: 10, backgroundColor: theme.palette.backgroundColor, border: "1px solid #424242", boxShadow: 'none', borderRadius: 4, width: 81, height: 51, marginRight: 15 }}
 						onClick={() => {
 							setWorkflowId("")
 							setWorkflow({"id": "", "name": "All Workflows"})

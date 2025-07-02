@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useContext } from "react";
 import React from "react";
 import { 
     Typography, 
@@ -7,16 +7,14 @@ import {
     Tooltip, 
     TextField, 
     Grid, 
-    Skeleton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    Box,
+    Checkbox
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import { Link } from "react-router-dom";
 import theme from "../theme.jsx";
 import { toast } from "react-toastify";
+import { Context } from "../context/ContextApi.jsx";
+import { getTheme } from "../theme.jsx";
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -30,6 +28,16 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
     const classes = useStyles();
     const [show2faSetup, setShow2faSetup] = React.useState(false);
 	const [autoPrivision, setAutoProvision] = React.useState(selectedOrganization?.sso_config?.auto_provision)
+	const [roleRequired, setRoleRequired] = React.useState(selectedOrganization?.sso_config?.role_required || false);
+	const [showOpenIdCred, setShowOpenIdCred] = React.useState(false);
+	const [showSamlCred, setShowSamlCred] = React.useState(false);
+	const [skipSSOForAdmin, setSkipSSOForAdmin] = React.useState(
+		selectedOrganization?.sso_config === undefined
+			? false
+			: selectedOrganization?.sso_config?.skip_sso_for_admins === undefined
+				? false
+				: selectedOrganization?.sso_config?.skip_sso_for_admins
+	);
     const [ssoEntrypoint, setSsoEntrypoint] = React.useState(
 		selectedOrganization.sso_config === undefined
 			? ""
@@ -86,6 +94,9 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 				: selectedOrganization.sso_config.openid_token
 	)
 
+	const { themeMode, supportEmail, brandColor } = useContext(Context);
+	const theme = getTheme(themeMode, brandColor);
+
     useEffect(()=>{
         
 		if (openidClientSecret !== selectedOrganization?.sso_config?.client_secret) {
@@ -118,12 +129,21 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 		if (autoPrivision !== selectedOrganization?.sso_config?.auto_provision) {
 			setAutoProvision(selectedOrganization?.sso_config?.auto_provision)
 		}
+
+		if (roleRequired !== selectedOrganization?.sso_config?.role_required) {
+			setRoleRequired(selectedOrganization?.sso_config?.role_required)
+		}
+
+		if (skipSSOForAdmin !== selectedOrganization?.sso_config?.skip_sso_for_admins) {
+			setSkipSSOForAdmin(selectedOrganization?.sso_config?.skip_sso_for_admins)
+		}
+
     },[selectedOrganization])
 
     const orgSaveButton = (
 		<Tooltip title="Save any unsaved data" placement="bottom">
 			<Button
-				style={{ width: 244, height: 51, flex: 1, textTransform: 'capitalize', padding: "16px, 24px, 16px, 24px", borderRadius: 4, backgroundColor: "#ff8544", color: "#1a1a1a",  fontSize: 16, }}
+				style={{ width: 244, height: 51, flex: 1, textTransform: 'capitalize', padding: "16px, 24px, 16px, 24px", borderRadius: 4,  fontSize: 16, }}
 				variant="contained"
 				color="primary"
 				disabled={
@@ -160,9 +180,15 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 							openid_token: openidToken,
 							SSORequired: SSORequired,
 							auto_provision: autoPrivision,
-						}
+							role_required: roleRequired,
+							skip_sso_for_admins: skipSSOForAdmin,
+						},
+						undefined, 
+						{},     
+						"sso_config"
 					)
 				}
+
 			>
 				Save Changes
 				{/* <SaveIcon /> */}
@@ -196,17 +222,35 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			openidAuthorization === "" &&
 			openidToken === ""
 		) {
-			if (!autoPrivision) {
-				toast.error(
-					"Please fill in fields for either OpenID connect or SSO before continuing. "
-				);
-				return;
-			}
+			toast.error(
+				"Please fill in fields for either OpenID connect or SSO before continuing. "
+			);
 		} else {
 			setAutoProvision((prev)=> !prev);
 			toast.info("Toggled Auto Provisioning. Remember to save.");
 		}
 	};
+
+	const handleChangeRoleRequired = (event) => {
+		if (
+			openidAuthorization?.length === 0 &&
+			openidToken?.length === 0
+		) {
+			toast.error(
+				"Please fill in fields for OpenID connect before continuing. "
+			);
+			return;
+		} else {
+			setRoleRequired((prev)=> !prev);
+			toast.info("Toggled Role Required. Remember to save.");
+		}
+	}
+
+	const handlechangeSkipSSOForAdmin = (event) => {
+		
+		setSkipSSOForAdmin((prev) => !prev);
+		toast.info("Toggled Skip SSO for Admins. Remember to save.");
+	};	
 	
 	const HandleTestSSO = () => {
 		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
@@ -229,7 +273,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			.then((response) => {
 				if (response.status !== 200) {
 					toast.error(
-						"Failed to test SSO. Please try again later or contact support@shuffler.io if issue persists.",
+						`Failed to test SSO. Please try again later or contact ${supportEmail} if issue persists.`,
 						{ duration: 3000 }
 					);
 					return null;
@@ -266,10 +310,10 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	};
 
     return (
-        <div style={{ width: "100%", height: "100%",boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121', borderRadius: '16px',  }}>
-			<div style={{ height: "100%", width: "100%", overflowX: 'hidden', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}} >
+        <div style={{ width: "100%", height: "100%",boxSizing: 'border-box', padding: "27px 10px 19px 27px",  backgroundColor: theme.palette.platformColor , borderRadius: '16px',  }}>
+			<div style={{ height: "100%", width: "100%", overflowX: 'hidden', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}} >
              <div style={{ width: "100%", overflowX: 'hidden', maxWidth: 883}}>
-			 <Typography style={{ width: "100%",  fontWeight: 'bold', fontSize: 24}}>
+			 <Typography variant="h5" style={{ width: "100%",  fontWeight: 500, fontSize: 24}}>
 					SSO Configuration
 				</Typography>
 				<div
@@ -284,7 +328,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					<Typography
 						variant="body2"
 						color="textSecondary"
-						style={{ marginTop: 5, marginBottom: 5, color: "rgba(158, 158, 158, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
+						style={{ marginTop: 5, marginBottom: 5, fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
 					>
 						Make SAML SSO or OpenID Authentication Required or Optional for Your Organization.
 					</Typography>
@@ -314,7 +358,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					<Typography
 						variant="body2"
 						color="textSecondary"
-						style={{ marginTop: 5, marginBottom: 5, color: "rgba(158, 158, 158, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
+						style={{ marginTop: 5, marginBottom: 5, fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
 					>
 						Auto-provisioning of users in SSO. By default, users are auto-provisioned in SSO when they login. If you enable this, no new user will be added in your organization when they login via SSO.
 					</Typography>
@@ -331,6 +375,65 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					
 				</div>
 
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						width: "100%",
+                        justifyContent: 'flex-start',
+						marginTop: 30
+					}}
+					>
+					<Typography
+						variant="body2"
+						color="textSecondary"
+						style={{ marginTop: 5, marginBottom: 5, color: "rgba(158, 158, 158, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
+					>
+						Restrict user login to SSO if no valid role is assigned by the SSO provider. When enabled, users will not be allowed to log in via SSO if their assigned role doesn't matches one of the following: shuffle-user, shuffle-admin, or shuffle-org-reader. Currently, available for OpenId Connect only. 
+						<a href="https://shuffler.io/docs/extensions#how-to-assign-a-role-to-a-new-user-from-an-sso-provider-(openid-connect)-in-shuffle" target="_blank" style={{ color: theme.palette.linkColor }}> Learn more</a>
+						 </Typography>
+					<div>
+						<Switch
+						checked={roleRequired}
+						onChange={handleChangeRoleRequired}
+                        sx={{marginBottom: 0.6, marginTop: 0.6}}
+						name="onOffSwitch"
+						color="primary"
+						title="Disable auto-provisioning of users in SSO"
+						/>
+					</div>
+					
+				</div>
+				{userdata && userdata?.active_org?.creator_org?.length > 0 ? null : 
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						width: "100%",
+                        justifyContent: 'flex-start',
+						marginTop: 30
+					}}
+					>
+					<Typography
+						variant="body2"
+						color="textSecondary"
+						style={{ marginTop: 5, marginBottom: 5, color: "rgba(158, 158, 158, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
+					>
+						Skip SSO for Admins. When enabled, parent org admins will be able switch to the sub-organization without SSO. 	
+					</Typography>
+					<div>
+						<Switch
+						checked={skipSSOForAdmin}
+						onChange={handlechangeSkipSSOForAdmin}
+                        sx={{marginBottom: 0.6, marginTop: 0.6}}
+						name="onOffSwitch"
+						color="primary"
+						title="Disable auto-provisioning of users in SSO"
+						/>
+					</div> 
+				</div>
+				}
+
 					<div
 					style={{
 						display: "flex",
@@ -340,7 +443,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						paddingBottom: 10,
 					}}
 					>
-					<Typography style={{color: "rgba(158, 158, 158, 1)", margin: "5px 0px 5px 0px", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>
+					<Typography variant="body2" color="textSecondary" style={{ margin: "5px 0px 5px 0px", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>
 						You can test your SSO configuration by clicking the button below.
 						Before testing, ensure you have set Open ID Connect or SAML SSO
 						credentials.
@@ -361,7 +464,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						<Button
 							variant="outlined"
 							color="primary"
-							style={{ width: 100, textTransform: "none", margin: "10px 10px 10px 0px" }}
+							style={{ width: 100, textTransform: "none", margin: "10px 10px 10px 0px", whiteSpace: "nowrap" }}
 							disabled={
 							!(
 								ssoEntrypoint?.length > 0 ||
@@ -379,93 +482,113 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					</div>
 				<Grid item xs={12} sx={{marginTop: 2}}>
 					<span style={{ display: "flex", flexDirection: "column" }}>
-						<Typography style={{ textAlign: "left", color: "rgba(241, 241, 241, 1)", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: "bold", }}>OpenID connect</Typography>
-						<span style={{ marginTop: 8, color: "rgba(158, 158, 158, 1)", fontSize: 16,  fontWeight: 400 }}>
+						<Typography variant="h5" color="textPrimary" style={{ textAlign: "left", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 500, }}>OpenID connect</Typography>
+						<span style={{ marginTop: 8, color: theme.palette.text.secondary, fontSize: 16,  fontWeight: 400 }}>
 							Configure and Authorize SAML / SSO or OpenID connect. {" "}
 							<a
 								target="_blank"
 								href="/docs/extensions#single-signon"
-								style={{ color: "rgba(255, 132, 68, 1)" }}
+								style={{ color: theme.palette.linkColor }}
 							>
 								Learn more
 							</a>
 						</span>
 					</span>
-					<Typography style={{ textAlign: "left", fontSize: 16, marginTop: 8, color: "rgba(158, 158, 158, 1)", fontWeight: 400 }}>
-						IdP URL for Shuffle OpenID: <Link to={`${globalUrl}/api/v1/login_openid`} target="_blank" style={{ color: "rgba(241, 241, 241, 1)", textDecoration: "none", fontSize: 16,}}>{`${globalUrl}/api/v1/login_openid`}</Link>
-					</Typography>
+					<Typography variant="body2" color="tehttp://localhost:5002/api/v1/login_openidxtSecondary" style={{ textAlign: "left", fontSize: 16, marginTop: 8,  fontWeight: 400 }}>
+						IdP URL for Shuffle OpenID: <Link to={`${globalUrl}/api/v1/login_openid`} target="_blank" style={{ color: theme.palette.text.secondary, textDecoration: "none", fontSize: 16,}}>{`${globalUrl}/api/v1/login_openid`}</Link>
+						</Typography>
+						<div style={{ display: 'flex', marginTop: 10, }}>
+							<Typography
+								color="textSecondary"
+								style={{
+								textAlign: "left",
+								fontSize: 16,
+								marginTop: 8,
+								fontWeight: 400,
+								}}
+							>
+								Show OpenID Credentials
+							</Typography>
+							<Checkbox
+								checked={showOpenIdCred}
+								onChange={(e) => setShowOpenIdCred(e.target.checked)}
+								name="showOpenIdCred"
+								color="primary"
+							/>
+							</div>
 					<Grid container style={{ marginTop: 8, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ color: "rgba(255, 255, 255, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>Client ID</Typography>
+								<Typography style={{ fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, }}>Client ID</Typography>
 								<TextField
 									required
 									style={{
 										flex: "1",
 										marginTop: "5px",
 										marginRight: "15px",
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
 									multiline={true}
 									rows={2}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									placeholder="The OpenID client ID from the identity provider"
-									value={openidClientId}
-									onChange={(e) => {
-										setOpenidClientId(e.target.value);
-									}}
+									value={showOpenIdCred ? openidClientId : openidClientId?.length > 0 ? "•".repeat(50) : ""}
+										onChange={(e) => setOpenidClientId(e.target.value)}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
-											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+										notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
-											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
-											fontWeight: 400,
-											fontSize: 16,
-											borderRadius: 4,
+										color: theme.palette.textFieldStyle.color,
+										fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+										fontWeight: 400,
+										fontSize: 16,
+										borderRadius: theme.palette.textFieldStyle.borderRadius,
 										},
 									}}
-								/>
+									/>
 							</span>
 						</Grid>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ color: "rgba(255, 255, 255, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>Client Secret</Typography>
+								<Typography style={{ fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, }}>Client Secret</Typography>
 								<TextField
 									required
 									style={{
 										flex: "1",
 										marginTop: "5px",
 										marginRight: "15px",
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showOpenIdCred ? "text" : "password"}
 									multiline={true}
 									rows={2}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									placeholder="The OpenID client secret - DONT use this if dealing with implicit auth / PKCE"
-									value={openidClientSecret}
+									value={showOpenIdCred ? openidClientSecret : openidClientSecret?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setOpenidClientSecret(e.target.value);
-									}}
+										}}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 											fontWeight: 400,
 											fontSize: 16,
-											borderRadius: 4,
+											borderRadius: theme.palette.textFieldStyle.borderRadius,
 										},
 									}}
 								/>
@@ -475,33 +598,35 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ color: "rgba(255, 255, 255, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>Authorization URL</Typography>
+								<Typography style={{ fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>Authorization URL</Typography>
 								<TextField
 									required
 									style={{
 										flex: "1",
 										marginTop: "5px",
 										marginRight: "15px",
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showOpenIdCred ? "text" : "password"}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									multiline={true}
 									rows={2}
 									placeholder="The OpenID authorization URL (usually ends with /authorize)"
-									value={openidAuthorization}
+									value={showOpenIdCred ? openidAuthorization : openidAuthorization?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setOpenidAuthorization(e.target.value)
-									}}
+										}}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 											fontWeight: 400,
 											fontSize: 16,
@@ -513,33 +638,35 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						</Grid>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ color: "rgba(255, 255, 255, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>Token URL</Typography>
+								<Typography style={{  fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, }}>Token URL</Typography>
 								<TextField
 									required
 									style={{
 										flex: "1",
 										marginTop: "5px",
 										marginRight: "15px",
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showOpenIdCred ? "text" : "password"}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									multiline={true}
 									rows={2}
 									placeholder="The OpenID token URL (usually ends with /token)"
-									value={openidToken}
+									value={showOpenIdCred ? openidToken : openidToken?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setOpenidToken(e.target.value)
-									}}
+										}}
+										onFocus={(e) => setShowOpenIdCred(true)}
+										onBlur={(e) => setShowOpenIdCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color:theme.palette.textFieldStyle.color,
 											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 											fontWeight: 400,
 											fontSize: 16,
@@ -554,40 +681,61 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 				{/**/}
 				{/*isCloud ? null : */}
 				<Grid item xs={12} sx={{ marginTop: 3.5 }} >
-					<Typography variant="h4" style={{ textAlign: "left", color: "rgba(241, 241, 241, 1)", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 600, }}>SAML SSO (v1.1)</Typography>
-					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: "rgba(241, 241, 241, 1)", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 16, fontWeight: 400, color: "rgba(158, 158, 158, 1)" }} color="textSecondary">
-						IdP URL for Shuffle SAML/SSO: <Link to={`${globalUrl}/api/v1/login_sso`} target="_blank" style={{ color: "rgba(241, 241, 241, 1)", textDecoration: "none" }}>{`${globalUrl}/api/v1/login_sso`}</Link>
-					</Typography>
+					<Typography variant="h5" color="textPrimary" style={{ textAlign: "left", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 500, }}>SAML SSO (v1.1)</Typography>
+					<Typography variant="body2" color="textSecondary"  style={{  textAlign: "left", marginTop: 8, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 16, fontWeight: 400, }}>
+						IdP URL for Shuffle SAML/SSO: <Link to={`${globalUrl}/api/v1/login_sso`} target="_blank" style={{ color: theme.palette.text.secondary, textDecoration: "none" }}>{`${globalUrl}/api/v1/login_sso`}</Link>
+						</Typography>
+						<div style={{ display: 'flex', marginTop: 10, }}>
+							<Typography
+								color="textSecondary"
+								style={{
+									textAlign: "left",
+									fontSize: 16,
+									marginTop: 8,
+									fontWeight: 400,
+								}}
+							>
+								Show SAML Credentials
+							</Typography>
+							<Checkbox
+								checked={showSamlCred}
+								onChange={(e) => setShowSamlCred(e.target.checked)}
+								name="showSamlCred"
+								color="primary"
+							/>
+						</div>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ color: "rgba(255, 255, 255, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>SSO Entrypoint (IdP)</Typography>
+								<Typography style={{ fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, }}>SSO Entrypoint (IdP)</Typography>
 								<TextField
 									required
 									style={{
 										flex: "1",
 										marginTop: "5px",
 										marginRight: "15px",
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor : theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showSamlCred ? "text" : "password"}
 									multiline={true}
 									rows={2}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									placeholder="The entrypoint URL from your provider"
-									value={ssoEntrypoint}
+									value={showSamlCred ? ssoEntrypoint : ssoEntrypoint?.length > 0 ? "•".repeat(50) : ""}
 									onChange={(e) => {
 										setSsoEntrypoint(e.target.value);
-									}}
+										}}
+										onFocus={(e) => setShowSamlCred(true)}
+										onBlur={(e) => setShowSamlCred(false)}
 									InputProps={{
 										classes: {
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 											fontWeight: 400,
 											fontSize: 16,
@@ -599,24 +747,26 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						</Grid>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ color: "rgba(255, 255, 255, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>SSO Certificate (X509)</Typography>
+								<Typography style={{ fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400, fontSize: 16 }}>SSO Certificate (X509)</Typography>
 								<TextField
 									required
 									style={{
 										flex: "1",
 										marginTop: "5px",
 										marginRight: "15px",
-										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+										backgroundColor: isEditOrgTab ? theme.palette.textFieldStyle.backgroundColor: theme.palette.inputColor,
 									}}
 									fullWidth={true}
-									type="name"
+									type={showSamlCred ? "text" : "password"}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
 									multiline={true}
 									rows={2}
 									placeholder="The X509 certificate to use"
-									value={ssoCertificate}
+										value={showSamlCred ? ssoCertificate : ssoCertificate?.length > 0 ? "•".repeat(50) : ""}
+										onFocus={(e) => setShowSamlCred(true)}
+										onBlur={(e) => setShowSamlCred(false)}
 									onChange={(e) => {
 										setSsoCertificate(e.target.value);
 									}}
@@ -625,7 +775,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
 										},
 										style: {
-											color: "white",
+											color: theme.palette.textFieldStyle.color,
 											fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 											fontWeight: 400,
 											fontSize: 16,

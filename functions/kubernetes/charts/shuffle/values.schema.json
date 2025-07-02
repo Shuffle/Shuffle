@@ -155,6 +155,11 @@
                             "description": "backend image repository",
                             "default": "shuffle/shuffle-backend"
                         },
+                        "tag": {
+                            "type": "string",
+                            "description": "backend image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
+                        },
                         "digest": {
                             "type": "string",
                             "description": "backend image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
@@ -367,12 +372,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in backend container' Security Context",
-                            "default": 1000
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in backend container' Security Context",
-                            "default": 1000
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -444,19 +449,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for backend daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for backend deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for backend statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -521,15 +516,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "backend statefulset strategy type",
-                            "default": "RollingUpdate"
+                            "description": "backend deployment strategy type",
+                            "default": "Recreate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for backend statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -693,6 +683,16 @@
                         }
                     }
                 },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for backend service",
+                            "default": {}
+                        }
+                    }
+                },
                 "serviceAccount": {
                     "type": "object",
                     "properties": {
@@ -838,6 +838,11 @@
                             "type": "string",
                             "description": "frontend image repository",
                             "default": "shuffle/shuffle-frontend"
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "frontend image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
                         },
                         "digest": {
                             "type": "string",
@@ -1056,12 +1061,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in frontend container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in frontend container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -1133,19 +1138,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for frontend daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for frontend deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for frontend statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -1210,15 +1205,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "frontend statefulset strategy type",
+                            "description": "frontend deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for frontend statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -1382,6 +1372,16 @@
                         }
                     }
                 },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for frontend service",
+                            "default": {}
+                        }
+                    }
+                },
                 "serviceAccount": {
                     "type": "object",
                     "properties": {
@@ -1463,6 +1463,11 @@
                             "description": "orborus image repository",
                             "default": "shuffle/shuffle-orborus"
                         },
+                        "tag": {
+                            "type": "string",
+                            "description": "orborus image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
+                        },
                         "digest": {
                             "type": "string",
                             "description": "orborus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
@@ -1485,16 +1490,6 @@
                     "type": "number",
                     "description": "Number of orborus replicas to deploy",
                     "default": 1
-                },
-                "containerPorts": {
-                    "type": "object",
-                    "properties": {
-                        "http": {
-                            "type": "number",
-                            "description": "orborus HTTP container port",
-                            "default": 8080
-                        }
-                    }
                 },
                 "extraContainerPorts": {
                     "type": "array",
@@ -1675,12 +1670,12 @@
                         "runAsUser": {
                             "type": "number",
                             "description": "Set runAsUser in orborus container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsGroup": {
                             "type": "number",
                             "description": "Set runAsGroup in orborus container' Security Context",
-                            "default": 101
+                            "default": 1001
                         },
                         "runAsNonRoot": {
                             "type": "boolean",
@@ -1752,19 +1747,9 @@
                     "default": [],
                     "items": {}
                 },
-                "daemonsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for orborus daemonset",
-                    "default": {}
-                },
                 "deploymentAnnotations": {
                     "type": "object",
                     "description": "Annotations for orborus deployment",
-                    "default": {}
-                },
-                "statefulsetAnnotations": {
-                    "type": "object",
-                    "description": "Annotations for orborus statefulset",
                     "default": {}
                 },
                 "podLabels": {
@@ -1829,15 +1814,10 @@
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "orborus statefulset strategy type",
+                            "description": "orborus deployment strategy type",
                             "default": "RollingUpdate"
                         }
                     }
-                },
-                "podManagementPolicy": {
-                    "type": "string",
-                    "description": "Pod management policy for orborus statefulset",
-                    "default": "OrderedReady"
                 },
                 "priorityClassName": {
                     "type": "string",
@@ -2092,10 +2072,112 @@
                             "description": "worker image repository",
                             "default": "shuffle/shuffle-worker"
                         },
+                        "tag": {
+                            "type": "string",
+                            "description": "worker image tag (immutable tags are recommended, defaults to appVersion)",
+                            "default": ""
+                        },
                         "digest": {
                             "type": "string",
                             "description": "worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
                             "default": ""
+                        }
+                    }
+                },
+                "podSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable worker pods' Security Context",
+                            "default": true
+                        },
+                        "fsGroupChangePolicy": {
+                            "type": "string",
+                            "description": "Set filesystem group change policy for worker pods",
+                            "default": "Always"
+                        },
+                        "sysctls": {
+                            "type": "array",
+                            "description": "Set kernel settings using the sysctl interface for worker pods",
+                            "default": [],
+                            "items": {}
+                        },
+                        "supplementalGroups": {
+                            "type": "array",
+                            "description": "Set filesystem extra groups for worker pods",
+                            "default": [],
+                            "items": {}
+                        },
+                        "fsGroup": {
+                            "type": "number",
+                            "description": "Set fsGroup in worker pods' Security Context",
+                            "default": 1001
+                        }
+                    }
+                },
+                "containerSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enabled worker container' Security Context",
+                            "default": true
+                        },
+                        "runAsUser": {
+                            "type": "number",
+                            "description": "Set runAsUser in worker container' Security Context",
+                            "default": 1001
+                        },
+                        "runAsGroup": {
+                            "type": "number",
+                            "description": "Set runAsGroup in worker container' Security Context",
+                            "default": 1001
+                        },
+                        "runAsNonRoot": {
+                            "type": "boolean",
+                            "description": "Set runAsNonRoot in worker container' Security Context",
+                            "default": true
+                        },
+                        "readOnlyRootFilesystem": {
+                            "type": "boolean",
+                            "description": "Set readOnlyRootFilesystem in worker container' Security Context",
+                            "default": true
+                        },
+                        "privileged": {
+                            "type": "boolean",
+                            "description": "Set privileged in worker container' Security Context",
+                            "default": false
+                        },
+                        "allowPrivilegeEscalation": {
+                            "type": "boolean",
+                            "description": "Set allowPrivilegeEscalation in worker container' Security Context",
+                            "default": false
+                        },
+                        "capabilities": {
+                            "type": "object",
+                            "properties": {
+                                "drop": {
+                                    "type": "array",
+                                    "description": "List of capabilities to be dropped in worker container",
+                                    "default": [
+                                        "ALL"
+                                    ],
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "seccompProfile": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "description": "Set seccomp profile in worker container",
+                                    "default": "RuntimeDefault"
+                                }
+                            }
                         }
                     }
                 },
@@ -2177,6 +2259,103 @@
         "app": {
             "type": "object",
             "properties": {
+                "podSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable app pods' Security Context",
+                            "default": true
+                        },
+                        "fsGroupChangePolicy": {
+                            "type": "string",
+                            "description": "Set filesystem group change policy for app pods",
+                            "default": "Always"
+                        },
+                        "sysctls": {
+                            "type": "array",
+                            "description": "Set kernel settings using the sysctl interface for app pods",
+                            "default": [],
+                            "items": {}
+                        },
+                        "supplementalGroups": {
+                            "type": "array",
+                            "description": "Set filesystem extra groups for app pods",
+                            "default": [],
+                            "items": {}
+                        },
+                        "fsGroup": {
+                            "type": "number",
+                            "description": "Set fsGroup in app pods' Security Context",
+                            "default": 1001
+                        }
+                    }
+                },
+                "containerSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enabled app container' Security Context",
+                            "default": true
+                        },
+                        "runAsUser": {
+                            "type": "number",
+                            "description": "Set runAsUser in app container' Security Context",
+                            "default": 1001
+                        },
+                        "runAsGroup": {
+                            "type": "number",
+                            "description": "Set runAsGroup in app container' Security Context",
+                            "default": 1001
+                        },
+                        "runAsNonRoot": {
+                            "type": "boolean",
+                            "description": "Set runAsNonRoot in app container' Security Context",
+                            "default": true
+                        },
+                        "readOnlyRootFilesystem": {
+                            "type": "boolean",
+                            "description": "Set readOnlyRootFilesystem in app container' Security Context",
+                            "default": true
+                        },
+                        "privileged": {
+                            "type": "boolean",
+                            "description": "Set privileged in app container' Security Context",
+                            "default": false
+                        },
+                        "allowPrivilegeEscalation": {
+                            "type": "boolean",
+                            "description": "Set allowPrivilegeEscalation in app container' Security Context",
+                            "default": false
+                        },
+                        "capabilities": {
+                            "type": "object",
+                            "properties": {
+                                "drop": {
+                                    "type": "array",
+                                    "description": "List of capabilities to be dropped in app container",
+                                    "default": [
+                                        "ALL"
+                                    ],
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "seccompProfile": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "description": "Set seccomp profile in app container",
+                                    "default": "RuntimeDefault"
+                                }
+                            }
+                        }
+                    }
+                },
                 "serviceAccount": {
                     "type": "object",
                     "properties": {
@@ -2249,6 +2428,11 @@
                             "items": {}
                         }
                     }
+                },
+                "exposedContainerPort": {
+                    "type": "number",
+                    "description": "The port that shuffle app containers will listen on for new requests. ",
+                    "default": 80
                 }
             }
         },
@@ -2590,6 +2774,11 @@
                             "type": "string",
                             "description": "OS Shell + Utility image repository",
                             "default": "bitnami/os-shell"
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "OS Shell + Utility image tag (immutable tags are recommended)",
+                            "default": "12-debian-12-r30"
                         },
                         "pullPolicy": {
                             "type": "string",

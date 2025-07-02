@@ -1,5 +1,5 @@
 import React, { memo, useContext, useEffect, useState } from 'react';
-import theme from "../theme.jsx";
+import { getTheme } from "../theme.jsx";
 import {
     Tooltip,
     Typography,
@@ -61,6 +61,9 @@ const EnvironmentTab = memo((props) => {
     const [selectedEnvironment, setSelectedEnvironment] = React.useState(null);
     const [selectedSubOrg, setSelectedSubOrg] = React.useState([]);
 	const [showLocationActionModal, setShowLocationActionModal] = React.useState(undefined)
+
+  const {  themeMode, supportEmail, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
 
     useEffect(() => {
@@ -370,7 +373,7 @@ const EnvironmentTab = memo((props) => {
           })
           .catch((error) => {
             toast(
-              "Failed dismissing alert. Please contact support@shuffler.io if this persists.",
+              `Failed dismissing alert. Please contact ${supportEmail} if this persists.`,
             );
           });
       };
@@ -512,11 +515,11 @@ const EnvironmentTab = memo((props) => {
           }}
         >
             <DialogTitle>
-                <span style={{ color: "white" }}>Add Location</span>
+                <Typography variant='h5' color="textPrimary" >Add Location</Typography>
             </DialogTitle>
             <DialogContent>
                 <div>
-                    Location Name
+                    <Typography variant='body2' color="textPrimary">Location Name</Typography>
                     <TextField
                         color="primary"
                         style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor,}}
@@ -524,7 +527,7 @@ const EnvironmentTab = memo((props) => {
                         InputProps={{
                             style: {
                                 height: "50px",
-                                color: "white",
+                                color: theme.palette.textFieldStyle.color,
                                 fontSize: "1em",
                             },
                         }}
@@ -539,19 +542,18 @@ const EnvironmentTab = memo((props) => {
                         }
                     />
                 </div>
-                {loginInfo} {/* Assuming loginInfo is part of the relevant content */}
+                {loginInfo}
             </DialogContent>
             <DialogActions>
                 <Button
-                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: "#ff8544" }}
+                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: theme.palette.primary.main, }}
                     onClick={() => setModalOpen(false)}
-                    color="primary"
                 >
                     Cancel
                 </Button>
                 <Button
                     variant="contained"
-                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", backgroundColor: "#ff8544", color: "#1a1a1a" }}
+                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", }}
                     onClick={() => {
                         submitEnvironment(modalUser); // Assuming modalUser is available
                     }}
@@ -733,9 +735,9 @@ const EnvironmentTab = memo((props) => {
           }}
       >
   <DialogTitle>
-    <div style={{ color: "rgba(255,255,255,0.9)" }}>
+    <Typography variant='h5' color="textPrimary" >
       Select sub-org to distribute Environments
-    </div>
+    </Typography>
   </DialogTitle>
   <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
     <MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
@@ -778,7 +780,7 @@ const EnvironmentTab = memo((props) => {
 
     <div style={{ display: "flex", marginTop: 20 }}>
       <Button
-        style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#ff8544"  }}
+        style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main  }}
         onClick={() => setShowDistributionPopup(false)}
         color="primary"
       >
@@ -786,7 +788,7 @@ const EnvironmentTab = memo((props) => {
       </Button>
       <Button
         variant="contained"
-        style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: "#1a1a1a", backgroundColor: "#ff8544", marginLeft: 10 }}
+        style={{ borderRadius: "2px", textTransform: 'none', fontSize:16,  marginLeft: 10 }}
         onClick={() => {
           changeDistribution(selectedEnvironment, selectedSubOrg);
         }}
@@ -800,27 +802,27 @@ const EnvironmentTab = memo((props) => {
   ) : null;
 
     return (
-        <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: '#212121',borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
+        <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
             {modalView}
             {EnvironmentDistributionModal}
-            <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin' }}>
-              <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
+            <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
+              <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
               <div style={{ marginBottom: 20 }}>
-                <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Runtime Locations</h2>
-                <span style={{ color: textColor }}>
-                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously called Environments. <br /> If you have scale problems, <a href="https://shuffler.io/docs/configuration#high-availability" target="_blank" rel="noopener noreferrer" style={{ color: "#FF8444" }}>check the docs</a> or talk to our team: support@shuffler.io.&nbsp;
+                <Typography variant='h5' color="textPrimary" style={{ marginBottom: 8, marginTop: 0,}}>Runtime Locations</Typography>
+                <Typography variant='body2' color="textSecondary">
+                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously called Environments. <br /> If you have scale problems, <a href="https://shuffler.io/docs/configuration#high-availability" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor }}>check the docs</a> or talk to our team: {supportEmail}.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
                         href="/docs/organizations#locations"
-                        style={{ color: "#FF8444" }}
+                        style={{ color: theme.palette.linkColor,  }}
                     >
                         Learn more
                     </a>
-                </span>
+                </Typography>
             </div>
             <Button
-                style={{ backgroundColor: '#ff8544', color: "#1a1a1a", borderRadius: 4, textTransform: "capitalize", fontSize: 16,  }}
+                style={{ borderRadius: 4, textTransform: "capitalize", fontSize: 16,  }}
                 variant="contained"
                 color="primary"
                 onClick={() => setModalOpen(true)}
@@ -828,9 +830,9 @@ const EnvironmentTab = memo((props) => {
                 Add Location
             </Button>
             <Button
-                style={{ backgroundColor: "#2F2F2F", borderRadius: 4, width: 81, height: 40, marginLeft: 16, marginRight: 15 }}
+                style={{ borderRadius: 4, width: 81, height: 40, marginLeft: 16, marginRight: 15 }}
                 variant="contained"
-                color="primary"
+                color="secondary"
                 onClick={getEnvironments}
             >
                 <CachedIcon />
@@ -851,7 +853,7 @@ const EnvironmentTab = memo((props) => {
                 style={{
                 borderRadius: 4,
                 marginTop: 24,
-                border: "1px solid #494949",
+                border: theme.palette.defaultBorder,
                 width: "100%",
                 overflowX: "auto", 
                 paddingBottom: 0,
@@ -873,7 +875,7 @@ const EnvironmentTab = memo((props) => {
                     width: "100%",
                     minWidth: 800,
                     paddingBottom: 0,
-                    borderBottom: "1px solid #494949",    
+                    borderBottom: theme.palette.defaultBorder,    
                   }}
               >
                     {["Type", "Status", "Scale", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => {
@@ -901,7 +903,7 @@ const EnvironmentTab = memo((props) => {
         style={{
           display: "grid",
           gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 350px 150px",
-          backgroundColor: "#212121",
+          backgroundColor: theme.palette.platformColor,
           height: 40,
           width: "100%",
           boxSizing: "border-box",
@@ -919,7 +921,7 @@ const EnvironmentTab = memo((props) => {
               variant="text"
               animation="wave"
               sx={{
-                backgroundColor: "#1a1a1a",
+                backgroundColor: theme.palette.loaderColor,
                 borderRadius: "4px",
               }}
             />
@@ -941,9 +943,9 @@ const EnvironmentTab = memo((props) => {
           return null;
         }
   
-        var bgColor = "#212121";
+        var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
         if (index % 2 === 0) {
-          bgColor = "#1A1A1A";
+            bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
         }
   
         // Check if there's a notification for it in userdata.priorities
@@ -1013,7 +1015,9 @@ const EnvironmentTab = memo((props) => {
               environment.name === "Cloud" ? (
               <Tooltip title="Cloud" placement="top">
                 <CloudIcon
-                style={{ color: "rgba(255,255,255,0.8)" }}
+                  style={{
+                    color: themeMode === "dark" ? "#CCCCCC" : "#333333",
+                  }}
                 />
               </Tooltip>
               ) : environment.run_type === "docker" ? (
@@ -1075,7 +1079,7 @@ const EnvironmentTab = memo((props) => {
 							: 
 							<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
 						  : 
-							"Cloud is automatically configured. Reachout to support@shuffler.io if you have any questions."
+							`Cloud is automatically configured. Reachout to ${supportEmail} if you have any questions.`
 						}
 
 						<br />
@@ -1169,7 +1173,7 @@ const EnvironmentTab = memo((props) => {
               		<ListItemText
                     	primary={
                 			environment.Type === "cloud" ? 
-                              <Tooltip title={"Make a new environment to set up a Datalake node. Please contact support@shuffler.io if this is something you want to see on Cloud directly."} placement="top">
+                              <Tooltip title={`Make a new environment to set up a Datalake node. Please contact ${supportEmail} if this is something you want to see on Cloud directly.`} placement="top">
                                 <CancelIcon style={{ color: "rgba(255,255,255,0.3)" }} />
                               </Tooltip>
                 		:
@@ -1267,13 +1271,12 @@ const EnvironmentTab = memo((props) => {
                         />
                         <ListItemText
                             style={{
-                              minWidth: 300,
-                              overflow: "hidden",
+                              minWidth: 350,
                             }}
                           >
                             <div style={{ display: "flex", flexWrap: "nowrap" }}>
                               <ButtonGroup
-                                style={{ borderRadius: "5px 5px 5px 5px", flexWrap: "nowrap" }}
+                                style={{ borderRadius: "5px 5px 5px 5px", flexWrap: "nowrap", width: "100%" }}
                               >
                                 <Button
                                   variant="outlined"
@@ -1369,7 +1372,7 @@ const EnvironmentTab = memo((props) => {
                               </ButtonGroup>
 
                               <IconButton disabled={environment.Type === "cloud"} onClick={()=> {setIsExpanded(prev => !prev)}}>
-                                {listItemExpanded === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                {listItemExpanded === index ? <ExpandLessIcon sx={{color: theme.palette.text.primary}} /> : <ExpandMoreIcon sx={{color: theme.palette.text.primary}}/>}
                               </IconButton>
                             </div>
                           </ListItemText>
@@ -1420,7 +1423,7 @@ const EnvironmentTab = memo((props) => {
           <Collapse in={listItemExpanded === index} timeout="auto" unmountOnExit>
           	<Grid container justifyContent="center" style={{minWidth: 850, maxWidth: 850, }}>
     			<Grid item xs={12} sm={8} md={6}>
-                    <div style={{minWidth: 700, maxWidth: 700, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
+                    <div style={{minWidth: 750, maxWidth: 750, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
                             Self-Hosted Orborus instance
@@ -1443,7 +1446,7 @@ const EnvironmentTab = memo((props) => {
                         >
                           <Tab
                             value={0}
-                          label=<span>
+                          label=<span style={{color: theme.palette.text.secondary, }}>
                             <img
                             src="/icons/docker.svg"
                             style={{ width: 20, height: 20, marginRight: 10, }}
@@ -1452,32 +1455,32 @@ const EnvironmentTab = memo((props) => {
                           />
                           <Tab
                             value={1}
-                          label=<span>
+                          label=<span style={{color: theme.palette.text.secondary, }}>
                             <img
                             src="/icons/docker.svg"
-                            style={{ width: 20, height: 20, marginRight: 10, }}
+                            style={{ width: 20, height: 20, marginRight: 10,}}
                             /> Scale
                           </span>
                           />
                           <Tab
                             value={2}
-                          label=<span>
+                          label=<span style={{color: theme.palette.text.secondary, }}>
                             <img
                             src="/icons/k8s.svg"
-                            style={{ width: 20, height: 20, marginRight: 10, }}
+                            style={{ width: 20, height: 20, marginRight: 10 }}
                             /> k8s 
                           </span>
                           />
                           </Tabs>
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
                             {installationTab === 2 ?
-                            <span>
+                            <Typography variant='body2' color="textSecondary">
                                 Check our <a href="https://docs.docker.com/get-started/get-docker/" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Kubernetes documentation</a> for more information on how to run Shuffle on Kubernetes. The status of the node will change when connected.
-                            </span>
+                            </Typography>
                             :
-                            <span>
+                            <Typography variant='body2' color="textSecondary">
                                 1. <a href="https://docs.docker.com/get-started/get-docker/" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Ensure Docker is installed</a> and the target server can reach '{globalUrl}'
-                            </span>
+                            </Typography>
                           }
         
                           </Typography>
@@ -1501,13 +1504,19 @@ const EnvironmentTab = memo((props) => {
                           >
                             <div style={{ display: "flex", position: "relative", }}>
                               <code
-                                contenteditable="true"
+                                contentEditable="true"
                                 id="orborus_command"
                                 style={{
-                                  // Wrap if larger than X
                                   whiteSpace: "pre-wrap",
                                   overflow: "auto",
                                   marginRight: 30,
+                                  backgroundColor: themeMode === "dark" ? "#1e1e1e" : "#f5f5f5",
+                                  color: themeMode === "dark" ? "#f8f8f2" : "#333",
+                                  padding: "8px",
+                                  borderRadius: "4px",
+                                  fontFamily: "monospace",
+                                  fontSize: 18,
+                                  border: themeMode === "dark" ? "1px solid #555" : "1px solid #ddd",
                                 }}
                               >
                                 {getOrborusCommand(environment)}
@@ -1532,7 +1541,8 @@ const EnvironmentTab = memo((props) => {
                             </div>
         
                             <Divider style={{marginTop: 25, marginBottom: 10, }}/>
-                            Configure HTTP Proxies: <Checkbox 
+                            <div style={{display: 'flex', alignItems: 'center', }}>
+                            <Typography variant='body2' color="textSecondary">Configure HTTP Proxies:</Typography> <Checkbox 
                               id="shuffle_skip_proxies"
                               onClick={() => {
                                 if (commandController.proxies === undefined) { 
@@ -1545,8 +1555,10 @@ const EnvironmentTab = memo((props) => {
                                 setUpdate(Math.random())
                               }}
                             />
+                            </div>
                             <div />
-                            Disable Pipelines & Data Lake: <Checkbox 
+                            <div style={{display: 'flex', alignItems: 'center', }}>
+                            <Typography variant='body2' color="textSecondary">Disable Pipelines & Data Lake:</Typography> <Checkbox 
                               id="shuffle_skip_pipelines"
                               onClick={() => {
                                 if (commandController.pipelines === undefined) { 
@@ -1558,6 +1570,7 @@ const EnvironmentTab = memo((props) => {
                                         setUpdate(Math.random())
                               }}
                             />
+                            </div>
                             </div>
                         }
         

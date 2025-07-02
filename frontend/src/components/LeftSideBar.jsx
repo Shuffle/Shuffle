@@ -11,6 +11,11 @@ import {
   Toc as TocIcon,
   Settings as SettingsIcon 
 } from "@mui/icons-material";
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import MonitorIcon from '@mui/icons-material/Monitor';
+
+
 import SearchBox from "./SearchData.jsx";
 import {
   Button,
@@ -30,11 +35,13 @@ import {
   Portal,
   Collapse,
   Tooltip,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
-import theme from "../theme.jsx";
 import RecentWorkflow from "../components/RecentWorkflow.jsx";
 
 import { useNavigate } from "react-router";
+import { getTheme } from "../theme.jsx";
 
 import { Link } from "react-router-dom";
 import {
@@ -57,8 +64,7 @@ const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
-  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen} = useContext(Context);
-
+  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
     userdata?.active_org?.name || "Select Organziation"
@@ -73,7 +79,10 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
   const [recentworkflows, setRecentworkflows] = useState(null);
   const [usersWorkFlows, setUsersWorkFlows] = useState([]);
   const [currentOpenTab, setCurrentOpenTab] = useState("");
-  const currentPath = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const [currentSelectedTheme, setCurrentSelectedTheme] = useState(themeMode);
+  const tab = params.get("tab");
+  const currentPath = tab ? `${window.location.pathname}?tab=${tab}` : window.location.pathname;
   const [hoverOnAvatar, setHoverOnAvatar] = useState(false);
   const [orgOptions, setOrgOptions] = useState(
     userdata?.orgs?.map((org) => ({
@@ -87,21 +96,35 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
 
-//With this code it is opening search bar on google chrome search bar as well which is not required
-useEffect(() => {
-  const handleKeyDown = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
-      event.preventDefault();
-      setSearchBarModalOpen((prev)=> !prev);
+  const theme = getTheme(themeMode);
+  const darkText = "#0F1419"
+  const lightText = "#CDCDCD"
+  const lightHoverColor = "#D6D6D6"
+  const darkHoverColor = "#2F2F2F"
+
+	//With this code it is opening search bar on google chrome search bar as well which is not required
+	useEffect(() => {
+	  const handleKeyDown = (event) => {
+		if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+		  event.preventDefault();
+		  setSearchBarModalOpen((prev)=> !prev);
+		}
+	  };
+
+	  window.addEventListener("keydown", handleKeyDown);
+
+	  return () => {
+		window.removeEventListener("keydown", handleKeyDown);
+	  };
+	}, [setSearchBarModalOpen]);
+
+  useEffect(() => {
+    if (userdata && userdata?.active_org?.branding?.theme?.length > 0) {
+      setCurrentSelectedTheme(userdata?.active_org?.branding?.theme);
+    }else if (userdata && userdata?.theme?.length > 0) {
+      setCurrentSelectedTheme(userdata?.theme);
     }
-  };
-
-  window.addEventListener("keydown", handleKeyDown);
-
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, [setSearchBarModalOpen]);
+  }, [userdata]);
   
   const CustomPopper = (props) => {
     return (
@@ -125,10 +148,12 @@ useEffect(() => {
           }}
           sx={{
             zIndex: 1000015,
-            backgroundColor: "#1f1f1f",
+            backgroundColor: theme.palette.backgroundColor,
+            color: theme.palette.text.primary,
             opacity: 1,
             "& .MuiAutocomplete-listbox": {
-              backgroundColor: "#1f1f1f",
+              backgroundColor: theme.palette.backgroundColor,
+              color: theme.palette.text.primary,
               padding: 0,
               margin: 0,
               borderRadius: "4px",
@@ -138,15 +163,16 @@ useEffect(() => {
             outline: "1px solid #555555",
             borderRadius: 1,
             overflow: 'hidden'
-            
           }}
         >
           <Box
           sx={{
             scrollbarWidth: "thin",
-            scrollbarColor: "#494949 transparent",
+            scrollbarColor: theme.palette.scrollbarColorTransparent,
+            color: theme.palette.text.primary,
             "& .MuiAutocomplete-listbox": {
-              backgroundColor: "#1f1f1f",
+              backgroundColor:theme.palette.backgroundColor,
+              color: theme.palette.text.primary,
               padding: 0,
               margin: 0,
               borderRadius: "4px",
@@ -155,18 +181,19 @@ useEffect(() => {
         >
           {props.children}
         </Box>
+
         <Link to="/admin?tab=tenants" style={hrefStyle}>
 			<Box
 				sx={{
 				  width: "100%",
 				  padding: "12px 8px",
 				  textAlign: "center",
-				  color: "#fff",
+				  color: theme.palette.text.primary,
 				  fontSize: "16px",
 				  cursor: "pointer",
 				  borderTop: "1px solid #444444",
 				  "&:hover": {
-					backgroundColor: "#444444",
+					  backgroundColor: theme.palette.hoverColor,
 				  },
 				  textTransform: 'none'
 				}}
@@ -240,15 +267,24 @@ useEffect(() => {
       setOpenautomateTab(true);
       setOpenSecurityTab(false);
       setCurrentOpenTab("apps");
-        } else if ((lastTabOpenByUser === "detection" && currentPath.includes("/detections")) || currentPath.includes("/detections")) {
+        } else if ((lastTabOpenByUser === "forms" && currentPath.includes("/forms")) || currentPath.includes("/forms")) {
       setOpenautomateTab(false);
       setOpenSecurityTab(true);
-      setCurrentOpenTab("detection");
-        } else if ((lastTabOpenByUser === "response" && currentPath.includes("/response")) || currentPath.includes("/response")) {
+      setCurrentOpenTab("forms");
+        } else if ((lastTabOpenByUser === "datastore" && currentPath.includes("/admin?tab=datastore")) || currentPath.includes("/admin?tab=datastore")) {
       setOpenautomateTab(false);
       setOpenSecurityTab(true);
-      setCurrentOpenTab("response");
-        } else if ((lastTabOpenByUser === "docs" || currentPath.includes("/docs")) || currentPath.includes("/docs")) {
+      setCurrentOpenTab("datastore");
+    } else if ((lastTabOpenByUser === "files" && currentPath.includes("/admin?tab=files")) || currentPath.includes("/admin?tab=files")) {
+      setOpenautomateTab(false);
+      setOpenSecurityTab(true);
+      setCurrentOpenTab("files");
+    }
+    else if ((lastTabOpenByUser === "locations" && currentPath.includes("/admin?tab=locations")) || currentPath.includes("/admin?tab=locations")) {
+      setOpenautomateTab(false);
+      setOpenSecurityTab(true);
+      setCurrentOpenTab("locations");
+    } else if ((lastTabOpenByUser === "docs" || currentPath.includes("/docs")) || currentPath.includes("/docs")) {
       setOpenautomateTab(false);
       setOpenSecurityTab(false);
       setCurrentOpenTab("docs");
@@ -373,6 +409,82 @@ useEffect(() => {
     }
   }, [usersWorkFlows]); 
 
+  const handleChangeTheme = (newTheme) => {
+
+
+    const data = {
+      	  "org_id": userdata?.active_org?.id,
+  	};
+
+    data["branding"]  = {
+			"theme": newTheme,
+			"enable_chat": userdata?.active_org?.branding?.enable_chat || false,
+			"home_url": userdata.active_org?.branding?.home_url || "",
+			"brand_color": userdata?.active_org?.branding?.brand_color || theme.palette.primary.main,
+			"brand_name": userdata?.active_org?.branding?.brand_name || "",
+			"logout_url": userdata?.active_org?.branding?.logout_url || "",
+			"support_email": userdata?.active_org?.branding?.support_email || "",
+		}
+
+		data["editing_branding"] = true;
+
+    const url = globalUrl + `/api/v1/orgs/${userdata?.active_org?.id}`;
+          fetch(url, {
+            mode: "cors",
+            method: "POST",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+            },
+          })
+            .then((response) =>
+              response.json().then((responseJson) => {
+                if (responseJson["success"] === false) {
+                    toast("Failed updating org: ", responseJson.reason);
+                }
+                })
+  	      ) 
+            .catch((error) => {
+              console.log("Error changing theme: ", error);
+            });
+  };
+
+  
+  const handleUpdateTheme = (newTheme) => {
+    handleThemeChange(newTheme);
+    setCurrentSelectedTheme(newTheme)
+    
+    const data = {
+      "user_id": userdata?.id,
+      "theme": newTheme,
+    }
+
+    const url = globalUrl + `/api/v1/users/updateuser`;
+    fetch(url, {
+      mode: "cors",
+      method: "PUT",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    }).then((response) =>
+      response.json().then((responseJson) => {
+        if (responseJson["success"] === false) {
+          toast("Failed saving your theme: ", responseJson.reason);
+        }
+      })
+    ).catch((error) => {
+      console.log("Error saving your theme: ", error);
+    }); 
+  };
+    
+
   const removeCookie = (name, path = "/") => {
     document.cookie = `${name}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
   };
@@ -399,8 +511,11 @@ useEffect(() => {
         // Clear localStorage
         localStorage.clear();
 
-        // Redirect to home immediately
-        window.location.href = "/";
+        if(userdata?.org_status?.includes("integration_partner") && logoutUrl?.length > 0){
+          window.location.href = logoutUrl
+        } else {
+          window.location.pathname = "/";
+        }
       })
       .catch((error) => {
         console.error("Logout error:", error);
@@ -412,7 +527,7 @@ useEffect(() => {
       <IconButton
         style={{
           marginRight: 5,
-          color: theme.palette.primary.contrastText,
+          color: themeMode === "dark" ? lightText : darkText,
         }}
         aria-controls="simple-menu"
         aria-haspopup="true"
@@ -445,17 +560,17 @@ useEffect(() => {
         sx={{
           zIndex: 1000015,
           "& .MuiPaper-root": {
-            backgroundColor: "#1F1F1F",
-            color: "#FFFFFF",
-            borderRadius: 1,
+            backgroundColor: theme.palette.backgroundColor,
+            color: theme.palette.text.primary,
+            borderRadius: theme.palette.borderRadius/3,
           },
           "& .MuiList-root": {
-            backgroundColor: "#1F1F1F",
+            backgroundColor: theme.palette.backgroundColor,
           },
           "& .MuiMenuItem-root": {
-            color: "#FFFFFF",
+            color: theme.palette.text.primary,
             "&:hover": {
-              backgroundColor: "#333333",
+              backgroundColor: theme.palette.hoverColor,
             },
           },
           "& .MuiDivider-root": {
@@ -463,6 +578,44 @@ useEffect(() => {
           },
         }}
       >
+        {userdata && (userdata?.org_status?.includes("integration_partner") && userdata?.org_status?.includes("sub_org")) ? null : (
+          <>
+            <ToggleButtonGroup
+      value={currentSelectedTheme}
+      exclusive
+      onChange={(event, newTheme) => {
+        if (newTheme === null) {
+          return;
+        }
+        if (newTheme === currentSelectedTheme) {
+          return;
+        }
+        handleThemeChange(newTheme)
+        setCurrentSelectedTheme(newTheme);
+        if (userdata?.org_status?.includes("integration_partner")){
+            handleChangeTheme(newTheme);
+        } else {
+
+          handleUpdateTheme(newTheme);
+        }
+      }}
+      aria-label="theme"
+      style={{display: 'flex', justifyContent: "center", marginBottom: 10,  }}
+      >
+
+      <ToggleButton value="light" aria-label="light theme" style={{ backgroundColor: currentSelectedTheme === "light" ? theme.palette.hoverColor : theme.palette.backgroundColor }}>
+        <LightModeIcon style={{ color: themeMode === "light" ? darkText : lightText }} />
+      </ToggleButton>
+      <ToggleButton value="dark" aria-label="dark theme" style={{ backgroundColor: currentSelectedTheme === "dark" ? theme.palette.hoverColor : theme.palette.backgroundColor }}>
+        <DarkModeIcon style={{ color: themeMode === "light" ? darkText : lightText }} />
+      </ToggleButton>
+      <ToggleButton value="system" aria-label="system theme" style={{ backgroundColor: currentSelectedTheme === "system" ? theme.palette.hoverColor : theme.palette.backgroundColor }}>
+        <MonitorIcon style={{ color: themeMode === "light" ? darkText : lightText }} />
+      </ToggleButton>
+      </ToggleButtonGroup>
+      <Divider style={{ marginTop: 10, marginBottom: 10, color: theme.palette.defaultBorder }} />
+          </>
+        )}
         <Link to="/admin" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -470,7 +623,7 @@ useEffect(() => {
             }}
             style={{fontSize: 18}}
           >
-            <BusinessIcon style={{ marginRight: 5 }} /> Organization
+            <BusinessIcon style={{ marginRight: 5 }} /> Org Admin 
           </MenuItem>
         </Link>
         <Link to="/settings" style={hrefStyle}>
@@ -480,11 +633,13 @@ useEffect(() => {
             }}
             style={{fontSize: 18}}
           >
-            <SettingsIcon style={{ marginRight: 5 }} /> Account
+            <SettingsIcon style={{ marginRight: 5 }} /> User Account
           </MenuItem>
         </Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+
+	  	{/*
 		<Link to="/admin?admin_tab=notifications" style={hrefStyle}>
 		  <MenuItem
 			onClick={(event) => {
@@ -492,7 +647,7 @@ useEffect(() => {
 			}}
       style={{fontSize: 18}}
 		  >
-			<NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
+			<NotificationsIcon style={{ marginRight: 5 }} /> Org Notifications ({
 				notifications === undefined || notifications === null ? 0 : 
 				notifications?.filter((notification) => notification.read === false).length
 			}) 
@@ -500,8 +655,9 @@ useEffect(() => {
 		</Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+	  	*/}
 
-        <Link to="/docs" style={hrefStyle}>
+        <Link to={userdata && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs" } target={userdata?.active_org?.branding?.documentation_link?.length > 0 && userdata?.org_status?.includes("integration_partner") ? "_blank" : "_self" } style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -512,7 +668,7 @@ useEffect(() => {
           </MenuItem>
         </Link>
         <MenuItem
-          style={{ color: "white", fontSize: 18 }}
+          style={{ fontSize: 18 }}
           onClick={(event) => {
             handleClickLogout();
             event.preventDefault();
@@ -525,7 +681,7 @@ useEffect(() => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
-          Version: 2.0.0
+          Version: 2.1.0-rc2
         </Typography>
       </Menu>
     </span>
@@ -589,6 +745,8 @@ useEffect(() => {
 
     localStorage.setItem("globalUrl", "");
     localStorage.setItem("getting_started_sidebar", "open");
+    localStorage.removeItem("workflows");
+    localStorage.removeItem("apps");
 
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
       mode: "cors",
@@ -647,7 +805,7 @@ useEffect(() => {
             toast(responseJson.reason);
           } else {
             toast(
-              "Failed changing org. Try again or contact support@shuffler.io if this persists."
+              `Failed changing org. Try again or contact ${supportEmail} if this persists.`
             );
           }
         }
@@ -742,7 +900,7 @@ useEffect(() => {
     width: expandLeftNav ? "100%" : 30,
     justifyContent: expandLeftNav ? "flex-start" : "center",
     height: 35,
-    color: openautomatetab ? "#F1F1F1" : "#C8C8C8",
+    color: openautomatetab ? "#F1F1F1" : themeMode === "dark" ? lightText : darkText,
     textTransform: "none",
     "& .MuiButton-root	": {
       width: expandLeftNav ? "100%" : 30,
@@ -757,7 +915,8 @@ useEffect(() => {
 			"US": "us",
 			"EU": "eu",
 			"CA": "ca",
-			"UK": "gb"
+			"UK": "gb",
+      "au": "au",
 		};
 
     region = regionMapping[region_url] || "eu";
@@ -772,6 +931,9 @@ useEffect(() => {
 
   }, [window?.location?.pathname]);
 
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const showPartnerLogo = userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.image !== undefined && userdata?.active_org?.image !== null && userdata?.active_org?.image.length > 0 
+
   return (
     <div
       style={{
@@ -784,12 +946,13 @@ useEffect(() => {
         transition: "width 0.3s ease",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" ,
         resize: 'both',
-
-		zoom: 0.8, 
+        zoom: isSafari ? undefined : 0.8,
+        transform: isSafari ? "scale(0.8)" : undefined,
+        transformOrigin: isSafari ? "top left" : undefined,
         height: "calc((100vh - 32px)*1.2)",
       }}
     >
-      {searchBarModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} /> : null}
+      {searchBarModalOpen && !isDocSearchModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} isDocSearchModalOpen={isDocSearchModalOpen} /> : null}
       <Box
         sx={{
           display: "flex",
@@ -831,11 +994,13 @@ useEffect(() => {
             }
           }}
         >
-          <Link to="/">
+          <Link to={isCloud && !showPartnerLogo ? "/" : "/workflows"}>
             <img
-              src={ShuffleLogo}
+              src={
+				  showPartnerLogo ? userdata?.active_org?.image : ShuffleLogo
+			  }
               alt="Shuffle Logo"
-              style={{ width: 24, height: 24 }}
+              style={{ width: showPartnerLogo ? 30 : 24, height: showPartnerLogo ? 30 : 24 }}
             />
           </Link>
         </Tooltip>
@@ -868,14 +1033,32 @@ useEffect(() => {
             disableElevation
             disableRipple
           >
-            <img
-              src={ExpandMoreAndLessIcon}
+          <svg
               style={{
-                transform: expandLeftNav ? "rotate(-180deg)" : "",
-                transition: "transform 0.3s ease",
+                transform: expandLeftNav ? "" : "rotate(180deg)",
+                transition: "transform 0.3s ease"
               }}
-              alt="Expand/Collapse Icon"          
-            />
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="12"
+                transform="matrix(-1 0 0 1 24 0)"
+                fill={themeMode === "dark" ? "#2F2F2F" : "#D0D0D0"}
+              />
+              <path
+                d="M14 18L8 12L14 6"
+                stroke={themeMode === "dark" ? "#F1F1F1" : "#2F2F2F"}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </Button>
         </Box>
       </Box>
@@ -923,19 +1106,19 @@ useEffect(() => {
                       "& input": {
                         padding: "8px 14px",
                         fontSize: "14px",
-                        color: "#C8C8C8",
+                        color: themeMode === "dark" ? lightText : darkText,
                       },
                       backgroundColor: "transparent",
                     }}
                     variant="outlined"
                     InputProps={{
                       startAdornment: (
-                        <SearchIcon style={{ color: "#CDCDCD", width: 24, height: 24, marginLeft: 16 }} />
+                        <SearchIcon style={{ color: themeMode === "dark" ? lightText : darkText, width: 24, height: 24, marginLeft: 16 }} />
                       ),
                       endAdornment: (
                         <span
                           style={{
-                            color: "#C8C8C8",
+                            color: themeMode === "dark" ? lightText : darkText,
                             fontSize: "12px",
                             marginRight: 16,
                             whiteSpace: "nowrap",
@@ -948,16 +1131,18 @@ useEffect(() => {
                     }}
                     onClick={() => {
                       setSearchBarModalOpen(true);
+                      setIsDocSearchModalOpen(false);
                     }}
                     onChange={() => {
                       setSearchBarModalOpen(true);
+                      setIsDocSearchModalOpen(false);
                     }}
                   />
             </Fade>
             ):(
             <>
             <Fade in={!expandLeftNav} timeout={500}>
-              <Button style={{color: "#CDCDCD", backgroundColor: "transparent", marginBottom: 5, borderRadius: 8, marginTop: 5 }} onClick={()=>{setSearchBarModalOpen(true)}} onMouseOver={(event)=>{event.currentTarget.style.backgroundColor = "#2f2f2f"}} onMouseLeave={(event)=> {event.currentTarget.style.backgroundColor = "transparent"}} disableElevation disableRipple><SearchIcon style={{width: 24, height: 24}}/></Button>
+              <Button style={{color: themeMode === "dark" ? lightText : darkText, backgroundColor: "transparent", marginBottom: 5, borderRadius: 8, marginTop: 5 }} onClick={()=>{setSearchBarModalOpen(true)}} onMouseOver={(event)=>{event.currentTarget.style.backgroundColor = "#2f2f2f"}} onMouseLeave={(event)=> {event.currentTarget.style.backgroundColor = "transparent"}} disableElevation disableRipple><SearchIcon style={{width: 24, height: 24}}/></Button>
             </Fade>
             </>)}
             <span style={{display: expandLeftNav ? "none": "inline", border: "1px solid #494949", width: 48, marginLeft: 14, marginRight: 14}}></span>
@@ -970,7 +1155,7 @@ useEffect(() => {
               height: "100%",
               overflowY: expandLeftNav ? "auto" : "hidden",
               scrollbarWidth: 'thin', 
-              scrollbarColor: "#494949 transparent",
+              scrollbarColor: theme.palette.scrollbarColorTransparent,
               overflowX: "hidden",
             }}
       >
@@ -983,55 +1168,73 @@ useEffect(() => {
           }}
         >
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
-	  		<Link to="/dashboards/automate" style={hrefStyle}>
             <Button
+              component={Link}
+              to="/usecases"
               onClick={(event) => {
                 setOpenautomateTab(true);
                 setOpenSecurityTab(false);
-                setCurrentOpenTab("automate");
-                localStorage.setItem("lastTabOpenByUser", "automate");
+                setCurrentOpenTab("usecases");
+                localStorage.setItem("lastTabOpenByUser", "usecases");
               }}
               variant="text"
               style={{
                 ...ButtonStyle,
-                backgroundColor: ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? "#2f2f2f": "transparent",
+                backgroundColor: ((currentOpenTab === "automate") || (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent",
               }}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? "#2f2f2f": "transparent";
+                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate")|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent";
               }}
             >
-              <img
-                src={detectionIcon}
-                style={{ width: 18, height: 18, marginRight: expandLeftNav ? 10 : 0 }}
-                alt="Automate Icon"
-              />
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 16 11"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{
+                      marginRight: expandLeftNav ? 10 : 0,
+                    }}
+                  >
+                    <path
+                      d="M7.99935 6.83317C8.73573 6.83317 9.33268 6.23622 9.33268 5.49984C9.33268 4.76346 8.73573 4.1665 7.99935 4.1665C7.26297 4.1665 6.66602 4.76346 6.66602 5.49984C6.66602 6.23622 7.26297 6.83317 7.99935 6.83317Z"
+                      stroke={themeMode === "dark" ? lightText : darkText}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M10.8269 2.67329C11.1988 3.04478 11.4938 3.48593 11.6951 3.97153C11.8964 4.45712 12 4.97763 12 5.50329C12 6.02895 11.8964 6.54946 11.6951 7.03505C11.4938 7.52064 11.1988 7.9618 10.8269 8.33329M5.17354 8.32662C4.80163 7.95513 4.5066 7.51398 4.3053 7.02838C4.104 6.54279 4.00039 6.02228 4.00039 5.49662C4.00039 4.97096 4.104 4.45045 4.3053 3.96486C4.5066 3.47927 4.80163 3.03811 5.17354 2.66662M12.7135 0.786621C13.9633 2.03681 14.6654 3.73219 14.6654 5.49995C14.6654 7.26772 13.9633 8.9631 12.7135 10.2133M3.28687 10.2133C2.03706 8.9631 1.33496 7.26772 1.33496 5.49995C1.33496 3.73219 2.03706 2.03681 3.28687 0.786621"
+                      stroke={themeMode === "dark" ? lightText : darkText}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
               <span
                 style={{
                   display: expandLeftNav ? "inline" : "none",
                   marginRight: "auto",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "automate" && currentPath.includes("/dashboards/automate") ? "#F1F1F1" : "#C8C8C8",
+                  color: themeMode === "dark" ? lightText : darkText
                 }}
               >
                 Automate
               </span>
             </Button>
-	  		</Link> 
             <IconButton
               onClick={() => {
                 setOpenautomateTab((prev) => !prev);
                 setOpenSecurityTab(false);
               }}
               style={{
-                  color: "#FFFFFF",
+                  color: themeMode === "dark" ? lightText : darkText,
                   marginLeft: 0.625,
               }}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
                 event.currentTarget.style.backgroundColor = "transparent";
@@ -1067,8 +1270,9 @@ useEffect(() => {
               gap: 10,
             }}
           >
-	  		<Link to="/usecases" style={hrefStyle}>
             <Button
+              component={Link}
+              to="/usecases"
               onClick={(event) => {
                 setCurrentOpenTab("usecases");
                 localStorage.setItem("lastTabOpenByUser", "usecases");
@@ -1076,18 +1280,18 @@ useEffect(() => {
               style={{
                 width: "100%",
                 height: 35,
-                color: currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases") ? "#FFFFFF" : "#C8C8C8",
+                color: themeMode === "dark" ? lightText : darkText,
                 justifyContent: "flex-start",
                 fontSize: 18,
                 textTransform: "none",
-                backgroundColor: currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases")? "#2f2f2f": "transparent",
+                backgroundColor: currentOpenTab === "usecases" && expandLeftNav ? themeMode === "dark"? darkHoverColor : lightHoverColor : "transparent",
                 marginLeft: 16
               }}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases")? "#2f2f2f": "transparent";
+                event.currentTarget.style.backgroundColor = currentOpenTab === "usecases" && expandLeftNav ? themeMode === "dark"? darkHoverColor : lightHoverColor : "transparent";
               }}
               disableRipple={expandLeftNav ? false : true}
             >
@@ -1097,15 +1301,15 @@ useEffect(() => {
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "usecases" && currentPath.includes("/usecases") ? "#FFFFFF" : "#C8C8C8",
+                  color: themeMode === "dark" ? currentOpenTab === "usecases" ? theme.palette.text.primary : lightText : darkText,
                 }}
               >
                 Usecases
               </span>
             </Button>
-	  		</Link>
-	  		<Link to="/workflows" style={hrefStyle}>
             <Button
+              component={Link}
+              to="/workflows"
               onClick={(event) => {
                 setCurrentOpenTab("workflows");
                 localStorage.setItem("lastTabOpenByUser", "workflows");
@@ -1113,19 +1317,19 @@ useEffect(() => {
               style={{
                 width: "100%",
                 height: 35,
-                color: currentOpenTab === "workflows" && currentPath === "/workflows"  ? "#FFFFFF" : "#C8C8C8",
+                color: themeMode === "dark" ? lightText : darkText,
                 justifyContent: "flex-start",
                 textTransform: "none",
-                backgroundColor: currentOpenTab === "workflows" && currentPath === "/workflows" && expandLeftNav? "#2f2f2f": "transparent",
+                backgroundColor: currentOpenTab === "workflows" && expandLeftNav? themeMode === "dark"? darkHoverColor : lightHoverColor : "transparent",
                 marginLeft: 16,
                 fontSize: 18
               }}
               disableRipple={expandLeftNav ? false : true}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = currentOpenTab === "workflows" && currentPath === "/workflows" && expandLeftNav? "#2f2f2f": "transparent";
+                event.currentTarget.style.backgroundColor = currentOpenTab === "workflows" && expandLeftNav? themeMode === "dark"? darkHoverColor : lightHoverColor : "transparent";
               }}
             >
               <span style={{display: expandLeftNav ? "inline" : "none", opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 18 }}>•</span>{" "}
@@ -1134,15 +1338,15 @@ useEffect(() => {
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "workflows" && currentPath === "/workflows"  ? "#FFFFFF" : "#C8C8C8",
+                  color: themeMode === "dark" ? currentOpenTab === "workflows" ? theme.palette.text.primary : lightText : darkText,
                 }}
               >
                 Workflows
               </span>
             </Button>
-	  		</Link> 
-	  		<Link to="/apps" style={hrefStyle}>
             <Button
+              component={Link}
+              to="/apps"
               onClick={(event) => {
                 setCurrentOpenTab("apps");
                 localStorage.setItem("lastTabOpenByUser", "apps");
@@ -1150,18 +1354,18 @@ useEffect(() => {
               style={{
                 width: "100%",
                 height: 35,
-                color: currentOpenTab === "apps" && currentPath.includes("/apps") ? "#FFFFFF" : "#C8C8C8",
+                color: themeMode === "dark" ? lightText : darkText,
                 justifyContent: "flex-start",
                 textTransform: "none",
-                backgroundColor: currentOpenTab === "apps" && expandLeftNav && currentPath.includes("/apps") ? "#2f2f2f": "transparent",
+                backgroundColor: currentOpenTab === "apps" && expandLeftNav  ? themeMode === "dark"? darkHoverColor : lightHoverColor : "transparent",
                 marginLeft: 16,
                 fontSize: 18
               }}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = currentOpenTab === "apps" && expandLeftNav && currentPath.includes("/apps") ? "#2f2f2f": "transparent";
+                event.currentTarget.style.backgroundColor = currentOpenTab === "apps" && expandLeftNav ? themeMode === "dark"? darkHoverColor : lightHoverColor  : "transparent";
               }}
               disableRipple={expandLeftNav ? false : true}
             >
@@ -1171,13 +1375,12 @@ useEffect(() => {
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "apps" && currentPath.includes("/apps") ? "#FFFFFF" : "#C8C8C8",
+                  color: themeMode === "dark" ? currentOpenTab === "apps" ? theme.palette.text.primary : lightText : darkText,
                 }}
               >
                 Apps
               </span>
             </Button>
-	  		</Link> 
           </Box>
           </Collapse>
           <Box
@@ -1188,29 +1391,24 @@ useEffect(() => {
             }}
           >
 	  		<span style={{ display: "inline-block", width: "100%" }}> 
-          <Link
-            to={"#"}
-            style={{
-              ...hrefStyle,
-              pointerEvents: "auto", 
-            }}
-          >
             <Button
+              component={Link}
+              to="/forms"
               onClick={(event) => {
                 setOpenSecurityTab(true);
                 setOpenautomateTab(false);
-                setCurrentOpenTab("security");
-                localStorage.setItem("lastTabOpenByUser", "security");
+                setCurrentOpenTab("forms");
+                localStorage.setItem("lastTabOpenByUser", "forms");
               }}
               style={{
                 ...ButtonStyle,
               }}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
                 event.currentTarget.style.backgroundColor = currentOpenTab === "security"
-                  ? "#2f2f2f"
+                  ? themeMode === "dark"? darkHoverColor : lightHoverColor
                   : "transparent";
               }}
             >
@@ -1219,7 +1417,7 @@ useEffect(() => {
                   width: 18,
                   height: 18,
                   marginRight: expandLeftNav ? 10 : 0,
-                  color: "inherit", 
+                  color: themeMode === "dark" ? lightText : darkText 
                 }}
               />
               <span
@@ -1227,16 +1425,14 @@ useEffect(() => {
                   display: expandLeftNav ? "inline" : "none",
                   marginRight: "auto",
                   fontSize: 18,
-                  color: currentOpenTab === "security" 
-                      ? "#F1F1F1"
-                      : "#C8C8C8"
+                  color: themeMode === "dark" ? lightText : darkText
                 }}
               >
 	  			Content
               </span>
             </Button>
-          </Link>
         </span>
+
             <IconButton
               onClick={() => {
                 setOpenSecurityTab((prev) => !prev);
@@ -1244,10 +1440,10 @@ useEffect(() => {
               }}
               style={{
                 marginLeft: 0.625,
-                color: "#FFFFFF",
+                color: themeMode === "dark" ? lightText : darkText,
               }}
               onMouseOver={(event)=>{
-                event.currentTarget.style.backgroundColor = "#2f2f2f";
+                event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
                 event.currentTarget.style.backgroundColor = "transparent";
@@ -1268,257 +1464,327 @@ useEffect(() => {
               )}
             </IconButton>
           </Box>
-          <Collapse in={openSecurityTab} timeout="auto" unmountOnExit>
+
+          <Collapse in={openSecurityTab} timeout="auto" unmountOnExit >
               <Box
                 style={{
-                  maxHeight: openSecurityTab && expandLeftNav ? 135 : 0,
+                  maxHeight: openSecurityTab && expandLeftNav ? 250 : 0,
                   overflow: "hidden",
                   transition: "max-height 0.3s ease, opacity 0.3s ease",
                   display: "flex",
                   flexDirection: "column",
                   paddingLeft: 16,
+                  gap: "2px",
                 }}
                 disableRipple={expandLeftNav ? false : true}
               >
                 <span style={{ display: "inline-block", width: "100%" }}>
-                  <Link
-                    to={"/forms"}
+                <Button
+                  component={Link}
+                  to="/forms"
+                  onClick={() => {
+                    setCurrentOpenTab("forms");
+                    localStorage.setItem("lastTabOpenByUser", "forms");
+                  }}
+                  sx={{
+                    width: "100%",
+                    height: 35,
+                    color: themeMode === "dark" ? lightText : darkText,
+                    justifyContent: "flex-start",
+                    textTransform: "none",
+                    backgroundColor:
+                      currentOpenTab === "forms" || currentPath.includes("/forms")
+                        ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+                        : "transparent",
+                    "&:hover": {
+                      backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+                    },
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+                    •
+                  </span>
+                  <span
                     style={{
-                      ...hrefStyle,
-                      pointerEvents: "auto", 
+                      display: expandLeftNav ? "inline" : "none",
+                      opacity: expandLeftNav ? 1 : 0,
+                      transition: "opacity 0.3s ease",
+                      fontSize: 18,
+                      color: themeMode === "dark" ? currentOpenTab === "forms" ? theme.palette.text.primary : lightText : darkText,
                     }}
                   >
-                    <Button
-                      onClick={(event) => {
-                        setCurrentOpenTab("detection");
-                        localStorage.setItem("lastTabOpenByUser", "detection");
-                      }}
-                      sx={{
-                        width: "100%",
-                        height: 35,
-                        color: "#C8C8C8", 
-                        justifyContent: "flex-start",
-                        textTransform: "none",
-                        backgroundColor:
-                          currentOpenTab === "detection" && currentPath.includes("/detection")
-                            ? "#2f2f2f"
-                            : "transparent",
-                        "&:hover": {
-                          backgroundColor: "#2f2f2f", 
-                        },
-                        cursor: "pointer", 
-                      }}
-                    >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
-                        •
-                      </span>
-                      <span
-                        style={{
-                          display: expandLeftNav ? "inline" : "none",
-                          opacity: expandLeftNav ? 1 : 0,
-                          transition: "opacity 0.3s ease",
-                          fontSize: 18,
-                          color:
-                            currentOpenTab === "detection" && currentPath.includes("/detection")
-                              ? "#F1F1F1"
-                              : "#C8C8C8"
-                        }}
-                      >
-                       	Forms	
-                      </span>
-                    </Button>
-                  </Link>
+                    Forms
+                  </span>
+                </Button>
                 </span>
-				<span style={{ display: "inline-block", width: "100%" }}>
-                  <Link
-                    to={"/admin?tab=datastore"}
-                    style={{
-                      ...hrefStyle,
-                      pointerEvents: "auto", 
-                    }}
-                  >
-                    <Button
-                      onClick={(event) => {
-                        setCurrentOpenTab("response");
-                        localStorage.setItem("lastTabOpenByUser", "response");
-                      }}
-                      sx={{
-                        width: "100%",
-                        height: 35,
-                        color: "#C8C8C8", 
-                        justifyContent: "flex-start",
-                        textTransform: "none",
-                        backgroundColor:
-                          currentOpenTab === "response" && currentPath.includes("/response")
-                            ? "#2f2f2f"
-                            : "transparent",
-                        "&:hover": {
-                          backgroundColor: "#2f2f2f", 
-                        },
-                        cursor: "pointer", 
-                      }}
-                    >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
-                        •
-                      </span>
-                      <span
-                        style={{
-                          display: expandLeftNav ? "inline" : "none",
-                          opacity: expandLeftNav ? 1 : 0,
-                          transition: "opacity 0.3s ease",
-                          fontSize: 18,
-                          color:
-                            currentOpenTab === "response" && currentPath.includes("/response")
-                              ? "#F1F1F1"
-                              : "#C8C8C8"
-                        }}
-                      >
-                       	Datastore	
-                      </span>
-                    </Button>
-                  </Link>
-                </span>
+				{userdata && (userdata?.support || userdata?.active_org?.role === "admin") ? (
+          <>
+            <span style={{ display: "inline-block", width: "100%" }}>
+          <Button
+          component={Link}
+          to="/admin?tab=datastore"
+            onClick={(event) => {
+              setCurrentOpenTab("datastore");
+              localStorage.setItem("lastTabOpenByUser", "datastore");
+            }}
+            sx={{
+              width: "100%",
+              height: 35,
+              justifyContent: "flex-start",
+              textTransform: "none",
+              backgroundColor:
+                currentOpenTab === "datastore"
+                  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+                  : "transparent",
+              "&:hover": {
+                backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+              },
+              cursor: "pointer", 
+            }}
+          >
+            <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+              •
+            </span>
+            <span
+              style={{
+                display: expandLeftNav ? "inline" : "none",
+                opacity: expandLeftNav ? 1 : 0,
+                transition: "opacity 0.3s ease",
+                fontSize: 18,
+                color: themeMode === "dark" ? currentOpenTab === "datastore" ? theme.palette.text.primary : lightText : darkText
+              }}
+            >
+               Datastore	
+            </span>
+          </Button>
+      </span>
 
-                <span style={{ display: "inline-block", width: "100%" }}>
-                  <Link
-                    to={"/admin?tab=files"}
-                    style={{
-                      ...hrefStyle,
-                      pointerEvents: "auto", 
-                    }}
-                  >
-                    <Button
-                      onClick={(event) => {
-                        setCurrentOpenTab("response");
-                        localStorage.setItem("lastTabOpenByUser", "response");
-                      }}
-                      sx={{
-                        width: "100%",
-                        height: 35,
-                        color: "#C8C8C8", 
-                        justifyContent: "flex-start",
-                        textTransform: "none",
-                        backgroundColor:
-                          currentOpenTab === "response" && currentPath.includes("/response")
-                            ? "#2f2f2f"
-                            : "transparent",
-                        "&:hover": {
-                          backgroundColor: "#2f2f2f", 
-                        },
-                        cursor: "pointer", 
-                      }}
-                    >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
-                        •
-                      </span>
-                      <span
-                        style={{
-                          display: expandLeftNav ? "inline" : "none",
-                          opacity: expandLeftNav ? 1 : 0,
-                          transition: "opacity 0.3s ease",
-                          fontSize: 18,
-                          color:
-                            currentOpenTab === "response" && currentPath.includes("/response")
-                              ? "#F1F1F1"
-                              : "#C8C8C8"
-                        }}
-                      >
-                       	Files	
-                      </span>
-                    </Button>
-                  </Link>
-                </span>
+      <span style={{ display: "inline-block", width: "100%" }}>
+          <Button
+            component={Link}
+            to="/admin?tab=files"
+            onClick={(event) => {
+              setCurrentOpenTab("files");
+              localStorage.setItem("lastTabOpenByUser", "files");
+            }}
+            sx={{
+              width: "100%",
+              height: 35,
+              color: themeMode === "dark" ? lightText : darkText, 
+              justifyContent: "flex-start",
+              textTransform: "none",
+              backgroundColor:
+              currentOpenTab === "files"
+              ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+              : "transparent",
+              "&:hover": {
+                backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+              },
+              cursor: "pointer", 
+            }}
+          >
+            <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+              •
+            </span>
+            <span
+              style={{
+                display: expandLeftNav ? "inline" : "none",
+                opacity: expandLeftNav ? 1 : 0,
+                transition: "opacity 0.3s ease",
+                fontSize: 18,
+                color: themeMode === "dark" ? currentOpenTab === "files" ? theme.palette.text.primary : lightText : darkText
+              }}
+            >
+               Files	
+            </span>
+          </Button>
+      </span>
 
-                <span style={{ display: "inline-block", width: "100%" }}>
-                  <Link
-                    to={"/admin?tab=locations"}
-                    style={{
-                      ...hrefStyle,
-                      pointerEvents: "auto", 
-                    }}
-                  >
-                    <Button
-                      onClick={(event) => {
-                        setCurrentOpenTab("response");
-                        localStorage.setItem("lastTabOpenByUser", "response");
-                      }}
-                      sx={{
-                        width: "100%",
-                        height: 35,
-                        color: "#C8C8C8", 
-                        justifyContent: "flex-start",
-                        textTransform: "none",
-                        backgroundColor:
-                          currentOpenTab === "response" && currentPath.includes("/response")
-                            ? "#2f2f2f"
-                            : "transparent",
-                        "&:hover": {
-                          backgroundColor: "#2f2f2f", 
-                        },
-                        cursor: "pointer", 
-                      }}
-                    >
-                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
-                        •
-                      </span>
-                      <span
-                        style={{
-                          display: expandLeftNav ? "inline" : "none",
-                          opacity: expandLeftNav ? 1 : 0,
-                          transition: "opacity 0.3s ease",
-                          fontSize: 18,
-                          color:
-                            currentOpenTab === "response" && currentPath.includes("/response")
-                              ? "#F1F1F1"
-                              : "#C8C8C8"
-                        }}
-                      >
-	  					Hybrid Locations
-                      </span>
-                    </Button>
-                  </Link>
-                </span>
+      		<span style={{ display: "inline-block", width: "100%" }}>
+			  <Button
+			   component={Link}
+			   to="/admin?admin_tab=notifications"
+				onClick={(event) => {
+				  setCurrentOpenTab("notifications");
+				  localStorage.setItem("lastTabOpenByUser", "notifications");
+				}}
+				variant="text"
+				sx={{
+				  width: "100%",
+				  height: 35,
+				  color: themeMode === "dark" ? lightText : darkText, 
+				  justifyContent: "flex-start",
+				  textTransform: "none",
+				  backgroundColor:
+					currentOpenTab === "notifications"
+					  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+					  : "transparent",
+				  "&:hover": {
+					backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+				  },
+				  cursor: "pointer", 
+				}}
+			  >
+				<span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+				  •
+				</span>
+				<span
+				  style={{
+					display: expandLeftNav ? "inline" : "none",
+					opacity: expandLeftNav ? 1 : 0,
+					transition: "opacity 0.3s ease",
+					fontSize: 18,
+					color: themeMode === "dark" ? currentOpenTab === "notifications" ? theme.palette.text.primary : lightText : darkText,
+				  }}
+				>
+					Notifications
+				</span>
+			  </Button>
+          </span>
+
+      		<span style={{ display: "inline-block", width: "100%" }}>
+			  <Button
+			   component={Link}
+			   to="/admin?tab=locations"
+				onClick={(event) => {
+				  setCurrentOpenTab("locations");
+				  localStorage.setItem("lastTabOpenByUser", "locations");
+				}}
+				variant="text"
+				sx={{
+				  width: "100%",
+				  height: 35,
+				  color: themeMode === "dark" ? lightText : darkText, 
+				  justifyContent: "flex-start",
+				  textTransform: "none",
+				  backgroundColor:
+					currentOpenTab === "locations"
+					  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+					  : "transparent",
+				  "&:hover": {
+					backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+				  },
+				  cursor: "pointer", 
+				}}
+			  >
+				<span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+				  •
+				</span>
+				<span
+				  style={{
+					display: expandLeftNav ? "inline" : "none",
+					opacity: expandLeftNav ? 1 : 0,
+					transition: "opacity 0.3s ease",
+					fontSize: 18,
+					color: themeMode === "dark" ? currentOpenTab === "locations" ? theme.palette.text.primary : lightText : darkText,
+				  }}
+				>
+					Runtime Locations
+				</span>
+			  </Button>
+          </span>
+
+          <span style={{ display: "inline-block", width: "100%" }}>
+          <Button
+           component={Link}
+           to="/partners"
+            onClick={(event) => {
+              setCurrentOpenTab("partners");
+              localStorage.setItem("lastTabOpenByUser", "partners");
+            }}
+            variant="text"
+            sx={{
+              width: "100%",
+              height: 35,
+              color: themeMode === "dark" ? lightText : darkText, 
+              justifyContent: "flex-start",
+              textTransform: "none",
+              backgroundColor:
+                currentOpenTab === "partners"
+                  ? themeMode === "dark" ? darkHoverColor : lightHoverColor
+                  : "transparent",
+              "&:hover": {
+                backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+              },
+              cursor: "pointer", 
+            }}
+          >
+            <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 18 }}>
+              •
+            </span>
+            <span
+              style={{
+                display: expandLeftNav ? "inline" : "none",
+                opacity: expandLeftNav ? 1 : 0,
+                transition: "opacity 0.3s ease",
+                fontSize: 18,
+                color: themeMode === "dark" ? currentOpenTab === "locations" ? theme.palette.text.primary : lightText : darkText,
+              }}
+            >
+    Partners
+            </span>
+          </Button>
+          </span>
+          </>): null}
               </Box>
             </Collapse>
 
-	  	  <Link to="/docs" style={hrefStyle}>
           <Button
+            component={Link}
+            to={userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs"}
+            target={userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? "_blank" : "_self"}
             onClick={(event) => {
               setCurrentOpenTab("docs");
               localStorage.setItem("lastTabOpenByUser", "docs");
             }}
             style={{
               ...ButtonStyle,
-              marginTop: 8,
-              marginTop: 8,
-              backgroundColor: currentOpenTab === "docs" && currentPath.includes("/docs") ? "#2f2f2f": "transparent",
+              marginTop: 5,
+              backgroundColor: currentOpenTab === "docs" ? themeMode === 'dark' ? darkHoverColor : lightHoverColor : "transparent",
             }}
             onMouseOver={(event)=>{
-              event.currentTarget.style.backgroundColor = "#2f2f2f";
+              event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
             }}
             onMouseOut={(event)=>{
-              event.currentTarget.style.backgroundColor = currentOpenTab === "docs" && currentPath.includes("/docs") ? "#2f2f2f": "transparent";
+              event.currentTarget.style.backgroundColor = currentOpenTab === "docs" ? themeMode === 'dark' ? darkHoverColor : lightHoverColor : "transparent";
             }}
           >
-            <img
-              src={documentationIcon}
-              style={{ width: 16, height: 16, marginRight: expandLeftNav ? 10 : 0 }}
-              alt="Documentation Icon"
-            />
+            <svg
+                width="18"
+                height="18"
+                viewBox="0 0 14 17"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ marginRight: expandLeftNav ? 10 : 0 }}
+              >
+                <path
+                  d="M7.75 1H2.5C2.10218 1 1.72064 1.15804 1.43934 1.43934C1.15804 1.72064 1 2.10218 1 2.5V14.5C1 14.8978 1.15804 15.2794 1.43934 15.5607C1.72064 15.842 2.10218 16 2.5 16H11.5C11.8978 16 12.2794 15.842 12.5607 15.5607C12.842 15.2794 13 14.8978 13 14.5V6.25L7.75 1Z"
+                  stroke={themeMode === "dark" ? lightText : darkText} 
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M7.75 1V6.25H13"
+                  stroke={themeMode === "dark" ? lightText : darkText} 
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             <span
               style={{
                 display: expandLeftNav ? "inline" : "none",
-                color: currentOpenTab === "docs" && currentPath.includes("/docs") ? "#F1F1F1" : "#C8C8C8",
+                color: themeMode === "dark" ? currentOpenTab === "docs" ? theme.palette.text.primary : lightText : darkText
               }}
             >
               Documentation
             </span>
           </Button>
-	  	  </Link>
 
 
-	  	  <Link to={isCloud ? "/admin?admin_tab=billingstats" : "/admin?admin_tab=locations"} style={hrefStyle}>
           <Button
+            component={Link}
+            to={isCloud ? "/admin" : "/admin"}
             onClick={(event) => {
               setCurrentOpenTab("admin");
               localStorage.setItem("lastTabOpenByUser", "admin");
@@ -1526,27 +1792,25 @@ useEffect(() => {
             style={{
               ...ButtonStyle,
               marginTop: 8,
-              marginTop: 8,
-              backgroundColor: currentOpenTab === "docs" && currentPath.includes("/admin") ? "#2f2f2f": "transparent",
+              backgroundColor: currentOpenTab === "admin" ? themeMode === 'dark' ? darkHoverColor : lightHoverColor : "transparent",
             }}
             onMouseOver={(event)=>{
-              event.currentTarget.style.backgroundColor = "#2f2f2f";
+              event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
             }}
             onMouseOut={(event)=>{
-              event.currentTarget.style.backgroundColor = currentOpenTab === "docs" && currentPath.includes("/admin") ? "#2f2f2f": "transparent";
+              event.currentTarget.style.backgroundColor = currentOpenTab === "admin" ? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent";
             }}
           >
-			<BusinessIcon style={{ width: 16, height: 16, marginRight: expandLeftNav ? 10 : 0, color: "rgba(255,255,255,0.5)", }} />
+			<BusinessIcon style={{ width: 16, height: 16, marginRight: expandLeftNav ? 10 : 0, color: themeMode === 'dark' ? lightText : darkText }} />
             <span
               style={{
                 display: expandLeftNav ? "inline" : "none",
-                color: currentOpenTab === "admin" && currentPath.includes("/admin") ? "#F1F1F1" : "#C8C8C8",
+                color: themeMode === "dark" ? currentOpenTab === "admin" ? theme.palette.text.primary : lightText : darkText
               }}
             >
 	  		  Admin
             </span>
           </Button>
-	  	  </Link>
         </Box>
 
         {recentworkflows?.length > 0 ? 
@@ -1569,7 +1833,6 @@ useEffect(() => {
         >
           <Typography
             style={{
-              color: "#CDCDCD",
               fontSize: 18,
               padding: "8px 8px",
               marginBottom: 10,
@@ -1605,6 +1868,20 @@ useEffect(() => {
           marginLeft: 5,
         }}
       >
+	  	
+	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav &&
+      <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
+      <Button
+	  		variant="outlined"
+	  		style={{marginBottom: 15, borderWidth: 2, }}
+	  		onClick={() => {
+				window.open("https://shuffler.io/contact?category=book_a_demo", "_blank")
+			}}
+	  	>
+	  		Book a Demo
+      </Button>
+      </div>
+		}
         <Box ref={autocompleteRef}>
           <Autocomplete
             disablePortal
@@ -1635,10 +1912,10 @@ useEffect(() => {
                   marginLeft: option.margin_left ? option.margin_left : 0,
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = "#444444";
+                  e.currentTarget.style.backgroundColor = theme.palette.hoverColor;
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = option.name === selectedOrg ? "#696969" : "transparent";
+                  e.currentTarget.style.backgroundColor = option.name === selectedOrg ? theme.palette.hoverColor : "transparent";
                 }}
                 onClick={(e) => {
                     if (option.id !== userdata?.active_org?.id) {
@@ -1654,7 +1931,7 @@ useEffect(() => {
                       isCloud ? (
                           <span
                       style={{
-                        color: "#bbb",
+                        color: theme.palette.text.primary,
                         fontSize: "16px",
                         marginRight: 12,
                         display: "flex",
@@ -1679,7 +1956,7 @@ useEffect(() => {
                     />
                     <span
                       style={{
-                        color: "#fff",
+                        color: theme.palette.text.primary,
                         fontSize: "16px",
                       }}
                     >
@@ -1753,7 +2030,7 @@ useEffect(() => {
                       display: "flex",
                       width: 48,
                       height: 51,
-                      border: "1px solid #494949",
+                      border: theme.palette.defaultBorder,
                       borderRadius: 8,
                       justifyContent: "center",
                       alignItems: "center",
@@ -1768,6 +2045,7 @@ useEffect(() => {
                         fontSize: "24px",
                         opacity: expandLeftNav ? 0 : 1,
                         transition: "opacity 0.3s ease",
+                        color: themeMode === "dark" ? lightText : darkText,
                       }}
                     />
                   </Box>
@@ -1783,112 +2061,106 @@ useEffect(() => {
             width: "100%",
             marginTop: 16,
             gap: 10,
-            justifyContent: "center",
+            justifyContent: "space-between",
             alignItems: "center",
             marginBottom: expandLeftNav ? 0 : 10,
             height: 55,
             borderRadius: 8,
           }}
-          onMouseOver ={(event)=>{event.currentTarget.style.backgroundColor = "#2f2f2f";setHoverOnAvatar(true)}}
-          onMouseLeave ={(event)=>{event.currentTarget.style.backgroundColor = "transparent";setHoverOnAvatar(false)}}
+          onMouseOver={(event) => {
+            event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
+            setHoverOnAvatar(true);
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.backgroundColor = "transparent";
+            setHoverOnAvatar(false);
+          }}
         >
           {expandLeftNav ? (
             <>
               <Button
-                style={{
-                  width: "100%",
-                  height: 24,
-                  display: "flex",
-                  cursor: "pointer",
-                  backgroundColor: "transparent",
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                  },
-                  transition: "opacity 0.3s ease",
-                  textTransform: "none",
-                  fontSize: 18,
-                }}
-                disableElevation
-                disableRipple
                 onClick={(event) => {
                   if (anchorElAvatar) {
                     setAnchorElAvatar(null);
                   } else {
                     setAnchorElAvatar(event.currentTarget);
                   }
-                  setOpenAutocomplete(false)
+                  setOpenAutocomplete(false);
                 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  backgroundColor: "transparent",
+                  cursor: "pointer",
+                  padding: 0,
+                  minWidth: 0,
+                  gap: 10,
+                  marginLeft: 8,
+                }}
+                disableElevation
+                disableRipple
               >
                 <Avatar
                   sx={{
                     width: 48,
                     height: 48,
-                    backgroundColor: "#2F2F2F",
-                    color: "#FFFFFF",
+                    backgroundColor: themeMode === 'dark' ? darkHoverColor : lightHoverColor,
+                    color: themeMode === 'dark' ? lightText : darkText,
                     fontSize: 30,
                     fontStyle: "bold",
-                    border: hoverOnAvatar ? "1px solid #494949" : "none",
+                    border: hoverOnAvatar ? (themeMode === 'dark' ? "1px solid #494949" : '1px solid #5A5A5A') : "none",
                   }}
                 >
                   {userdata?.username?.substring(0, 1).toUpperCase()}
                 </Avatar>
                 <Typography
                   style={{
-                    color: "#CDCDCD",
-                    margin: "0 5px",
+                    color: themeMode === "dark" ? lightText : darkText,
                     fontSize: 18,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     maxWidth: 150,
-                    textAlign: "center",
-                    marginLeft: 10,
-
                   }}
                 >
                   {userdata?.username}
                 </Typography>
-                {avatarMenu}
               </Button>
+              {avatarMenu}
             </>
           ) : (
-            <>
-              <Button
-                onClick={(event) => {
-                  if (anchorElAvatar) {
-                    setAnchorElAvatar(null);
-                  } else {
-                    setAnchorElAvatar(event.currentTarget);
-                  }
+            <Button
+              onClick={(event) => {
+                if (anchorElAvatar) {
+                  setAnchorElAvatar(null);
+                } else {
+                  setAnchorElAvatar(event.currentTarget);
+                }
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                flexDirection: 'column',
+                cursor: "pointer",
+                backgroundColor: "transparent",
+                padding: 5,
+                border: hoverOnAvatar ? theme.palette.defaultBorder: "none",
+              }}
+              disableElevation
+              disableRipple
+            >
+              <Avatar
+                sx={{
+                  width: 48,
+                  height: 48,
+                  backgroundColor: themeMode === "dark" ? darkHoverColor : lightHoverColor,
+                  color: theme.palette.text.primary,
+                  fontSize: 30,
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  flexDirection: 'column',
-                  cursor: "pointer",
-                  backgroundColor: "transparent",
-                  padding: 5,
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                  },
-                  border: hoverOnAvatar ? "1px solid #494949" : "none",
-                }}
-                disableElevation
-                disableRipple
               >
-                <Avatar
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    backgroundColor: "#2F2F2F",
-                    color: "#FFFFFF",
-                    fontSize: 30,
-                  }}
-                >
-                  {userdata?.username?.substring(0, 1).toUpperCase()}
-                </Avatar>
-              </Button>
-            </>
+                {userdata?.username?.substring(0, 1).toUpperCase()}
+              </Avatar>
+            </Button>
           )}
         </Box>
       </Box>
@@ -1898,31 +2170,34 @@ useEffect(() => {
 };
 
 export default LeftSideBar;
-
-
-const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata}) => {
+const ModalView = memo(({searchBarModalOpen, setSearchBarModalOpen, globalUrl, serverside, userdata, isDocSearchModalOpen}) => {
+  const {themeMode}  = useContext(Context);
+  const theme = getTheme(themeMode);
   return (
     (
       <Dialog
-        open={searchBarModalOpen}
+        open={searchBarModalOpen && !isDocSearchModalOpen}
         onClose={() => {
           setSearchBarModalOpen(false);
         }}
         PaperProps={{
-          style: {
-            color: "white",
-            minWidth: 750,
-            height: 785,
-            borderRadius: 16,
+          sx: {
+            color: theme.palette.text.primary,
+            minWidth: "750px",
+            height: "785px",
+            borderRadius: "16px",
             border: "1px solid var(--Container-Stroke, #494949)",
-            background: "var(--Container, #000000)",
+            background: theme?.palette?.DialogStyle?.backgroundColor,
             boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
             zIndex: 13000,
-                  paddingTop: 20,
+            paddingTop: "20px",
+            '& .MuiDialogContent-root': {
+              backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+            },
           },
         }}
       >
-        <DialogContent className='dialog-content' style={{}}>
+        <DialogContent className='dialog-content' style={{backgroundColor: theme.palette.DialogStyle.backgroundColor}}>
           <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
         </DialogContent>
         <Divider style={{overflow: "hidden"}}/>

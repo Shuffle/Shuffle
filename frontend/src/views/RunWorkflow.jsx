@@ -1,5 +1,5 @@
 /* eslint-disable react/no-multi-comp */
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import ReactDOM from "react-dom"
 
 import ReactJson from "react-json-view-ssr";
@@ -19,6 +19,7 @@ import RecentWorkflow from "../components/RecentWorkflow.jsx";
 
 import {
   	Tooltip,
+  	Fade,
 	Select,
 	IconButton,
 	CircularProgress, 
@@ -33,6 +34,7 @@ import {
 	DialogTitle,
 	DialogContent,
 	MenuItem,
+    Autocomplete,
 } from '@mui/material';
 
 import {
@@ -44,7 +46,9 @@ import {
   LockOpen as LockOpenIcon,
   OpenInNew as OpenInNewIcon,
   Edit as EditIcon,
+  Polyline as PolylineIcon,
 } from '@mui/icons-material';
+import { Context } from '../context/ContextApi.jsx';
 
 const hrefStyle = {
 	color: "white", 
@@ -55,6 +59,7 @@ const hrefStyle = {
 const RunWorkflow = (defaultprops) => {
   const { globalUrl, userdata, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
 
+  const { supportEmail } = useContext(Context);
   let navigate = useNavigate();
   const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
   const [explorerUi, setExplorerUi] = useState(false)
@@ -74,6 +79,7 @@ const RunWorkflow = (defaultprops) => {
   const [sharingOpen, setSharingOpen] = React.useState(false)
   const [realtimeMarkdown, setRealtimeMarkdown] = React.useState("")
   const [forms, setForms] = React.useState([])
+  const [workflows, setWorkflows] = React.useState([])
   const [boxWidth, setBoxWidth] = React.useState(500)
   const [inputQuestions, setInputQuestions] = React.useState([])
 
@@ -178,6 +184,37 @@ const RunWorkflow = (defaultprops) => {
 		}
 
 		return true
+	}
+
+	const getWorkflows = () => {
+		const url = `${globalUrl}/api/v1/workflows`
+		fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for org forms");
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				toast.error("Failed saving workflow. Please try again.")
+			} else {
+				if (responseJson?.length > 0) {
+					setWorkflows(responseJson)
+				}
+			}
+		})
+		.catch((error) => {
+			//toast.error("Load form error: " + error)
+		})
 	}
 
 	const loadForms = (orgId) => {
@@ -436,7 +473,7 @@ const RunWorkflow = (defaultprops) => {
 			}
 
 			if (response.status === 401 || response.status === 403) {
-				toast("This Form is not available for you to run. If you this is an error, contact support@shuffler.io with a link to this form")
+				toast(`This Form is not available for you to run. If you this is an error, contact ${supportEmail} with a link to this form`)
 			}
 
 			return response.json()
@@ -462,6 +499,8 @@ const RunWorkflow = (defaultprops) => {
 			} else {
 				console.log("Started execution")
 
+				start()
+				setExecutionRunning(true);
 				if (answer !== undefined && answer !== null) {
 					console.log("Skipping start")
 				} else {
@@ -590,7 +629,7 @@ const RunWorkflow = (defaultprops) => {
         }
 
 		if (response.status === 401 || response.status === 403) {
-			toast("This Form is not available to you. If you think this is an error, please contact support@shuffler.io with the URL.")
+			toast(`This Form is not available to you. If you think this is an error, please contact ${supportEmail} with the URL.`)
 		}
 
         return response.json()
@@ -875,6 +914,7 @@ const RunWorkflow = (defaultprops) => {
     // Just use this one?
     var url = execution_id !== undefined && authorization !== undefined ?  `${globalUrl}/api/v1/orgs/${orgId}?reference_execution=${execution_id}&authorization=${authorization}` : `${globalUrl}/api/v1/orgs/${orgId}`;
 
+	getWorkflows() 
 	loadForms(orgId)
 
     fetch(url, {
@@ -1055,7 +1095,7 @@ const RunWorkflow = (defaultprops) => {
 
 				if (parsedresult.click_info !== undefined && parsedresult.click_info !== null) {
 					if (parsedresult.click_info.user !== undefined && parsedresult.click_info.user !== null && parsedresult.click_info.user.length > 0) {
-						setMessage("Already answered by " + parsedresult.click_info.user)
+						setMessage("Answered by " + parsedresult.click_info.user)
   
 					}
 				} else {
@@ -1149,9 +1189,99 @@ const RunWorkflow = (defaultprops) => {
 							No Forms Found
 						</Typography>
 						<Typography variant="body1" color="textSecondary">
-							<b>Every</b> Workflow is a form, and can be accessed by going to /forms/{`{workflow_id}`}. You can control the form by editing the workflow details in the "Forms" section.
-						</Typography>
+							<b>ALL</b> Workflows are forms, and can be accessed by going to /forms/{`{workflow_id}`}. You can control the form by editing the workflow details in the "Forms" section.
+						</Typography>	
 					</div>
+				}
+
+				{workflows === undefined || workflows === null || workflows.length === 0 ? null : 
+					<Autocomplete
+						disabled={workflows === undefined || workflows === null || workflows.length === 0}
+						id="form-workflow-search"
+						autoHighlight
+						value={""}
+						ListboxProps={{
+						  style: {
+							backgroundColor: theme.palette.inputColor,
+							color: "white",
+						  },
+						}}
+						sx={{
+						  '& .MuiOutlinedInput-root': {
+							height: 40, // Adjust the input height
+						  },
+						  '& .MuiAutocomplete-input': {
+							padding: '8px', // Adjust the text padding
+						  },
+						}}
+						getOptionSelected={(option, value) => option.id === value.id}
+						getOptionLabel={(option) => {
+						  if (
+							option === undefined ||
+							option === null ||
+							option.name === undefined ||
+							option.name === null
+						  ) {
+							return "No Workflow Selected";
+						  }
+
+						  const newname = (
+							option.name.charAt(0).toUpperCase() + option.name.substring(1)
+						  ).replaceAll("_", " ");
+						  return newname;
+						}}
+						options={workflows}
+						fullWidth
+						style={{
+						  backgroundColor: theme.palette.inputColor,
+						  borderRadius: theme.palette?.borderRadius,
+						  marginTop: 75, 
+						}}
+						renderOption={(props, data, state) => {
+						  if (data.id === workflow.id) {
+							data = workflow;
+						  }
+
+						  //key={index}
+						  return (
+							<Tooltip arrow placement="left" title={
+							  <span style={{}}>
+								{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+								  <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, maxWidth: 285, borderRadius: theme.palette?.borderRadius, }} />
+								  : null}
+								<Typography>
+								  Choose Subflow '{data.name}'
+								</Typography>
+							  </span>
+							}>
+							  <MenuItem
+								style={{
+								  backgroundColor: theme.palette.inputColor,
+								}}
+							  	onClick={() => {
+									window.location.href = `/forms/${data.id}`
+								}}
+								value={data}
+							  >
+								<PolylineIcon style={{ marginRight: 8 }} />
+								{data.name}
+							  </MenuItem>
+							</Tooltip>
+						  )
+						}}
+						renderInput={(params) => {
+						  return (
+							<div style={{ display: "flex", }}>
+							  <TextField
+								style={theme.palette.textFieldStyle}
+								{...params}
+								label="Find your form"
+								variant="outlined"
+							  />
+							</div>
+						  )
+						}}
+					/>
 				}
 			</div> 
 		)
@@ -1197,6 +1327,7 @@ const RunWorkflow = (defaultprops) => {
       				<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "25px 0px 15px 0px",}}>
 						{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? null : 
 						<div>
+							{/*
 							<img
 								alt={workflow.name}
 								src={image}
@@ -1211,6 +1342,7 @@ const RunWorkflow = (defaultprops) => {
 									left: 200,
 								}}
 							/>
+							*/}
 
 							<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
 								{organization}
@@ -1323,7 +1455,8 @@ const RunWorkflow = (defaultprops) => {
 								})}
 							</div>
 						: 
-						answer !== undefined && answer !== null ? null :
+						(answer !== undefined && answer !== null) || message !== ""  ? null :
+						
 							<span>
 								Runtime Argument
 								<div style={{marginBottom: 5}}>
@@ -1332,7 +1465,13 @@ const RunWorkflow = (defaultprops) => {
 										style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
 										multiLine
 										maxRows={2}
+										type="text"
+										autoComplete="off"
 										InputProps={{
+											autocomplete: "off",
+											form: {
+												autocomplete: "off",
+											},
 											style:{
 												height: "50px", 
 												color: "white",
@@ -1373,9 +1512,11 @@ const RunWorkflow = (defaultprops) => {
 											{message}. You may close this window.
 										</Typography>
 									: 
-										<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-											{disabledButtons ? "Answered. You may close this window." : ""}
-										</Typography>
+										<Fade in={true} timeout={2500}>
+											<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
+												{disabledButtons ? "Answered. You may close this window." : ""}
+											</Typography>
+										</Fade>
 									}
 
 									{disabledButtons ? null :
@@ -1385,25 +1526,47 @@ const RunWorkflow = (defaultprops) => {
 									}
 
 									<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
-										<Button fullWidth id="continue_execution" variant="contained" disabled={!handleValidateForm(executionArgument) || disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
-											setButtonClicked("FINISHED")
-											setExecutionData({
-												status: "FINISHED",
-											})
+										<Button 
+											fullWidth 
+											id="continue_execution" 
+											variant="contained" 
+											disabled={!handleValidateForm(executionArgument) || disabledButtons} 
+											color="primary" 
+											style={{
+												flex: 1,
+												textTransform: "none",
+											}} 
+											onClick={() => {
+												setButtonClicked("FINISHED")
+												setExecutionData({
+													status: "FINISHED",
+												})
 
-											onSubmit(null, execution_id, authorization, true) 
-										}}>Continue</Button>
+												onSubmit(null, execution_id, authorization, true) 
+											}}>
+											Continue</Button>
 										<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
 											&nbsp;or&nbsp;
 										</Typography>
-										<Button fullWidth id="abort_execution" variant="contained" disabled={!handleValidateForm(executionArgument) || disabledButtons} color="primary" style={{ flex: 1, }} onClick={() => {
-											setButtonClicked("ABORTED")
-											setExecutionData({
-												status: "ABORTED",
-											})
+										<Button 
+											fullWidth 
+											id="abort_execution" 
+											variant="outlined"
+											disabled={!handleValidateForm(executionArgument) || disabledButtons} 
+											color="primary" 
+											style={{ 
+												flex: 1, 
+												textTransform: "none", 
+											}} onClick={() => {
+												setButtonClicked("ABORTED")
+												setExecutionData({
+													status: "ABORTED",
+												})
 
-											onSubmit(null, execution_id, authorization, false) 
-										}}>Stop</Button>
+												onSubmit(null, execution_id, authorization, false) 
+										}}>
+											Stop
+										</Button>
 									</div>
 								</span>
 							:
@@ -1414,6 +1577,9 @@ const RunWorkflow = (defaultprops) => {
 									color="primary" 
 									fullWidth 
 									disabled={!handleValidateForm(executionArgument) || executionLoading}
+									style={{
+										textTransform: "none",
+									}}
 								>
 									{executionLoading ? 
 										<CircularProgress color="secondary" style={{color: "white",}} /> 
@@ -1599,7 +1765,10 @@ const RunWorkflow = (defaultprops) => {
 						disabled={workflow.id === undefined || workflow.id === null}
 						variant={"outlined"}
 						color={"secondary"}
-						style={{marginRight: 10, }}
+						style={{
+							marginRight: 10, 
+							textTransform: "none",
+						}}
 						onClick={() => {
 							window.open(`/workflows/${workflow.id}`, "_blank")
 						}}
@@ -1612,7 +1781,10 @@ const RunWorkflow = (defaultprops) => {
 						disabled={workflow.id === undefined || workflow.id === null}
 						variant={workflow.sharing === "form" ? "outlined" : "contained"}
 						color={"secondary"}
-						style={{marginRight: 10, }}
+						style={{
+							marginRight: 10, 
+							textTransform: "none",
+						}}
 						onClick={() => {
 							setSharingOpen(true)
 						}}
@@ -1634,7 +1806,9 @@ const RunWorkflow = (defaultprops) => {
 						disabled={workflow.id === undefined || workflow.id === null}
 						variant={"contained"}
 						color={"primary"}
-						style={{}}
+						style={{
+							textTransform: "none",
+						}}
 						onClick={() => {
 							setEditWorkflowModalOpen(true)
 						}}

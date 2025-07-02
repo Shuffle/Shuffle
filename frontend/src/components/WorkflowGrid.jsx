@@ -24,7 +24,7 @@ import {
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const AppGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, onlyResults, inputsearch } = props
 

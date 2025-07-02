@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect, } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect, useContext } from 'react';
 import { toast } from 'react-toastify';
 import '../codeeditor-index.css';
 import {
@@ -17,8 +17,8 @@ import {
 	ButtonGroup,
 	Collapse,
 } from '@mui/material';
-
-import theme from '../theme.jsx';
+import { Context } from '../context/ContextApi.jsx';
+import {getTheme} from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';
 import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
@@ -46,6 +46,7 @@ import {
 	DragIndicator as DragIndicatorIcon,
 	RestartAlt as RestartAltIcon,
 	ArrowForward as ArrowForwardIcon,
+	KeyboardReturn as KeyboardReturnIcon, 
 } from '@mui/icons-material';
 
 
@@ -63,6 +64,7 @@ import AceEditor from "react-ace";
 import ace from "ace-builds";
 import 'ace-builds/src-noconflict/mode-python';
 import 'ace-builds/src-noconflict/mode-json';
+import 'ace-builds/src-noconflict/mode-yaml';
 //import 'ace-builds/src-noconflict/theme-twilight';
 //import 'ace-builds/src-noconflict/theme-solarized_dark';
 import 'ace-builds/src-noconflict/theme-gruvbox';
@@ -89,13 +91,17 @@ const liquidFilters = [
 const pythonFilters = [
 	{ "name": "Hello World", "value": `print("hello world")`, "example": `` },
 	{ "name": "Using Shuffle variables", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"{\"sample\": \"string\", \"int\": 1}\"\"\"\n  \njsondata = json.loads(nodevalue)\nprint(jsondata)`, "example": `` },
+	{ "name": "Filter a list", "value": `import json\nnodevalue = r\"\"\"$exec\"\"\"\nif not nodevalue:\n  nodevalue = r\"\"\"[{\"sample\": \"string\", \"int\": 1, "malicious": "no"}, {\"sample\": \"string2\", \"int\": 1, "malicious": "yes"}]\"\"\"\n  \njsondata = json.loads(nodevalue)\nfiltered = []\nfor item in jsondata:\n  try:\n    if item[\"malicious\"] == \"yes\":\n      filtered.append(item)\n  except:\n    pass\nprint(json.dumps(filtered))`, "example": `` },
 	{ "name": "Print Execution ID", "value": `print(self.current_execution_id)`, "example": `` },
 	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
 	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
 
-	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_cache(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_cache(key)[\"value\"]\nprint(self.get_cache(key))`, "example": `` },
-	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": true, },
-	{ "name": "Run a Singul AI Action", "value": `response = singul.create_ticket(app="jira/iris/ticketingsystem", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": true, },
+	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_key(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_key(key)[\"value\"]\nprint(self.get_key(key))`, "example": `` },
+
+	{ "name": "Run a Subflow", "value": `response = shuffle.run_workflow(workflow_id="", start_command="Runtime arg here!", wait=True)\nprint(response)`, "example": ``, "disabled": false, },
+	{ "name": "Run an App Action", "value": `response = shuffle.run_app(app_id="app", action="action_name", auth="authentication_id", params={})\nprint(response)`, "example": ``, "disabled": false, },
+	{ "name": "Run a Singul AI Action", "value": `response = singul.cases.create_ticket(app="jira", fields={"title": "Test ticket!"})\nprint(response)`, "example": ``, "disabled": false, },
+
 
 ]
 
@@ -114,6 +120,7 @@ const CodeEditor = (props) => {
 		handleActionParamChange,
 		setcodedata,
 		isFileEditor,
+		isWorkflowEditor,
 		runUpdateText,
 		toolsAppId,
 		parameterName,
@@ -127,7 +134,7 @@ const CodeEditor = (props) => {
 		fieldname,
 		contentLoading,
 		editorData,
-		handleSubflowParamChange,
+		handleTriggerParamChange,
 		setAiQueryModalOpen,
 		fullScreenMode,
 		environment,
@@ -138,12 +145,9 @@ const CodeEditor = (props) => {
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
-	//const { setContainer } = useCodeMirror({
-	//	container: editorRef.current,
-	//	extensions,
-	//	value: localcodedata,
-	//})
 	// const {codelang, setcodelang} = props
+	const {themeMode, supportEmail} = useContext(Context)
+	const theme = getTheme(themeMode)
 
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
@@ -205,7 +209,7 @@ const CodeEditor = (props) => {
 	const triggerField = searchParams.get('trigger_field');
 	const triggerName = searchParams.get('trigger_name');
 	const conditionId = searchParams.get('condition_id');
-	const conditionField = searchParams.get('field');
+	const conditionField = searchParams.get('condition_field');
 
 	useEffect(() => {
 		if (actionId === undefined || actionId === null) {
@@ -244,7 +248,7 @@ const CodeEditor = (props) => {
 		setSelectedCondition(condition);
 		// Update available variables when condition changes
 		updateAvailableVariables(actionlist);
-	}, [conditionId, fieldName])
+	}, [conditionId, conditionField])
 
 	// Extract variable updating logic into a separate function
 	const updateAvailableVariables = (actionlist) => {
@@ -298,8 +302,19 @@ const CodeEditor = (props) => {
 		setMainVariables(tmpVariables)
 	}
 
+    const handleKeyDown = (event) => {
+  		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+  	  		event.preventDefault()
+			const tryItButton = document.getElementById("try-it-button")
+			if (tryItButton !== undefined && tryItButton !== null) {
+				tryItButton.click()
+			}
+		}
+	}
+
 	// Remove the original useEffect for actionlist since we'll update on action/trigger changes
 	useEffect(() => {
+    	document.addEventListener("keydown", handleKeyDown)
 		updateAvailableVariables(actionlist)
 	}, [])
 
@@ -886,6 +901,8 @@ const CodeEditor = (props) => {
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
 		if (found !== null && found !== undefined) {
+
+			//console.log("FOUND: ", found)
 			try {
 				for (var i = 0; i < found.length; i++) {
 					try {
@@ -920,28 +937,72 @@ const CodeEditor = (props) => {
 								}
 							}
 						}
+
+						// Find the location to ensure replacements happen correctly
+						var foundlocation = -1
+						for (var j = 0; j < input.length; j++) {
+							const foundStringSize = fixedVariable.length
+							const foundslice = input.slice(j, j + foundStringSize)
+							//console.log("FOUNDSLICE: ", foundslice)
+							if (fixedVariable !== foundslice) {
+								continue
+							}
+
+							// Check if it matches EXACTLY or not, as there may be more AFTER the found[i]
+							const nextchar = input.slice(j + foundStringSize, j + foundStringSize + 1)
+							if (nextchar === ".") {
+								continue
+							}
+
+							foundlocation = j
+							break
+						}
 	
+						// FIXME: There is something wrong here with: 
+						// $variable.#
+						// vs
+						// $variable.#.subvalue
+						// if you put both of those lines in the same editor, then it will replace both (somehow). Make sure $variable.#.subvalue exists while testing.
+						console.log("FOUNDLOC: ", fixedVariable, foundlocation)
 						for (var j = 0; j < actionlist.length; j++) {
 							if (fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()) {
 								continue
 							}
 
+							// Look for the location of found[i] in the input, as to make sure to skip parts of the input in the replace. Find ALL spots for it
 							valuefound = true
+							var newvalue = ""
 							try {
-								if (typeof actionlist[j].example === "object") {
 
-									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+								if (typeof actionlist[j].example === "object") {
+									newvalue = JSON.stringify(actionlist[j].example)
 
 								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
-									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+
+									newvalue = JSON.stringify(actionlist[j].example)
 								} else {
 									const newExample = fixStringInput(actionlist[j].example)
-									input = input.replace(found[i], newExample, -1)
+
+									newvalue = newExample
 								}
 							} catch (e) {
-								input = input.replace(found[i], actionlist[j].example, -1)
+								newvalue = actionlist[j].example
 							}
 
+							try {
+								console.log("REPLACE: ", foundlocation, fixedVariable, newvalue)
+								if (newvalue !== "") {
+									if (foundlocation === -1) {
+										input = input.replace(fixedVariable, newvalue, 1)
+									} else {
+										// Ensures we don't just randomly replace the first value we find
+										const replacedSlice = input.slice(foundlocation, input.length).replace(fixedVariable, newvalue, 1)
+										input = input.slice(0, foundlocation) + replacedSlice
+									}
+								} 
+							} catch (e) {
+								console.log("Replace error: ", e)
+							}
 						}
 
 						if (!valuefound) {
@@ -1334,7 +1395,7 @@ const CodeEditor = (props) => {
 
 					  const usedposition = e.offsetY
 					  if (usedposition  === undefined || usedposition === null) {
-						  toast.info("Error: LayerY is undefined or null. Please contact support@shuffler.io")
+						  toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
 						  return
 					  }
 
@@ -1461,17 +1522,19 @@ const CodeEditor = (props) => {
 						setActiveDialog("codeeditor")
 					}
 				},
-				style: {
+				sx: {
 					// zIndex: 12501,
 					pointerEvents: "auto",
-					color: "white",
-					minWidth: isMobile ? "100%" : isFileEditor ? 650 : "80%",
-					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
-					minHeight: isMobile ? "100%" : "auto",
-					maxHeight: isMobile ? "100%" : 700,
+					color: theme.palette.DialogStyle.color,
+					minWidth: isMobile || isWorkflowEditor ? "100%" : isFileEditor ? "650px" : "80%",
+					maxWidth: isMobile || isWorkflowEditor ? "100%" : isFileEditor ? "650px" : "1100px",
+					minHeight: isMobile || isWorkflowEditor ? "100%" : "auto",
+					maxHeight: isMobile || isWorkflowEditor ? "100%" : "700px",
 					border: "3px solid rgba(255,255,255,0.3)",
-					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					backgroundColor: "black",
+					padding: isMobile ? "25px 10px 25px 10px" : isWorkflowEditor ? "25px 10px 25px 200px" : "25px",
+					backgroundColor: themeMode === "dark" ? "black" : theme.palette.DialogStyle.backgroundColor,
+
+					opacity: isWorkflowEditor ? 0.93 : 1,
 				},
 			}}
 		>
@@ -1522,7 +1585,10 @@ const CodeEditor = (props) => {
 						color: "grey",
 					}}
 					onClick={() => {
-						navigate("")
+						if (isFileEditor !== true) {
+							navigate("")
+						}
+
 						setExpansionModalOpen(false)
 					}}
 				>
@@ -1652,7 +1718,7 @@ const CodeEditor = (props) => {
 									Code Editor
 							</DialogTitle>
 							*/}
-								{isFileEditor ? null :
+								{isFileEditor || isWorkflowEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
 										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
 											{userdata !== undefined && userdata !== null && userdata.support === true ? 
@@ -1666,6 +1732,7 @@ const CodeEditor = (props) => {
 													style={{
 														textTransform: "none",
 														width: 175,
+														textWrap: 'nowrap'
 													}}
 													onClick={(event) => {
 														setSourceDataOpen(!sourceDataOpen)
@@ -1685,6 +1752,7 @@ const CodeEditor = (props) => {
 												style={{
 													textTransform: "none",
 													width: 120,
+													textWrap: "nowrap"
 												}}
 												onClick={(event) => {
 													setAnchorEl(event.currentTarget);
@@ -1720,13 +1788,14 @@ const CodeEditor = (props) => {
 												color="secondary"
 												style={{
 													textTransform: "none",
-													width: 120,
+													width: 145,
+													textWrap: "nowrap"
 												}}
 												onClick={(event) => {
 													setAnchorEl3(event.currentTarget);
 												}}
 											>
-												Python Code
+												Python Examples 
 											</Button>
 											<Button
 												id="basic-button"
@@ -1738,6 +1807,7 @@ const CodeEditor = (props) => {
 												style={{
 													textTransform: "none",
 													width: 130,
+													textWrap: "nowrap",
 												}}
 												onClick={(event) => {
 													setMenuPosition({
@@ -1761,7 +1831,12 @@ const CodeEditor = (props) => {
 											>
 												{pythonFilters.map((item, index) => {
 													return (
-														<MenuItem key={index} onClick={() => {
+														<MenuItem 
+															style={{
+																borderTop: item.name === "Use files" || (item.name.toLowerCase().includes("run") && item.name.toLowerCase().includes("subflow")) ? "2px solid rgba(255,255,255,0.3)" : "none",
+
+															}}
+															key={index} onClick={() => {
 															if (item.disabled) {
 																toast.error("This feature may not work in your environment until you update your Shuffle Tools app.", { autoClose: 10000 })
 															}
@@ -2114,15 +2189,15 @@ const CodeEditor = (props) => {
 							console.log("DROP: ", e)
 						}}
 					>	
-						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
+						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor || isWorkflowEditor ? (
 							<AceEditor
 								id="shuffle-codeeditor"
 								name="shuffle-codeeditor"
 								value={localcodedata}
-								mode={selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
+								mode={isWorkflowEditor ? "yaml" : selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
 								theme="gruvbox"
-								height={isFileEditor ? 450 : 550}
-								width={isFileEditor ? 650 : "100%"}
+								height={isFileEditor ? 450 : isWorkflowEditor ? "90vh" : 550}
+								width={isFileEditor ? 650 : isWorkflowEditor ? "90vw" : "100%"}
 
 								markers={markers}
 								highlightActiveLine={false}
@@ -2183,7 +2258,7 @@ const CodeEditor = (props) => {
 					</div>
 				</div>
 
-				{isFileEditor  ? null :
+				{isFileEditor || isWorkflowEditor ? null :
 					<div style={{ 
 						flex: sourceDataOpen ? 1.5 : 3, 
 						marginLeft: 5, 
@@ -2199,7 +2274,9 @@ const CodeEditor = (props) => {
 										paddingLeft: 10,
 										paddingTop: 0,
 										display: "flex",
-										cursor: "move"
+										cursor: "move",
+										color: theme.palette.DialogStyle.color,
+										backgroundColor: "transparent",
 									}}
 								>
 									<div>
@@ -2227,7 +2304,7 @@ const CodeEditor = (props) => {
 													{
 														selectedEdge && Object.keys(selectedEdge).length > 0 ?
 														<ArrowForwardIcon style={{ 
-															color: "rgba(255,255,255,0.7)",
+															color: theme.palette.textPrimary,
 															fontSize: 18,
 															marginLeft: -5,
 															marginRight: -5,
@@ -2252,7 +2329,7 @@ const CodeEditor = (props) => {
 													}
 												</div>
 												: 
-												<span style={{ color: "white" }}>
+												<span style={{ color: theme.palette.text.primary }}>
 												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
 													"Code to run" : 
 													triggerId ? 
@@ -2269,9 +2346,8 @@ const CodeEditor = (props) => {
 							<div style={{}}>
 								<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
 									<Button
-										variant="outlined"
+										id="try-it-button"
 										disabled={executing}
-										color="primary"
 										style={{
 											border: `1px solid rgba(255, 255, 255, 0.15)`,
 											position: "absolute",
@@ -2282,11 +2358,14 @@ const CodeEditor = (props) => {
 											zIndex: 1200,
 											fontWeight: 500,
 											fontSize: 14,
-											backgroundColor: "rgba(33, 33, 33, 0.95)",
+											textTransform: "none",
+											backgroundColor: theme.palette.platformColor,
 											backdropFilter: "blur(8px)",
 											boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
 											transition: "all 0.2s ease",
-											borderRadius: "4px",
+											paddingRight: 20, 
+											color: "#FF8544",
+											borderRadius: theme.palette?.borderRadius,
 											"&:hover": {
 												backgroundColor: "rgba(45, 45, 45, 0.95)",
 												transform: "translateY(-1px)",
@@ -2303,7 +2382,23 @@ const CodeEditor = (props) => {
 										{executing ?
 											<CircularProgress style={{ height: 18, width: 18, }} />
 											:
-											<span>{selectedAction === undefined ? "Try it" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} /> </span>
+											<span>
+
+												<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} />
+											{selectedAction === undefined ? <Typography style={{color: "inherit"}}>Try it</Typography> : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"} 
+                        						<span
+                        						  style={{
+                        						    color: "#C8C8C8",
+                        						    fontSize: "12px",
+                        						    whiteSpace: "nowrap",
+													marginLeft: 5,
+														  marginRight: 10, 
+                        						  }}
+                        						>
+                        						  <kbd>Ctrl</kbd> + <kbd><KeyboardReturnIcon style={{width: 13, position: "absolute", marginLeft: 3, top: 5, }}/></kbd>
+                        						</span>
+
+											</span>
 										}
 									</Button>
 								</Tooltip>
@@ -2428,7 +2523,7 @@ const CodeEditor = (props) => {
 			</div>
 
 
-			<div style={{ display: 'flex' }}>
+			<div style={{ display: 'flex', width: isWorkflowEditor ? "90%" : "100%",  }}>
 				<Button
 					style={{
 						height: 35,
@@ -2451,6 +2546,7 @@ const CodeEditor = (props) => {
 				<Button
 					variant="contained"
 					color="primary"
+					disabled={isWorkflowEditor} 
 					style={{
 						height: 35,
 						flex: 1,
@@ -2458,13 +2554,11 @@ const CodeEditor = (props) => {
 						marginTop: 5,
 					}}
 					onClick={(event) => {
-						/*
-						const clickedFieldId = "rightside_field_" + fieldCount 
-						const clickedField = document.getElementById(clickedFieldId)
-						if (clickedField !== undefined && clickedField !== null) {
-							clickedField.focus()
+						if (isWorkflowEditor === true) {
+							setExpansionModalOpen(false)
+							navigate("")
+							return
 						}
-						*/
 
 						if (isFileEditor !== true) {
 							navigate("")
@@ -2475,7 +2569,8 @@ const CodeEditor = (props) => {
 						var fixedcodedata = localcodedata
 						const valid = validateJson(localcodedata, true)
 						if (valid.valid) {
-							fixedcodedata = JSON.stringify(valid.result, null, 2)
+							//fixedcodedata = JSON.stringify(valid.result, null, 2)
+							fixedcodedata = JSON.stringify(valid.result)
 						}
 
 						// console.log(codedata)
@@ -2491,7 +2586,7 @@ const CodeEditor = (props) => {
 
 						// Handle condition fields
 						if (conditionField !== null && handleConditionFieldChange !== undefined) {
-							handleConditionFieldChange(conditionField, fieldName, fixedcodedata);
+							handleConditionFieldChange(conditionField, fixedcodedata);
 						}
 						// Handle action fields
 						else if (actionId !== undefined && actionId !== null && actionId.length > 0) {
@@ -2499,7 +2594,7 @@ const CodeEditor = (props) => {
 						}
 						// Handle trigger fields
 						else if (triggerId !== undefined && triggerId !== null && triggerId.length > 0) {
-							handleSubflowParamChange(triggerId, triggerField, fixedcodedata)
+							handleTriggerParamChange(triggerId, triggerField, fixedcodedata)
 						}
 
 						setExpansionModalOpen(false)

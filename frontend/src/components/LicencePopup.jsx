@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import ReactGA from 'react-ga4';
 
-import theme from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import countries from "../components/Countries.jsx";
 import {
     Box,
@@ -25,12 +25,14 @@ import {
     CardContent,
     ButtonGroup,
     DialogContentText,
+    ToggleButton,
+    ToggleButtonGroup,
 } from "@mui/material";
 
 import { useNavigate, Link } from "react-router-dom";
 import { Autocomplete } from "@mui/material";
 import { toast } from "react-toastify"
-
+import { Context } from "../context/ContextApi.jsx";
 import {
     Cached as CachedIcon,
     ContentCopy as ContentCopyIcon,
@@ -46,7 +48,7 @@ import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 import Billing from "./Billing.jsx";
 
 const LicencePopup = (props) => {
-    const { globalUrl, userdata, serverside, billingInfo, stripeKey, setModalOpen, isLoggedIn, isMobile, selectedOrganization, isCloud } = props;
+    const { globalUrl, userdata, serverside, billingInfo, stripeKey, setModalOpen, isScale, isLoggedIn, isMobile, selectedOrganization, isCloud, features, licensePopup = false } = props;
     //const alert = useAlert();
     let navigate = useNavigate();
     const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
@@ -72,6 +74,9 @@ const LicencePopup = (props) => {
     const [errorMessage, setErrorMessage] = useState("")
     const [highlight, setHighlight] = useState(false)
 
+    const { themeMode } = useContext(Context);
+    const theme = getTheme(themeMode);
+
     // Cloud
     const [calculatedApps, setCalculatedApps] = useState(600)
     const [calculatedCost, setCalculatedCost] = useState("$600")
@@ -87,29 +92,235 @@ const LicencePopup = (props) => {
     const [calculatedCores, setCalculatedCores] = useState('600')
     const [onpremSelectedValue, setOnpremSelectedValue] = useState(8)
 
-    const payasyougo = "Pay as you go"
+    const [billingCycle, setBillingCycle] = useState("annual")
+    const [scaleValue, setScaleValue] = useState(
+        new URLSearchParams(window.location.search).get("app_runs") || 
+        (userdata?.app_execution_limit / 1000) + 50 || 10
+    );
+
+    useEffect(() => {
+        setScaleValue((userdata?.app_execution_limit / 1000) + 50 || 10)
+    }, [userdata])
+
+    const getPrice = (basePrice) => {
+        return Math.round(billingCycle === "annual" ? basePrice * 0.9 : basePrice); // 10% discount for annual
+    };
+    
     const stripe = typeof window === 'undefined' || window.location === undefined ? "" : props.stripeKey === undefined ? "" : window.Stripe ? window.Stripe(props.stripeKey) : ""
 
+  // Handle slider change for Scale plan
+    const handleScaleChange = (event, newValue) => {
+        setScaleValue(newValue);
+
+        // Add app runs to URL query params
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        urlSearchParams.set("app_runs", newValue); // Convert to actual app runs (k to actual number)
+        const newUrl = `${window.location.pathname}?${urlSearchParams.toString()}`;
+        window.history.replaceState({}, "", newUrl);
+    };
+
+    // Handle billing cycle change
+    const handleBillingCycleChange = (event, newValue) => {
+        if (newValue !== null) {
+            setBillingCycle(newValue);
+
+      if(isCloud){
+        ReactGA.event({
+          category: 'Billingpage',
+          action: 'Billing Cycle Changed',
+          label: `${billingCycle} -> ${newValue}`,
+        });
+      }
+
+      // Add billing cycle to URL query params
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      urlSearchParams.set("billing_cycle", newValue);
+      const newUrl = `${
+        window.location.pathname
+      }?${urlSearchParams.toString()}`;
+      window.history.replaceState({}, "", newUrl);
+        }
+    };
+
+    const payasyougo = "Pay as you go"
+   
     const paperStyle = {
         padding: 20,
+        paddingBottom: 30,
         borderRadius: theme.palette?.borderRadius,
-        height: "100%"
+        height: "100%",
+        
     }
 
+    const userInScalePlan = userdata?.app_execution_limit > 2000
+    const appRuns = (userdata?.app_execution_limit / 1000) + "K App Runs"
+
+    // Add this function to format the limit value
+    const formatLimit = (limit) => {
+        if (limit === null || limit === undefined || limit === 0) return "Unlimited";
+        if (typeof limit === "string" && limit.toLowerCase() === "unlimited") return "Unlimited";
+        if (typeof limit === "number") return limit.toLocaleString();
+        return limit.toString();
+    };
+
+    // Add this function to format the feature text with proper unlimited handling
+    const formatFeatureText = (feature, limit) => {
+        if (!feature) return "";
+
+        // Dynamic features that use limits
+        const featureMapping = {
+            app_executions: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return `Includes ${formattedLimit} App Executions per month`;
+            },
+            multi_env: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Environments"
+                    : `${formattedLimit} Environment${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            multi_tenant: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Tenants"
+                    : `${formattedLimit} Tenant${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            multi_region: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Regions"
+                    : `${formattedLimit} Region${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            webhook: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Webhooks"
+                    : `${formattedLimit} Webhook${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            schedules: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Schedules"
+                    : `${formattedLimit} Schedule${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            user_input: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited User Inputs"
+                    : `${formattedLimit} User Input${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            send_mail: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Emails per month"
+                    : `${formattedLimit} Email${parseInt(formattedLimit) > 1 ? 's' : ''} per month`;
+            },
+            send_sms: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited SMS per month"
+                    : `${formattedLimit} SMS${parseInt(formattedLimit) > 1 ? 's' : ''} per month`;
+            },
+            email_trigger: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Email Triggers"
+                    : `${formattedLimit} Email Trigger${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            notifications: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Notifications"
+                    : `${formattedLimit} Notification${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            workflows: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Workflows"
+                    : `${formattedLimit} Workflow${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            autocomplete: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Autocomplete"
+                    : `${formattedLimit} Autocomplete${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            workflow_executions: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Workflow Executions"
+                    : `${formattedLimit} Workflow Execution${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            authentication: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Authentication"
+                    : `${formattedLimit} Authentication${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+            shuffle_gpt: (limit) => {
+                const formattedLimit = formatLimit(limit);
+                return formattedLimit === "Unlimited" 
+                    ? "Unlimited Shuffle GPT"
+                    : `${formattedLimit} Shuffle GPT${parseInt(formattedLimit) > 1 ? 's' : ''}`;
+            },
+        };
+
+        try {
+            // Check if we have a mapping for this feature
+            const formatter = featureMapping[feature];
+            if (formatter) {
+                return formatter(limit);
+            }
+            
+            // Default format for unknown features
+            const formattedLimit = formatLimit(limit);
+            return `${feature}: ${formattedLimit}`;
+        } catch (error) {
+            console.warn(`Error formatting feature ${feature}:`, error);
+            return `${feature}: ${formatLimit(limit)}`;
+        }
+    };
+
+
+    // Update the subscription features section
     billingInfo.subscription = {
         "active": true,
-        "name": "Pay as you go",
-        "price": typecost_single,
-        "currency": "USD",
-        "currency_text": "$",
-        "interval": "app run / month",
-        "description": "Pay as you go",
-        "features": [
-            "Basic Support",
-            "Includes 10.000 app run/month for free. ",
-            "Pay for what you use with no minimum commitment and cancel anytime."
+        "name": appRuns,
+        "price": userInScalePlan ? "" : "Free",
+        "currency": userInScalePlan ? "" : "Free",
+        "currency_text": "",
+        "interval": "",
+        "description": "",
+        "features": userInScalePlan ?  [
+            // Add static features first
+            ...(userInScalePlan ? ["Standard Email Support"] : []),
+            
+            // Then add dynamic features from the database
+            ...Object.entries(features || {})
+                .filter(([_, featureData]) => {
+                    return featureData && 
+                           typeof featureData === 'object' && 
+                           featureData.active === true;
+                })
+                .map(([featureName, featureData]) => {
+                    try {
+                        return formatFeatureText(featureName, featureData?.limit);
+                    } catch (error) {
+                        console.warn(`Error processing feature ${featureName}:`, error);
+                        return "";
+                    }
+                })
+                .filter(feature => 
+                    feature.length > 0 && 
+                    !feature.toLowerCase().includes('unlimited') // Add this filter to remove "unlimited" features
+                )
+        ] : [
+            userInScalePlan ? "Standard Email Support" : "Community Support",
+            userInScalePlan ? `Includes ${appRuns}. ` : `Includes ${appRuns} for free. `,
+            userInScalePlan ? "Multi-Tenant & Multi-Region" : "Get all 2500+ Apps and 10 Workflows",
+            userInScalePlan ? "All features included in the Scale plan" : "Invite up to 5 users"
         ],
-        "limit": 10000,
+        "limit": userInScalePlan ? userdata?.app_execution_limit : 10000,
     }
 
     const sendSignatureRequest = (subscription) => {
@@ -143,6 +354,15 @@ const LicencePopup = (props) => {
             })
     }
 
+    // Create a function to remove duplicates and merge features
+    const mergeUniqueFeatures = (existingFeatures, newFeatures) => {
+        // Convert arrays to Sets to remove duplicates
+        const uniqueFeatures = new Set([
+            ...(existingFeatures || []),
+            ...(newFeatures || [])
+        ]);
+        return Array.from(uniqueFeatures);
+    };
 
     const SubscriptionObject = (props) => {
         const { globalUrl, index, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, subscription, highlight, } = props;
@@ -151,36 +371,50 @@ const LicencePopup = (props) => {
         const [tosChecked, setTosChecked] = React.useState(subscription.eula_signed)
         const [hovered, setHovered] = React.useState(false)
         const [newBillingEmail, setNewBillingEmail] = useState('');
-        var top_text = "Base Cloud Access"
-        if (subscription.limit === undefined && subscription.level === undefined || subscription.level === null || subscription.level === 0) {
-            subscription.name = "Enterprise"
-            subscription.currency_text = "$"
-            subscription.price = subscription.level * 180
-            subscription.limit = subscription.level * 100000
-            subscription.interval = subscription.recurrence
-            subscription.features = [
-                "Includes " + subscription.limit + " app runs/month. ",
-                "Multi-Tenancy and Region-Selection",
-                "And all other features from /pricing",
-            ]
-        }
+        var top_text = userInScalePlan ? "Scale Plan" : "Starter Plan"
+        // if (subscription.limit === undefined && subscription.level === undefined || subscription.level === null || subscription.level === 0) {
+        //     subscription.name = "Enterprise"
+        //     subscription.currency_text = "$"
+        //     subscription.price = subscription.level * 180
+        //     subscription.limit = subscription.level * 100000
+        //     subscription.interval = subscription.recurrence
+        //     subscription.features = [
+        //         "Includes " + subscription.limit + " app runs/month. ",
+        //         "Multi-Tenancy and Region-Selection",
+        //         "And all other features from /pricing",
+        //     ]
+        // }
+
+        // if (userdata?.app_execution_limit >= 300000) {
+        //     subscription.name = "Enterprise"
+        //     subscription.currency_text = "$"
+        //     subscription.price = typecost_single
+        //     subscription.limit = userdata?.app_execution_limit
+        //     subscription.interval = "app run / month"
+        //     subscription.features = [
+        //         "Includes " + (userdata?.app_execution_limit/1000) + "K app runs/month. ",
+        //         "Multi-Tenancy and Region-Selection",
+        //         "And all other features from /pricing",
+        //     ]
+        // }
+
 
         var newPaperstyle = JSON.parse(JSON.stringify(paperStyle))
         if (subscription.name === "Enterprise" && subscription.active === true) {
-            top_text = "Current Plan"
+            top_text = "Enterprise Plan"
 
-            newPaperstyle.border = "1px solid #f85a3e"
+            // newPaperstyle.border = "1px solid #f85a3e"
         }
 
         var showSupport = false
         if (subscription.name.includes("default")) {
             top_text = "Custom Contract"
-            newPaperstyle.border = "1px solid #f85a3e"
+            // newPaperstyle.border = "1px solid #f85a3e"
             showSupport = true
         }
 
         if (subscription.name.includes("App Run Units")) {
-            top_text = "Cloud Access"
+            top_text = "Scale Plan"
             showSupport = true
         }
 
@@ -250,14 +484,31 @@ const LicencePopup = (props) => {
                 });
         }
 
+
+        const extraFeatures = Object.entries(features || {})
+            .filter(([_, featureData]) => {
+                return featureData && 
+                typeof featureData === 'object' && 
+                featureData.active === true;
+            })
+            .map(([featureName, featureData]) => {
+                return formatFeatureText(featureName, featureData?.limit);
+            })
+            .filter(feature => 
+                feature.length > 0 && 
+                !feature.toLowerCase().includes('unlimited') // Add this filter to remove "unlimited" features
+            )
+
+        subscription.features = mergeUniqueFeatures(subscription.features, extraFeatures);
+
         return (
             <Tooltip
                 style={{ borderRadius: theme.palette?.borderRadius, }}
                 placement="bottom"
             >
-                <div style={{}}>
-                    <Paper
-                        style={newPaperstyle}
+                <div style={{ backgroundColor: theme.palette.cardBackgroundColor, border: "1.2px solid #ff8544", borderRadius: theme.palette?.borderRadius}}>
+                    <div
+                        style={{ backgroundColor: theme.palette.cardBackgroundColor, ...newPaperstyle }}
                     // onMouseEnter={() => setHovered(true)}
                     // onMouseLeave={() => setHovered(false)}
                     >
@@ -343,9 +594,13 @@ const LicencePopup = (props) => {
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        <Button style={{ backgroundColor: '#2F2F2F', color: "white", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', width: 144, height: 40 }}>Current Plan</Button>
+                        {subscription.active === true && !isScale &&  <Button style={{ textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', fontSize: 13 }}
+                            variant="contained"
+                            color="secondary">
+                            Current Plan
+                        </Button>}
                         <div style={{ display: "flex" }}>
-                            {top_text === "Base Cloud Access" && userdata.has_card_available === true ?
+                            {top_text === "Base Cloud Access" && userdata.has_card_available === true && !isScale ?
                                 <Chip
                                     style={{
                                         backgroundColor: "#f86a3e",
@@ -367,7 +622,7 @@ const LicencePopup = (props) => {
                                     color="primary"
                                 />
                                 : null}
-                            <Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, flex: 5, whiteSpace: 'nowrap' }}>
+                            <Typography variant="h6" style={{ marginTop: 25, marginBottom: 10, flex: 5, whiteSpace: 'nowrap' }}>
                                 {top_text}
                             </Typography>
 
@@ -382,7 +637,7 @@ const LicencePopup = (props) => {
                                     }}
                                 />
                                 : null}
-                            {isCloud && highlight === true && top_text !== "Base Cloud Access" ?
+                            {isCloud && highlight === true && top_text !== "Starter Plan" ?
                                 <Tooltip
                                     title="Sign EULA"
                                     placement="top"
@@ -412,7 +667,7 @@ const LicencePopup = (props) => {
                                         {subscription.currency_text}{subscription.price}
                                     </Typography>
                                     <Typography variant="body1" color="textSecondary" style={{ marginLeft: 10, marginTop: 15, marginBottom: 10 }}>
-                                        / {subscription.interval}
+                                        {subscription.interval.length > 0 ? `/ ${subscription.interval}` : ""}
                                     </Typography>
                                 </div>
                                 : null}
@@ -503,20 +758,17 @@ const LicencePopup = (props) => {
                                     : null}
                             </ul>
                             <Typography variant="body2" color="textSecondary" style={{ marginTop: 20, marginBottom: 10 }}>
-							{subscription.name.includes("Scale") ?
-								""
-								:
-
-								userdata.has_card_available === true ?
-									"While you have a card attached to your account, Shuffle will no longer prevent workflows from running. Billing will occur at the start of each month."
-									:
+							{
 									isCloud ?
-										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
+                                        userdata?.app_execution_limit && userdata?.app_execution_limit !== 10000 ?
+                                            "You have already subscribed to the Scale plan, which includes " + (userdata?.app_execution_limit/1000) + "K app runs/month. You can increase the limit by upgrading current plan. Contact support@shuffler.io for more information." :
+                                            `You are using free Starter plan with max ${userdata?.app_execution_limit === 10000 ? "10,000" : "2,000"} runs per month. Upgrade to increase this limit.`
+
 										:
 										`You are not subscribed to any plan and are using the free, open source plan. This plan has no enforced limits, but scale issues may occur due to CPU congestion.`
 							}
 						</Typography>
-							{isCloud && (userdata.has_card_available === true || selectedOrganization?.Billing?.Email?.length > 0 )? 
+							{/* {isCloud && (userdata.has_card_available === true || selectedOrganization?.Billing?.Email?.length > 0 )? 
                             	<div>
                                     <span>Billing email: {BillingEmail}</span>
                                     <Button
@@ -594,53 +846,46 @@ const LicencePopup = (props) => {
 								</DialogActions>
 							</Dialog>
                                 </div>
-							: null}
+							: null} */}
                         </div>
                         {isCloud ? (
                             <Button
 							fullWidth
-							disabled={false}
 							color="primary"
+                            variant="contained"
 							style={{
-								marginTop: !userdata.has_card_available ? 20 : 10,
+								marginTop: !userdata.has_card_available ? 25 : 10,
 								borderRadius: 4,
 								height: 40,
 								fontSize: 16,
-								color: "#1a1a1a",
-								backgroundColor: "#ff8544",
 								// backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
 								textTransform: "none",
 
 							}}
 							onClick={() => {
-								if (isCloud) {
-									handlePayasyougo(userdata, selectedOrganization, BillingEmail)
-									//navigate("/pricing?tab=cloud&highlight=true")
-								} else {
-									//window.open("https://shuffler.io/pricing?tab=onprem&highlight=true", "_blank")
-									handlePayasyougo()
-								}
+                                console.log("Subscription: ", subscription.name)
+                                if(!subscription.name.includes("App Run Units") && !userInScalePlan) {
+                                    window.open("https://discord.gg/B2CBzUm", "_blank")
+                                } else {
+                                    window.open("mailto:support@shuffler.io", "_blank")
+                                }
 							}}
 						>
-							{userdata.has_card_available === true ?
-								"Manage Card Details"
-								:
-								"Add Card Details"
-							}
+							Get Support
 						</Button> ) : null}
                             <Button
                             variant="outlined"
+                            color="primary"
                             style={{
                                 marginTop: isCloud? 10 : 30,
                                 borderRadius: 4,
                                 width: "100%",
                                 cursor: "pointer",
                                 textTransform: "capitalize",
-                                backgroundColor: "transparent",
                                 fontSize: 16,
                                 position: "relative", // Required for positioning tooltip
                             }}
-                            title="Click to book a call"
+                            title="Get more app runs"
                             onClick={() => {
                                 if (isCloud) {
                                 ReactGA.event({
@@ -648,7 +893,7 @@ const LicencePopup = (props) => {
                                     action: "bookcall_upgread_popup",
                                     label: "",
                                 })};
-                                window.open("https://drift.me/frikky/meeting", "_blank");
+                                navigate("/contact?category=contact")
                                 // if (isLoggedIn) {
                                 // isLoggedInHandler()
                                 // } else {
@@ -657,7 +902,7 @@ const LicencePopup = (props) => {
                             }}
                         >
 							<span>
-                            	Book a call
+                            	Get more app runs
 							</span>
                             <span
                                 style={{
@@ -679,7 +924,7 @@ const LicencePopup = (props) => {
                             </span>
                         </Button>
                         
-                    </Paper>
+                    </div>
                     {/*
 			<div style={{ paddingRight: 150, display: "flex", alignItems: "baseline" }}>
 				
@@ -692,17 +937,42 @@ const LicencePopup = (props) => {
         )
     }
 
-    useEffect(() => {
-		console.log("New variant: ", shuffleVariant)
+    // useEffect(() => {
+	// 	console.log("New variant: ", shuffleVariant)
 
-		if (shuffleVariant === 1) {
-			setCalculatedCost("$960")
-			setSelectedValue(8)
-		} else {
-			setCalculatedCost("$960")
-			setSelectedValue(300)
-		}
-	}, [shuffleVariant])
+	// 	if (shuffleVariant === 1) {
+	// 		setCalculatedCost("$960")
+	// 		setSelectedValue(8)
+	// 	} else {
+    //         if (userdata && userdata?.app_execution_limit) {
+    //             if (userdata.app_execution_limit >= 30000 && userdata.app_execution_limit < 40000) {
+    //                 setSelectedValue(400)
+    //                 setCalculatedCost("$1280")
+    //             }else if (userdata?.app_execution_limit >= 40000 && userdata?.app_execution_limit < 50000) {
+    //                 setSelectedValue(500)
+    //                 setCalculatedCost("$1600")
+    //             } else if (userdata?.app_execution_limit >= 500000 && userdata?.app_execution_limit < 600000) {
+    //                 setSelectedValue(600)
+    //                 setCalculatedCost("$1920")
+    //             } else if (userdata?.app_execution_limit >= 60000 && userdata?.app_execution_limit < 70000) {
+    //                 setSelectedValue(700)
+    //                 setCalculatedCost("$2240")
+    //             } else if (userdata?.app_execution_limit >= 70000 && userdata?.app_execution_limit < 80000) {
+    //                 setSelectedValue(800)
+    //                 setCalculatedCost("$2560")
+    //             } else if (userdata?.app_execution_limit >= 80000 && userdata?.app_execution_limit < 90000) {
+    //                 setSelectedValue(900)
+    //                 setCalculatedCost("$2880")
+    //             }else {
+    //                 setCalculatedCost("$960")
+    //                 setSelectedValue(300)
+    //             }
+    //         }else {
+    //             setCalculatedCost("$960")
+    //             setSelectedValue(300)
+    //         }
+	// 	}
+	// }, [userdata])
 
     if (typeof window === 'undefined' || window.location === undefined) {
         return null
@@ -857,66 +1127,120 @@ const LicencePopup = (props) => {
         color: "white",
     }
 
-    console.log("Priceitem: ", shuffleVariant)
+    // const isLoggedInHandler = () => {
+    //     if (calculatedCost === payasyougo) {
+    //         handlePayasyougo(props.userdata)
+    //         return
+    //     }
+
+    //     const priceItem =
+	// 		window.location.origin === "https://shuffler.io/" || "https://sandbox.shuffler.io/"
+	// 			? shuffleVariant === 0
+	// 				? "price_1PWI3uDzMUgUjxHSffUBwWCy"
+	// 				: "price_1PWI8EDzMUgUjxHSfEhUB7oL"
+
+	// 			: shuffleVariant === 0
+	// 				? "price_1PZPSSEJjT17t98NLJoTMYja"
+	// 				: "price_1PZPQuEJjT17t98N3yORUtd9";
+
+    //     const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`
+    //     const failUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=failure`
+	// 	const quantity = shuffleVariant === 0 ? selectedValue / 100 : selectedValue
+
+    //     console.log("Priceitem: ", priceItem, quantity, shuffleVariant)
+    //     var checkoutObject = {
+    //         lineItems: [
+    //             {
+    //                 price: priceItem,
+    //                 quantity: quantity,
+    //             },
+    //         ],
+    //         mode: "subscription",
+    //         billingAddressCollection: "auto",
+    //         successUrl: successUrl,
+    //         cancelUrl: failUrl,
+    //         clientReferenceId: props.userdata.active_org.id,
+    //     }
+
+	// 	if (stripe === undefined || stripe === null || stripe.redirectToCheckout === undefined) {
+	// 		window.open("https://shuffler.io/admin?admin_tab=billingstats&payment=stripe_error", "_self")
+	// 	}
+
+    //     stripe.redirectToCheckout(checkoutObject)
+    //         .then(function (result) {
+    //             console.log("SUCCESS STRIPE?: ", result)
+
+    //             ReactGA.event({
+    //                 category: "pricing",
+    //                 action: "add_card_success",
+    //                 label: "",
+    //             })
+    //         })
+    //         .catch(function (error) {
+    //             console.error("STRIPE ERROR: ", error)
+
+    //             ReactGA.event({
+    //                 category: "pricing",
+    //                 action: "add_card_error",
+    //                 label: "",
+    //             })
+    //         })
+    // }
+
     const isLoggedInHandler = () => {
-        if (calculatedCost === payasyougo) {
-            handlePayasyougo(props.userdata)
-            return
+        var priceItem;
+        if (window.location.origin === "https://shuffler.io" || window.location.origin === "https://sandbox.shuffler.io") {
+          priceItem = billingCycle === "monthly" ? "price_1R66rbEJjT17t98NHIQ78nrz" : "price_1R671UEJjT17t98NzfqWvSG7"
+        } else if (window.location.origin === "http://localhost:3002") {
+          priceItem = billingCycle === "monthly" ? "price_1R678hEJjT17t98Nai5J50gs" : "price_1R6c84EJjT17t98NR68gUfT7"
+      }
+    
+        const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`;
+        const failUrl = `${window.location.origin}/pricing?admin_tab=billingstats&payment=failure`;
+    
+        let quantity;
+    
+        if (billingCycle === "monthly") {
+          quantity = scaleValue / 10
+        } else {
+          quantity = (scaleValue / 10) * 12
         }
-
-        const priceItem = window.location.origin === "https://shuffler.io" ?
-            shuffleVariant === 0 ? "app_executions" : "cores"
-            :
-            shuffleVariant === 0 ? "price_1PZPSSEJjT17t98NLJoTMYja" : "price_1PZPQuEJjT17t98N3yORUtd9"
-
-        const successUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=success`
-        const failUrl = `${window.location.origin}/admin?admin_tab=billingstats&payment=failure`
-
-        console.log("Priceitem: ", priceItem, shuffleVariant)
-        var checkoutObject = {
-            lineItems: [
-                {
-                    price: priceItem,
-                    quantity: shuffleVariant === 0 ? selectedValue / 100 : selectedValue,
-                },
-            ],
-            mode: "subscription",
-            billingAddressCollection: "auto",
-            successUrl: successUrl,
-            cancelUrl: failUrl,
-            clientReferenceId: props.userdata.active_org.id,
-        }
-
-		if (stripe === undefined || stripe === null || stripe.redirectToCheckout === undefined) {
-			window.open("https://shuffler.io/admin?admin_tab=billingstats&payment=stripe_error", "_self")
-		}
-
-        stripe.redirectToCheckout(checkoutObject)
-            .then(function (result) {
-                console.log("SUCCESS STRIPE?: ", result)
-
-                ReactGA.event({
-                    category: "pricing",
-                    action: "add_card_success",
-                    label: "",
-                })
-            })
-            .catch(function (error) {
-                console.error("STRIPE ERROR: ", error)
-
-                ReactGA.event({
-                    category: "pricing",
-                    action: "add_card_error",
-                    label: "",
-                })
-            })
-    }
+    
+        redirectToCheckout(priceItem, quantity, successUrl, failUrl);
+      };
+    
+      const redirectToCheckout = (priceItem, quantity, successUrl, failUrl) => {
+        const checkoutObject = {
+          lineItems: [
+            {
+              price: priceItem,
+              quantity: quantity,
+            },
+          ],
+          mode: "subscription",
+          billingAddressCollection: "auto",
+          successUrl: successUrl,
+          cancelUrl: failUrl,
+          clientReferenceId: userdata.active_org.id,
+        };
+    
+        console.log("OBJECT: ", priceItem, checkoutObject);
+    
+        stripe
+          .redirectToCheckout(checkoutObject)
+          .then(function (result) {
+            console.log("SUCCESS STRIPE?: ", result);
+          })
+          .catch(function (error) {
+            console.error("STRIPE ERROR: ", error);
+          });
+      };
 
     return (
         <div>
-            <Grid container spacing={2} columns={16} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex", }}>
-                <Grid item xs={8}>
-                    {isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ?
+            <Grid container spacing={2} style={{ flexDirection: "row", flexWrap: "nowrap", borderRadius: '16px', display: "flex"}}>
+                <Grid item maxWidth={licensePopup ? 400 : 450}>
+                    {(selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0) && isCloud ?
                         <SubscriptionObject
                             index={0}
                             globalUrl={globalUrl}
@@ -928,7 +1252,29 @@ const LicencePopup = (props) => {
                             subscription={billingInfo.subscription}
                             highlight={selectedOrganization.subscriptions === undefined || selectedOrganization.subscriptions === null || selectedOrganization.subscriptions.length === 0}
                         />
-                        : !isCloud ?
+                        : 
+                        selectedOrganization.subscriptions !== undefined &&
+                        selectedOrganization.subscriptions !== null &&
+                        selectedOrganization.subscriptions.length > 0 ?
+                        selectedOrganization.subscriptions
+                            .reverse()
+                            .map((sub, index) => {
+                                return (
+                                    <SubscriptionObject
+                                        index={index + 1}
+                                        globalUrl={globalUrl}
+                                        userdata={userdata}
+                                        serverside={serverside}
+                                        billingInfo={billingInfo}
+                                        stripeKey={stripeKey}
+                                        selectedOrganization={selectedOrganization}
+                                        subscription={sub}
+                                        highlight={true}
+                                    />
+                                )
+                            })
+                        : null}       
+                        {!isCloud ?
                             <span style={{ display: "flex", }}>
                                 <SubscriptionObject
                                     index={0}
@@ -973,7 +1319,7 @@ const LicencePopup = (props) => {
                             </span>
                             : null}
 
-                    {isCloud &&
+                    {/* {isCloud &&
                         selectedOrganization.subscriptions !== undefined &&
                         selectedOrganization.subscriptions !== null &&
                         selectedOrganization.subscriptions.length > 0 ?
@@ -994,63 +1340,188 @@ const LicencePopup = (props) => {
                                     />
                                 )
                             })
-                        : null}
+                        : null} */}
                 </Grid>
-                <Grid item xs={8}>
+                {
+                licensePopup &&
+                (<Grid  item maxWidth={450}>
                     <Grid style={{}}>
                         {errorMessage.length > 0 ? <Typography variant="h4">Error: {errorMessage}</Typography> : null}
                         <Card style={{
                             padding: 20,
-                            borderRadius: theme.palette?.borderRadius,
-                            border: "1px solid #f85a3e",
+                             background:
+                            "linear-gradient(to right, #212121, #212121) padding-box, linear-gradient(90deg, #F86744 0%, #F34475 100%) border-box",
+                            borderWidth: "2px",
+                            borderStyle: "solid",
+                            borderColor: "transparent",
                         }}>
-                            <div>
-                                <Button style={{ backgroundColor: 'rgba(255, 132, 68, 0.2)', color: "#FF8444", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', }}
+                            <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: 25,
+                                marginLeft: -2,
+                            }}
+                            >
+                               <Button style={{ backgroundColor: 'rgba(255, 132, 68, 0.2)', color: "#FF8444", textTransform: "capitalize", borderRadius: 200, boxShadow: 'none', fontSize: 13 }}
                                     variant="contained"
-                                    color="primary">Recommended </Button>
-
+                                    color="primary">Recommended 
+                                </Button>
+                                {
+                                    billingCycle === "annual" && 
+                                    (
+                                        <Box
+                                sx={{
+                                    background: "rgba(248, 103, 68, 0.1)",
+                                    py: 0.5,
+                                    px: 1.5,
+                                    borderRadius: "8px",
+                                }}
+                                >
+                                        <Typography
+                                            sx={{
+                                            fontWeight: "bold",
+                                            background:
+                                                "linear-gradient(90deg, #FF8544 0%, #FB47A0 100%)",
+                                                WebkitBackgroundClip: "text",
+                                                WebkitTextFillColor: "transparent",
+                                                backgroundClip: "text",
+                                                fontSize: {
+                                                    xs: "12px",
+                                                    md: "14px",
+                                                },
+                                        }}
+                                        >
+                                            10% OFF
+                                        </Typography>
+                                        </Box>
+                                    )
+                                }
                             </div>
-                            <Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, flex: 5, }}>{shuffleVariant === 1 ? "Scale" : "Enterprise"}</Typography>
+                            <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: 10,
+                                marginTop: 10,
+                            }}
+                            >
+                            <Typography variant="h6" style={{ }}>
+                               {scaleValue > 300 ? "Enterprise Plan" : "Scale Plan"}
+                            </Typography>
+                            <Box sx={{ display: "flex", justifyContent: "center" }}>
+                                <ToggleButtonGroup
+                                    value={billingCycle}
+                                    exclusive
+                                    onChange={handleBillingCycleChange}
+                                    aria-label="billing cycle"
+                                    sx={{
+                                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                        fontFamily: theme.typography.fontFamily,
+                                        borderRadius: "30px",
+                                        marginTop: -1,
+                                        padding: "3px",
+                                        "& .MuiToggleButton-root": {
+                                            border: "none",
+                                            borderRadius: "30px",
+                                            color: "#fff",
+                                            padding: "6px 22px",
+                                            textTransform: "none",
+                                            fontSize: {
+                                                xs: "12px",
+                                            },
+                                            "&.Mui-selected": {
+                                                backgroundColor: "#fff",
+                                                fontFamily: theme.typography.fontFamily,
+                                                color: "#1A1A1A",
+                                                fontWeight: "bold",
+                                                "&:hover": {
+                                                    backgroundColor: "#fff",
+                                                },
+                                            },
+                                            "&:hover": {
+                                                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                                            },
+                                        },
+                                    }}
+                                >
+                                <ToggleButton value="monthly" aria-label="monthly">
+                                    Monthly
+                                </ToggleButton>
+                                <ToggleButton value="annual" aria-label="annual">
+                                    Annual
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                            </Box>
+                            </div>
                             <Divider />
                             <Typography variant="body1" color="textSecondary" style={{ marginTop: 20 }}>
-                                {shuffleVariant === 0 ?
-                                    "SaaS / Cloud - Per Month"
-                                    :
-                                    "Open Source + Scale License"
-                                }
+                               App Runs Units
                             </Typography>
 
-                            <Typography style={{ minHeight: 46, cursor: calculatedCores === "Get A Quote" ? "pointer" : "inherit", }} onClick={() => {
-
-                                if (calculatedCores === "Get A Quote") {
-                                    console.log("Clicked on get a quote")
-                                    if (window.drift !== undefined) {
-                                        window.drift.api.startInteraction({ interactionId: 340785 })
-                                    }
-                                }
-                            }}>{calculatedCost}</Typography>
-                            <Typography variant="body1" color="textSecondary" style={{}}>For {shuffleVariant === 1 ? `${selectedValue} CPU cores` : `${selectedValue}k App Runs`}: </Typography>
-                            <div style={{ textAlign: "center" }}>
-
-                                <Slider
-                                    aria-label="Small steps"
-                                    style={{ width: "80%", margin: "auto" }}
-                                    onChange={(event, newValue) => {
-                                        handleChange(event, newValue)
+                            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 10 , marginTop: 10 }}>
+                                <Typography style={{ 
+                                    fontSize: 24,
+                                    marginTop: 7,
+                                    marginBottom: 10,
+                                    fontWeight: "500",
+                                }} 
+                                >
+                                    {scaleValue > 300 ? "Let's Talk" : `$${getPrice(32) * (scaleValue / 10)}`}
+                                </Typography>
+                                <Typography
+                                    color="text.secondary"
+                                    sx={{
+                                        fontSize: "14px",
+                                        marginBottom: "-2px",
+                                        marginLeft: scaleValue > 300 ? 1 : 0,
                                     }}
-                                    marks
-                                    value={selectedValue}
-                                    step={shuffleVariant === 0 ? 100 : 4}
-                                    min={shuffleVariant === 0 ? 100 : 8}
-                                    max={shuffleVariant === 0 ? 1000 : 32}
-                                    valueLabelDisplay="auto"
-                                />
+                                >
+                                    {scaleValue > 300 ? `for ${scaleValue > 500 ? "500k+" : `${scaleValue}k`} App Runs` : `/month for ${scaleValue}k App Runs`}
+                                </Typography>
                             </div>
+                            <Box sx={{ px: 1 }}>
+                                <Slider
+                                  value={scaleValue}
+                                  onChange={handleScaleChange}
+                                  aria-labelledby="scale-slider"
+                                  valueLabelDisplay="auto"
+                                  valueLabelFormat={(value) => {
+                                    if(value === 510){
+                                      return "500k+"
+                                    }
+                                    return `${value}k`
+                                  }}
+                                  step={10}
+                                  min={10}
+                                  max={510}
+                                  marks
+                                 sx={{
+                                    color: "#ff8544",
+                                    "& .MuiSlider-thumb": {
+                                    width: 15,
+                                    height: 15,
+                                    },
+                                    "& .MuiSlider-valueLabel": {
+                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                    color: "rgba(241, 241, 241, 1)",
+                                    fontSize: 14,
+                                    borderRadius: "4px",
+                                    border: "1px solid rgba(73, 73, 73, 1)",
+                                    fontFamily: theme?.typography?.fontFamily,
+                                    },
+                                }}
+                                />
+                            </Box>
 
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     <span>{defaultTaskIcon}</span>
-                                    <Typography style={{ fontSize: 14, marginLeft: 8 }}>Priority Support</Typography>
+                                    <Typography style={{ fontSize: 14, marginLeft: 8 }}>Standard Email Support</Typography>
                                 </div>
                                 <Divider />
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1069,7 +1540,7 @@ const LicencePopup = (props) => {
                                 <Divider />
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     <span>{defaultTaskIcon}</span>
-                                    <Typography style={{ fontSize: 14, marginLeft: 8 }}>Help with Workflow and App development</Typography>
+                                    <Typography style={{ fontSize: 14, marginLeft: 8 }}>30 Days workflow run history</Typography>
                                 </div>
                             </div>
                             <div style={{ marginTop: 20, }} />
@@ -1088,18 +1559,23 @@ const LicencePopup = (props) => {
                         
 							navigate("/pricing")
 						} else {
-							window.open("https://shuffler.io/pricing?tab=onprem", "_blank")
+							window.open("https://shuffler.io/pricing?tab=Self-Hosted", "_blank")
 						}
                     }}
                     color="primary"
                 >
                     View all plans
                 </Button>
+
                 <Button
                     variant="contained"
                     style={{ borderRadius: 4, textTransform: "capitalize", color: "#1a1a1a", backgroundColor: "#ff8544", width: "100%", fontSize: 16}}
                     onClick={() => {
                         if (isCloud) {
+                            if(scaleValue > 300){
+                                navigate("/contact?category=cloud_enterprise_plan")
+                                return;
+                            }
 							ReactGA.event({
 								category: "header",
 								action: "upgread_clicks_popup",
@@ -1121,13 +1597,14 @@ const LicencePopup = (props) => {
                     }}
                     color="primary"
                 >
-                    Upgrade
+                    {scaleValue > 300 ? "Let's Talk" : "Upgrade"}
                 </Button>
                 </div>
             </DialogActions>
                         </Card>
                     </Grid>
-                </Grid>
+                </Grid>)
+                }
             </Grid> 
         </div>
     )
