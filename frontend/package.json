@@ -33,7 +33,7 @@
     "cytoscape-node-html-label": "^1.2.2",
     "cytoscape-panzoom": "^2.5.3",
     "cytoscape-undo-redo": "^1.3.3",
-    "d3": "~4.10.0",
+    "d3": "~4.13.0",
     "dayjs": "^1.11.10",
     "dotenv": "^6.1.0",
     "downshift": "^3.4.8",
