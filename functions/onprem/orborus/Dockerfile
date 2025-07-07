@@ -14,7 +14,7 @@ RUN go mod tidy
 #RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o orborus.
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/orborus .
 
-FROM alpine:3.21.2
+FROM alpine:3.21.3
 
 RUN apk add --no-cache bash tzdata
 #COPY --from=builder /app/orborus orborus
