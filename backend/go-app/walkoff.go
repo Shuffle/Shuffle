@@ -256,7 +256,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	orgId := request.Header.Get("Org")
 	if len(orgId) == 0 {
-		log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
+		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 		/*
 			resp.WriteHeader(403)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org header. This can be done by setting the 'ORG' environment variable for Orborus to your Org ID in Shuffle"}`)))
@@ -306,13 +306,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	timeNow := time.Now().Unix()
 	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
 	if err != nil {
-		if !strings.Contains(err.Error(), "mismatch") {
-			log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
-		}
-
-		log.Printf("[DEBUG] Issue with environment ID: %s", environment)
-
-		return
+		log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
 	}
 
 	//log.Printf("Found env: %#v", env)
