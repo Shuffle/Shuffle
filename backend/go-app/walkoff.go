@@ -306,13 +306,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	timeNow := time.Now().Unix()
 	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
 	if err != nil {
-		if !strings.Contains(err.Error(), "mismatch") {
-			log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
-		}
-
-		log.Printf("[DEBUG] Issue with environment ID: %s", environment)
-
-		return
+		log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
 	}
 
 	//log.Printf("Found env: %#v", env)
