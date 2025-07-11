@@ -904,13 +904,12 @@ const ParsedAction = (props) => {
 
 			if (paramvalue.includes("$")) {
 				let actions = workflow.actions?.map((action) => {
-					return "$" + action.label?.toLowerCase();
+					return "$" + action.label?.toLowerCase().replaceAll(" ", "_");
 				})
 
 				if (newActionList?.length > 0) {
-					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
+					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase().replaceAll(" ", "_"));
 					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
-					
 					// Extract all variable references from paramvalue
 					// Examples of what it matches:
 					//   - Simple variables: $test, $myVar, $x

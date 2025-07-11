@@ -92,9 +92,14 @@ const AdminNavBar = (props) => {
     const HandleVisibleTabs = () => {
         if (userdata?.id?.length > 0) {
             if (userdata?.active_org?.role === "admin" || userdata?.support) {
-                setVisibleItems(items);
+                if (isChildOrg) {
+                    const filteredItems = items.filter(item => item.text !== "Partner");
+                    setVisibleItems(filteredItems);
+                }else {
+                    setVisibleItems(items);
+                }
             }else {
-                const filteredItems = items.filter(item => item.text !== "Users" && item.text !== "Files" && item.text !== "Datastore" && item.text !== "Triggers" && item.text !== "Locations");
+                const filteredItems = items.filter(item => item.text !== "Users" && item.text !== "Files" && item.text !== "Datastore" && item.text !== "Triggers" && item.text !== "Locations" && item.text !== "Partner");
                 setVisibleItems(filteredItems);
             }
         }
@@ -105,12 +110,12 @@ const AdminNavBar = (props) => {
             // Filter out Users and Tenants tabs
             if (userdata?.active_org?.role === "admin" || userdata?.support) {
                 const filteredItems = items.filter(item => 
-                    item.text !== "Users" && item.text !== "Tenants"
+                    item.text !== "Users" && item.text !== "Tenants" && item.text !== "Partner" 
                 );
                 setVisibleItems(filteredItems);
             }else {
                 const filteredItems = items.filter(item => 
-                    item.text !== "Users" && item.text !== "Tenants" && item.text !== "Files" && item.text !== "Datastore" && item.text !== "Triggers" && item.text !== "Locations"
+                    item.text !== "Users" && item.text !== "Partner" && item.text !== "Tenants" && item.text !== "Files" && item.text !== "Datastore" && item.text !== "Triggers" && item.text !== "Locations"
                 );
                 setVisibleItems(filteredItems);
             }
@@ -191,7 +196,7 @@ const AdminNavBar = (props) => {
 
             const params = new URLSearchParams(location.search);
             const tab = params?.get('tab')?.toLowerCase();
-            if (tab === "users" || tab === "tenants") {
+            if (tab === "users" || tab === "tenants" || tab === "partner") {
                 toast.info("You are not allowed to access this tab. Please contact your admin for more information. Redirecting to Organization Configuration tab.");
                 setTimeout(() => {
                     setSelectedItem("Organization");
@@ -200,6 +205,7 @@ const AdminNavBar = (props) => {
                 }
                 , 3000);
             }
+
         } else if (userdata && isOrgLoaded && isUserDataLoaded && userdata?.active_org?.role !== "admin" && !userdata?.support) {
             const queryParams = new URLSearchParams(location.search);
             const tabName = queryParams?.get('admin_tab')?.toLowerCase();

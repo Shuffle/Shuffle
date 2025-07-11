@@ -315,7 +315,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
 
-  const { globalUrl, isLoggedIn } = props;
+  const { globalUrl, userdata, isLoggedIn } = props;
   //const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
   const [dayAmount, setDayAmount] = useState(7);
@@ -323,10 +323,10 @@ const Dashboard = (props) => {
   const [stats, setStats] = useState({});
   const [changeme, setChangeme] = useState("");
   const [statsRan, setStatsRan] = useState(false);
-	const [keys, setKeys] = useState([])
-	const [treeKeys, setTreeKeys] = useState([])
+  const [keys, setKeys] = useState([])
+  const [treeKeys, setTreeKeys] = useState([])
 
-  const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("");
+  const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("")
   const [selectedUsecases, setSelectedUsecases] = useState([]);
   const [usecases, setUsecases] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -750,8 +750,6 @@ const Dashboard = (props) => {
 
 		const newname = data.key !== undefined ? data.key.replaceAll("_", " ") : ""
 
-		console.log("KEYDATA: ", data)
-
 		const loadNewStats = (newkey) => {
 			const resp = LoadStats(globalUrl, newkey)
 			if (resp !== undefined) { 
@@ -807,7 +805,7 @@ const Dashboard = (props) => {
 									backgroundColor: theme.palette.inputColor,
 									color: "white",
 									height: 40,
-									maxWidth: 150, 
+									maxWidth: 200, 
 									borderRadius: theme.palette?.borderRadius,
 								  }}
 								>
@@ -829,10 +827,12 @@ const Dashboard = (props) => {
 							</Select>
 						}
 					</div>
+
 					<DashboardBarchart 
 						timelineData={data}
 						height={50}
 					/>
+
 				</Paper>
 			</Draggable>
 		)
@@ -847,14 +847,6 @@ const Dashboard = (props) => {
 					</span>
 				: null}
 			</div>
-
-			{/*widgetData === undefined || widgetData === null || widgetData === [] || widgetData.length === 0 ? null : 
-				<Draggable>
-					<Paper style={{height: 350, width: 500, padding: "15px 15px 15px 15px", }}>
-						<LineChartWrapper keys={widgetData[0]} height={280} width={470}  />
-					</Paper>
-				</Draggable>
-			*/}
 
 	  		{newWidgetData === undefined || newWidgetData === null || newWidgetData === [] ? null :
 				newWidgetData.map((data, index) => {
@@ -872,7 +864,9 @@ const Dashboard = (props) => {
   );
 
   const dataWrapper = (
-    <div style={{ maxWidth: 1366, margin: "auto", paddingTop: 10, }}>{data}</div>
+    <div style={{ maxWidth: 1366, margin: "auto", paddingTop: 10, }}>
+	  {data}
+	</div>
   );
 
   return dataWrapper;

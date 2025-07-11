@@ -2476,9 +2476,14 @@ const CodeEditor = (props) => {
 									}}
 									displayDataTypes={false}
 									onSelect={(select) => {
-										//HandleJsonCopy(executionResult.result, select, "exec");
+										var basename = "exec"
+										if (selectedAction !== undefined && selectedAction !== null && Object.keys(selectedAction).length !== 0) {
+											basename = selectedAction.label.toLowerCase().replaceAll(" ", "_")
+										}
+
+										HandleJsonCopy(executionResult.result, select, basename)
 									}}
-									name={"Test result"}
+									name={"Run Output"}
 								/>
 								:
 								<span style={{ maxHeight: 190, minHeight: 190, }}>

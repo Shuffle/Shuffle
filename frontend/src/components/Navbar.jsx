@@ -49,7 +49,7 @@ const menuData = {
     {
       title: "Shuffle",
       description:
-        "The most versatile automation engine with focus on security.",
+        "The most versatile automation engine. Focused on cybersecurity.",
       icon: "/images/icons/shuffleLogo.svg",
       path: "/docs/about",
       gaData: {
@@ -61,7 +61,7 @@ const menuData = {
     {
       title: "Singul",
       description:
-        "Connect your favorite services with a singul line of code.",
+        "Connect to your favorite services with a singul line of code.",
       icon: "/images/logos/singul.svg",
       path: "https://singul.io",
       gaData: {
@@ -70,6 +70,7 @@ const menuData = {
         label: "singul_click"
       }
     },
+	/*
     {
       title: "API Explorer",
       description:
@@ -82,6 +83,7 @@ const menuData = {
         label: "api_explorer_click"
       }
     },
+	*/
   ],
   Services: [
     {
@@ -1245,23 +1247,6 @@ const Navbar = (props) => {
               >
                 {menuItem.title}
               </Typography>
-              {menuItem.title === "Singul" && (
-                <Typography
-                  sx={{
-                    fontSize: '10px',
-                    color: '#FF8544',
-                    border: '1px solid #FF8544',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    lineHeight: 1,
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}
-                >
-                  Beta: Coming Soon
-                </Typography>
-              )}
             </Box>
             <Typography
               variant="body2"

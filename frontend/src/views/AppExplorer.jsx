@@ -233,6 +233,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
   const [secondaryApp, setSecondaryApp] = useState({});
   const [firstRequest, setFirstRequest] = useState(true);
   const [publishModalOpen, setPublishModalOpen] = React.useState(false);
+  const [showDistributionPopup, setShowDistributionPopup] = React.useState(false);
 
   const [categories, setCategories] = useState(appCategories)
   const [newWorkflowCategories, setNewWorkflowCategories] = React.useState([]);
@@ -743,7 +744,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     }
   };
 
-  const activateApp = (action) => {
+  const activateApp = (action, org_id, multiple_request = false) => {
     if (serverside === true) {
       return
     }
@@ -753,11 +754,14 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 	if (action !== undefined && action !== null) {
 		url = `${globalUrl}/api/v1/apps/${appId}/${action}`
 	}
-	fetch(url, {
+
+  
+  fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        "Accept": "application/json",
+        "Org-Id": org_id !== undefined && org_id !== null && org_id?.length > 0 ? org_id : userdata.active_org.id
       },
       credentials: "include",
     })
@@ -784,7 +788,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 				}
 			}
       } else {
-          if (checkLogin !== undefined && checkLogin !== null) {
+          if ((checkLogin !== undefined && checkLogin !== null) && !multiple_request) {
             checkLogin()
           }
 
@@ -795,6 +799,9 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 				toast("App activated for your organization!")
 			  }
 		  } else {
+        if (responseJson.success && !multiple_request &&(responseJson.reason !== undefined || responseJson.reason !== null)) {
+          toast.success(`${responseJson.reason}`);
+        }
 		  }
         }
       })
@@ -3909,6 +3916,212 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     </Dialog>
   ) : null;
 
+
+  const handleActivateApp = (id, action) => {
+    if (action === "activate_all") {
+      const childOrgs = userdata.orgs.filter(
+        (data) => data.creator_org === userdata.active_org.id
+      );
+      const orgIds = childOrgs.map((data) => data.id);
+      // run app activation requset for each org
+      orgIds.forEach((orgId) => {
+        activateApp("activate", orgId, true)
+      });
+      setTimeout(() => {
+        toast.success("App activated for all sub-orgs");
+      }, 5000);
+    } else if (action === "deactivate_all") {
+      const childOrgs = userdata.orgs.filter(
+        (data) => data.creator_org === userdata.active_org.id
+      );
+      const orgIds = childOrgs.map((data) => data.id);
+      // run app deactivation request for each org
+      orgIds.forEach((orgId) => {
+        activateApp("deactivate", orgId, true)
+      });
+
+      setTimeout(() => {
+        toast.success("App deactivated for all sub-orgs");
+      }, 5000);
+
+    } else if (action === "activate_single") {
+      if (id === null) {
+        toast.error("Please select a sub-org to activate the app for.");
+        return;
+      }
+      activateApp("activate", id);
+    } else if (action === "deactivate_single") {
+      if (id === null) {
+        toast.error("Please select a sub-org to deactivate the app for.");
+        return;
+      }
+      activateApp("deactivate", id);
+    }
+  };
+
+
+
+
+  const appDistributinModal = showDistributionPopup ? (
+  <Dialog
+    open={showDistributionPopup}
+    onClose={() => setShowDistributionPopup(false)}
+    PaperProps={{
+      sx: {
+        borderRadius: theme?.palette?.DialogStyle?.borderRadius || 3,
+        border: theme?.palette?.DialogStyle?.border,
+        fontFamily: theme?.typography?.fontFamily,
+        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+        zIndex: 1000,
+        minWidth: "600px",
+        minHeight: "320px",
+        overflow: "auto",
+        '& .MuiDialogContent-root': {
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+          },
+          '& .MuiDialogTitle-root': {
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+            p: 2,
+          },
+          '& .MuiDialogActions-root': {
+            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+          },
+      },
+    }}
+  >
+    <DialogTitle
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        pr: 1,
+        pb: 1,
+      }}
+    >
+      <Typography variant="h6" fontWeight={600} color="text.primary">
+        Select sub-org to distribute App
+      </Typography>
+      <IconButton
+        onClick={() => setShowDistributionPopup(false)}
+        sx={{
+          color: theme.palette.text.primary,
+        }}
+      >
+        <CloseIcon />
+      </IconButton>
+    </DialogTitle>
+
+    <DialogContent
+      sx={{
+        color: "rgba(255,255,255,0.85)",
+        px: 2,
+        pt: 1,
+        pb: 2,
+        display: "flex",
+        flexDirection: "column",
+        gap: 1,
+      }}
+    >
+      <MenuItem
+        value="none"
+        onClick={() => handleActivateApp(null, "deactivate_all")}
+        sx={{
+          borderRadius: 1,
+          px: 2,
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.08)',
+          },
+        }}
+      >
+        Deactivate for all suborgs
+      </MenuItem>
+
+      <MenuItem
+        value="all"
+        onClick={() => handleActivateApp(null, "activate_all")}
+        sx={{
+          borderRadius: 1,
+          px: 2,
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.08)',
+          },
+        }}
+      >
+        Activate for all suborgs
+      </MenuItem>
+
+      {userdata.orgs.map((data, index) => {
+        if (data.creator_org !== userdata.active_org.id) return null;
+
+        const imageSize = 28;
+        const imageStyle = {
+          width: imageSize,
+          height: imageSize,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          marginRight: 12,
+        };
+
+        const imageSrc = data.image || theme.palette.defaultImage;
+
+        return (
+          <MenuItem
+            key={index}
+            value={data.id}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderRadius: 1,
+              px: 2,
+              py: 1,
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.06)',
+              },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <img alt={data.name} src={imageSrc} style={imageStyle} />
+              <Typography variant="body1" color="text.primary">
+                {data.name}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                onClick={() => handleActivateApp(data.id, "activate_single")}
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '6px',
+                  fontWeight: 500,
+                }}
+              >
+                Activate
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                onClick={() => handleActivateApp(data.id, "deactivate_single")}
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '6px',
+                  fontWeight: 500,
+                }}
+              >
+                Deactivate
+              </Button>
+            </Box>
+          </MenuItem>
+        );
+      })}
+    </DialogContent>
+  </Dialog>
+) : null;
+
+
   const landingpageDataBrowser = (
     <div
       style={{
@@ -3918,6 +4131,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
       }}
     >
       {publishModal}
+      {appDistributinModal}
       <div style={{ display: "flex", position: "relative" }}>
         {isMobile ? null : (
           <Breadcrumbs
@@ -4066,7 +4280,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
             </Button>
           }
 
-          {isMobile || app?.reference_org === userdata?.active_org?.id ? null : (
+          {isMobile || app?.reference_org === userdata?.active_org?.id || (app?.suborg_distribution?.includes(userdata?.active_org?.id)) ? null : (
             <Button
 			  variant={userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appId) ? "outlined": "contained"}
               component="label"
@@ -4168,7 +4382,8 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 					Try the API
 				  </Button>
 				</a>
-                <Select
+             {app?.reference_org === userdata?.active_org?.id ? (
+              <Select
                   value={sharingConfiguration}
 			  	  disabled={!isCloud}
                   onChange={(event) => {
@@ -4223,6 +4438,11 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                     );
                   })}
                 </Select>
+             ): null}
+                
+              {userdata && (userdata?.active_org?.creator_org?.length > 0 || userdata?.active_org?.child_orgs?.length === 0) ? null : (
+                  <Button variant="outlined" color="secondary" onClick={()=> {setShowDistributionPopup(true)}} >Distribute App</Button>
+              )}
 			</div>
           ) : (
             <a

@@ -31,56 +31,9 @@ import {
 	Box,
 } from "@mui/material";
 
-import { 
-	BarChart,
-	BarSeries,
-	Bar,
-	BarLabel,
-
-	GridlineSeries,
-	Gridline,
-	TooltipArea,
-	ChartTooltip,
-	TooltipTemplate,
-} from 'reaviz';
-
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
+import LineChartWrapper from '../components/LineChartWrapper.jsx';
 import { Context } from '../context/ContextApi.jsx';
-
-const LineChartWrapper = ({keys, inputname, height, width}) => {
-  const [hovered, setHovered] = useState("");
-	const inputdata = keys.data === undefined ? keys : keys.data
-	const {themeMode} = useContext(Context)
-	const theme = getTheme(themeMode)
-
-
-	return (
-		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
-			<Typography variant="h6" style={{marginBotton: 30, }}>
-				{inputname}
-			</Typography>
-
-			<BarChart
-				style={{marginTop: 100, }}
-				width={"100%"}
-				height={height}
-				data={inputdata}
-
-		      	series={
-					<BarSeries
-					  bar={
-						<Bar />
-					  } 
-					/>
-				}
-				gridlines={
-					<GridlineSeries line={<Gridline direction="all" />} />
-				}
-			/>
-
-		</div>
-	)
-}
 
 
 const AppStats = (defaultprops) => {

@@ -56,7 +56,8 @@ const OrgHeaderexpandedNew = (props) => {
 		adminTab,
 		selectedStatus,
 		setSelectedStatus,
-		isEditOrgTab
+		isEditOrgTab,
+		handleStatusChange
 	} = props;
 
 	const classes = useStyles();
@@ -68,7 +69,7 @@ const OrgHeaderexpandedNew = (props) => {
 			style: {
 				maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
 				width: 300,
-				borderRadius: 20,
+				borderRadius: 4,
 				overflowY: "scroll",
 			},
 		},
@@ -93,40 +94,6 @@ const OrgHeaderexpandedNew = (props) => {
 	const { themeMode, supportEmail, brandColor } = useContext(Context);
 	const theme = getTheme(themeMode, brandColor);
 
-	const handleStatusChange = (event) => {
-		const { value } = event.target;
-		handleEditOrg(
-			orgName,
-			orgDescription,
-			selectedOrganization.id,
-			selectedOrganization?.image,
-			{
-				app_download_repo: selectedOrganization?.defaults?.app_download_repo,
-				app_download_branch: selectedOrganization?.defaults?.app_download_branch,
-				workflow_download_repo: selectedOrganization?.defaults?.workflow_download_repo,
-				workflow_download_branch: selectedOrganization?.defaults?.workflow_download_branch,
-				notification_workflow: selectedOrganization?.defaults?.notification_workflow,
-				documentation_reference: selectedOrganization?.defaults?.documentation_reference,
-				workflow_upload_repo: selectedOrganization?.defaults?.workflow_upload_repo,
-				workflow_upload_branch: selectedOrganization?.defaults?.workflow_upload_branch,
-				workflow_upload_username: selectedOrganization?.defaults?.workflow_upload_username,
-				workflow_upload_token: selectedOrganization?.defaults?.workflow_upload_token,
-				newsletter: selectedOrganization?.defaults?.newsletter,
-				weekly_recommendations: selectedOrganization?.defaults?.weekly_recommendations,
-			},
-			{
-				sso_entrypoint: selectedOrganization?.sso_config?.sso_entrypoint,
-				sso_certificate: selectedOrganization?.sso_config?.sso_certificate,
-				client_id: selectedOrganization?.sso_config?.client_id,
-				client_secret: selectedOrganization?.sso_config?.client_secret,
-				openid_authorization: selectedOrganization?.sso_config?.openid_authorization,
-				openid_token: selectedOrganization?.sso_config?.openid_token,
-				SSORequired: selectedOrganization?.sso_config?.SSORequired,
-				auto_provision: selectedOrganization?.sso_config?.auto_provision,
-			},
-			value.length === 0 ? ["none"] : value,
-		)
-	}
 	const [appDownloadBranch, setAppDownloadBranch] = React.useState(
 		selectedOrganization.defaults === undefined
 			? defaultBranch
@@ -544,7 +511,7 @@ const OrgHeaderexpandedNew = (props) => {
 													renderValue={(selected) => selected.join(', ')}
 													MenuProps={MenuProps}
 												>
-													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "integration partner", "distribution partner", "service partner", "old customer", "old lead"].map((name) => (
+													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "integration partner", "distribution partner", "channel partner", "service partner", "old customer", "old lead"].map((name) => (
 														<MenuItem key={name} value={name}>
 															<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 															<ListItemText primary={name} />
