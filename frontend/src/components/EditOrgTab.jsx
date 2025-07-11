@@ -25,6 +25,7 @@ const EditOrgTab = (props) => {
         handleGetOrg, 
          selectedStatus, setSelectedStatus,
          handleEditOrg,
+         handleStatusChange
     } = props;
     const [organizationFeatures, setOrganizationFeatures] = React.useState({});
     const [users, setUsers] = React.useState([]);
@@ -38,43 +39,6 @@ const EditOrgTab = (props) => {
 
     const { themeMode, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
-
-    const handleStatusChange = (event) => {
-        const { value } = event.target;
-        setSelectedStatus(value);
-
-        handleEditOrg(
-            selectedOrganization?.name,
-            selectedOrganization?.description,
-            selectedOrganization.id,
-            selectedOrganization.image,
-            {
-				app_download_repo: selectedOrganization?.defaults?.app_download_repo,
-				app_download_branch: selectedOrganization?.defaults?.app_download_branch,
-				workflow_download_repo: selectedOrganization?.defaults?.workflow_download_repo,
-				workflow_download_branch: selectedOrganization?.defaults?.workflow_download_branch,
-				notification_workflow: selectedOrganization?.defaults?.notification_workflow,
-				documentation_reference: selectedOrganization?.defaults?.documentation_reference,
-				workflow_upload_repo: selectedOrganization?.defaults?.workflow_upload_repo,
-				workflow_upload_branch: selectedOrganization?.defaults?.workflow_upload_branch,
-				workflow_upload_username: selectedOrganization?.defaults?.workflow_upload_username,
-				workflow_upload_token: selectedOrganization?.defaults?.workflow_upload_token,
-				newsletter: selectedOrganization?.defaults?.newsletter,
-				weekly_recommendations: selectedOrganization?.defaults?.weekly_recommendations,
-			},
-            {
-				sso_entrypoint: selectedOrganization?.sso_config?.sso_entrypoint,
-				sso_certificate: selectedOrganization?.sso_config?.sso_certificate,
-				client_id: selectedOrganization?.sso_config?.client_id,
-				client_secret: selectedOrganization?.sso_config?.client_secret,
-				openid_authorization: selectedOrganization?.sso_config?.openid_authorization,
-				openid_token: selectedOrganization?.sso_config?.openid_token,
-				SSORequired: selectedOrganization?.sso_config?.SSORequired,
-                auto_provision: selectedOrganization?.sso_config?.auto_provision,
-			},
-            value.length === 0 ? ["none"] : value,
-        );
-    };
 
 
     const getUsers = () => {
@@ -443,6 +407,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 isEditOrgTab={true}
                 handleGetOrg={handleGetOrg}
                 serverside={serverside}
+                handleStatusChange={handleStatusChange}
             />
             </div>
         </div >

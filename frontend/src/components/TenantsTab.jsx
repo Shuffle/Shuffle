@@ -667,13 +667,12 @@ const TenantsTab = memo((props) => {
         const handleDeleteAccount = () => {
           const baseURL = globalUrl;
     
-          const url = `${baseURL}/api/v1/orgs/${selectedOrganization?.id}`;
+          const url = `${baseURL}/api/v1/orgs/${selectedSuborg?.id}`;
 
           const data = {
-            suborg_id : selectedSuborg?.id,
             password: password,
-          }
-    
+          };
+
           fetch(url, {
             mode: "cors",
             method: "DELETE",

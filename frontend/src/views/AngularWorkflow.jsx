@@ -401,7 +401,6 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 //export const green = "#86c142";
 export const green = "#02CB70"
 export const yellow = "#FECC00";
-//export const red = "#ff3632";
 export const red = "#F53434";
 export const grey = "#b0b0b0";
 
@@ -729,6 +728,8 @@ const AngularWorkflow = (defaultprops) => {
 						"List tickets",
 						"Send Email",
 						"Get specific ticket",
+						"Update ticket",
+						"Add ticket comment",
 					],
 					"multiselect": true,
 				},
@@ -2258,7 +2259,7 @@ const AngularWorkflow = (defaultprops) => {
         currentnode.removeClass("shuffle-hover-highlight");
         currentnode.removeClass("awaiting-data-highlight");
         currentnode.addClass("success-highlight");
-        incomingEdges.addClass("success-highlight");
+
         outgoingEdges.addClass("success-highlight");
 
         if (visited !== undefined && visited !== null && !visited.includes(label)) {
@@ -5368,7 +5369,8 @@ const AngularWorkflow = (defaultprops) => {
 	if (!branchFound) {
 	  var relevantNodes = [] 
 
-	  const minDistance = 185 
+	  //const minDistance = 185 
+	  const minDistance = 85 
 	  const draggedNode = event.target
 	  const allnodes = cy.nodes().jsons()
 	  for (var nodekey in allnodes) {
@@ -5398,7 +5400,7 @@ const AngularWorkflow = (defaultprops) => {
 		if (decoratorNodeIds.includes(node.data.id)) {
 
 		  // Drag a little farther to remove it
-		  if (distance > minDistance + 75) {
+		  if (distance > minDistance + 125) {
 			// Remove the branch? Why?
 			const edgeToRemove = cy.getElementById(branches[branchkey].data.id)
 			if (edgeToRemove !== null && edgeToRemove !== undefined) {
@@ -18187,8 +18189,8 @@ const AngularWorkflow = (defaultprops) => {
       </div>
 
     </div>
-  const defaultEnvironment = environments && environments?.find(
-    (env) => env?.default && env?.Name?.toLowerCase() !== "cloud"
+  const defaultEnvironment = environments.find(
+    (env) => env.default && env.Name.toLowerCase() !== "cloud"
   );
 
   if (selectedTrigger.trigger_type === "PIPELINE" && selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
@@ -20997,7 +20999,10 @@ const AngularWorkflow = (defaultprops) => {
 			</div>
 			*/}
 
-      {userdata.support === true || (userdata.avatar !== undefined && (userdata.avatar === creatorProfile.github_avatar || allowList.includes(userdata.public_username))) ?
+      {userdata.support || 
+      (userdata.avatar !== undefined && (userdata.avatar === creatorProfile.github_avatar || allowList.includes(userdata.public_username))) || 
+       (workflow?.owner?.length > 0 && workflow.owner === userdata?.active_org?.id && userdata?.active_org.role === "admin") || 
+       (workflow?.owner?.length > 0 && workflow.owner === userdata?.id)?
         <div style={{ marginTop: 50, }}>
           <Typography variant="body2" color="textSecondary">
             You can see these buttons because you may have the correct access rights as a creator to help modify this workflow.
@@ -22738,7 +22743,7 @@ const AngularWorkflow = (defaultprops) => {
                             style={{ zIndex: 50000 }}
                           >
                             <ArrowLeftIcon style={{ 
-								color: relevant_errors.length > 0 ? yellow : theme.palette.textColor,
+								color: relevant_errors.length > 0 ? red : theme.palette.textColor,
 							}} />
                           </Tooltip>
                         </IconButton>
@@ -22782,6 +22787,26 @@ const AngularWorkflow = (defaultprops) => {
 						  </Tooltip>
 						</span>
 					  : null}
+
+                      {data?.action?.name === "run_schemaless" || data?.action?.name === "run_singul" || data?.action?.name === "singul" && data?.action?.parameters?.length > 4 ?  
+							<div
+						  		style={{flex: 10, float: "right", textAlign: "right", }}
+							>
+							  <Tooltip title={"Explore the raw debug-output"}>
+								  <a
+									rel="noopener noreferrer"
+									href={data?.action?.parameters?.find((param) => param?.name === "X-Debug-Url")?.value || ""}
+									target="_blank"
+									style={{
+									  textDecoration: "none",
+									  color: "rgba(255,255,255,0.4)",
+									}}
+								  >
+									<OpenInNewIcon />
+								  </a>
+							  </Tooltip>
+							</div>
+						: null}
 
                       {data.action.app_name === "shuffle-subflow" &&
                         validate.result.success !== undefined &&
@@ -22944,7 +22969,7 @@ const AngularWorkflow = (defaultprops) => {
 			  >
 				<b>Action Logs</b>
 			  </Typography>
-			  <Typography variant="body2" style={{ whiteSpace: 'pre-line', }}>
+			  <Typography variant="body2" color="textSecondary" style={{ whiteSpace: 'pre-line', }}>
 				More log details for this action are not available without <a style={{ color: theme.palette.linkColor, }} href="/admin?tab=locations" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{ color: theme.palette.linkColor, }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
 			  </Typography>
 			</div>
@@ -23002,7 +23027,9 @@ const AngularWorkflow = (defaultprops) => {
             variant="body1"
             style={{}}
           >
-            <b>{data.name}</b>: {showVariable ? data.value : null}
+            <b>{data.name}</b>: <span style={{color: "rgba(255,255,255,0.5)" }}>
+				{showVariable ? data.value : null}
+			</span>
           </Typography>
         }
         {open ?
@@ -23024,8 +23051,8 @@ const AngularWorkflow = (defaultprops) => {
             <Typography
               variant="body2"
               style={{
+				marginTop: 5, 
                 whiteSpace: 'pre-line',
-                color: showlink ? "#FF8544" : theme.palette.text.primary,
                 cursor: showlink ? "pointer" : "default",
               }}
               onClick={(e) => {
@@ -23035,7 +23062,7 @@ const AngularWorkflow = (defaultprops) => {
                   window.open(data.value, "_blank")
                 }
               }}
-              color={showlink ? "inherit" : "textSecondary"}
+              color={showlink ? "#ff8544" : "textSecondary"}
             >
               {data.value}
             </Typography>
@@ -23199,8 +23226,9 @@ const AngularWorkflow = (defaultprops) => {
         sx: {
           pointerEvents: "auto",
           color: theme.palette.text.primary,
-          minWidth: isMobile ? "90%" : "750px",
-          maxHeight: "550px",
+          minWidth: isMobile ? "90%" : 900,
+		  minHeight: 500, 
+          maxHeight: 650,
           overflowY: "auto",
           overflowX: "hidden",
           border: theme.palette.defaultBorder,
@@ -23418,7 +23446,9 @@ const AngularWorkflow = (defaultprops) => {
             >
               <b>{selectedResult.action.label.replaceAll("_", " ")}</b>
             </div>
-            <div style={{ fontSize: 14, color: theme.palette.textColor, }}>{selectedResult.action.name}</div>
+            <Typography variant="body2" color="textSecondary" style={{ }}>
+	  			{selectedResult.action.name}
+			</Typography>
           </div>
         </div>
 
@@ -25588,12 +25618,14 @@ const AngularWorkflow = (defaultprops) => {
       const actionIndex = workflow?.actions.findIndex(action => action.id === actionId);
       if (actionIndex >= 0) {
         // Find the parameter with matching name
-        console.log("fieldName", fieldName)
         const paramIndex = workflow.actions[actionIndex].parameters.findIndex(param => param.name === fieldName);
         if (paramIndex >= 0) {
           // Update the parameter value
           workflow.actions[actionIndex].parameters[paramIndex].value = newData;
-          
+          if(selectedAction !== undefined && selectedAction !== null && selectedAction.id === actionId) {
+            selectedAction.parameters[paramIndex].value = newData;
+            setSelectedAction(selectedAction)
+          }
           // Update workflow state to trigger re-render
           setWorkflow({...workflow});
           setLastSaved(false);

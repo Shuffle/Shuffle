@@ -36,7 +36,7 @@ const OrganizationTab = (props) => {
     const [billingInfo, setBillingInfo] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [curIndex, setCurIndex] = React.useState(0);
-    const items = ['Org Configuration', "SSO", "Notifications", 'Billing & Stats', 'Branding'];
+    const items = ['Org Configuration', "SSO", "Notifications", 'Billing & Stats'];
     const [visibleTabs, setVisibleTabs] = useState(items);
     const [unreadNotifications, setUnreadNotifications] = React.useState(
         notifications?.filter((notification) => notification.read === false)?.length
@@ -157,16 +157,16 @@ const OrganizationTab = (props) => {
                         isLoaded={isLoaded}
                     />
                 );
-            case 'branding':
-                return <Branding
-                    isCloud={isCloud}
-                    userdata={userdata}
-                    globalUrl={globalUrl}
-                    handleGetOrg={handleGetOrg}
-                    selectedOrganization={selectedOrganization}
-                    clickedFromOrgTab={true}
-                    setSelectedOrganization={setSelectedOrganization}
-                />;
+            // case 'branding':
+            //     return <Branding
+            //         isCloud={isCloud}
+            //         userdata={userdata}
+            //         globalUrl={globalUrl}
+            //         handleGetOrg={handleGetOrg}
+            //         selectedOrganization={selectedOrganization}
+            //         clickedFromOrgTab={true}
+            //         setSelectedOrganization={setSelectedOrganization}
+            //     />;
             // case 'analytics':
             //     return <AnalyticsTab isCloud={isCloud} userdata={userdata} globalUrl={globalUrl} />;
             default:

@@ -25,7 +25,11 @@ import {
 	Checkbox,
 	Chip,
 	Menu,
+	Pagination,
+	PaginationItem,
 } from "@mui/material";
+
+import { DataGrid } from "@mui/x-data-grid";
 
 import {
   Link as LinkIcon,
@@ -45,6 +49,7 @@ import Dropzone from "../components/Dropzone.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import {getTheme} from "../theme.jsx";
 import { Context } from "../context/ContextApi.jsx";
+import { red } from "../views/AngularWorkflow.jsx";
 
 const Files = memo((props) => {
   const { globalUrl, userdata, serverside, selectedOrganization, isCloud,isSelectedFiles } = props;
@@ -75,9 +80,370 @@ const Files = memo((props) => {
   const [showDistributionPopup, setShowDistributionPopup] = useState(false)
   const [selectedSubOrg, setSelectedSubOrg] = useState([])
   const [fileIdSelectedForDistribution, setFileIdSelectedForDistribution] = useState("")
+  const [totalAmount, setTotalAmount] = useState(0);
+const [page, setPage] = useState(0);
+const [pageSize, setPageSize] = useState(50)
+const [selectedRows, setSelectedRows] = useState([]);
+const [filesLoaded, setFilesLoaded] = useState(false);
   //const alert = useAlert();
   const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1", "response"]
   var upload = "";
+	const paginatedRows = files.slice(page * pageSize, (page + 1) * pageSize);
+
+  const columns = [
+	{
+		field : 'filename',
+		headerName: 'Name',
+		filterable: true,
+		sortable: true,
+		width: 250,
+		renderCell: (params) => {
+			if (params.row.filename === undefined || params.row.filename === null || params.row.filename.length < 1) {
+				return (
+					<Typography variant="body2" style={{ color: "grey" }}>
+						No name
+					</Typography>
+				)
+			} 
+
+			return (
+				<Tooltip 
+					title={params.row.filename} 
+					placement="left" 
+					arrow
+				>
+					<Typography variant="body2" style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", width: "100%" }}>
+						{params.row.filename}
+					</Typography>
+				</Tooltip>
+			);
+		}
+	},
+	{
+  field: 'Workflow',
+  headerName: 'Workflow',
+  renderCell: (params) => {
+    const file = params.row;
+    return (
+      file.workflow_id === "global" || !file.workflow_id ? (
+        <IconButton
+          disabled={file.workflow_id === "global"}
+          style={{ marginLeft: 10 }}
+        >
+          <OpenInNewIcon
+            style={{
+              color: file.workflow_id !== "global" ? "#FF8444" : "grey",
+            }}
+          />
+        </IconButton>
+      ) : (
+        <Tooltip title={"Go to workflow"} aria-label={"Download"}>
+          <span>
+            <a
+              rel="noopener noreferrer"
+              style={{
+                textDecoration: "none",
+                color: "#f85a3e",
+              }}
+              href={`/workflows/${file.workflow_id}`}
+              target="_blank"
+            >
+              <IconButton style={{ marginLeft: 10 }}>
+                <OpenInNewIcon
+                  style={{
+                    width: 24,
+                    height: 24,
+                    color: "#FF8444",
+                  }}
+                />
+              </IconButton>
+            </a>
+          </span>
+        </Tooltip>
+      )
+    );
+  },
+},
+{
+		field: 'md5_sum',
+		headerName: 'MD5',
+		width: 100,
+	},
+	{
+		field: "Status",
+		headerName: "Status",
+		renderCell: (params) => {
+			const file = params.row;
+			return (
+				<Typography variant="body2" style={{ color: file.status === "active" ? "#2BC07E" : "#FD4C62", fontWeight: "bold" }}>
+					{file.status.charAt(0).toUpperCase() + file.status.slice(1)}
+				</Typography>
+			);
+		}
+	},
+	{
+		field: "filesize",
+		headerName: "Filesize",
+
+	},
+	{
+		field: "actions",
+		headerName: "Actions",
+		width: 200,
+		renderCell: (params) => {
+			const file = params.row;
+			const filenamesplit = file.filename.split(".")
+			const iseditable = file.filesize < 2000000 && file.status === "active" && (allowedFileTypes.includes(filenamesplit[filenamesplit.length-1]) || !file?.filename.includes("."))
+			return (
+				<span style={{ display:"inline"}}>
+					<Tooltip
+						title={`Edit File (${allowedFileTypes.join(", ")}). Max size 2MB`}
+						style={{}}
+						aria-label={"Edit"}
+					>
+						<span>
+							<IconButton
+								disabled={!iseditable || file.org_id !== selectedOrganization.id}
+								style = {{padding: "6px", }}
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									setOpenEditor(true)
+									setOpenFileId(file.id)
+									readFileData(file)
+								}}
+							>
+								<svg
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+									>
+									<path
+										d="M16.1038 4.66848C16.3158 4.45654 16.5674 4.28843 16.8443 4.17373C17.1212 4.05903 17.418 4 17.7177 4C18.0174 4 18.3142 4.05903 18.5911 4.17373C18.868 4.28843 19.1196 4.45654 19.3315 4.66848C19.5435 4.88041 19.7116 5.13201 19.8263 5.40891C19.941 5.68582 20 5.9826 20 6.28232C20 6.58204 19.941 6.87882 19.8263 7.15573C19.7116 7.43263 19.5435 7.68423 19.3315 7.89617L8.43807 18.7896L4 20L5.21038 15.5619L16.1038 4.66848Z"
+										stroke={themeMode=== "dark" ? "#F1F1F1" : "#333"}
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</IconButton>
+						</span>
+					</Tooltip>
+					{/*
+					<Tooltip
+						title={"Public URL"}
+						style={{}}
+					>
+						<span>
+							<IconButton
+								style = {{padding: "6px"}}
+								disabled={file.status !== "active"}
+								onClick={() => {
+									// Open the file, without downloading it
+									window.open(`${globalUrl}/api/v1/files/${file.id}/content?type=text&authorization=${file.public_authorization}`, "_blank noreferrer noopener")
+								}}
+							>
+								<LinkIcon
+									style={{
+										color:
+											file.status === "active"
+												? "white"
+												: "grey",
+									}}
+								/>
+							</IconButton>
+						</span>
+					</Tooltip>
+					*/}
+					<Tooltip
+						title={"Download file"}
+						style={{}}
+						aria-label={"Download"}
+					>
+						<span>
+							<IconButton
+								style = {{padding: "6px"}}
+								disabled={file.status !== "active"}
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									downloadFile(file);
+								}}
+							>
+								<svg
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+								>
+								<rect
+									width="24"
+									height="24"
+									fill={themeMode === "dark" ? "#212121" : "#EDEDED"}
+									fillOpacity="0.02"
+								/>
+								<path
+									d="M8.22595 16.4463L11.7792 19.9995L15.3324 16.4463"
+									stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								<path
+									d="M11.7792 12.0049V19.9997"
+									stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								<path
+									d="M19.6676 17.415C20.4399 16.8719 21.019 16.0968 21.321 15.2023C21.6229 14.3078 21.632 13.3403 21.3468 12.4403C21.0617 11.5402 20.4971 10.7545 19.7352 10.197C18.9732 9.6396 18.0534 9.33948 17.1092 9.34021H15.99C15.7228 8.299 15.2229 7.33196 14.5279 6.5119C13.8329 5.69184 12.961 5.04013 11.9777 4.60583C10.9944 4.17153 9.92534 3.96596 8.85109 4.00459C7.77684 4.04322 6.72535 4.32505 5.77578 4.82886C4.82621 5.33267 4.00331 6.04534 3.36902 6.9132C2.73474 7.78106 2.30559 8.78151 2.11391 9.83922C1.92222 10.8969 1.97297 11.9844 2.26236 13.0196C2.55174 14.0549 3.07221 15.011 3.78459 15.816"
+									stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								</svg>
+
+							</IconButton>
+						</span>
+					</Tooltip>
+					<Tooltip
+						title={"Copy file ID"}
+						style={{}}
+						aria-label={"copy"}
+					>
+						<IconButton
+							style = {{padding: "6px"}}
+							onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									navigator.clipboard.writeText(file.id);
+									document.execCommand("copy");
+
+									toast(file.id + " copied to clipboard");
+							}}
+						>
+							<svg
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+								>
+								<rect
+									width="24"
+									height="24"
+									fillOpacity="1"
+								/>
+								<path
+									d="M14 4H7.6C7.17565 4 6.76869 4.16857 6.46863 4.46863C6.16857 4.76869 6 5.17565 6 5.6V18.4C6 18.8243 6.16857 19.2313 6.46863 19.5314C6.76869 19.8314 7.17565 20 7.6 20H17.2C17.6243 20 18.0313 19.8314 18.3314 19.5314C18.6314 19.2313 18.8 18.8243 18.8 18.4V8.8L14 4Z"
+									stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								<path
+									d="M14 4V8.8H18.8"
+									stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								</svg>
+						</IconButton>
+					</Tooltip>
+					<Tooltip
+						title={"Delete file"}
+						style={{marginLeft: isSelectedFiles?5:15, }}
+						aria-label={"Delete"}
+					>
+						<span>
+							<IconButton
+								disabled={file.status !== "active" || file.org_id !== selectedOrganization.id}
+								style={{ padding: "6px" }}
+								onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								deleteFile(file.id, true);
+								}}
+							>
+								<svg
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								xmlns="http://www.w3.org/2000/svg"
+								style={{
+									stroke: file.status === "active"  && file.org_id === selectedOrganization.id ? "#fd4c62" : "#c8c8c8",
+								}}
+								>
+								<path
+									d="M5 7.20001H6.6H19.4"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									fill="none"
+								/>
+								<path
+									d="M17.7996 7.2V18.4C17.7996 18.8243 17.631 19.2313 17.331 19.5314C17.0309 19.8314 16.624 20 16.1996 20H8.19961C7.77526 20 7.3683 19.8314 7.06824 19.5314C6.76818 19.2313 6.59961 18.8243 6.59961 18.4V7.2M8.99961 7.2V5.6C8.99961 5.17565 9.16818 4.76869 9.46824 4.46863C9.7683 4.16857 10.1753 4 10.5996 4H13.7996C14.224 4 14.6309 4.16857 14.931 4.46863C15.231 4.76869 15.3996 5.17565 15.3996 5.6V7.2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									fill="none"
+								/>
+								</svg>
+							</IconButton>
+							</span>
+					</Tooltip>
+				</span>
+			)
+		}
+	},
+	{
+		field: "distribution",
+		headerName: "Distribution",
+		renderCell: (params) => {
+			const file = params.row;
+			const isDistributed = file?.suborg_distribution?.length > 0 ? true : false;
+
+			return (
+				<>
+					{selectedOrganization.id !== undefined && file?.org_id !== selectedOrganization.id ?
+						<Tooltip
+							title="Parent organization controlled file. You can use, but not modify this file. Contact an admin of your parent organization if you need changes to this."
+							placement="top"
+						>
+							<Chip
+								label={"Parent"}
+								variant="contained"
+								color="secondary"
+								style={{display: "table-cell",}}
+							/>
+						</Tooltip>
+						:
+						<Tooltip
+							title="Distributed to sub-organizations. This means the sub organizations can use this file, but can not modify it."
+							placement="top"
+						>
+							<Checkbox
+								disabled={userdata?.active_org?.role !== "admin" || (selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ) ? true : false}
+								checked={isDistributed}
+								style={{ }}
+								onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setShowDistributionPopup(true)
+								if(file?.suborg_distribution?.length > 0){
+									setSelectedSubOrg(file.suborg_distribution)
+								}else{
+									setSelectedSubOrg([])
+								}
+								setFileIdSelectedForDistribution(file.id)
+								}}
+							/>
+						</Tooltip>
+					}
+				</>
+			)
+		}
+	}
+ ]
+
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
@@ -97,7 +463,7 @@ const Files = memo((props) => {
 
 		editFileConfig(id, "suborg_distribute", [...new Set(selectedSubOrg)])
 	}
-
+	
 	const editFileConfig = (id, parentAction, selectedSubOrg) => {
 			const data = {
 				id: id,
@@ -121,9 +487,9 @@ const Files = memo((props) => {
 				.then((response) =>
 					response.json().then((responseJson) => {
 						if (responseJson["success"] === false) {
-							toast("Failed overwriting files");
+							toast.error("Failed overwriting files");
 						} else {
-							toast("Successfully updated file!");
+							toast.success("File updated!");
 							setTimeout(() => {
 								getFiles();
 							}, 1000);
@@ -170,6 +536,7 @@ const Files = memo((props) => {
   }
 
   const getFiles = (namespace) => {
+	setFilesLoaded(false)
     var parsedurl = `${globalUrl}/api/v1/files`
 
 	if (namespace === undefined || namespace === null || namespace === "default") {
@@ -199,6 +566,11 @@ const Files = memo((props) => {
       .then((responseJson) => {
         if (responseJson.files !== undefined && responseJson.files !== null) {
           	setFiles(responseJson.files);
+			if (responseJson.total_amount !== undefined && responseJson.total_amount !== null && responseJson.total_amount > 0) {
+					setTotalAmount(responseJson.total_amount)
+			} else {
+				setTotalAmount(responseJson.files.length)
+			}
 			setShowLoader(false)
 			setShowDistributionPopup(false)
         } else if (responseJson.list !== undefined && responseJson.list !== null) {
@@ -227,7 +599,9 @@ const Files = memo((props) => {
       })
       .catch((error) => {
         toast(error.toString());
-      });
+      }).finally(() => {
+		setFilesLoaded(true)
+	  });
   };
 
 	useEffect(() => {
@@ -585,8 +959,12 @@ const Files = memo((props) => {
 
   ): null
 
-  const deleteFile = (file) => {
-    fetch(globalUrl + "/api/v1/files/" + file.id, {
+  const deleteFile = (fileId, showSinglDeleteToast) => {
+
+	console.log("Deleting file with ID: ", fileId)
+	console.log("showSinglDeleteToast: ", showSinglDeleteToast)
+
+    fetch(globalUrl + "/api/v1/files/" + fileId, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -602,18 +980,20 @@ const Files = memo((props) => {
         return response.json();
       })
       .then((responseJson) => {
-        if (responseJson.success) {
-          toast("Successfully deleted file") 
+        if (responseJson.success && showSinglDeleteToast === true) {
+          toast.success("Deleted file") 
         } else if (
           responseJson.reason !== undefined &&
           responseJson.reason !== null
         ) {
-          toast("Failed to delete file: " + responseJson.reason);
+          toast.error("Failed to delete file: " + responseJson.reason);
         }
 
-        setTimeout(() => {
-  			getFiles(selectedCategory)
-        }, 1500);
+        if (showSinglDeleteToast === true) {
+			setTimeout(() => {
+  				getFiles(selectedCategory)
+        	}, 1500);
+		}
       })
       .catch((error) => {
         toast(error.toString());
@@ -909,7 +1289,7 @@ const Files = memo((props) => {
 			{fileDistributionModal}
 			<div style={{width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
 
-        		<div style={{height: "100%", maxHeight: 1700,overflowY: 'auto', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
+        		<div style={{height: "100%", }}>
 					<div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
 					<DownloadFileIcon setLoadFileModalOpen={setLoadFileModalOpen} isSelectedFiles={isSelectedFiles} />
 
@@ -1131,528 +1511,135 @@ const Files = memo((props) => {
 						backgroundColor: theme.palette.textFieldStyle.backgroundColor,
 					}}
 				/>}
-				<div
-					style={{
-					borderRadius: 4,
-					marginTop: 24,
-					border: theme.palette.defaultBorder,
-					width: "100%",
-					overflowX: "auto", 
-					paddingBottom: 0,
-					}}
-				>
-				<List 
-					style={{
-						width: '100%', 
-						tableLayout: "auto", 
-						display: "table", 
-						minWidth: 800,
-						overflowX: "auto",
-						paddingBottom: 0,
-					}}
-					>
-					<ListItem
+				<div style={{ height: '100%', width: '100%',  }}>
+					<DataGrid 
+						rows={paginatedRows} 
+						columns={columns} 
+						checkboxSelection
+						disableRowSelectionOnClick
+						selectionModel={selectedRows}
+						onSelectionModelChange={(newSelection) => {
+							setSelectedRows(newSelection);
+						}}
+						sx={{
+							marginTop: 1, 
+							height: files.length*52,
+							width: "100%",
+							'.MuiTablePagination-selectLabel, .MuiTablePagination-select, .MuiTablePagination-selectIcon': {
+							display: 'none',
+							},
+							marginBottom: 20, 
+						}}
+						hideFooterSelectedRowCount={true}
+						hideFooter={true}
+						pagination
+						autoHeight={true}
+						getRowId={(row) => row.id}
+						keepNonExistentRowsSelected={false}
+						loading={filesLoaded === false}
+					/>
+					<div
 						style={{
-							borderBottom: theme.palette.defaultBorder ,
-							display: "table-row"
+							position: 'fixed',
+							bottom: 10,
+							left: 250,
+							right: 0,
+							height: 52,
+							zIndex: 1000,
+							display: 'flex',
+							alignItems: 'center',
+							paddingLeft: 16,
 						}}
 						>
-						{[
-							<Tooltip title={"Select all files"} style={{}} aria-label={""}>
-								<Checkbox 
-								sx={{padding: 0}}
-								onChange={() => {
-									setSelectAllChecked((prev) => !prev);
-									setSelectedFiles((prev) => {
-										if (prev.length === files.length) {
-											return []
-										} else {
-											return files.map((_, index) => !prev.includes(index))
-										}
-									})
-									if (selectAllChecked) {
-										setSelectedFileId([])
-									} else {
-										setSelectedFileId(
-											files
-												.filter((file) => file.namespace === selectedCategory)
-												.map((file) => file.id) 
-										);
-									}
-								}}
-							/>
-							</Tooltip>,
-							"Name",
-							"Workflow",
-							"Md5",
-							"Status",
-							"Filesize",
-							"Actions",
-							"Distribution"
-						]
-							.filter(Boolean)
-							.map((header, index) => (
-							<ListItemText
-								key={index}
-								primary={header}
-								style={{
-								display: "table-cell",
-								padding: index === 0 ? "0px 8px 8px 15px" : "0px 8px 8px 8px",
-								whiteSpace: "nowrap",
-								textOverflow: "ellipsis",
-								borderBottom: theme.palette.defaultBorder,
-								verticalAlign: "middle"
-								}}
-								primaryTypographyProps={{
-								style: {
-									paddingLeft: 10
-								}
-								}}
-							/>
-							))}
-						</ListItem>
-					{showLoader ? 
-					[...Array(6)].map((_, rowIndex) => (
-                        <ListItem
-                            key={rowIndex}
-                            style={{
-                                display: "table-row",
-                                backgroundColor: theme.palette.platformColor,
-                            }}
-                        >
-                            {Array(8)
-                                .fill()
-                                .map((_, colIndex) => (
-                                    <ListItemText
-                                        key={colIndex}
-                                        style={{
-                                            display: "table-cell",
-                                            padding: "8px",
-                                        }}
-                                    >
-                                        <Skeleton
-                                            variant="text"
-                                            animation="wave"
-                                            sx={{
-                                                backgroundColor: theme.palette.loaderColor,
-                                                height: "20px",
-                                                borderRadius: "4px",
-                                            }}
-                                        />
-                                    </ListItemText>
-                                ))}
-                        </ListItem>
-                    )):
-						files.length === 0 ? (
-							<div style={{textAlign: "center"}}>
-								<Typography style={{padding: 25, fontSize: 18, textAlign: 'center'}}>
-								No files found
-							</Typography>
-							</div>
-						):(
-							files?.map((file, index) => {
-								if (file.namespace === "") {
-									file.namespace = "default";
-								}
-	
-								if (file.namespace !== selectedCategory) {
-									return null;
-								}
-	
-								var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
-								if (index % 2 === 0) {
-									bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
-								}
-								const isDistributed = file?.suborg_distribution?.length > 0 ? true : false;
-								const filenamesplit = file.filename.split(".")
-								const iseditable = file.filesize < 2000000 && file.status === "active" && (allowedFileTypes.includes(filenamesplit[filenamesplit.length-1]) || !file?.filename.includes("."))
-								return (
-									<ListItem
-										key={index}
-										style={{
-											display: 'table-row',
-											backgroundColor: bgColor,
-											maxHeight: 100,
-											overflow: "hidden",
-											borderBottomLeftRadius: files?.length - 1 === index ? 8 : 0, 
-											borderBottomRightRadius: files?.length - 1 === index ? 8 : 0,
-										}}
-									>
-										{/*
-										<ListItemText
-											style={{
-												maxWidth: isSelectedFiles ? 170:225,
-												minWidth: isSelectedFiles ? 170:225,
-												overflow: "hidden",
-											}}
-											primary={new Date(file.updated_at * 1000).toISOString()}
-										/>
-										*/}
-										<ListItemText
-											style={{
-												display: 'table-cell',
-												overflow: "hidden",
-												textAlign: "center",
-											}}
-										>
-											<Checkbox
-												style={{ padding: 0 }}
-												disabled={file.org_id !== selectedOrganization.id}
-												checked={!!selectedFiles[index] || selectAllChecked}
-												onChange={() => {handleFileCheckboxChange(index); setSelectedFileId(prev => {
-													if (prev.includes(file.id)) {
-														return prev.filter((item) => item !== file.id)
-													} else {
-														return [...prev, file.id]
-													}
-												})}}
-											/>
-										</ListItemText>
-										<ListItemText
-											primaryTypographyProps={{
-												style: {
-												  maxWidth: "170px",
-												  whiteSpace: 'nowrap',
-												  textOverflow: 'ellipsis',
-												  overflow: 'hidden',
-												  padding: "8px 8px 8px 20px"
-												}
-											}}
-											primary={file.filename}
-										/>
-										<ListItemText
-											primary={
-												file.workflow_id === "global" || file.workflow_id === "" || file.workflow_id === null || file.workflow_id === undefined ?
-													<IconButton
-														disabled={file.workflow_id === "global"}
-														style={{marginLeft: 10}}
-													>
-														<OpenInNewIcon
-															style={{
-																color:
-																	file.workflow_id !== "global"
-																		? "#FF8444"
-																		: "grey",
-															}}
-														/>
-													</IconButton>
-												 : (
-													<Tooltip
-														title={"Go to workflow"}
-														style={{}}
-														aria-label={"Download"}
-													>
-														<span>
-															<a
-																rel="noopener noreferrer"
-																style={{
-																	textDecoration: "none",
-																	color: "#f85a3e",
-																}}
-																href={`/workflows/${file.workflow_id}`}
-																target="_blank"
-															>
-																<IconButton
-																	disabled={file.workflow_id === "global"}
-																	style={{marginLeft: 10}}
-																>
-																	<OpenInNewIcon
-																		style={{
-																			width: 24, height: 24,
-																			color:
-																				file.workflow_id !== "global"
-																					? "#FF8444"
-																					: "grey",
-																		}}
-																	/>
-																</IconButton>
-															</a>
-														</span>
-													</Tooltip>
-												)
-											}
-											style={{
-												display: 'table-cell',
-												overflow: "hidden",
-											}}
-										/>
-										<ListItemText
-											primary={(
-												<Tooltip title={file.md5_sum}>
-													{file.md5_sum}
-												</Tooltip>
-											)}
-											primaryTypographyProps={{
-												style:{
-													display: 'table-cell',
-													marginLeft:isSelectedFiles? 15:null,
-													overflow: "hidden",
-													whiteSpace: 'nowrap',
-													textOverflow: 'ellipsis',
-													maxWidth: 200,
-												}
-											}}
-										/>
-										<ListItemText
-											primary={file.status}
-											style={{
-												display: 'table-cell',
-												overflow: "hidden",
-												textAlign:isSelectedFiles?"center":null,
-												color: file.status === "active" ? "#2BC07E" : "#FD4C62"
-											}}
-										/>
-										<ListItemText
-											primary={file.filesize}
-											style={{
-												display: 'table-cell',
-												overflow: "hidden",
-												textAlign:'center'
-											}}
-										/>
-										<ListItemText
-											primary=<span style={{ display:"inline"}}>
-												<Tooltip
-													title={`Edit File (${allowedFileTypes.join(", ")}). Max size 2MB`}
-													style={{}}
-													aria-label={"Edit"}
-												>
-													<span>
-														<IconButton
-															disabled={!iseditable || file.org_id !== selectedOrganization.id}
-															style = {{padding: "6px", }}
-															onClick={() => {
-																setOpenEditor(true)
-																setOpenFileId(file.id)
-																readFileData(file)
-															}}
-														>
-															<svg
-																width="24"
-																height="24"
-																viewBox="0 0 24 24"
-																fill="none"
-																xmlns="http://www.w3.org/2000/svg"
-																>
-																<path
-																	d="M16.1038 4.66848C16.3158 4.45654 16.5674 4.28843 16.8443 4.17373C17.1212 4.05903 17.418 4 17.7177 4C18.0174 4 18.3142 4.05903 18.5911 4.17373C18.868 4.28843 19.1196 4.45654 19.3315 4.66848C19.5435 4.88041 19.7116 5.13201 19.8263 5.40891C19.941 5.68582 20 5.9826 20 6.28232C20 6.58204 19.941 6.87882 19.8263 7.15573C19.7116 7.43263 19.5435 7.68423 19.3315 7.89617L8.43807 18.7896L4 20L5.21038 15.5619L16.1038 4.66848Z"
-																	stroke={themeMode=== "dark" ? "#F1F1F1" : "#333"}
-																	strokeLinecap="round"
-																	strokeLinejoin="round"
-																/>
-															</svg>
-														</IconButton>
-													</span>
-												</Tooltip>
-												{/*
-												<Tooltip
-													title={"Public URL"}
-													style={{}}
-												>
-													<span>
-														<IconButton
-															style = {{padding: "6px"}}
-															disabled={file.status !== "active"}
-															onClick={() => {
-																// Open the file, without downloading it
-																window.open(`${globalUrl}/api/v1/files/${file.id}/content?type=text&authorization=${file.public_authorization}`, "_blank noreferrer noopener")
-															}}
-														>
-															<LinkIcon
-																style={{
-																	color:
-																		file.status === "active"
-																			? "white"
-																			: "grey",
-																}}
-															/>
-														</IconButton>
-													</span>
-												</Tooltip>
-												*/}
-												<Tooltip
-													title={"Download file"}
-													style={{}}
-													aria-label={"Download"}
-												>
-													<span>
-														<IconButton
-															style = {{padding: "6px"}}
-															disabled={file.status !== "active"}
-															onClick={() => {
-																downloadFile(file);
-															}}
-														>
-															<svg
-															width="24"
-															height="24"
-															viewBox="0 0 24 24"
-															fill="none"
-															xmlns="http://www.w3.org/2000/svg"
-															>
-															<rect
-																width="24"
-																height="24"
-																fill={themeMode === "dark" ? "#212121" : "#EDEDED"}
-																fillOpacity="0.02"
-															/>
-															<path
-																d="M8.22595 16.4463L11.7792 19.9995L15.3324 16.4463"
-																stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															/>
-															<path
-																d="M11.7792 12.0049V19.9997"
-																stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															/>
-															<path
-																d="M19.6676 17.415C20.4399 16.8719 21.019 16.0968 21.321 15.2023C21.6229 14.3078 21.632 13.3403 21.3468 12.4403C21.0617 11.5402 20.4971 10.7545 19.7352 10.197C18.9732 9.6396 18.0534 9.33948 17.1092 9.34021H15.99C15.7228 8.299 15.2229 7.33196 14.5279 6.5119C13.8329 5.69184 12.961 5.04013 11.9777 4.60583C10.9944 4.17153 9.92534 3.96596 8.85109 4.00459C7.77684 4.04322 6.72535 4.32505 5.77578 4.82886C4.82621 5.33267 4.00331 6.04534 3.36902 6.9132C2.73474 7.78106 2.30559 8.78151 2.11391 9.83922C1.92222 10.8969 1.97297 11.9844 2.26236 13.0196C2.55174 14.0549 3.07221 15.011 3.78459 15.816"
-																stroke={file.status === "active" ? (themeMode === "dark" ? "#F1F1F1" : "black") : "grey"}
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															/>
-															</svg>
+						<div style={{
+							width: 1200, 
+							margin: "auto", 
+							padding: 10, 
+							backgroundColor: theme.palette.platformColor,
+							borderRadius: 4,
+							border: "1px solid rgba(255, 255, 255, 0.5)",
 
-														</IconButton>
-													</span>
-												</Tooltip>
-												<Tooltip
-													title={"Copy file ID"}
-													style={{}}
-													aria-label={"copy"}
-												>
-													<IconButton
-														style = {{padding: "6px"}}
-														onClick={() => {
-																navigator.clipboard.writeText(file.id);
-																document.execCommand("copy");
-	
-																toast(file.id + " copied to clipboard");
-														}}
-													>
-														<svg
-															width="24"
-															height="24"
-															viewBox="0 0 24 24"
-															fill="none"
-															xmlns="http://www.w3.org/2000/svg"
-															>
-															<rect
-																width="24"
-																height="24"
-																fillOpacity="1"
-															/>
-															<path
-																d="M14 4H7.6C7.17565 4 6.76869 4.16857 6.46863 4.46863C6.16857 4.76869 6 5.17565 6 5.6V18.4C6 18.8243 6.16857 19.2313 6.46863 19.5314C6.76869 19.8314 7.17565 20 7.6 20H17.2C17.6243 20 18.0313 19.8314 18.3314 19.5314C18.6314 19.2313 18.8 18.8243 18.8 18.4V8.8L14 4Z"
-																stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															/>
-															<path
-																d="M14 4V8.8H18.8"
-																stroke={themeMode === "dark" ? "#F1F1F1" : "#333"}
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															/>
-															</svg>
-													</IconButton>
-												</Tooltip>
-												<Tooltip
-													title={"Delete file"}
-													style={{marginLeft: isSelectedFiles?5:15, }}
-													aria-label={"Delete"}
-												>
-													<span>
-														<IconButton
-															disabled={file.status !== "active" || file.org_id !== selectedOrganization.id}
-															style={{ padding: "6px" }}
-															onClick={() => {
-															deleteFile(file);
-															}}
-														>
-															<svg
-															width="24"
-															height="24"
-															viewBox="0 0 24 24"
-															xmlns="http://www.w3.org/2000/svg"
-															style={{
-																stroke: file.status === "active"  && file.org_id === selectedOrganization.id ? "#fd4c62" : "#c8c8c8",
-															}}
-															>
-															<path
-																d="M5 7.20001H6.6H19.4"
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																fill="none"
-															/>
-															<path
-																d="M17.7996 7.2V18.4C17.7996 18.8243 17.631 19.2313 17.331 19.5314C17.0309 19.8314 16.624 20 16.1996 20H8.19961C7.77526 20 7.3683 19.8314 7.06824 19.5314C6.76818 19.2313 6.59961 18.8243 6.59961 18.4V7.2M8.99961 7.2V5.6C8.99961 5.17565 9.16818 4.76869 9.46824 4.46863C9.7683 4.16857 10.1753 4 10.5996 4H13.7996C14.224 4 14.6309 4.16857 14.931 4.46863C15.231 4.76869 15.3996 5.17565 15.3996 5.6V7.2"
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																fill="none"
-															/>
-															</svg>
-														</IconButton>
-														</span>
-												</Tooltip>
-											</span>
+							display: "flex",
+							textAlign: "center", 
+						}}>
+							<Typography variant="body2" style={{ color: theme.palette.text.primary, marginRight: 50, marginTop: 6, marginLeft: 350, }}>
+								{page * pageSize + 1} - {Math.min((page + 1) * pageSize, totalAmount)} of {totalAmount}
+							</Typography>
+							
+							<Pagination
+								count={Math.ceil(files.length / pageSize)}
+								page={page+1}
+								renderItem={(item) => {
+
+									return (
+									<PaginationItem
+										{...item}
+										style={{
+											marginLeft: 4,
+											marginRight: 4,
+											height: 35,
+											width: 35,
+										}}
+									/>
+									)
+
+								}}
+								onChange={(e, value) => {
+								if (value < 1) {
+									return
+								}
+
+								const newPage = value-1
+								console.log("New page: ", value)
+								// handleChangePage()
+
+								setPage(newPage)
+								}}
+							/>
+
+							{selectedRows.length > 0 ?
+								<Button
+									style={{ marginLeft: 50, }}
+									onClick={() => {
+									if (selectedRows.length === 0) {
+										toast("Please select files to delete");
+										return;
+									}
+
+									for (let i = 0; i < selectedRows.length; i++) {
+										const fileIdToDelete = selectedRows[i];
+										deleteFile(fileIdToDelete, false);
+
+										if (i === selectedRows.length - 1) {
+										setTimeout(() => {
+											setSelectedRows([]);
+											getFiles(selectedCategory);
+											toast.success(
+											`Deleted ${selectedRows.length} file${selectedRows.length === 1 ? "" : "s"}`
+											);
+										}, 2500);
+										}
+									}
+									}}
+									variant={"outlined"}
+									color="secondary"
+									startIcon={
+										<DeleteIcon
 											style={{
-												display: 'table-cell',
-												textAlign:'center'
-												// overflow: "hidden",
+												color: red,
+												marginRight: 10, 
 											}}
-										/>
-										<ListItemText primaryTypographyProps={{
-                                    style: {
-                                      padding: 8
-                                    }
-                                  }} style={{ display: "table-cell", textAlign: 'center', verticalAlign: 'middle'}} >
-                                  {selectedOrganization.id !== undefined && file?.org_id !== selectedOrganization.id ?
-                                      <Tooltip
-                                          title="Parent organization controlled file. You can use, but not modify this file. Contact an admin of your parent organization if you need changes to this."
-                                          placement="top"
-                                      >
-                                          <Chip
-                                              label={"Parent"}
-                                              variant="contained"
-                                              color="secondary"
-                                              style={{display: "table-cell",}}
-                                          />
-                                      </Tooltip>
-                                      :
-                                      <Tooltip
-                                          title="Distributed to sub-organizations. This means the sub organizations can use this file, but can not modify it."
-                                          placement="top"
-                                      >
-                                          <Checkbox
-                                              disabled={userdata?.active_org?.role !== "admin" || (selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ) ? true : false}
-                                              checked={isDistributed}
-                                              style={{ }}
-                                              onClick={() => {
-												setShowDistributionPopup(true)
-												if(file?.suborg_distribution?.length > 0){
-													setSelectedSubOrg(file.suborg_distribution)
-												}else{
-													setSelectedSubOrg([])
-												}
-												setFileIdSelectedForDistribution(file.id)
-                                              }}
-                                          />
-                                      </Tooltip>
-                                  }
-                              </ListItemText>
-									</ListItem>
-								);
-							})
-						)
-					}
-				</List>
+									/>
+									}
+								>
+									Delete {selectedRows.length} File{ selectedRows.length > 1 ? "s" : "" }
+								</Button>
+							: null}
+						</div>
+						</div>
 				</div>
-					</div>
 				</div>
+			</div>
 			</div>
 		</Dropzone>
 	)

@@ -54,7 +54,8 @@ const PartnerSettings = (props) => {
         "tech_partner": "#ff8544",
         "distribution_partner": "#2BC07E",
         "service_partner": "#a99cf9",
-        "integration_partner": "#fb47a0"
+        "integration_partner": "#fb47a0",
+        "channel_partner": "#4caf50",
     }
 
     const handleSendUpdateRequest = () => {
@@ -85,6 +86,7 @@ const PartnerSettings = (props) => {
             { field: partnerData?.landscape_image_url, name: "Landscape Image" },
             { field: partnerData?.website_url, name: "Website URL" },
             { field: partnerData?.article_url, name: "Article URL" },
+            { field: partnerData?.contact_email, name: "Contact Email" },
             { field: partnerData?.country, name: "Country" },
             { field: partnerData?.region, name: "Region" },
         ];
@@ -129,6 +131,7 @@ const PartnerSettings = (props) => {
             description: partnerData.description?.trim(),
             website_url: partnerData.website_url?.trim(),
             article_url: partnerData.article_url?.trim(),
+            contact_email: partnerData.contact_email?.trim(),
             partner_type: partnerTypes,
             expertise: partnerData?.expertise || [],
             services: partnerData?.services || [],
@@ -177,6 +180,7 @@ const PartnerSettings = (props) => {
             description: partnerData.description?.trim(),
             website_url: partnerData.website_url?.trim(),
             article_url: partnerData.article_url?.trim(),
+            contact_email: partnerData.contact_email?.trim(),
             partner_type: partnerTypes,
             usecases: partnerData?.usecases || [],
             expertise: partnerData?.expertise || [],

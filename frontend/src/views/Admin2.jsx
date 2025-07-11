@@ -87,6 +87,10 @@ const Admin2 = (props) => {
 							leads.push("distribution partner");
 						}
 
+                        if (responseJson.lead_info.channel_partner) {
+                            leads.push("channel partner");
+                        }
+
 						if (responseJson.lead_info.service_partner) {
 							leads.push("service partner");
 						}

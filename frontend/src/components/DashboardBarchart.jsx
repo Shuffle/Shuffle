@@ -1,6 +1,7 @@
 import React from 'react';
-import { Bar } from 'react-chartjs-2';
 import { toast } from "react-toastify";
+
+import LineChartWrapper from '../components/LineChartWrapper.jsx';
 
 export const LoadStats = (globalUrl, cachekey) => {
 	if (globalUrl === undefined) {
@@ -64,84 +65,13 @@ export const LoadStats = (globalUrl, cachekey) => {
 	})
 }
 
+// This wrapper is a waste lol
 const DashboardBarchart = (props) => {
-	// this is clearly unfinished and not worth my time. 
-	// refer to health page to see how i made it work there w/o using chartjs
+	const { timelineData, title, height, } = props;
 
-	// const { timelineData, title, height, } = props;
-	// var inputHeight = 15 
-	// if (height !== undefined && height !== null) {
-	// 	inputHeight = height
-	// }
-
-	// const barOptions = {
-	// 	plugins: {
-    // 		tooltip: {
-    //   			enabled: true, // Ensure tooltips are enabled
-	// 		},
-	//   	},
-	//     tooltips: {
-	//       mode: 'index',
-	//       intersect: false,
-	//     },
-    //     legend: {
-    //         display: false
-    //     },
-    //     layout: {
-    //         padding: {
-    //             top: 0, // Adjust the top padding as needed
-    //             bottom: -10, // Adjust the bottom padding as needed
-    //             left: 0, // Adjust the left padding as needed
-    //             right: 0, // Adjust the right padding as needed
-    //         },
-    //     },
-    //     scales: {
-	// 		y: {
-	// 			beginAtZero: false,
-	// 		},
-    //         yAxes: [{
-    //             ticks: {
-    //                 display: false 
-    //             },
-	// 			beginAtZero: false,
-    //         }],
-    //         xAxes: [{
-    //             ticks: {
-    //                 display: false 
-    //             },
-	// 			beginAtZero: false,
-    //         }]
-    //     },
-    //     tooltips: {
-    //         callbacks: {
-    //             label: function (tooltipItem, data) {
-    //                 const label = data.labels[tooltipItem.index]
-    //                 return label.split('\n')[0]
-    //             },
-    //             afterLabel: function (tooltipItem, data) {
-	// 				const amount = tooltipItem.value === undefined || tooltipItem.value === null ? 0 : tooltipItem.value
-    //                 return `Amount: ${amount}` 
-    //             },
-    //             title: function () {
-    //                 return title === undefined ? '' : title
-    //             }
-    //         }
-    //     }
-    // }
-
-	// return (
-	// 	<Bar
-	//         data={timelineData}
-	//         options={barOptions}
-	// 		height={inputHeight}
-	//         getElementAtEvent={(elements) => {
-	//       	  if (elements && elements.length > 0) {
-	//       		  //toast("Click event")
-	//       		  console.log("Clicked: ", elements)
-	//       	  }
-	//         }}
-	//     />
-	// )
+	return (
+		<LineChartWrapper keys={timelineData} height={150} width={"100%"} border={false} />
+	)
 }
 
 export default DashboardBarchart;
