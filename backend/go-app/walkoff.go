@@ -26,6 +26,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	newscheduler "github.com/carlescere/scheduler"
+	"github.com/go-co-op/gocron"
 	"github.com/frikky/kin-openapi/openapi3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -42,17 +43,22 @@ var baseEnvironment = "onprem"
 var cloudname = "cloud"
 
 var scheduledJobs = map[string]*newscheduler.Job{}
+var cronJobs = map[string]*gocron.Job{}
 var scheduledOrgs = map[string]*newscheduler.Job{}
+
+var CronScheduler = gocron.NewScheduler(time.UTC)
 
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
 	var err error
 	testSplit := strings.Split(frequency, "*")
 	cronJob := ""
+	isCron := false
 	newfrequency := 0
 
 	if len(testSplit) > 5 {
 		cronJob = frequency
+		isCron = true
 	} else {
 		newfrequency, err = strconv.Atoi(frequency)
 		if err != nil {
@@ -65,12 +71,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		//} else if int(newfrequency) <
 	}
 
-	// Reverse. Can't handle CRON, only numbers
-	if len(cronJob) > 0 {
-		return errors.New("cronJob isn't formatted correctly")
-	}
-
-	if newfrequency < 1 {
+	if newfrequency < 1 && !isCron {
 		return errors.New("Frequency has to be more than 0")
 	}
 
@@ -96,17 +97,27 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		}
 	}
 
-	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
+	log.Printf("[INFO] Starting frequency for execution: %s", frequency)
 
-	//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
-	jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
-	if err != nil {
-		log.Printf("Failed to schedule workflow: %s", err)
-		return err
+	if isCron {
+		cronJob, err := CronScheduler.Cron(cronJob).Do(job)
+		if err != nil {
+			log.Printf("[ERROR] Failed to start schedule with cron(%s): %s", cronJob, err)
+		}
+
+		cronJobs[scheduleId] = cronJob
+	} else {
+		//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
+		jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
+		if err != nil {
+			log.Printf("Failed to schedule workflow: %s", err)
+			return err
+		}
+
+		scheduledJobs[scheduleId] = jobret
 	}
 
 	//scheduledJobs = append(scheduledJobs, jobret)
-	scheduledJobs[scheduleId] = jobret
 
 	// Doesn't need running/not running. If stopped, we just delete it.
 	timeNow := int64(time.Now().Unix())
@@ -117,6 +128,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		Argument:             string(body),
 		WrappedArgument:      bodyWrapper,
 		Seconds:              newfrequency,
+		Frequency:            frequency,
 		CreationTime:         timeNow,
 		LastModificationtime: timeNow,
 		LastRuntime:          timeNow,
@@ -1541,7 +1553,15 @@ func deleteSchedule(ctx context.Context, id string) error {
 			value.Lock()
 		} else {
 			// FIXME - allow it to kind of stop anyway?
-			return errors.New("Can't find the schedule.")
+			if j, ok := cronJobs[id]; ok {
+				err := CronScheduler.RemoveByID(j)
+				if err != nil {
+					log.Printf("[ERROR] Failed to remove the scheduler %s", err)
+					return err
+				}
+			} else {
+				return errors.New("Can't find the schedule.")
+			}
 		}
 	}
 
