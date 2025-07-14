@@ -4034,7 +4034,6 @@ func runInitEs(ctx context.Context) {
 	// FIXME: This should ONLY run on one backend instance
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
-	log.Printf("Schedules %s", schedules)
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
 	} else {
