@@ -2695,7 +2695,7 @@ const Workflows2 = (props) => {
                                                     style={{
                                                         height: 24,
                                                         width: 24,
-                                                        filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(0.9)",
+                                                        filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(1)",
                                                         cursor: "pointer",
                                                     }}
                                                     onClick={() => {
@@ -2716,7 +2716,7 @@ const Workflows2 = (props) => {
                                                         style={{
                                                             height: 24,
                                                             width: 24,
-                                                            filter: "brightness(0.6)",
+                                                            filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(1)",
                                                             cursor: "pointer",
                                                         }}
                                                         onClick={() => {
