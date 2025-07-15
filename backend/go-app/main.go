@@ -4078,14 +4078,23 @@ func runInitEs(ctx context.Context) {
 
 			//log.Printf("Schedule: %#v", schedule)
 			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
-			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
-			if err != nil {
-				log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+			if schedule.Seconds == 0 && len(schedule.Frequency) > 0 {
+				cronJob, err := CronScheduler.Cron(schedule.Frequency).Do(job(schedule))
+				if err != nil {
+					log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+				} else {
+					log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
+				}
+				cronJobs[schedule.Id] = cronJob
 			} else {
-				log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
+				jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
+				if err != nil {
+					log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+				} else {
+					log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
+				}
+				scheduledJobs[schedule.Id] = jobret
 			}
-
-			scheduledJobs[schedule.Id] = jobret
 		}
 	}
 
@@ -5090,6 +5099,7 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 func initHandlers() {
 	var err error
 	ctx := context.Background()
+	CronScheduler.StartAsync()
 
 	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
 	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
