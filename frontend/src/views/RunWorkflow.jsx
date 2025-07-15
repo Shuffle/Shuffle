@@ -13,7 +13,7 @@ import { makeStyles } from '@mui/material/styles';
 import { useInterval } from "react-powerhooks";
 import { isMobile } from "react-device-detect";
 import Markdown from "react-markdown";
-import theme from '../theme.jsx';
+import {getTheme} from '../theme.jsx';
 import rehypeRaw from "rehype-raw";
 import RecentWorkflow from "../components/RecentWorkflow.jsx";
 
@@ -58,6 +58,8 @@ const hrefStyle = {
 
 const RunWorkflow = (defaultprops) => {
   const { globalUrl, userdata, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
+  const { themeMode, brandColor } = useContext(Context);
+  const theme = getTheme(themeMode, brandColor);
 
   const { supportEmail } = useContext(Context);
   let navigate = useNavigate();

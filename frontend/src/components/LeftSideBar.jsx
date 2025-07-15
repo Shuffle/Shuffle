@@ -578,7 +578,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           },
         }}
       >
-        {userdata && (userdata?.org_status?.includes("integration_partner") && userdata?.org_status?.includes("sub_org")) ? null : (
+        {userdata && (userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.role !== "admin") ? null : (
           <>
             <ToggleButtonGroup
       value={currentSelectedTheme}
