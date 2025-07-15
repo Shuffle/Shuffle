@@ -3,6 +3,7 @@ package main
 import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/shuffle/shuffle-shared"
+	"github.com/shuffle/singul/pkg"
 
 	"archive/zip"
 	"bufio"
@@ -5191,6 +5192,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories", shuffle.GetActiveCategories).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/categories/run", singul.RunCategoryAction).Methods("POST", "OPTIONS")
+
 	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
