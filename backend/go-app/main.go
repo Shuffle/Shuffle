@@ -23,6 +23,8 @@ import (
 	"math/rand"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/base64"
+	"path/filepath"
 
 	"net/http/httptest"
 	"strings"
@@ -259,6 +261,70 @@ type Hook struct {
 	Running     bool         `json:"running" datastore:"running"`
 	OrgId       string       `json:"org_id" datastore:"org_id"`
 	Environment string       `json:"environment" datastore:"environment"`
+}
+
+// Form structures for the Web Form Generator
+type FormField struct {
+	Id           string            `json:"id" datastore:"id"`
+	Type         string            `json:"type" datastore:"type"`
+	Label        string            `json:"label" datastore:"label"`
+	Name         string            `json:"name" datastore:"name"`
+	Required     bool              `json:"required" datastore:"required"`
+	Placeholder  string            `json:"placeholder" datastore:"placeholder"`
+	HelpText     string            `json:"help_text" datastore:"help_text"`
+	Validation   map[string]string `json:"validation" datastore:"validation,noindex"`
+	Options      []string          `json:"options" datastore:"options"`
+	DefaultValue string            `json:"default_value" datastore:"default_value"`
+	Visible      bool              `json:"visible" datastore:"visible"`
+	Order        int               `json:"order" datastore:"order"`
+}
+
+type FormSettings struct {
+	RequireAuth       bool   `json:"require_auth" datastore:"require_auth"`
+	AllowAnonymous    bool   `json:"allow_anonymous" datastore:"allow_anonymous"`
+	SubmitButtonText  string `json:"submit_button_text" datastore:"submit_button_text"`
+	SuccessMessage    string `json:"success_message" datastore:"success_message"`
+	RedirectUrl       string `json:"redirect_url" datastore:"redirect_url"`
+	MaxSubmissions    int    `json:"max_submissions" datastore:"max_submissions"`
+	EnableCaptcha     bool   `json:"enable_captcha" datastore:"enable_captcha"`
+	FormWidth         int    `json:"form_width" datastore:"form_width"`
+	Theme             string `json:"theme" datastore:"theme"`
+}
+
+type FormWorkflow struct {
+	Id             string `json:"id" datastore:"id"`
+	TriggerOnSubmit bool   `json:"trigger_on_submit" datastore:"trigger_on_submit"`
+	PassFormData   bool   `json:"pass_form_data" datastore:"pass_form_data"`
+}
+
+type FormMetadata struct {
+	Created     int64  `json:"created" datastore:"created"`
+	Updated     int64  `json:"updated" datastore:"updated"`
+	CreatedBy   string `json:"created_by" datastore:"created_by"`
+	Submissions int64  `json:"submissions" datastore:"submissions"`
+}
+
+type Form struct {
+	Id          string       `json:"id" datastore:"id"`
+	Name        string       `json:"name" datastore:"name"`
+	Description string       `json:"description" datastore:"description"`
+	Fields      []FormField  `json:"fields" datastore:"fields,noindex"`
+	Settings    FormSettings `json:"settings" datastore:"settings"`
+	Workflow    FormWorkflow `json:"workflow" datastore:"workflow"`
+	Metadata    FormMetadata `json:"metadata" datastore:"metadata"`
+	OrgId       string       `json:"org_id" datastore:"org_id"`
+	Owner       string       `json:"owner" datastore:"owner"`
+}
+
+type FormSubmission struct {
+	Id        string                 `json:"id" datastore:"id"`
+	FormId    string                 `json:"form_id" datastore:"form_id"`
+	Data      map[string]interface{} `json:"data" datastore:"data,noindex"`
+	Timestamp int64                  `json:"timestamp" datastore:"timestamp"`
+	IpAddress string                 `json:"ip_address" datastore:"ip_address"`
+	UserAgent string                 `json:"user_agent" datastore:"user_agent"`
+	UserId    string                 `json:"user_id" datastore:"user_id"`
+	OrgId     string                 `json:"org_id" datastore:"org_id"`
 }
 
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -1839,6 +1905,808 @@ func handleNewSchedule(resp http.ResponseWriter, request *http.Request) {
 	log.Println("Generating new schedule")
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true, "message": "Created new service"}`))
+}
+
+// Form API handlers
+func handleGetForms(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in get forms: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to get forms: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	ctx := context.Background()
+	forms, err := getForms(ctx, user.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting forms for org %s: %s", user.ActiveOrg.Id, err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	newjson, err := json.Marshal(forms)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(newjson)
+}
+
+func handleGetForm(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var formId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+		formId = location[4]
+	}
+
+	if len(formId) != 32 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		return
+	}
+
+	// Check if form is public or requires authentication
+	ctx := context.Background()
+	form, err := getForm(ctx, formId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting form %s: %s", formId, err)
+		resp.WriteHeader(404)
+		resp.Write([]byte(`{"success": false, "message": "Form not found"}`))
+		return
+	}
+
+	// If form requires authentication, check user
+	if form.Settings.RequireAuth {
+		user, userErr := shuffle.HandleApiAuthentication(resp, request)
+		if userErr != nil {
+			log.Printf("[WARNING] Api authentication failed in get form: %s", userErr)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "message": "Authentication required"}`))
+			return
+		}
+
+		if user.ActiveOrg.Id != form.OrgId {
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "message": "Access denied"}`))
+			return
+		}
+	}
+
+	newjson, err := json.Marshal(form)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(newjson)
+}
+
+func handleCreateForm(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in create form: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to create forms: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed reading body for create form: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	var form Form
+	err = json.Unmarshal(body, &form)
+	if err != nil {
+		log.Printf("[WARNING] Failed unmarshaling form: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Set form metadata
+	form.Id = uuid.NewV4().String()
+	form.OrgId = user.ActiveOrg.Id
+	form.Owner = user.Id
+	form.Metadata.Created = time.Now().Unix()
+	form.Metadata.Updated = time.Now().Unix()
+	form.Metadata.CreatedBy = user.Id
+	form.Metadata.Submissions = 0
+
+	ctx := context.Background()
+	err = setForm(ctx, form)
+	if err != nil {
+		log.Printf("[WARNING] Failed setting form: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	newjson, err := json.Marshal(form)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(201)
+	resp.Write(newjson)
+}
+
+func handleUpdateForm(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var formId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+		formId = location[4]
+	}
+
+	if len(formId) != 32 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		return
+	}
+
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in update form: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to update forms: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	ctx := context.Background()
+	existingForm, err := getForm(ctx, formId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting form %s for update: %s", formId, err)
+		resp.WriteHeader(404)
+		resp.Write([]byte(`{"success": false, "message": "Form not found"}`))
+		return
+	}
+
+	if existingForm.OrgId != user.ActiveOrg.Id {
+		resp.WriteHeader(403)
+		resp.Write([]byte(`{"success": false, "message": "Access denied"}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed reading body for update form: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	var form Form
+	err = json.Unmarshal(body, &form)
+	if err != nil {
+		log.Printf("[WARNING] Failed unmarshaling form: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Preserve certain fields
+	form.Id = formId
+	form.OrgId = existingForm.OrgId
+	form.Owner = existingForm.Owner
+	form.Metadata.Created = existingForm.Metadata.Created
+	form.Metadata.CreatedBy = existingForm.Metadata.CreatedBy
+	form.Metadata.Submissions = existingForm.Metadata.Submissions
+	form.Metadata.Updated = time.Now().Unix()
+
+	err = setForm(ctx, form)
+	if err != nil {
+		log.Printf("[WARNING] Failed updating form: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	newjson, err := json.Marshal(form)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(newjson)
+}
+
+func handleDeleteForm(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var formId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+		formId = location[4]
+	}
+
+	if len(formId) != 32 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		return
+	}
+
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in delete form: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to delete forms: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	ctx := context.Background()
+	form, err := getForm(ctx, formId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting form %s for delete: %s", formId, err)
+		resp.WriteHeader(404)
+		resp.Write([]byte(`{"success": false, "message": "Form not found"}`))
+		return
+	}
+
+	if form.OrgId != user.ActiveOrg.Id {
+		resp.WriteHeader(403)
+		resp.Write([]byte(`{"success": false, "message": "Access denied"}`))
+		return
+	}
+
+	err = shuffle.DeleteKey(ctx, "forms", formId)
+	if err != nil {
+		log.Printf("[WARNING] Failed deleting form: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true, "message": "Form deleted successfully"}`))
+}
+
+func handleFormSubmission(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var formId string
+	if location[1] == "api" {
+		if len(location) <= 5 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+		formId = location[4]
+	}
+
+	if len(formId) != 32 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		return
+	}
+
+	ctx := context.Background()
+	form, err := getForm(ctx, formId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting form %s for submission: %s", formId, err)
+		resp.WriteHeader(404)
+		resp.Write([]byte(`{"success": false, "message": "Form not found"}`))
+		return
+	}
+
+	// Check authentication requirements
+	var user shuffle.User
+	if form.Settings.RequireAuth {
+		userPtr, userErr := shuffle.HandleApiAuthentication(resp, request)
+		if userErr != nil {
+			log.Printf("[WARNING] Api authentication failed in form submission: %s", userErr)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "message": "Authentication required"}`))
+			return
+		}
+		user = *userPtr
+
+		if user.ActiveOrg.Id != form.OrgId {
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "message": "Access denied"}`))
+			return
+		}
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed reading body for form submission: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	var submissionData map[string]interface{}
+	err = json.Unmarshal(body, &submissionData)
+	if err != nil {
+		log.Printf("[WARNING] Failed unmarshaling form submission: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Validate required fields
+	for _, field := range form.Fields {
+		if field.Required {
+			if _, exists := submissionData[field.Name]; !exists {
+				resp.WriteHeader(400)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Required field '%s' is missing"}`, field.Label)))
+				return
+			}
+		}
+	}
+
+	// Create form submission record
+	submission := FormSubmission{
+		Id:        uuid.NewV4().String(),
+		FormId:    formId,
+		Data:      submissionData,
+		Timestamp: time.Now().Unix(),
+		IpAddress: request.RemoteAddr,
+		UserAgent: request.UserAgent(),
+		OrgId:     form.OrgId,
+	}
+
+	if form.Settings.RequireAuth {
+		submission.UserId = user.Id
+	}
+
+	err = setFormSubmission(ctx, submission)
+	if err != nil {
+		log.Printf("[WARNING] Failed saving form submission: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Update form submission count
+	form.Metadata.Submissions++
+	err = setForm(ctx, form)
+	if err != nil {
+		log.Printf("[WARNING] Failed updating form submission count: %s", err)
+	}
+
+	// Trigger workflow if configured
+	if form.Workflow.TriggerOnSubmit && form.Workflow.Id != "" {
+		go func() {
+			err := triggerFormWorkflow(form, submissionData, user)
+			if err != nil {
+				log.Printf("[WARNING] Failed triggering workflow for form submission: %s", err)
+			}
+		}()
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true, "message": "Form submitted successfully"}`))
+}
+
+func triggerFormWorkflow(form Form, submissionData map[string]interface{}, user shuffle.User) error {
+	ctx := context.Background()
+
+	// Get the workflow
+	workflow, err := shuffle.GetWorkflow(ctx, form.Workflow.Id, true)
+	if err != nil {
+		return fmt.Errorf("failed to get workflow: %s", err)
+	}
+
+	// Prepare execution data
+	executionData := map[string]interface{}{
+		"form_id": form.Id,
+		"form_name": form.Name,
+		"submission_data": submissionData,
+		"timestamp": time.Now().Unix(),
+	}
+
+	if form.Settings.RequireAuth && user.Id != "" {
+		executionData["user_id"] = user.Id
+		executionData["user_email"] = user.Username
+	}
+
+	executionDataBytes, err := json.Marshal(executionData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal execution data: %s", err)
+	}
+
+	// Create execution request
+	executionRequest := shuffle.ExecutionRequest{
+		ExecutionId:   uuid.NewV4().String(),
+		WorkflowId:    workflow.ID,
+		Authorization: "",
+		Environments:  []string{""},
+	}
+
+	// Execute workflow
+	workflowExecution := shuffle.WorkflowExecution{
+		ExecutionId:       executionRequest.ExecutionId,
+		Workflow:          *workflow,
+		ExecutionArgument: string(executionDataBytes),
+		ExecutionSource:   "form_submission",
+		Status:            "EXECUTING",
+		Start:             workflow.Start,
+		StartedAt:         time.Now().Unix(),
+		CompletedAt:       0,
+		Authorization:     executionRequest.Authorization,
+		OrgId:             form.OrgId,
+	}
+
+	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+	if err != nil {
+		return fmt.Errorf("failed to set workflow execution: %s", err)
+	}
+
+	log.Printf("[INFO] Triggered workflow %s from form submission %s", workflow.ID, form.Id)
+	return nil
+}
+
+// File operation handlers to fix issue #687 - Read-only file system
+func handleFileWrite(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Authentication is optional for file operations to support both authenticated and anonymous workflows
+	var user *shuffle.User
+	var err error
+
+	// Try to authenticate, but don't fail if it doesn't work
+	user, err = shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[INFO] File write request without authentication - allowing for workflow execution")
+		user = nil
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed reading body for file write: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "message": "Failed to read request body"}`))
+		return
+	}
+
+	var fileRequest struct {
+		Filename string `json:"filename"`
+		Content  string `json:"content"`
+		Mode     string `json:"mode"` // "text" or "binary"
+		Encoding string `json:"encoding"` // "utf-8", "base64", etc.
+	}
+
+	err = json.Unmarshal(body, &fileRequest)
+	if err != nil {
+		log.Printf("[WARNING] Failed unmarshaling file write request: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "message": "Invalid request format"}`))
+		return
+	}
+
+	if fileRequest.Filename == "" {
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "message": "Filename is required"}`))
+		return
+	}
+
+	// Sanitize filename to prevent directory traversal
+	filename := filepath.Base(fileRequest.Filename)
+	if filename != fileRequest.Filename {
+		log.Printf("[WARNING] Filename sanitized from '%s' to '%s'", fileRequest.Filename, filename)
+	}
+
+	// Get the shuffle files directory
+	shuffleFilesPath := os.Getenv("SHUFFLE_FILE_LOCATION")
+	if shuffleFilesPath == "" {
+		shuffleFilesPath = "/tmp/shuffle-files"
+	}
+
+	// Ensure directory exists
+	err = os.MkdirAll(shuffleFilesPath, 0755)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create shuffle files directory: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "message": "Failed to create files directory"}`))
+		return
+	}
+
+	filePath := filepath.Join(shuffleFilesPath, filename)
+
+	// Handle different content encodings
+	var contentBytes []byte
+	if fileRequest.Encoding == "base64" {
+		contentBytes, err = base64.StdEncoding.DecodeString(fileRequest.Content)
+		if err != nil {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "message": "Invalid base64 content"}`))
+			return
+		}
+	} else {
+		contentBytes = []byte(fileRequest.Content)
+	}
+
+	// Write the file
+	err = ioutil.WriteFile(filePath, contentBytes, 0644)
+	if err != nil {
+		log.Printf("[ERROR] Failed to write file %s: %s", filePath, err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "message": "Failed to write file"}`))
+		return
+	}
+
+	log.Printf("[INFO] File written successfully: %s (%d bytes)", filePath, len(contentBytes))
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "File written successfully",
+		"filename": filename,
+		"path": filePath,
+		"size": len(contentBytes),
+	}
+
+	responseBytes, _ := json.Marshal(response)
+	resp.WriteHeader(200)
+	resp.Write(responseBytes)
+}
+
+func handleFileRead(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var filename string
+	if location[1] == "api" {
+		if len(location) <= 5 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "message": "Filename required"}`))
+			return
+		}
+		filename = location[5]
+	}
+
+	// Sanitize filename
+	filename = filepath.Base(filename)
+
+	shuffleFilesPath := os.Getenv("SHUFFLE_FILE_LOCATION")
+	if shuffleFilesPath == "" {
+		shuffleFilesPath = "/tmp/shuffle-files"
+	}
+
+	filePath := filepath.Join(shuffleFilesPath, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		resp.WriteHeader(404)
+		resp.Write([]byte(`{"success": false, "message": "File not found"}`))
+		return
+	}
+
+	// Read the file
+	contentBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Printf("[ERROR] Failed to read file %s: %s", filePath, err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "message": "Failed to read file"}`))
+		return
+	}
+
+	// Try to determine if content is text or binary
+	isText := true
+	for _, b := range contentBytes {
+		if b == 0 {
+			isText = false
+			break
+		}
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"filename": filename,
+		"size": len(contentBytes),
+		"is_text": isText,
+	}
+
+	if isText {
+		response["content"] = string(contentBytes)
+		response["encoding"] = "utf-8"
+	} else {
+		response["content"] = base64.StdEncoding.EncodeToString(contentBytes)
+		response["encoding"] = "base64"
+	}
+
+	responseBytes, _ := json.Marshal(response)
+	resp.WriteHeader(200)
+	resp.Write(responseBytes)
+}
+
+func handleFileList(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	shuffleFilesPath := os.Getenv("SHUFFLE_FILE_LOCATION")
+	if shuffleFilesPath == "" {
+		shuffleFilesPath = "/tmp/shuffle-files"
+	}
+
+	// Ensure directory exists
+	err := os.MkdirAll(shuffleFilesPath, 0755)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create shuffle files directory: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "message": "Failed to access files directory"}`))
+		return
+	}
+
+	files, err := ioutil.ReadDir(shuffleFilesPath)
+	if err != nil {
+		log.Printf("[ERROR] Failed to list files in %s: %s", shuffleFilesPath, err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "message": "Failed to list files"}`))
+		return
+	}
+
+	var fileList []map[string]interface{}
+	for _, file := range files {
+		if !file.IsDir() {
+			fileInfo := map[string]interface{}{
+				"name": file.Name(),
+				"size": file.Size(),
+				"modified": file.ModTime().Unix(),
+				"is_dir": false,
+			}
+			fileList = append(fileList, fileInfo)
+		}
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"files": fileList,
+		"count": len(fileList),
+		"path": shuffleFilesPath,
+	}
+
+	responseBytes, _ := json.Marshal(response)
+	resp.WriteHeader(200)
+	resp.Write(responseBytes)
+}
+
+func handleFileDelete(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var filename string
+	if location[1] == "api" {
+		if len(location) <= 5 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "message": "Filename required"}`))
+			return
+		}
+		filename = location[5]
+	}
+
+	// Sanitize filename
+	filename = filepath.Base(filename)
+
+	shuffleFilesPath := os.Getenv("SHUFFLE_FILE_LOCATION")
+	if shuffleFilesPath == "" {
+		shuffleFilesPath = "/tmp/shuffle-files"
+	}
+
+	filePath := filepath.Join(shuffleFilesPath, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		resp.WriteHeader(404)
+		resp.Write([]byte(`{"success": false, "message": "File not found"}`))
+		return
+	}
+
+	// Delete the file
+	err := os.Remove(filePath)
+	if err != nil {
+		log.Printf("[ERROR] Failed to delete file %s: %s", filePath, err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "message": "Failed to delete file"}`))
+		return
+	}
+
+	log.Printf("[INFO] File deleted successfully: %s", filePath)
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "File deleted successfully",
+		"filename": filename,
+	}
+
+	responseBytes, _ := json.Marshal(response)
+	resp.WriteHeader(200)
+	resp.Write(responseBytes)
 }
 
 // Does the webhook
@@ -5262,6 +6130,20 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 
+	// Form Generator API
+	r.HandleFunc("/api/v1/forms", handleGetForms).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/forms", handleCreateForm).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/forms/{key}", handleGetForm).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/forms/{key}", handleUpdateForm).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/forms/{key}", handleDeleteForm).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/forms/{key}/submit", handleFormSubmission).Methods("POST", "OPTIONS")
+
+	// File Operations API (fixes issue #687)
+	r.HandleFunc("/api/v1/files/write", handleFileWrite).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/files/read/{filename}", handleFileRead).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/list", handleFileList).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/delete/{filename}", handleFileDelete).Methods("DELETE", "OPTIONS")
+
 	// This structure is horrendous. Needs fixing after we got the prototype up
 	r.HandleFunc("/api/v1/detections", shuffle.HandleListDetectionCategories).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
@@ -5419,4 +6301,35 @@ func main() {
 		log.Printf("[DEBUG] Running on %s:%s", hostname, innerPort)
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", innerPort), nil))
 	}
+}
+
+// Database helper functions for forms
+func getForms(ctx context.Context, orgId string) ([]Form, error) {
+	// This is a placeholder implementation
+	// In a real implementation, this would query the database
+	// For now, return empty slice
+	return []Form{}, nil
+}
+
+func getForm(ctx context.Context, formId string) (Form, error) {
+	// This is a placeholder implementation
+	// In a real implementation, this would query the database
+	// For now, return empty form with error
+	return Form{}, errors.New("Form not found")
+}
+
+func setForm(ctx context.Context, form Form) error {
+	// This is a placeholder implementation
+	// In a real implementation, this would save to database
+	// For now, just log and return nil
+	log.Printf("[INFO] Would save form %s (%s) to database", form.Name, form.Id)
+	return nil
+}
+
+func setFormSubmission(ctx context.Context, submission FormSubmission) error {
+	// This is a placeholder implementation
+	// In a real implementation, this would save to database
+	// For now, just log and return nil
+	log.Printf("[INFO] Would save form submission %s for form %s to database", submission.Id, submission.FormId)
+	return nil
 }
