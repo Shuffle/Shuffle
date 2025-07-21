@@ -67,6 +67,8 @@ import { Context } from './context/ContextApi.jsx';
 import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
+import FormGenerator from "./views/FormGenerator.jsx";
+import FormManager from "./views/FormManager.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -671,7 +673,9 @@ const App = (message, props) => {
 			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
 			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
 
-			<Route exact path="/forms" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms" element={<FormManager serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/manager" element={<FormManager serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/generator/:formId" element={<FormGenerator serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
 			<Route exact path="/forms/:key/run" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
 			<Route exact path="/forms/:key" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
 
