@@ -1068,6 +1068,72 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		activatedAppIds = append(activatedAppIds, app.ID)
 	}
 
+	parsedStatus := []string{}
+	if len(org.ManagerOrgs) > 0 || userInfo.ActiveOrg.CreatorOrg != "" {
+		parsedStatus = append(parsedStatus, "sub_org")
+
+		parentOrgId := userInfo.ActiveOrg.CreatorOrg
+		if len(userInfo.ActiveOrg.CreatorOrg) == 0 {
+			parentOrgId = org.ManagerOrgs[0].Id
+		}
+
+		// Check for licensing/branding of parent and override
+		parentOrg, err := shuffle.GetOrg(ctx, parentOrgId)
+		if err == nil {
+			if parentOrg.LeadInfo.IntegrationPartner {
+				parsedStatus = append(parsedStatus, "integration_partner")
+
+				// except theme take from parent org
+				org.Branding.EnableChat = parentOrg.Branding.EnableChat
+				org.Branding.HomeUrl = parentOrg.Branding.HomeUrl
+				org.Branding.DocumentationLink = parentOrg.Defaults.DocumentationReference
+				org.Branding.SupportEmail = parentOrg.Branding.SupportEmail
+				org.Branding.LogoutUrl = parentOrg.Branding.LogoutUrl
+				org.Branding.BrandColor = parentOrg.Branding.BrandColor
+				org.Branding.BrandName = parentOrg.Branding.BrandName
+				org.Branding.GlobalUser = parentOrg.Branding.GlobalUser
+
+				if len(org.Branding.Theme) == 0 {
+					org.Branding.Theme = parentOrg.Branding.Theme
+				}
+
+				userInfo.ActiveOrg.Branding = parentOrg.Branding
+				userInfo.ActiveOrg.Image = parentOrg.Image
+				userInfo.ActiveOrg.Branding.DocumentationLink = parentOrg.Defaults.DocumentationReference
+				userInfo.ActiveOrg.Branding.BrandColor = parentOrg.Branding.BrandColor
+				userInfo.ActiveOrg.Branding.SupportEmail = org.Branding.SupportEmail
+				userInfo.ActiveOrg.Branding.LogoutUrl = org.Branding.LogoutUrl
+				userInfo.ActiveOrg.Branding.BrandName = parentOrg.Branding.BrandName
+
+				if len(org.Branding.Theme) == 0 {
+					userInfo.ActiveOrg.Branding.Theme = parentOrg.Branding.Theme
+				} else {
+					userInfo.ActiveOrg.Branding.Theme = org.Branding.Theme
+				}
+
+				// check whether current is global user or not? means is user part of parent org or not
+				for _, user := range parentOrg.Users {
+					if user.Id == userInfo.Id && user.Role == "admin" {
+						userInfo.ActiveOrg.Branding.GlobalUser = true
+						break
+					}
+				}
+			}
+		}
+	} else {
+		// for parent org branding
+		if org.LeadInfo.IntegrationPartner {
+			userInfo.ActiveOrg.Branding.Theme = org.Branding.Theme
+			userInfo.ActiveOrg.Branding.DocumentationLink = org.Defaults.DocumentationReference
+			userInfo.ActiveOrg.Branding.SupportEmail = org.Branding.SupportEmail
+			userInfo.ActiveOrg.Branding.LogoutUrl = org.Branding.LogoutUrl
+			userInfo.ActiveOrg.Branding.BrandColor = org.Branding.BrandColor
+			userInfo.ActiveOrg.Branding.BrandName = org.Branding.BrandName
+
+			parsedStatus = append(parsedStatus, "integration_partner")
+		}
+	}
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1091,6 +1157,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Licensed:   licensed,
 		ActiveApps: activatedAppIds,
 		Theme:      userInfo.Theme,
+		OrgStatus:  parsedStatus,
 	}
 
 	returnData, err := json.Marshal(returnValue)
