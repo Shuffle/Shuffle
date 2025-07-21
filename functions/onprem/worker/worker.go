@@ -955,11 +955,46 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	// Add more volume binds if possible
-	if len(volumeBinds) > 0 {
+	// Always add a writable temporary directory for file operations
+	hostConfig.Binds = []string{}
+	hostConfig.Mounts = []mount.Mount{}
 
-		// Only use mounts, not direct binds
-		hostConfig.Binds = []string{}
-		hostConfig.Mounts = []mount.Mount{}
+	// Add default writable mount for file operations (fixes issue #687)
+	shuffleFilesPath := os.Getenv("SHUFFLE_FILE_LOCATION")
+	if shuffleFilesPath == "" {
+		shuffleFilesPath = "/tmp/shuffle-files"
+	}
+
+	// Ensure the directory exists
+	if _, err := os.Stat(shuffleFilesPath); os.IsNotExist(err) {
+		err = os.MkdirAll(shuffleFilesPath, 0755)
+		if err != nil {
+			log.Printf("[WARNING] Failed to create shuffle files directory: %s", err)
+		}
+	}
+
+	// Add the default writable mount
+	defaultMount := mount.Mount{
+		Type:     mount.TypeBind,
+		Source:   shuffleFilesPath,
+		Target:   "/tmp/shuffle-files",
+		ReadOnly: false,
+	}
+	hostConfig.Mounts = append(hostConfig.Mounts, defaultMount)
+
+	// Add a writable temp directory for Python scripts
+	tempMount := mount.Mount{
+		Type:     mount.TypeTmpfs,
+		Target:   "/tmp/python-workspace",
+		ReadOnly: false,
+		TmpfsOptions: &mount.TmpfsOptions{
+			SizeBytes: 100 * 1024 * 1024, // 100MB
+			Mode:      0755,
+		},
+	}
+	hostConfig.Mounts = append(hostConfig.Mounts, tempMount)
+
+	if len(volumeBinds) > 0 {
 		for _, bind := range volumeBinds {
 			if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
 				log.Printf("[ERROR] Volume bind '%s' is invalid. Use absolute paths.", bind)

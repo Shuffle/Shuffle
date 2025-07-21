@@ -96,6 +96,14 @@ const pythonFilters = [
 	{ "name": "Get full execution details", "value": `print(self.full_execution)`, "example": `` },
 	{ "name": "Use files", "value": `# Create a sample file\nfiles = [{\n  \"filename\": \"test.txt\",\n  \"data\": \"Testdata\"\n}]\nret = self.set_files(files)\n\n# Get the content of the file from Shuffle storage\n# Originally a byte string in the \"data\" key\nfile_content = (self.get_file(ret[0])[\"data\"]).decode()\nprint(file_content)`, "example": `` },
 
+	{ "name": "Write CSV file (Fixed #687)", "value": `# Solution for read-only file system issue\nfrom shuffle_tools import write_csv_file\nimport json\n\n# Sample data - replace with your actual data\ndata = json.loads(r\"\"\"$exec\"\"\")\nif not data:\n    data = [{\"name\": \"John\", \"age\": 30}, {\"name\": \"Jane\", \"age\": 25}]\n\n# Convert to rows\nheaders = [\"Name\", \"Age\"]\nrows = [[item[\"name\"], item[\"age\"]] for item in data]\n\n# Write CSV file using Shuffle's file API\nresult = write_csv_file(\"output.csv\", rows, headers)\nprint(f\"CSV file created: {result}\")`, "example": `` },
+
+	{ "name": "Write text file (Fixed #687)", "value": `# Solution for read-only file system issue\nfrom shuffle_tools import write_file\nimport json\n\n# Get data from previous node\ndata = json.loads(r\"\"\"$exec\"\"\")\nif not data:\n    data = {\"message\": \"Hello from Shuffle!\"}\n\n# Write to file using Shuffle's file API\ncontent = json.dumps(data, indent=2)\nresult = write_file(\"output.json\", content)\nprint(f\"File written: {result}\")`, "example": `` },
+
+	{ "name": "Read and process file", "value": `# Read file using Shuffle's file API\nfrom shuffle_tools import read_file, file_exists\nimport json\n\nfilename = \"data.json\"\nif file_exists(filename):\n    content = read_file(filename)\n    data = json.loads(content)\n    print(f\"File content: {data}\")\nelse:\n    print(f\"File {filename} not found\")`, "example": `` },
+
+	{ "name": "List and manage files", "value": `# List and manage files using Shuffle's file API\nfrom shuffle_tools import list_files, delete_file\n\n# List all files\nfiles = list_files()\nprint(f\"Available files: {len(files)}\")\nfor file_info in files:\n    print(f\"- {file_info['name']} ({file_info['size']} bytes)\")\n\n# Delete old files (example)\nfor file_info in files:\n    if file_info['name'].startswith('temp_'):\n        result = delete_file(file_info['name'])\n        print(f\"Deleted: {result}\")`, "example": `` },
+
 	{ "name": "Use datastore", "value": `key = \"testkey\"\nvalue = \"The value of the testkey\"\n\nself.set_key(key, value)\n\n# Print the details of the key after it's been updated\n# To get the value, use self.get_key(key)[\"value\"]\nprint(self.get_key(key))`, "example": `` },
 
 	{ "name": "Run a Subflow", "value": `response = shuffle.run_workflow(workflow_id="", start_command="Runtime arg here!", wait=True)\nprint(response)`, "example": ``, "disabled": false, },

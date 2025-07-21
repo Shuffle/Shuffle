@@ -82,6 +82,8 @@ const mathFilters = [
 const pythonFilters = [
 	{"name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": ``},
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
+	{"name": "Write CSV file (Fixed #687)", "value": `{% python %}\n# Solution for read-only file system issue\nfrom shuffle_tools import write_csv_file\nimport json\n\n# Sample data - replace with your actual data\ndata = json.loads(r"""$nodename""")\nif not data:\n    data = [{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]\n\n# Convert to rows\nheaders = ["Name", "Age"]\nrows = [[item["name"], item["age"]] for item in data]\n\n# Write CSV file using Shuffle's file API\nresult = write_csv_file("output.csv", rows, headers)\nprint(f"CSV file created: {result}")\n{% endpython %}`, "example": ``},
+	{"name": "Write text file (Fixed #687)", "value": `{% python %}\n# Solution for read-only file system issue\nfrom shuffle_tools import write_file\nimport json\n\n# Get data from previous node\ndata = json.loads(r"""$nodename""")\nif not data:\n    data = {"message": "Hello from Shuffle!"}\n\n# Write to file using Shuffle's file API\ncontent = json.dumps(data, indent=2)\nresult = write_file("output.json", content)\nprint(f"File written: {result}")\n{% endpython %}`, "example": ``},
 ]
 
 const CodeEditor = (props) => {
