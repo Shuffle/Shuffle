@@ -54,7 +54,7 @@ import YAML from "yaml";
 import { MuiChipsInput } from "mui-chips-input";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
-import words from "shellwords";
+import { split } from "shellwords";
 
 import AvatarEditor from "react-avatar-editor";
 import { Context } from "../context/ContextApi.jsx";
@@ -119,7 +119,7 @@ const parseCurl = (s) => {
   }
 
   try {
-    var args = rewrite(words.split(s));
+    var args = rewrite(split(s));
   } catch (e) {
     return s;
   }
