@@ -7,7 +7,7 @@ toolchain go1.24.4
 //replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
 require (
-	github.com/docker/docker v28.2.2+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.8.84
