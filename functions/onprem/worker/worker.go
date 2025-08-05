@@ -840,7 +840,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			// Running as coroutine for eventual completeness
 			// FIXME: With goroutines it got too much trouble of deploying with an older version
 			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
-			shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+			err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+			if err == nil {
+				downloadedImages = append(downloadedImages, image)
+			}
 		}
 
 		var exposedPort int
@@ -1598,6 +1601,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				executed := false
 				if err == nil {
 					log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
+					downloadedImages = append(downloadedImages, imageName)
 					//err = deployApp(dockercli, image, identifier, env, workflow, action)
 					err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
 					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
@@ -1712,6 +1716,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					executed := false
 					if err == nil {
 						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
+						downloadedImages = append(downloadedImages, imageName)
 						//err = deployApp(dockercli, image, identifier, env, workflow, action)
 						err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
 						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
@@ -4415,7 +4420,10 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Downloading image %s", imageBody.Image)
-	shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageBody.Image)
+	err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageBody.Image)
+	if err == nil {
+		downloadedImages = append(downloadedImages, imageBody.Image)
+	}
 
 	// return success
 	resp.WriteHeader(200)
