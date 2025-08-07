@@ -309,10 +309,10 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if !found {
-		log.Printf("[ERROR] Failed to find environment(%s) for org(%s)", environment, orgId)
-		resp.WriteHeader(400)
-		resp.Write([]byte(`{"success":false,"reason":"environment not found"}`))
-		return
+		env, err = shuffle.GetEnvironment(ctx, environment, "")
+		if err != nil {
+			log.Printf("[WARNING] Failed to find the environment(%s) in org(%s). Could cause with Failover test", environment, orgId)
+		}
 	}
 
 	timeNow := time.Now().Unix()
