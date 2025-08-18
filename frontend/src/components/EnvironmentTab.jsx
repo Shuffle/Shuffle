@@ -383,38 +383,36 @@ const EnvironmentTab = memo((props) => {
           //toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.",)
           return
         }
-    
+
         if (
           props.userdata.active_org === undefined ||
           props.userdata.active_org === null
         ) {
           return;
         }
-    
+
         const elementName = "copy_element_shuffle";
         var auth =
           environment.auth === ""
             ? "cb5st3d3Z!3X3zaJ*Pc"
             : environment.auth
-
-		// Escape exclamation marks for copying
-		auth = auth.replace("\\!", "!").replace(/!/g, "\\!")
-
+      // Escape exclamation marks for copying
+      auth = auth.replace("\\!", "!").replace(/!/g, "\\!")
         const newUrl =
           globalUrl === "https://shuffler.io"
             ? "https://shuffle-backend-stbuwivzoq-nw.a.run.app"
             : globalUrl;
-    
+
         var skipPipeline = false
         if (commandController.pipelines === true) {
             skipPipeline = true
         }
-    
+
         var addProxy = false
         if (commandController.proxies === true) {
             addProxy = true
         }
-    
+
         if (installationTab === 1) {
             return (`docker run -d \\
         --restart=always \\
@@ -428,14 +426,32 @@ const EnvironmentTab = memo((props) => {
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e SHUFFLE_LOGS_DISABLED=true \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
-		-e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
-		-e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
+      -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+      -e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest
             `)
         } else if (installationTab === 2) {
-            return `https://shuffler.io/docs/configuration#kubernetes`
+             return `helm install shuffle-orborus oci://ghcr.io/shuffle/charts/shuffle \\
+              --namespace shuffle --create-namespace \\
+              --set opensearch.enabled=false \\
+              --set backend.replicaCount=0 \\
+              --set frontend.replicaCount=0 \\
+              --set 'orborus.extraEnvVars[0].name=AUTH' \\
+              --set 'orborus.extraEnvVars[0].value=${auth}' \\
+              --set 'orborus.extraEnvVars[1].name=BASE_URL' \\
+              --set 'orborus.extraEnvVars[1].value=${newUrl}' \\
+              --set 'orborus.extraEnvVars[2].name=ENVIRONMENT_NAME' \\
+              --set 'orborus.extraEnvVars[2].value=${environment.Name}' \\
+              --set 'orborus.extraEnvVars[3].name=ORG' \\
+              --set 'orborus.extraEnvVars[3].value=${environment.org_id}' \\
+              --set shuffle.org="${environment.org_id}"${addProxy ? ` \\
+              --set 'orborus.extraEnvVars[4].name=HTTPS_PROXY' \\
+              --set 'orborus.extraEnvVars[4].value=IP:PORT'` : ""}${skipPipeline ? ` \\
+              --set 'orborus.extraEnvVars[${addProxy ? 5 : 4}].name=SHUFFLE_SKIP_PIPELINES' \\
+              --set 'orborus.extraEnvVars[${addProxy ? 5 : 4}].value=true'` : ""} \\
+              --set persistence.storageClass=standard`
         }
-    
+
         const commandData = `docker rm shuffle-orborus --force; \\\ndocker run -d \\
         --restart=always \\
         --name="shuffle-orborus" \\
@@ -445,12 +461,13 @@ const EnvironmentTab = memo((props) => {
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${props.userdata.active_org.id}" \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
-		-e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
-		-e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
+      -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+      -e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest`
-    
+
         return commandData
-      };
+    };
+
 
     const submitEnvironment = (data) => {
         // FIXME - add some check here ROFL
@@ -1475,7 +1492,7 @@ const EnvironmentTab = memo((props) => {
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
                             {installationTab === 2 ?
                             <Typography variant='body2' color="textSecondary">
-                                Check our <a href="https://docs.docker.com/get-started/get-docker/" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Kubernetes documentation</a> for more information on how to run Shuffle on Kubernetes. The status of the node will change when connected.
+                                Simply connect to your Kubernetes cluster and run the following command:
                             </Typography>
                             :
                             <Typography variant='body2' color="textSecondary">
@@ -1489,7 +1506,6 @@ const EnvironmentTab = memo((props) => {
                             "2. Run this command on the server you want to run workflows or store Pipeline data on"}
                           </Typography>
         
-                          {installationTab === 2 ? null : 
                           <div
                             style={{
                               marginTop: 10, 
@@ -1571,8 +1587,7 @@ const EnvironmentTab = memo((props) => {
                               }}
                             />
                             </div>
-                            </div>
-                        }
+                          </div>
         
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
                             {installationTab === 2 ? null : 

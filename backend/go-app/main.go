@@ -4099,8 +4099,9 @@ func runInitEs(ctx context.Context) {
 		time.Sleep(30 * time.Second)
 	}
 
-	// FIXME: This should ONLY run on one backend instance
+	shuffle.InitOpensearchIndexes()
 
+	// FIXME: This should ONLY run on one backend instance. This may cause interference.
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
