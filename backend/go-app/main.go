@@ -1159,6 +1159,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		ActiveApps: activatedAppIds,
 		Theme:      userInfo.Theme,
 		OrgStatus:  parsedStatus,
+		AIEnabled:  org.LocalAIEnabled,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -5479,6 +5480,23 @@ func initHandlers() {
 
 	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)
+
+	go func() {
+		log.Printf("[DEBUG] Starting AI availability check for all organizations")
+		activeOrgs, err := shuffle.GetAllOrgs(ctx)
+		if err != nil {
+			log.Printf("[ERROR] Error getting organizations for AI availability check: %s", err)
+			return
+		}
+		
+		for _, org := range activeOrgs {
+			if len(org.Id) == 0 {
+				continue
+			}
+			
+			go shuffle.CheckAndUpdateAIAvailability(ctx, org.Id)
+		}
+	}()
 }
 
 // Had to move away from mux, which means Method is fucked up right now.
