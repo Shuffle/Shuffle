@@ -63,6 +63,7 @@ import {
 	Add as AddIcon,
 	Remove as RemoveIcon,
 	EditNote as EditNoteIcon,
+	AutoAwesome as AutoAwesomeIcon
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
@@ -72,6 +73,7 @@ const EditWorkflow = (props) => {
 	const {themeMode, brandColor} = useContext(Context)
 	const theme = getTheme(themeMode, brandColor)
 	const [submitLoading, setSubmitLoading] = React.useState(false);
+	const [aiGenerateLoading, setAiGenerateLoading] = React.useState(false);
 	const [showMoreClicked, setShowMoreClicked] = React.useState(isEditing !== false ? true : false);
 
 	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
@@ -220,7 +222,7 @@ const EditWorkflow = (props) => {
 				<div style={{ display: "flex" }}>
 					<div style={{ flex: 1, color: theme.palette.textColor }}>
 						<div style={{ display: "flex" }}>
-							<Typography variant="h4" style={{ flex: 9, marginTop: 25, }}>
+							<Typography variant="h4" style={{ flex: 9, marginTop: newWorkflow ? 50 : 25, }}>
 								{newWorkflow ? "New" : "Editing"} Workflow
 							</Typography>
 
@@ -298,93 +300,316 @@ const EditWorkflow = (props) => {
 					paddingLeft: 30, 
 					backgroundColor: themeMode === "dark" ? "#262626" :  theme.palette.DialogStyle.backgroundColor,
 				}}>
-					<Button
-						variant="contained"
-						style={{}}
-						id="save_workflow_button"
-						disabled={name.length === 0 || submitLoading === true}
-						onClick={() => {
-							setSubmitLoading(true)
+					{newWorkflow === true ? (
+						<div style={{ display: "flex", gap: 10 }}>
+							
+							
+							<Button
+								variant="contained"
+								style={{}}
+								id="save_workflow_button"
+								disabled={name.length === 0 || submitLoading === true || aiGenerateLoading === true}
+								onClick={() => {
+									setSubmitLoading(true)
 
-							// Loop inputfields
-							var validfields = []
-							for (var i = 0; i < inputQuestions.length; i++) {
-								if (inputQuestions[i].deleted === true) {
-									continue
+									// Loop inputfields
+									var validfields = []
+									for (var i = 0; i < inputQuestions.length; i++) {
+										if (inputQuestions[i].deleted === true) {
+											continue
+										}
+
+										if (inputQuestions[i].value.length === 0) {
+											continue
+										}
+
+										validfields.push(inputQuestions[i])
+									}
+
+									innerWorkflow.input_questions = validfields
+
+									if (innerWorkflow.form_control === undefined || innerWorkflow.form_control === null) {
+										innerWorkflow.form_control = {}
+									}
+
+									innerWorkflow.form_control.input_markdown = inputMarkdown
+									innerWorkflow.form_control.output_yields = selectedYieldActions
+									innerWorkflow.form_control.form_width = formWidth
+									innerWorkflow.form_control.cleanup_actions = selectedCleanupActions
+
+									innerWorkflow.name = name
+									innerWorkflow.description = description
+
+									if (newWorkflowTags.length > 0) {
+										innerWorkflow.tags = newWorkflowTags
+									} else {
+										innerWorkflow.tags = []
+									}
+
+									if (selectedUsecases.length > 0) {
+										innerWorkflow.usecase_ids = selectedUsecases
+									} else {
+										innerWorkflow.usecase_ids = []
+									}
+
+									if (dueDate > 0) {
+										innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"] + 1}-${dueDate["$D"]}`).getTime() / 1000
+									}
+
+									if (saveWorkflow !== undefined) {
+										saveWorkflow(innerWorkflow)
+
+										if (setWorkflow !== undefined) {
+											setWorkflow(innerWorkflow)
+										}
+									} else if (setNewWorkflow !== undefined) {
+										setNewWorkflow(
+											innerWorkflow.name,
+											innerWorkflow.description,
+											innerWorkflow.tags,
+											innerWorkflow.default_return_value,
+											innerWorkflow,
+											newWorkflow,
+											innerWorkflow.usecase_ids,
+											innerWorkflow.blogpost,
+											innerWorkflow.status,
+											workflowAsCode
+										)
+										setWorkflow({})
+									} else {
+										setWorkflow(innerWorkflow)
+									}
+
+									setSubmitLoading(true)
+
+									// If new workflow, don't close it
+									if (isEditing) {
+										setModalOpen(false)
+									}
+								}}
+								color="primary"
+							>
+								{submitLoading ? <CircularProgress color="secondary" /> : "Create from scratch"}
+							</Button>
+
+							<Tooltip placement="top" arrow
+								title={
+									<Typography variant="body1" style={{padding: 10, }}>
+										Generate using the name, description, usecases and tags provided. Required: Name + Description
+									</Typography>
+								}
+							>
+								<span>
+								<Button
+									disabled={name.length === 0 || innerWorkflow?.default_return_value?.length === 0 || aiGenerateLoading === true || submitLoading === true}
+									variant="aiButton"
+									onClick={async () => {
+										// Check if description is provided in the visible field for new workflows
+										if (!innerWorkflow.default_return_value || innerWorkflow.default_return_value.trim().length === 0) {
+											toast.error("You need to describe what you want to generate so the AI can auto generate the entire workflow");
+											return;
+										}
+
+										setAiGenerateLoading(true);
+										toast.info("Creating workflow...");
+
+										try {
+											// Step 1: Create basic workflow WITHOUT using setNewWorkflow (to avoid modal closing)
+											const workflowData = {
+												name: name.length > 0 ? name : "AI Generated Workflow",
+												description: innerWorkflow.default_return_value,
+												tags: newWorkflowTags,
+												default_return_value: innerWorkflow.default_return_value,
+												usecase_ids: selectedUsecases,
+												blogpost: innerWorkflow.blogpost || "",
+												status: innerWorkflow.status || ""
+											};
+
+											const workflowResponse = await fetch(`${globalUrl}/api/v1/workflows`, {
+												method: "POST",
+												headers: {
+													"Content-Type": "application/json",
+													Accept: "application/json",
+												},
+												body: JSON.stringify(workflowData),
+												credentials: "include",
+											});
+
+											if (workflowResponse.status !== 200) {
+												toast.error("Failed to create workflow");
+												setAiGenerateLoading(false);
+												return;
+											}
+
+											const workflowJson = await workflowResponse.json();
+
+											if (workflowJson.success === false) {
+												toast.error("Failed to create workflow: " + (workflowJson.reason || "Unknown error"));
+												setAiGenerateLoading(false);
+												return;
+											}
+
+											if (!workflowJson || !workflowJson.id) {
+												toast.error("Failed to create workflow - no ID returned");
+												setAiGenerateLoading(false);
+												return;
+											}
+
+											const workflowId = workflowJson.id;
+											console.log("Created workflow with ID:", workflowId);
+
+											// Step 2: Generate AI content for the workflow
+											const data = { 
+												query: innerWorkflow.default_return_value,
+												workflow_id: workflowId,
+											};
+
+											const aiResponse = await fetch(globalUrl + "/api/v2/workflows/generate/llm", {
+												method: "POST",
+												headers: {
+													"Content-Type": "application/json",
+													Accept: "application/json",
+												},
+												body: JSON.stringify(data),
+												credentials: "include",
+											});
+
+											const json = await aiResponse.json();
+
+											// Handle AI response and provide feedback
+											if (aiResponse.status !== 200) {
+												console.log("AI generation failed, but workflow created:", json.message || "Unexpected response");
+												toast.warning("Workflow created successfully, but AI generation failed. Opening workflow editor...");
+											} else if (json.success === true && typeof json.message === "string") {
+												// AI "rejection" message
+												console.log("AI rejected request:", json.message);
+												toast.warning(`AI: ${json.message}. Opening empty workflow editor...`);
+											} else if (json.success === false) {
+												console.log("AI generation failed:", json.message || "Operation failed");
+												toast.warning("AI generation failed. Opening empty workflow editor...");
+											} else if (!json || Object.keys(json).length === 0) {
+												console.log("Empty AI response");
+												toast.warning("AI returned empty response. Opening workflow editor...");
+											} else {
+												toast.success("Workflow generated successfully! Opening editor...");
+												console.log("AI generation successful");
+											}
+
+											// Step 3: Now close modal and redirect (only after everything is complete)
+											setTimeout(() => {
+												setModalOpen(false);
+												setAiGenerateLoading(false);
+												window.location.href = `/workflows/${workflowId}`;
+											}, 1500); // Give user time to read the final message
+
+										} catch (error) {
+											console.error("Error in AI workflow generation:", error);
+											toast.error("Failed to generate. Please try again later: " + error.message);
+											setAiGenerateLoading(false);
+											// Don't close modal on error so user can try again
+										}
+									}}
+								>
+									{aiGenerateLoading ? (
+										<CircularProgress color="secondary" size={20} style={{ marginRight: 8 }} />
+									) : (
+										<AutoAwesomeIcon style={{ marginRight: 8 }} />
+									)}
+
+									AI Generate
+								</Button>
+								</span>
+							</Tooltip>
+						</div>
+					) : (
+						<Button
+							variant="contained"
+							style={{}}
+							id="save_workflow_button"
+							disabled={name.length === 0 || submitLoading === true}
+							onClick={() => {
+								setSubmitLoading(true)
+
+								// Loop inputfields
+								var validfields = []
+								for (var i = 0; i < inputQuestions.length; i++) {
+									if (inputQuestions[i].deleted === true) {
+										continue
+									}
+
+									if (inputQuestions[i].value.length === 0) {
+										continue
+									}
+
+									validfields.push(inputQuestions[i])
 								}
 
-								if (inputQuestions[i].value.length === 0) {
-									continue
+								innerWorkflow.input_questions = validfields
+
+								if (innerWorkflow.form_control === undefined || innerWorkflow.form_control === null) {
+									innerWorkflow.form_control = {}
 								}
 
-								validfields.push(inputQuestions[i])
-							}
+								innerWorkflow.form_control.input_markdown = inputMarkdown
+								innerWorkflow.form_control.output_yields = selectedYieldActions
+								innerWorkflow.form_control.form_width = formWidth
+								innerWorkflow.form_control.cleanup_actions = selectedCleanupActions
 
-							innerWorkflow.input_questions = validfields
+								innerWorkflow.name = name
+								innerWorkflow.description = description
 
-							if (innerWorkflow.form_control === undefined || innerWorkflow.form_control === null) {
-								innerWorkflow.form_control = {}
-							}
+								if (newWorkflowTags.length > 0) {
+									innerWorkflow.tags = newWorkflowTags
+								} else {
+									innerWorkflow.tags = []
+								}
 
-							innerWorkflow.form_control.input_markdown = inputMarkdown
-							innerWorkflow.form_control.output_yields = selectedYieldActions
-							innerWorkflow.form_control.form_width = formWidth
-							innerWorkflow.form_control.cleanup_actions = selectedCleanupActions
+								if (selectedUsecases.length > 0) {
+									innerWorkflow.usecase_ids = selectedUsecases
+								} else {
+									innerWorkflow.usecase_ids = []
+								}
 
-							innerWorkflow.name = name
-							innerWorkflow.description = description
+								if (dueDate > 0) {
+									innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"] + 1}-${dueDate["$D"]}`).getTime() / 1000
+								}
 
-							if (newWorkflowTags.length > 0) {
-								innerWorkflow.tags = newWorkflowTags
-							} else {
-								innerWorkflow.tags = []
-							}
+								if (saveWorkflow !== undefined) {
+									saveWorkflow(innerWorkflow)
 
-							if (selectedUsecases.length > 0) {
-								innerWorkflow.usecase_ids = selectedUsecases
-							} else {
-								innerWorkflow.usecase_ids = []
-							}
-
-							if (dueDate > 0) {
-								innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"] + 1}-${dueDate["$D"]}`).getTime() / 1000
-							}
-
-							if (saveWorkflow !== undefined) {
-								saveWorkflow(innerWorkflow)
-
-								if (setWorkflow !== undefined) {
+									if (setWorkflow !== undefined) {
+										setWorkflow(innerWorkflow)
+									}
+								} else if (setNewWorkflow !== undefined) {
+									setNewWorkflow(
+										innerWorkflow.name,
+										innerWorkflow.description,
+										innerWorkflow.tags,
+										innerWorkflow.default_return_value,
+										innerWorkflow,
+										newWorkflow,
+										innerWorkflow.usecase_ids,
+										innerWorkflow.blogpost,
+										innerWorkflow.status,
+										workflowAsCode
+									)
+									setWorkflow({})
+								} else {
 									setWorkflow(innerWorkflow)
 								}
-							} else if (setNewWorkflow !== undefined) {
-								setNewWorkflow(
-									innerWorkflow.name,
-									innerWorkflow.description,
-									innerWorkflow.tags,
-									innerWorkflow.default_return_value,
-									innerWorkflow,
-									newWorkflow,
-									innerWorkflow.usecase_ids,
-									innerWorkflow.blogpost,
-									innerWorkflow.status,
-									workflowAsCode
-								)
-								setWorkflow({})
-							} else {
-								setWorkflow(innerWorkflow)
-							}
 
-							setSubmitLoading(true)
+								setSubmitLoading(true)
 
-							// If new workflow, don't close it
-							if (isEditing) {
-								setModalOpen(false)
-							}
-						}}
-						color="primary"
-					>
-						{submitLoading ? <CircularProgress color="secondary" /> : "Save Changes"}
-					</Button>
+								// If new workflow, don't close it
+								if (isEditing) {
+									setModalOpen(false)
+								}
+							}}
+							color="primary"
+						>
+							{submitLoading ? <CircularProgress color="secondary" /> : "Save Changes"}
+						</Button>
+					)}
 				</div>
 
 				<DialogContent style={{ paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 400, paddingLeft: 50, }}>
@@ -408,6 +633,29 @@ const EditWorkflow = (props) => {
 							fullWidth
 							id="Enter-Workflow-Name"
 						/>
+
+						{newWorkflow === true ?
+							<TextField
+								onBlur={(event) => {
+									innerWorkflow.default_return_value = event.target.value
+									setInnerWorkflow(innerWorkflow)
+									setUpdate(Math.random())
+								}}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={innerWorkflow.default_return_value}
+								placeholder="Please describe your workflow below so the AI can generate it."
+								rows="3"
+								multiline
+								label="Description"
+								margin="dense"
+								fullWidth
+							/>
+						: null}
 
 						<div style={{ display: "flex", marginTop: 10, }}>
 							{usecases !== null && usecases !== undefined && usecases.length > 0 ?
@@ -1285,7 +1533,7 @@ const EditWorkflow = (props) => {
 				</DialogContent>
 
 
-				{newWorkflow === true ?
+				{/*newWorkflow === true ?
 					<span style={{ paddingTop: 30 }}>
 						<Typography variant="h6" style={{ marginLeft: 30, paddingBottom: 0, }}>
 							Relevant Workflows
@@ -1311,9 +1559,8 @@ const EditWorkflow = (props) => {
 						}
 
 					</span>
-					: null}
-
-				{/*newWorkflow === true && name.length > 2 ?
+			: null*/}
+			{/*newWorkflow === true && name.length > 2 ?
 			<div style={{marginLeft: 30, }}>
 				<WorkflowGrid 
 					maxRows={1}

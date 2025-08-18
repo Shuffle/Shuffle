@@ -391,6 +391,78 @@ export const getTheme = (themeMode, brandColor) =>
                 },
               },
             },
+            {
+              props: { variant: 'aiButton' },
+              style: {
+                background: 'linear-gradient(90deg, #ff8544 0%, #ec517c 50%, #9c5af2 100%)',
+                color: '#ffffff',
+                borderRadius: '4px',
+                whiteSpace: "nowrap",
+                textWrap: "normal",
+                border: 'none',
+                boxShadow: 'none',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  color: '#ffffff',
+                  textShadow: '0 0 1px currentColor',
+                },
+                '&:active': {
+                  background: 'linear-gradient(90deg, #e6743a 0%, #d4456e 50%, #8a4de8 100%)',
+                },
+                '&:disabled': {
+                  background: themeMode === "dark" ? '#494949' : '#C9C9C9',
+                  color: themeMode === "dark" ? '#9E9E9E' : '#616161',
+                },
+              },
+            },
+            {
+              props: { variant: 'aiButtonGhost' },
+              style: {
+                background: 'transparent',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#ffffff',
+                whiteSpace: "nowrap",
+                textWrap: "normal",
+                boxShadow: 'none',
+                transition: 'all 0.2s ease-in-out',
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderRadius: '4px',
+                  padding: '2px',
+                  background: 'linear-gradient(90deg, #ff8544 0%, #ec517c 50%, #9c5af2 100%)',
+                  mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                  WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                  maskComposite: 'exclude',
+                  WebkitMaskComposite: 'xor',
+                  transition: 'opacity 0.2s ease-in-out',
+                  zIndex: -1,
+                },
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #ff8544 0%, #ec517c 50%, #9c5af2 100%)',
+                  color: '#ffffff',
+                  '&::before': {
+                    opacity: 0,
+                  },
+                },
+                '&:active': {
+                  background: 'linear-gradient(90deg, #e6743a 0%, #d4456e 50%, #8a4de8 100%)',
+                },
+                '&:disabled': {
+                  background: 'transparent',
+                  color: themeMode === "dark" ? '#9E9E9E' : '#616161',
+                  '&::before': {
+                    background: themeMode === "dark" ? '#494949' : '#C9C9C9',
+                  },
+                },
+              },
+            },
           ],
         },
         MuiTab: {
@@ -412,39 +484,39 @@ export const getTheme = (themeMode, brandColor) =>
           MuiCssBaseline: {
             styleOverrides: `
               @font-face {
-                font-family: 'Roboto';
+                font-family: 'Inter';
                 font-style: normal;
                 font-display: swap;
                 font-weight: 300;
-                src: local('Roboto Light'), local('Roboto-Light');
+                src: local('Inter Light'), local('Inter-Light');
               }
               @font-face {
-                font-family: 'Roboto';
+                font-family: 'Inter';
                 font-style: normal;
                 font-display: swap;
                 font-weight: 400;
-                src: local('Roboto'), local('Roboto-Regular');
+                src: local('Inter Regular'), local('Inter-Regular');
               }
               @font-face {
-                font-family: 'Roboto';
+                font-family: 'Inter';
                 font-style: normal;
                 font-display: swap;
                 font-weight: 500;
-                src: local('Roboto Medium'), local('Roboto-Medium');
+                src: local('Inter Medium'), local('Inter-Medium');
               }
               @font-face {
-                font-family: 'Roboto';
+                font-family: 'Inter';
                 font-style: normal;
                 font-display: swap;
                 font-weight: 600;
-                src: local('Roboto SemiBold'), local('Roboto-SemiBold');
+                src: local('Inter SemiBold'), local('Inter-SemiBold');
               }
               @font-face {
-                font-family: 'Roboto';
+                font-family: 'Inter';
                 font-style: normal;
                 font-display: swap;
                 font-weight: 700;
-                src: local('Roboto Bold'), local('Roboto-Bold');
+                src: local('Inter Bold'), local('Inter-Bold');
               }
             `,
           },
