@@ -111,9 +111,15 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
-	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
-	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"http:1.4.2":            "frikky/shuffle:http_1.4.2",
+	"iris:1.1.2":            "frikky/shuffle:iris_1.1.2",
+	"misp:1.1.2":            "frikky/shuffle:misp_1.1.2",
+	"opensearch:1.1.2":      "frikky/shuffle:opensearch_1.1.2",
+	"shuffle-subflow:1.1.2": "frikky/shuffle:shuffle-subflow_1.1.2",
+	"shuffle-tools:1.2.2":   "frikky/shuffle:shuffle-tools_1.2.2",
+	// "http:1.4.0":            "frikky/shuffle:http_1.4.0",
+	// "shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
+	// "shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -2390,9 +2396,9 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", backendUrl)
 	topClient := shuffle.GetExternalClient(backendUrl)
-	requestData := shuffle.ActionResult {
+	requestData := shuffle.ActionResult{
 		Authorization: auth,
-		ExecutionId: executionId,
+		ExecutionId:   executionId,
 	}
 
 	data, err := json.Marshal(requestData)
@@ -2652,7 +2658,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		}
 
@@ -2670,7 +2676,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				if debug { 
+				if debug {
 					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
 				}
 
@@ -3635,7 +3641,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
 		}
 	}
