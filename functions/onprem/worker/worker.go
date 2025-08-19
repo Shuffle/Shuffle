@@ -115,6 +115,7 @@ var autoDeploy = map[string]string{
 	"iris:1.1.2":            "frikky/shuffle:iris_1.1.2",
 	"misp:1.1.2":            "frikky/shuffle:misp_1.1.2",
 	"opensearch:1.1.2":      "frikky/shuffle:opensearch_1.1.2",
+	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
 	"shuffle-subflow:1.1.2": "frikky/shuffle:shuffle-subflow_1.1.2",
 	"shuffle-tools:1.2.2":   "frikky/shuffle:shuffle-tools_1.2.2",
 	// "http:1.4.0":            "frikky/shuffle:http_1.4.0",
