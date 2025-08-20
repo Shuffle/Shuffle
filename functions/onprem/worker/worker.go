@@ -429,6 +429,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	envMap["SHUFFLE_SWARM_CONFIG"] = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	envMap["BASE_URL"] = "http://shuffle-workers:33333"
 
+	if len(os.Getenv("SHUFFLE_LOGS_DISABLED")) > 0 {
+		envMap["SHUFFLE_LOGS_DISABLED"] = os.Getenv("SHUFFLE_LOGS_DISABLED")
+	}
+
 	clientset, _, err := shuffle.GetKubernetesClient()
 	if err != nil {
 		log.Printf("[ERROR] Failed getting kubernetes: %s", err)
