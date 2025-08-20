@@ -734,7 +734,7 @@ func deployServiceWorkers(image string) {
 				var updatedNetworks []swarm.NetworkAttachmentConfig
 				for _, net := range serviceSpec.Networks {
 					if net.Target != "shuffle_shuffle" {
-					updatedNetworks = append(updatedNetworks, net)
+						updatedNetworks = append(updatedNetworks, net)
 					}
 				}
 				serviceSpec.Networks = updatedNetworks
@@ -813,21 +813,21 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		newImages = append(newImages, curimage)
 
 		// Force remove the current image to avoid cached layers
-//		if swarmConfig == "run" || swarmConfig == "swarm" {
-//			_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
-//				Force:         true,
-//				PruneChildren: true,
-//			})
-//
-//			if err != nil {
-//				log.Printf("[ERROR] Failed removing image for re-download: %s", err)
-//			} else {
-//				log.Printf("[DEBUG] Removed image: %s", curimage)
-//			}
-//		} else {
-//			//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
-//		}
-//
+		//	if swarmConfig == "run" || swarmConfig == "swarm" {
+		//		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
+		//			Force:         true,
+		//			PruneChildren: true,
+		//		})
+
+		//		if err != nil {
+		//			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+		//		} else {
+		//			log.Printf("[DEBUG] Removed image: %s", curimage)
+		//		}
+		//	} else {
+		//		//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
+		//	}
+
 		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
 			//log.Printf("[ERROR] Failed downloading image: %s", err)
@@ -887,7 +887,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 						log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 					} else {
 						log.Printf("[DEBUG] Updated service %s with the new image %s. Resp: %#v", service.Spec.Annotations.Name, image, resp)
-							
+
 						found = true
 
 						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
@@ -1063,6 +1063,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	if len(appContainerSecurityContext) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT=%s", appContainerSecurityContext))
+	}
+
+	if len(os.Getenv("SHUFFLE_LOGS_DISABLED")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")))
 	}
 
 	clientset, _, err := shuffle.GetKubernetesClient()
@@ -2213,7 +2217,6 @@ func main() {
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
-
 
 	hasStarted := false
 	for {
