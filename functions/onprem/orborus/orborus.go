@@ -2298,7 +2298,7 @@ func main() {
 			}
 
 			if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" && os.Getenv("SHUFFLE_SCALE_REPLICAS") == "" {
-				// go AutoScale(ctx)
+				go AutoScale(ctx)
 			}
 			hasStarted = true
 		}
