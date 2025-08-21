@@ -683,6 +683,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		return err
 	}
 
+	// Giving the service time to start before we contineu anything
+	log.Printf("[DEBUG] Waiting 20 seconds before moving on to let app '%s' start properly. Service: %s (k8s)", name, image)
+	time.Sleep(20 * time.Second)
+
 	return nil
 }
 
@@ -3135,7 +3139,7 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 }
 
 /*** STARTREMOVE ***/
-func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int) error {
+func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int, retry bool) error {
 	log.Printf("[DEBUG] Deploying service for %s to swarm on port %d", name, deployport)
 	//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
 
@@ -3296,6 +3300,21 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	_ = service
 
 	if err != nil {
+
+		if strings.Contains(fmt.Sprintf("%s", err), "network") && strings.Contains(fmt.Sprintf("%s", err), "not found") {
+			log.Printf("[DEBUG] Network %s not found. Trying to initialize it.", networkName)
+			networkErr := initSwarmNetwork()
+			if networkErr != nil {
+				log.Printf("[ERROR] Failed initializing swarm network: %s", err)
+				//return err
+			}
+
+			// Retry deploying the service
+			if !retry { 
+				return deploySwarmService(dockercli, name, image, deployport, true)
+			}
+		}
+
 		log.Printf("[DEBUG] Failed deploying %s with image %s: %s", name, image, err)
 		return err
 	}
@@ -3351,13 +3370,108 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 	return err
 }
 
-func findAppInfo(image, name string) (int, error) {
+// Backups in case networks are removed
+func initSwarmNetwork() error {
+	ctx := context.Background()
 	dockercli, err := dockerclient.NewEnvClient()
 	if err != nil {
 		log.Printf("[ERROR] Unable to create docker client (2): %s", err)
-		return -1, err
+		return err
 	}
 
+	// Create the network options with the specified MTU
+	options := make(map[string]string)
+	mtu := 1500
+	options["com.docker.network.driver.mtu"] = fmt.Sprintf("%d", mtu)
+
+
+	ingressOptions := network.CreateOptions{
+		Driver:     "overlay",
+		Attachable: false,
+		Ingress:    true,
+		IPAM: &network.IPAM{
+			Driver: "default",
+			Config: []network.IPAMConfig{
+				network.IPAMConfig{
+					Subnet:  "10.225.225.0/24",
+					Gateway: "10.225.225.1",
+				},
+			},
+		},
+	}
+
+	_, err = dockercli.NetworkCreate(
+		ctx,
+		"ingress",
+		ingressOptions,
+	)
+
+	if err != nil {
+		log.Printf("[WARNING] Ingress network may already exist: %s", err)
+	}
+
+	//docker network create --driver=overlay workers
+	// Specific subnet?
+	networkName := "shuffle_swarm_executions"
+	if len(swarmNetworkName) > 0 {
+		networkName = swarmNetworkName
+	}
+
+	networkCreateOptions := network.CreateOptions{
+		Driver:     "overlay",
+		Options:    options,
+		Attachable: true,
+		Ingress:    false,
+		IPAM: &network.IPAM{
+			Driver: "default",
+			Config: []network.IPAMConfig{
+				network.IPAMConfig{
+					Subnet:  "10.224.224.0/24",
+					Gateway: "10.224.224.1",
+				},
+			},
+		},
+	}
+	_, err = dockercli.NetworkCreate(
+		ctx,
+		networkName,
+		networkCreateOptions,
+	)
+
+	if err != nil {
+		log.Printf("[WARNING] Swarm Executions network may already exist: %s", err)
+	}
+
+	networkName = "shuffle-executions"
+	networkCreateOptions = network.CreateOptions{
+		Driver:     "overlay",
+		Options:    options,
+		Attachable: true,
+		Ingress:    false,
+		IPAM: &network.IPAM{
+			Driver: "default",
+			Config: []network.IPAMConfig{
+				network.IPAMConfig{
+					Subnet:  "10.223.223.0/24",
+					Gateway: "10.223.223.1",
+				},
+			},
+		},
+	}
+	_, err = dockercli.NetworkCreate(
+		ctx,
+		networkName,
+		networkCreateOptions,
+	)
+
+	if err != nil {
+		log.Printf("[WARNING] Swarm Executions network may already exist: %s", err)
+	}
+
+	return nil 
+}
+
+func findAppInfo(image, name string) (int, error) {
 	highest := baseport
 	exposedPort := -1
 
@@ -3379,6 +3493,12 @@ func findAppInfo(image, name string) (int, error) {
 
 	//Filters:
 	if exposedPort == -1 {
+		dockercli, err := dockerclient.NewEnvClient()
+		if err != nil {
+			log.Printf("[ERROR] Unable to create docker client (2): %s", err)
+			return -1, err
+		}
+
 		serviceListOptions := types.ServiceListOptions{}
 		services, err := dockercli.ServiceList(
 			context.Background(),
@@ -3443,26 +3563,29 @@ func findAppInfo(image, name string) (int, error) {
 	if exposedPort >= 0 {
 		//log.Printf("[INFO] Found service %s on port %d - no need to deploy another", name, exposedPort)
 	} else {
+		dockercli, err := dockerclient.NewEnvClient()
+		if err != nil {
+			log.Printf("[ERROR] Unable to create docker client (2): %s", err)
+			return -1, err
+		}
+
 		// Increment by 1 for highest port
 		if highest <= baseport {
 			highest = baseport
 		}
 
 		highest += 1
-		err = deploySwarmService(dockercli, name, image, highest)
+		err = deploySwarmService(dockercli, name, image, highest, false)
 		if err != nil {
 			log.Printf("[WARNING] NOT Found service: %s. error: %s", name, err)
 			return highest, err
 		} else {
-			log.Printf("[DEBUG] Deployed app with name %s", name)
+			log.Printf("[DEBUG] Waiting 20 seconds before moving on to let app '%s' start properly. Service: %s", name, image)
+			time.Sleep(time.Duration(20) * time.Second)
 		}
 
 		exposedPort = highest
-
-		if appsInitialized {
-			log.Printf("[DEBUG] Waiting 30 seconds before moving on to let app start")
-			time.Sleep(time.Duration(30) * time.Second)
-		}
+		//return exposedPort, errors.New("Deployed app %s")
 	}
 
 	return exposedPort, nil
@@ -3652,7 +3775,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 func baseDeploy() {
 
 	var cli *dockerclient.Client
-	var err error
+	//var err error
 
 	if isKubernetes != "true" {
 		cli, err := dockerclient.NewEnvClient()
@@ -3714,8 +3837,7 @@ func baseDeploy() {
 
 		//deployApp(cli, value, identifier, env, workflowExecution, action)
 		log.Printf("[DEBUG] Deploying app with identifier %s to ensure basic apps are available from the get-go", identifier)
-		err = deployApp(cli, value, identifier, env, workflowExecution, action)
-		_ = err
+		go deployApp(cli, value, identifier, env, workflowExecution, action)
 		//err := deployApp(cli, value, identifier, env, workflowExecution, action)
 		//if err != nil {
 		//	log.Printf("[DEBUG] Failed deploying app %s: %s", value, err)

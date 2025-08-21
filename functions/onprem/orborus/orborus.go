@@ -90,7 +90,7 @@ var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 
 //var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
-// Used for cloud with auth
+// Used for cloud with auth. Onprem in certain cases too.
 var auth = os.Getenv("AUTH")
 var org = os.Getenv("ORG")
 
