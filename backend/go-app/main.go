@@ -1135,6 +1135,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	aiEnabled := os.Getenv("OPENAI_API_URL") != "" && os.Getenv("AI_MODEL") != ""
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1159,6 +1161,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		ActiveApps: activatedAppIds,
 		Theme:      userInfo.Theme,
 		OrgStatus:  parsedStatus,
+		AIEnabled:  aiEnabled,
 	}
 
 	returnData, err := json.Marshal(returnValue)
