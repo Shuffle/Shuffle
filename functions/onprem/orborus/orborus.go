@@ -85,9 +85,8 @@ var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONT
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
 // var baseimagename = "shuffle/shuffle"
-var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
-
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 //var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
 // Used for cloud with auth. Onprem in certain cases too.
@@ -1041,6 +1040,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
 	}
 
+	if len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_REGISTRY=%s", os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")))
+	}
+
 	if len(os.Getenv("REGISTRY_URL")) > 0 {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
@@ -1100,8 +1103,13 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		}
 	}
 
+	// Required format:
+	// url/org/repo/appname:tag
+	// url/org/repo/appname:tag
+
+	//env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
 	env = append(env, fmt.Sprintf("BASE_URL=%s", baseUrl))
-	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
+	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=run")
 	env = append(env, fmt.Sprintf("WORKER_HOSTNAME=%s", "shuffle-workers"))
 
 	if len(kubernetesNamespace) == 0 {
@@ -2137,14 +2145,15 @@ func main() {
 
 		if isKubernetes != "true" {
 			deployServiceWorkers(workerImage)
+
+			err := setBackendToSwarmNetwork(ctx)
+			if err != nil {
+				log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
+			}
+
 		} else {
 			deployK8sWorker(workerImage, "shuffle-workers", []string{})
 			runString = "Run: \"kubectl get pods\" for more info"
-		}
-
-		err := setBackendToSwarmNetwork(ctx)
-		if err != nil {
-			log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
 		}
 
 		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)

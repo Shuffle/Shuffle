@@ -404,6 +404,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	log.Printf("[DEBUG] Deploying k8s app with identifier %s to namespace %s", identifier, kubernetesNamespace)
+
 	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
 	if err != nil {
 		deployport = 80
@@ -866,6 +868,11 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		} else {
 			// ** STARTREMOVE ***/
 			exposedPort = 80
+			deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
+			if err == nil {
+				exposedPort = deployport
+			}
+
 			err = findAppInfoKubernetes(image, appName, env)
 			if err != nil {
 				log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
@@ -1430,6 +1437,16 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
 		if strings.Contains(imageName, " ") {
 			imageName = strings.ReplaceAll(imageName, " ", "-")
+		}
+
+		// Kubernetes specific.
+		// Should it be though?
+		if isKubernetes == "true" {
+			// Map it to:
+			// <registry>/baseimagename/<appname>:<appversion>
+			if len(localRegistry) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0 {
+				imageName = fmt.Sprintf("%s/%s/%s:%s", os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY"), baseimagename, parsedAppname, action.AppVersion)
+			}
 		}
 
 		askOtherWorkersToDownloadImage(imageName)
