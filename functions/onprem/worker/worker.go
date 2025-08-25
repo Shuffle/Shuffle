@@ -1444,8 +1444,15 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		if isKubernetes == "true" {
 			// Map it to:
 			// <registry>/baseimagename/<appname>:<appversion>
-			if len(localRegistry) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0 {
-				imageName = fmt.Sprintf("%s/%s/%s:%s", os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY"), baseimagename, parsedAppname, action.AppVersion)
+			localRegistry := os.Getenv("REGISTRY_URL")
+			if len(localRegistry) > 0 && len(baseimagename) > 0 {
+
+				newImageName := fmt.Sprintf("%s/%s/%s:%s", localRegistry, baseimagename, parsedAppname, action.AppVersion)
+
+				log.Printf("[INFO] Remapping image name %s to %s due to registry+image name existing on k8s", imageName, newImageName)
+
+				imageName = newImageName
+
 			}
 		}
 

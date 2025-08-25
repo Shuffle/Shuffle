@@ -1109,7 +1109,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	//env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
 	env = append(env, fmt.Sprintf("BASE_URL=%s", baseUrl))
-	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=run")
+	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=run"))
 	env = append(env, fmt.Sprintf("WORKER_HOSTNAME=%s", "shuffle-workers"))
 
 	if len(kubernetesNamespace) == 0 {
