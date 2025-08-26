@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/shuffle/shuffle-shared"
+	"github.com/shuffle/singul/pkg"
 
 	"bytes"
 	"context"
@@ -57,6 +58,7 @@ var logsDisabled = os.Getenv("SHUFFLE_LOGS_DISABLED")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
+var shutdownDisabled = strings.ToLower(os.Getenv("SHUFFLE_WORKER_SHUTDOWN_DISABLED"))
 
 // Kubernetes settings
 var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
@@ -289,7 +291,13 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
 	log.Printf("[DEBUG][%s] Shutdown (%s) started with reason %#v. Result amount: %d. ResultsSent: %d, Send result: %#v, Parent: %#v", workflowExecution.ExecutionId, workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend, workflowExecution.ExecutionParent)
-	//reason := "Error in execution"
+
+	// This is an escape hatch for development only
+	// Typically meant to be used when you aren't sure how to make a workflow run in bad scenarios, and want to rapidly debug it.
+	if shutdownDisabled == "true" {
+		log.Printf("[ERROR] Shutdown disabled: NOT shutting down. This should ONLY be used for development & debugging.")
+		os.Exit(3)
+	}
 
 	sleepDuration := 1
 	if handleResultSend && requestsSent < 2 {
@@ -1433,7 +1441,15 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		appname = strings.Replace(appname, ".", "-", -1)
 		appversion = strings.Replace(appversion, ".", "-", -1)
 
+		action, _ = singul.HandleSingulStartnode(workflowExecution, action, []string{})
+
 		parsedAppname := strings.Replace(strings.ToLower(action.AppName), " ", "-", -1)
+		//if strings.ToLower(parsedAppname) == "singul" {
+		//	parsedAppname = "shuffle-ai"
+		//	appversion = "1.0.0"
+		//	appname = "shuffle-ai"
+		//}
+
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
 		if strings.Contains(imageName, " ") {
 			imageName = strings.ReplaceAll(imageName, " ", "-")
@@ -4181,6 +4197,9 @@ func main() {
 
 	if os.Getenv("DEBUG") == "true" {
 		debug = true
+
+		log.Printf("[INFO] Disabled cleanup due to debug mode (DEBUG=true)")
+		cleanupEnv = "false" 
 	}
 
 	/*** STARTREMOVE ***/
