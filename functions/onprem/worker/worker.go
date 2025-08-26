@@ -42,6 +42,7 @@ import (
 	//k8s deps
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -639,6 +640,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 								},
 							},
 							SecurityContext: containerSecurityContext,
+							Resources:       buildResourcesFromEnv(),
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
@@ -2375,6 +2377,49 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	}
 	return envVars
 }
+
+func buildResourcesFromEnv() corev1.ResourceRequirements {
+	reqs := corev1.ResourceList{}
+	lims := corev1.ResourceList{}
+
+	type item struct {
+		env string
+		rn  corev1.ResourceName
+		to  *corev1.ResourceList
+	}
+
+	items := []item{
+		// kubernetes requests
+		{env: "SHUFFLE_APP_CPU_REQUEST", rn: corev1.ResourceCPU, to: &reqs},
+		{env: "SHUFFLE_APP_MEMORY_REQUEST", rn: corev1.ResourceMemory, to: &reqs},
+		{env: "SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST", rn: corev1.ResourceEphemeralStorage, to: &reqs},
+		// kubernetes limits
+		{env: "SHUFFLE_APP_CPU_LIMIT", rn: corev1.ResourceCPU, to: &lims},
+		{env: "SHUFFLE_APP_MEMORY_LIMIT", rn: corev1.ResourceMemory, to: &lims},
+		{env: "SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT", rn: corev1.ResourceEphemeralStorage, to: &lims},
+	}
+
+	for _, it := range items {
+		if v := strings.TrimSpace(os.Getenv(it.env)); v != "" {
+			if q, err := resource.ParseQuantity(v); err == nil {
+				(*it.to)[it.rn] = q
+			} else {
+				log.Printf("[WARN] Cannot parse %s=%q as resource quantity: %v", it.env, v, err)
+			}
+		}
+	}
+
+	rr := corev1.ResourceRequirements{}
+	if len(reqs) > 0 {
+		rr.Requests = reqs
+	}
+	if len(lims) > 0 {
+		rr.Limits = lims
+	}
+
+	return rr
+}
+
 func getWorkerBackendExecution(auth string, executionId string) (*shuffle.WorkflowExecution, error) {
 	backendUrl := os.Getenv("BASE_URL")
 	if len(backendUrl) == 0 {
@@ -2385,9 +2430,9 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", backendUrl)
 	topClient := shuffle.GetExternalClient(backendUrl)
-	requestData := shuffle.ActionResult {
+	requestData := shuffle.ActionResult{
 		Authorization: auth,
-		ExecutionId: executionId,
+		ExecutionId:   executionId,
 	}
 
 	data, err := json.Marshal(requestData)
@@ -2647,7 +2692,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		}
 
@@ -2665,7 +2710,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				if debug { 
+				if debug {
 					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
 				}
 
@@ -3630,7 +3675,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
 		}
 	}

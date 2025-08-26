@@ -799,13 +799,13 @@ func buildResourcesFromEnv() corev1.ResourceRequirements {
 
 	items := []item{
 		// kubernetes requests
-		{env: "KUBERNETES_CPU_REQUEST", rn: corev1.ResourceCPU, to: &reqs},
-		{env: "KUBERNETES_MEMORY_REQUEST", rn: corev1.ResourceMemory, to: &reqs},
-		{env: "KUBERNETES_EPHEMERAL_STORAGE_REQUEST", rn: corev1.ResourceEphemeralStorage, to: &reqs},
+		{env: "SHUFFLE_WORKER_CPU_REQUEST", rn: corev1.ResourceCPU, to: &reqs},
+		{env: "SHUFFLE_WORKER_MEMORY_REQUEST", rn: corev1.ResourceMemory, to: &reqs},
+		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST", rn: corev1.ResourceEphemeralStorage, to: &reqs},
 		// kubernetes limits
-		{env: "KUBERNETES_CPU_LIMIT", rn: corev1.ResourceCPU, to: &lims},
-		{env: "KUBERNETES_MEMORY_LIMIT", rn: corev1.ResourceMemory, to: &lims},
-		{env: "KUBERNETES_EPHEMERAL_STORAGE_LIMIT", rn: corev1.ResourceEphemeralStorage, to: &lims},
+		{env: "SHUFFLE_WORKER_CPU_LIMIT", rn: corev1.ResourceCPU, to: &lims},
+		{env: "SHUFFLE_WORKER_MEMORY_LIMIT", rn: corev1.ResourceMemory, to: &lims},
+		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT", rn: corev1.ResourceEphemeralStorage, to: &lims},
 	}
 
 	for _, it := range items {
@@ -1071,6 +1071,34 @@ func fixk8sRoles() {
 func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
+
+	// worker resource env
+	for _, k := range []string{
+		"SHUFFLE_WORKER_CPU_REQUEST",
+		"SHUFFLE_WORKER_MEMORY_REQUEST",
+		"SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST",
+		"SHUFFLE_WORKER_CPU_LIMIT",
+		"SHUFFLE_WORKER_MEMORY_LIMIT",
+		"SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT",
+	} {
+		if v := os.Getenv(k); v != "" {
+			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	// app resource env
+	for _, k := range []string{
+		"SHUFFLE_APP_CPU_REQUEST",
+		"SHUFFLE_APP_MEMORY_REQUEST",
+		"SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST",
+		"SHUFFLE_APP_CPU_LIMIT",
+		"SHUFFLE_APP_MEMORY_LIMIT",
+		"SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT",
+	} {
+		if v := os.Getenv(k); v != "" {
+			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
 
 	if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
 		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
