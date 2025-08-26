@@ -344,7 +344,7 @@ const LoginDialog = (props) => {
                 variant="body2"
                 style={{ marginBottom: 20, color: "white" }}
               >
-                <b>1.</b> Make sure shuffle-database folder has correct access, and that you have a minimum of <b>2Gb of RAM available</b>:{" "}
+                <b>1.</b> Make sure shuffle-database folder has correct access, and that you have a minimum of <b>4Gb of RAM available</b>:{" "}
                 <br />
                 <br />
                 sudo chown -R 1000:1000 shuffle-database
