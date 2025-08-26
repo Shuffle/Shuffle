@@ -222,7 +222,7 @@ const PartnerDetails = (props) => {
                   <div style={{ marginTop: 8, display: "flex" }} />
                   <div style={{ display: "flex" }}>
                     <div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Name
                       </Typography>
                       <Skeleton 
@@ -267,7 +267,7 @@ const PartnerDetails = (props) => {
                       />
                     </div> */}
                     <div style={{ alignItems: "center" }}>
-                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary }}>
+                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Solutions
                       </div>
                       <Skeleton 
@@ -282,7 +282,7 @@ const PartnerDetails = (props) => {
                       />
                     </div>
                     <div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }}>
-                        <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                        <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                           Region
                         </Typography>
                         <Skeleton 
@@ -297,7 +297,7 @@ const PartnerDetails = (props) => {
                         />
                     </div>
                     <div style={{ alignItems: "center", marginLeft: 12 }}>
-                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary }}>
+                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Country
                       </div>
                       <Skeleton 
@@ -313,7 +313,7 @@ const PartnerDetails = (props) => {
                     </div>
                   </div>
                   <div style={{ marginTop: "10px" }}>
-                    <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                    <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                       Description
                     </Typography>
                     <Skeleton 
@@ -329,7 +329,7 @@ const PartnerDetails = (props) => {
                   </div>
                   <div>
                     <div style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 10 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Website URL
                       </Typography>
                       <Skeleton 
@@ -344,7 +344,7 @@ const PartnerDetails = (props) => {
                       />
                     </div>
                     <div style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 20 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Article URL
                       </Typography>
                       <Skeleton 
@@ -359,7 +359,7 @@ const PartnerDetails = (props) => {
                       />
                     </div>
                     <div style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 10 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Contact Email
                       </Typography>
                       <Skeleton 
@@ -397,7 +397,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Name
                     </Typography>
@@ -544,6 +544,7 @@ const PartnerDetails = (props) => {
                         style={{
                           marginRight: "12px",
                           color: theme.palette.text.primary,
+                          fontFamily: theme?.typography?.fontFamily
                         }}
                       >
                         Solutions
@@ -586,7 +587,7 @@ const PartnerDetails = (props) => {
                     >
                       <Typography
                         variant="text"
-                        style={{ color: theme.palette.text.primary }}
+                        style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                       >
                         Region
                       </Typography>
@@ -602,7 +603,7 @@ const PartnerDetails = (props) => {
                     <div style={{ alignItems: "flex-start", marginLeft: 13, display: "flex", flexDirection: "column" }}>
                       <Typography
                         variant="text"
-                        style={{ color: theme.palette.text.primary }}
+                        style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                       >
                         Country
                       </Typography>
@@ -686,7 +687,7 @@ const PartnerDetails = (props) => {
                 <div style={{ marginTop: "10px", }} />
                 <Typography
                   variant="text"
-                  style={{ color: theme.palette.text.primary }}
+                  style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                 >
                   Description
                 </Typography>
@@ -746,7 +747,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Website URL
                     </Typography>
@@ -809,7 +810,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Article URL
                     </Typography>
@@ -872,7 +873,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Contact Email
                     </Typography>
@@ -894,7 +895,7 @@ const PartnerDetails = (props) => {
                         cursor: isDisabled ? "not-allowed" : "pointer",
                       }}
                       fullWidth={true}
-                      placeholder="https://www.example.com"
+                      placeholder="support@shuffler.io"
                       type="name"
                       id="standard-required"
                       margin="normal"

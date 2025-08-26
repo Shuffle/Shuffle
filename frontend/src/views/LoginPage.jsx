@@ -453,7 +453,7 @@ const LoginPage = props => {
 			return (username.length > 0 && password.length > 0);
 		}
 
-		return (username.length > 1 && password.length > 8);
+		return (username.length > 1 && password.length > 9);
 	}
 
 	if (isLoggedIn === true && serverside !== true) {
@@ -932,7 +932,7 @@ const LoginPage = props => {
 									helperText={
 										handleValidateForm(username, password)
 											? ""
-											: "Password must be at least 9 characters long"
+											: "Password must be at least 10 characters long"
 									}
 								/>
 							</div>

@@ -7,7 +7,6 @@ import { useInterval } from "react-powerhooks";
 import { makeStyles, } from "@mui/styles";
 
 import YAML from "yaml";
-import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { v4 as uuidv4, v5 as uuidv5, validate as isUUID, } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { useBeforeunload } from "react-beforeunload"
@@ -71,6 +70,7 @@ import {
   Autocomplete,
   Radio,
   ButtonGroup,
+  Box,
 } from "@mui/material";
 
 
@@ -146,7 +146,9 @@ import CytoscapeComponent from "react-cytoscapejs";
 
 import Draggable from "react-draggable";
 import defaultCytoscapeStyle from "../defaultCytoscapeStyle.jsx";
+import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
+import LineChartWrapper from "../components/LineChartWrapper.jsx";
 
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 import { validateJson, collapseField, GetIconInfo, handleReactJsonClipboard, HandleJsonCopy, } from "../views/Workflows.jsx";
@@ -157,8 +159,13 @@ import ParsedAction from "../components/ParsedAction.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
 import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
+import HighlightedValueInSearch from "../components/HighlightedValueInSearch.jsx"
 import { act } from "react";
 import { Context } from "../context/ContextApi.jsx";
+import WorkflowGenerationModal from "../components/WorkflowGenerationModal.jsx";
+import CodeMirror from '@uiw/react-codemirror';
+import { python } from '@codemirror/lang-python';
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 
 cytoscape.use(edgehandles);
 
@@ -399,7 +406,7 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 
 
 //export const green = "#86c142";
-export const green = "#02CB70"
+export const green = "#2BC07E"
 export const yellow = "#FECC00";
 export const red = "#F53434";
 export const grey = "#b0b0b0";
@@ -530,6 +537,8 @@ const AngularWorkflow = (defaultprops) => {
   const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
   const [aiQueryModalOpen, setAiQueryModalOpen] = React.useState(false)
+  const [workflowGenerationModalOpen, setWorkflowGenerationModalOpen] = React.useState(false);
+  const [workflowDescription, setWorkflowDescription] = React.useState("");
   const [executionVariablesModalOpen, setExecutionVariablesModalOpen] =
     React.useState(false);
   const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
@@ -540,8 +549,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [workflowDone, setWorkflowDone] = React.useState(false);
   const [localFirstrequest, setLocalFirstrequest] = React.useState(true);
-  const [requiresAuthentication, setRequiresAuthentication] =
-    React.useState(false);
+  const [requiresAuthentication, setRequiresAuthentication] = React.useState(false);
   const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false);
   const [showSkippedActions, setShowSkippedActions] = React.useState(false);
   const [lastExecution, setLastExecution] = React.useState("");
@@ -624,6 +632,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [executionFilter, setExecutionFilter] = React.useState("ALL")
   const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
+  const [executionTimeline, setExecutionTimeline] = React.useState([]);
   const [workflowExecutionCount, setWorkflowExecutionCount] = React.useState(0);
   const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
   const [workflowRecommendations, setWorkflowRecommendations] = React.useState(undefined);
@@ -647,6 +656,22 @@ const AngularWorkflow = (defaultprops) => {
     "open": false,
     "attachedTo": "",
   })
+
+  // For code editor
+  const [codeEditorModalOpen, setCodeEditorModalOpen] = React.useState(false);
+  const [codedata, setcodedata] = React.useState("");
+  const [editorData, setEditorData] = React.useState({
+    "name": "",
+    "value": "",
+    "field_number": -1,
+    "actionlist": [],
+    "field_id": "",
+
+    "example": "",
+  })
+  const [executionArgumentModalOpen, setExecutionArgumentModalOpen] = React.useState(false);
+  const [searchModalOpen, setSearchModalOpen] = React.useState(false);
+  
 
   useEffect(() => {
     if (!firstrequest && isLoaded && isLoggedIn && editWorkflowModalOpen === false) {
@@ -677,6 +702,272 @@ const AngularWorkflow = (defaultprops) => {
 
   const dragRef = React.useRef(false);
 
+  // Add this function to handle search
+  const searchWorkflow = (workflowData, term) => {
+    if (!term) return [];
+    
+    const results = [];
+    const searchTermLower = term.toLowerCase();
+
+    // Helper function to search through nodes
+    const searchNode = (node) => {
+      // Search node name/label
+      if (node.label?.toLowerCase()?.replaceAll("_", " ").includes(searchTermLower) || 
+          node.app_name?.toLowerCase().includes(searchTermLower)) {
+        results.push({
+          nodeId: node.id,
+          matchType: 'nodeName',
+          matchedValue: node.label || node.app_name,
+          path: `${node.label?.replaceAll("_", " ")}`,
+          image: node.large_image
+        });
+      }
+
+      // Search parameters
+      if (node.parameters) {
+        node.parameters.forEach(param => {
+          // Search parameter names
+          if (param.name?.toLowerCase().includes(searchTermLower)) {
+            results.push({
+              nodeId: node.id,
+              matchType: 'fieldName',
+              matchedValue: param.name,
+              path: `${node.label?.replaceAll("_", " ")} > ${param.name}`,
+              image: node.large_image
+            });
+          }
+
+          // Search parameter values
+          if (param.value && typeof param.value === 'string' && 
+              param.value?.toLowerCase().includes(searchTermLower)) {
+            results.push({
+              nodeId: node.id,
+              matchType: 'fieldValue',
+              matchedValue: param.value,
+              path: `${node.label?.replace("_", " ")} > ${param.name}`,
+              image: node.large_image
+            });
+          }
+        });
+      }
+    };
+
+    // Search through all actions
+    workflowData.actions?.forEach(searchNode);
+    // Search through all triggers if they exist
+    workflowData.triggers?.forEach(searchNode);
+
+    return results;
+  };
+
+  const SearchModal = memo(({ open, onClose, workflow }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+    const searchTimeoutRef = useRef(null);
+  
+    // Custom debounce implementation
+    const handleSearchChange = (event) => {
+      const newTerm = event.target.value;
+      setSearchTerm(newTerm);
+  
+      // Clear any existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+  
+      // Set new timeout for search
+      searchTimeoutRef.current = setTimeout(() => {
+        if (!newTerm.trim()) {
+          setSearchResults([]);
+          return;
+        }
+        const results = searchWorkflow(workflow, newTerm);
+        setSearchResults(results);
+      }, 300); // 300ms delay
+    };
+  
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (searchTimeoutRef.current) {
+          clearTimeout(searchTimeoutRef.current);
+        }
+      };
+    }, []);
+  
+    return (
+      <Dialog 
+        open={open} 
+        onClose={onClose}
+        PaperProps={{
+          style: {
+            color: "white",
+            minWidth: 750,
+            minHeight: "200px",
+            maxHeight: "80vh",
+            borderRadius: 16,
+            border: "1px solid var(--Container-Stroke, #494949)",
+            background: "var(--Container, #000000)",
+            boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
+            position: "fixed",
+            top: "70px",
+            left: "50%",
+            transform: "translateX(-50%)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pr: 2
+        }}>
+          <span>Search Workflow (Beta version)</span>
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{ 
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <TextField
+              autoFocus
+              fullWidth
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Search for nodes, parameters, values..."
+              variant="outlined"
+            />
+            <div style={{ 
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}>
+              {searchResults.map((result, index) => (
+                <Paper
+                  key={index}
+                  elevation={1}
+                  style={{
+                    padding: '12px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    // Find the action in workflow.actions that matches the node ID
+                    const action = workflow.actions.find(action => action.id === result.nodeId);
+                    if (action) {
+                      console.log("Selected action", action)
+                      setSelectedAction(action);
+                      setRightSideBarOpen(true)
+                    }
+                  
+                    // Navigate to the node using the utility function
+                    const navigationSuccess = navigateToNode(result.nodeId);
+                    
+                    if (!navigationSuccess) {
+                      console.warn(`Failed to navigate to node: ${result.nodeId}`);
+                      // Fallback: try to trigger node selection event manually
+                      if (cy && result.nodeId) {
+                        const cyNode = cy.getElementById(result.nodeId);
+                        if (cyNode && cyNode.length > 0) {
+                          cyNode.trigger('select');
+                        }
+                      }
+                    }
+
+                    // Scroll to specific field if it's a field search result
+                    if ((result.matchType === 'fieldName' || result.matchType === 'fieldValue') && result.path) {
+                      const paramName = result.path.split(' > ').pop();
+                      setTimeout(() => {
+                        const field = document.querySelector(`[data-parameter="${paramName}"], [name="${paramName}"], #param_${paramName.replace(/[^a-zA-Z0-9_-]/g, '_')}`);
+                        if (field) {
+                          field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          field.style.border = '3px solid #2BC07E';
+                          setTimeout(() => field.style.border = '', 2000);
+                        }
+                      }, 800);
+                    }
+                    
+                    onClose();
+                  }}
+                >
+                  <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: "center",
+                    gap:1,
+                    mb: 1
+                  }}
+                  >
+                  <img src={result.image} alt="Node" style={{ width: '20px', height: '20px', borderRadius: "50%", border: "1px solid #2121212" }} />
+                  <Typography variant="subtitle1">
+                    {result.path}
+                  </Typography>
+                  </Box>
+                  <HighlightedValueInSearch
+                  value={result.matchedValue} 
+                  searchTerm={searchTerm}
+                  theme={theme}
+                  />
+                </Paper>
+              ))}
+              {searchTerm && searchResults.length === 0 && (
+                <Typography color="textSecondary">
+                  No results found
+                </Typography>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  });
+  
+  // Add keyboard shortcut handler in your main component
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      const hasSupport = userdata?.support === true;
+      
+      if (hasSupport && ((event.metaKey || event.ctrlKey) && event.key === 'f')) {
+
+        // Check if any modal is currently open
+        const isAnyModalOpen = codeEditorModalOpen || executionModalOpen || 
+            editWorkflowModalOpen || executionArgumentModalOpen || authenticationModalOpen || codeModalOpen ||
+            authgroupModalOpen;
+            
+        if (isAnyModalOpen) {
+          return;
+        }
+        
+        event.preventDefault();
+        setSearchModalOpen(true);
+      }
+    };
+  
+    // Always add the event listener, but the handler will check permissions internally
+    document.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [
+    userdata?.support,
+    codeEditorModalOpen, 
+    executionModalOpen, 
+    editWorkflowModalOpen, 
+    executionArgumentModalOpen, 
+    authenticationModalOpen, 
+    codeModalOpen, 
+    authgroupModalOpen
+  ]);
 
   // New for generated stuff
   const releaseToConnectLabel = "Release to Connect"
@@ -765,6 +1056,7 @@ const AngularWorkflow = (defaultprops) => {
 	{
     "id": "integration",
     "name": "Singul",
+	"is_valid": true,
 	"large_image": theme.palette.singulGreen,
     "type": "ACTION",
     "app_version": "1.0.0",
@@ -772,7 +1064,7 @@ const AngularWorkflow = (defaultprops) => {
     "authentication": {
       "type": "",
     },
-    "description": "Support-use only",
+    "description": "Build & integrate tools easily with standard input and standard output. Built by Shuffle. https://singul.io",
     "actions": [{
       "name": "Cases",
       "description": "Available actions for case management",
@@ -968,21 +1260,30 @@ const AngularWorkflow = (defaultprops) => {
         "multiline": true,
       }]
     },
-    ]
-  }]
+    {
+      "name": "Translate standard",
+      "description": "Translates your JSON data into a standard formats, then stores it in the Shuffle Datastore",
+      "label": "Translate standard",
+	  "example": "{\"source_data\": \"{\\\"event\\\": \\\"login\\\", \\\"user\\\": \\\"john_doe\\\", \\\"timestamp\\\": \\\"2023-10-01T12:00:00Z\\\"}\", \"standard\": \"OCSF\"}",
+      "parameters": [{
+        "name": "source_data",
+        "value": "",
+        "required": true,
+		"multiline": true,
+      },
+      {
+        "name": "standard",
+        "value": "OCSF",
+		"description": "The standard to use from https://github.com/Shuffle/standards/tree/main",
+		"options": [
+			"OCSF"
+		],
+        "required": true,
+        "multiline": false,
+      }]
+    },
+	]}]
 
-  // For code editor
-  const [codeEditorModalOpen, setCodeEditorModalOpen] = React.useState(false);
-  const [codedata, setcodedata] = React.useState("");
-  const [editorData, setEditorData] = React.useState({
-    "name": "",
-    "value": "",
-    "field_number": -1,
-    "actionlist": [],
-    "field_id": "",
-
-    "example": "",
-  })
 
   const [loadedApps, setLoadedApps] = React.useState([])
 
@@ -1245,8 +1546,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
   }, [selectedApp])
-
-  const [executionArgumentModalOpen, setExecutionArgumentModalOpen] = React.useState(false);
 
   // This should all be set once, not on every iteration
   // Use states and don't update lol
@@ -1987,6 +2286,10 @@ const AngularWorkflow = (defaultprops) => {
           responseJson.executions = responseJson.runs
         }
 
+        if (responseJson !== undefined && responseJson !== null && responseJson.timeline !== undefined && responseJson.timeline !== null && responseJson.timeline.length > 0) {
+			setExecutionTimeline(responseJson.timeline)
+		}
+
         if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null) {
 
           // - means it's opposite
@@ -2086,7 +2389,7 @@ const AngularWorkflow = (defaultprops) => {
       .then((response) => {
         if (response.status !== 200) {
           stop();
-          setExecutionModalView(0);
+          //setExecutionModalView(0);
           //toast("Failed loading the workflow run")
           console.log("Status not 200 for stream results :O!");
 
@@ -2196,6 +2499,63 @@ const AngularWorkflow = (defaultprops) => {
 
   };
 
+  // Utility function to navigate to a specific node in the workflow
+  const navigateToNode = (nodeId) => {
+    if (!cy || !nodeId) {
+      console.warn('Cytoscape instance not available or nodeId missing');
+      return false;
+    }
+
+    try {
+      // Find the node in Cytoscape
+      const cyNode = cy.getElementById(nodeId);
+      
+      if (!cyNode || cyNode.length === 0) {
+        console.warn(`Node with ID ${nodeId} not found in Cytoscape`);
+        return false;
+      }
+
+      // Default options
+      const defaultOptions = {
+        select: true,
+        unselectOthers: true,
+        center: true,
+        zoom: Math.max(cy.zoom(), 1),
+        animationDuration: 800,
+        easing: 'ease-in-out'
+      };
+
+      const config = { ...defaultOptions };
+
+      // Unselect all currently selected nodes if requested
+      if (config.unselectOthers) {
+        cy.$(':selected').unselect();
+      }
+      
+      // Select the target node if requested
+      if (config.select) {
+        cyNode.select();
+      }
+      
+      // Center and zoom to the node with smooth animation if requested
+      if (config.center) {
+        cy.animate({
+          center: {
+            eles: cyNode
+          },
+          zoom: config.zoom,
+        }, {
+          duration: config.animationDuration,
+          easing: config.easing
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error navigating to node:', error);
+      return false;
+    }
+  };
 
   const handleColoring = (actionId, status, label) => {
     if (cy === undefined) {
@@ -6529,8 +6889,31 @@ const AngularWorkflow = (defaultprops) => {
             )
           }
 
-          const requiresAuth = curapp.authentication.required; //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
-          setRequiresAuthentication(requiresAuth);
+          var requiresAuth = curapp?.authentication?.required
+		  if (curaction.app_id === "integration" || curaction.app_id === "shuffle_agent") { 
+
+			requiresAuth = false
+			for (var paramkey in curaction.parameters) {
+				const param = curaction.parameters[paramkey]
+				if (param.name === "app_name" && param?.value?.length > 0) {
+
+					const foundapp = apps.find((a) => a.name === param.value)
+					if (foundapp !== undefined && foundapp !== null && foundapp?.authentication?.required === true) { 
+						requiresAuth = true
+						for (var key in appAuthentication) {
+							if (appAuthentication[key]?.app?.name === foundapp?.name) {
+								requiresAuth = false
+								break
+							}
+						}
+					}
+
+					break
+				}
+			}
+		  }
+
+          setRequiresAuthentication(requiresAuth)
           if (curapp.authentication.required) {
             //console.log("App requires auth.")
             // Setup auth here :)
@@ -11588,6 +11971,59 @@ const AngularWorkflow = (defaultprops) => {
     }
   }
 
+  const generateAIWorkflow = () => {
+    const envToSend = selectedActionEnvironment?.Name || (isCloud ? "Cloud" : "Shuffle");
+
+    const data = { 
+      query: workflowDescription,
+      workflow_id: props.match.params.key,
+      environment: envToSend 
+     };
+
+    fetch(globalUrl + "/api/v2/workflows/generate/llm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const json = await response.json();
+
+        if (response.status !== 200) {
+          toast(json.message || "Unexpected response");
+          return null;
+        }
+
+        // AI “rejection” message (success: true + message)
+        if (json.success === true && typeof json.message === "string") {
+          toast(json.message);
+          return null;
+        }
+
+        if (json.success === false) {
+          toast(json.message || "Operation failed");
+          return null;
+        }
+
+        if (!json || Object.keys(json).length === 0) {
+          toast("Workflow generation failed: empty response");
+          return null;
+        }
+
+        toast("Workflow generation successful");
+        setWorkflow(json);
+        return json;
+      })
+      .catch((error) => {
+        console.error("AI Workflow Generation Error:", error);
+        toast("Workflow generation failed due to network error");
+      });
+  };
+
+
   const AppView = (props) => {
     const { allApps, prioritizedApps, filteredApps, extraApps } = props;
     // console.log("AppView Rendered!")
@@ -12313,18 +12749,15 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 if (app.trigger_type === "PIPELINE" && userdata.support !== true) {
-                  return null
+                  	return null
                 }
 
-                if ((app.id === "integration" || app.id === "shuffle_agent") && userdata.support !== true) {
-					if (isCloud === false && app.id === "integration") {
-					} else {
-                  		return null
-					}
-                }
+                if ((app.id === "shuffle_agent") && userdata.support !== true) {
+                  	return null
+				}
 
                 if (viewedApps.includes(app.id)) {
-                  return null
+                  	return null
                 }
 
                 if (app.trigger_type !== undefined && app.trigger_type !== null && app.trigger_type.length > 0) {
@@ -13711,6 +14144,10 @@ const AngularWorkflow = (defaultprops) => {
         continue
       }
 
+      if (execution.execution_argument === "{}" || execution.execution_argument === "[]") {
+        continue
+      }
+
       if (availableArguments.includes(execution.execution_argument)) {
         continue
       }
@@ -13968,7 +14405,7 @@ const AngularWorkflow = (defaultprops) => {
           :
           <div>
             <Typography variant="body1" color="textSecondary">
-              At least one node in this workflow requires an execution argument ($exec). Please select one below, or provide a custom one in the text field next to the run button.
+              At least one node in this workflow requires an execution argument ($exec). Please click one below, or provide a custom argument in the text field next to the run button.
             </Typography>
 
             <Divider style={{ marginTop: 10, marginBottom: 20, }} />
@@ -13978,8 +14415,45 @@ const AngularWorkflow = (defaultprops) => {
                   Previously used arguments:
                 </Typography>
                 {availableArguments.map((data) => {
+      
+				  var defaultoutput = 
+                      <Typography variant="body1" color="textSecondary">
+                        {data}
+                      </Typography>
+
+				  const validate = validateJson(data, true)
+      			  if (validate.valid === true) {
+					  defaultoutput = 
+						  <div style={{display: "flex", }}>
+						  	  <Button
+					  			variant="outlined"
+					  			color="primary"
+					  			style={{position: "sticky", top: 35, maxHeight: 40, maxWidth: 150, marginRight: 5, }}
+					  			onClick={() => {
+									setExecutionText(data)
+									executeWorkflow(data, workflow.start, lastSaved);
+
+									setExecutionArgumentModalOpen(false)
+								}}
+					  		  >Select</Button>
+							  <ReactJson
+								src={validate.result}
+								theme={theme.palette.jsonTheme}
+								style={theme.palette.reactJsonStyle}
+								shouldCollapse={(jsonField) => {
+								  return collapseField(jsonField)
+								}}
+								iconStyle={theme.palette.jsonIconStyle}
+								collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+								displayArrayKey={false}
+								displayDataTypes={false}
+								name={false}
+							  />
+						  </div>
+				  }
+
                   return (
-                    <Paper style={{ padding: 10, marginTop: 10, backgroundColor: theme.palette.platformColor, maxHeight: 70, overflow: "auto", cursor: "pointer", position: "relative", }}
+                    <Paper style={{ padding: 10, marginTop: 10, backgroundColor: theme.palette.platformColor, maxHeight: 100, overflow: "auto", cursor: "pointer", position: "relative", }}
                       onClick={() => {
                         setExecutionText(data)
                         executeWorkflow(data, workflow.start, lastSaved);
@@ -13988,9 +14462,7 @@ const AngularWorkflow = (defaultprops) => {
                       }}
                     >
                       <div style={{ height: "100%", width: 2, backgroundColor: "rgba(255, 255, 255, 0.5)", position: "absolute", left: 0, top: 0 }} />
-                      <Typography variant="body1" color="textSecondary">
-                        {data}
-                      </Typography>
+					  {defaultoutput}
                     </Paper>
                   )
                 })}
@@ -13999,14 +14471,14 @@ const AngularWorkflow = (defaultprops) => {
 
             <Button
               variant="outlined"
-              color="primary"
+              color="secondary"
               onClick={() => {
                 executeWorkflow(" ", workflow.start, lastSaved);
                 setExecutionArgumentModalOpen(false)
               }}
-              style={{ marginTop: 20, marginBottom: 20 }}
+              style={{ marginTop: 50, }}
             >
-              Run anyway
+              Run without Runtime Argument 
             </Button>
           </div>
         }
@@ -20363,6 +20835,7 @@ const AngularWorkflow = (defaultprops) => {
             </span>
           </Tooltip>
 		  */}
+
             <Tooltip color="secondary" title="Undo" placement="top-start">
               <span>
                 <Button
@@ -20482,7 +20955,10 @@ const AngularWorkflow = (defaultprops) => {
 					  disabled={workflow.public}
 					  color="secondary"
 					  variant="text"
-					  style={{ width: 65, height: buttonHeights, }}
+					  style={{ 
+						  width: 65, height: buttonHeights, 
+							  borderLeft: "1px solid rgba(255,255,255,0.5)",
+					  }}
 					  onClick={() => {
 						setupWorkflowYaml(workflow)
 					  }}
@@ -20492,8 +20968,29 @@ const AngularWorkflow = (defaultprops) => {
 				  </span>
 				</Tooltip>
 			: null}
-          </ButtonGroup>
 
+            {userdata.support == true ?
+              <Tooltip
+                color="secondary"
+                title="Generate workflow (support only)"
+                placement="top-start"
+              >
+                <span>
+                  <Button
+                    variant="aiButtonGhost"
+                    color="secondary"
+                    style={{ width: 65, height: buttonHeights, }}
+                    onClick={() => {
+						setWorkflowGenerationModalOpen(!workflowGenerationModalOpen)
+					}}
+                  >
+                    <AutoAwesomeIcon />
+                  </Button>
+                </span>
+              </Tooltip>
+              : null}
+
+          </ButtonGroup>
 
         </div>
       </div>
@@ -21120,20 +21617,6 @@ const AngularWorkflow = (defaultprops) => {
         </div>
       );
 
-  const executionPaperStyle = {
-    minWidth: "95%",
-    maxWidth: "95%",
-    marginTop: 5,
-    color: theme.palette.text.primary,
-    marginBottom: 10,
-    padding: 5,
-    backgroundColor: theme.palette.platformColor,
-    borderRadius: theme.palette.borderRadius,
-    cursor: "pointer",
-    display: "flex",
-    minHeight: 45,
-    maxHeight: 45,
-  };
 
   const parsedExecutionArgument = () => {
     var showResult = executionData.execution_argument.trim();
@@ -21629,7 +22112,8 @@ const AngularWorkflow = (defaultprops) => {
         </Tooltip>
         : null}
       {executionModalView === 0 ? (
-        <div style={{ padding: isMobile ? "0px 0px 0px 10px" : 25, zIndex: 12502,  backgroundColor: theme.palette.drawer.backgroundColor,  height: "100%", }}>
+
+        <div style={{ position: "relative", padding: isMobile ? "0px 0px 0px 10px" : "25px 25px 25px 25px", zIndex: 12502,  backgroundColor: theme.palette.drawer.backgroundColor,  height: "100%", }}>
           <div style={{ display: "flex", }}>
             <Breadcrumbs
               aria-label="breadcrumb"
@@ -21656,6 +22140,21 @@ const AngularWorkflow = (defaultprops) => {
               </a>
             </Tooltip>
           </div>
+
+		  {executionTimeline?.length > 0 && 
+		  	<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", position: "fixed", bottom: 0, zIndex: 13000, width: 460, right: 10, padding: "0px 10px 0px 10px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
+			  <LineChartWrapper 
+				inputname={""}
+				keys={executionTimeline}
+				height={100}
+				width={100}
+				border={false}
+
+			    color={"#808080"}
+			  />
+			</div>
+		  }
+
 		  <Button
 		    style={{ borderRadius: 8, }}
 		    variant="outlined"
@@ -21713,12 +22212,14 @@ const AngularWorkflow = (defaultprops) => {
               Aborted
             </Button>
           </ButtonGroup>
+
           <div
             style={{
               marginTop: 10,
               marginBottom: 10,
             }}
           />
+
           {workflowExecutions.length > 0 ? (
             <div>
               {workflowExecutions.map((data, index) => {
@@ -21766,6 +22267,21 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 const foundnotifications = data.notifications_created === undefined || data.notifications_created === null ? 0 : data.notifications_created
+
+			    const executionPaperStyle = {
+			      padding: 5,
+			      marginTop: 5,
+			      minHeight: 45,
+			      maxHeight: 45,
+			      minWidth: "95%",
+			      maxWidth: "95%",
+			      display: "flex",
+			      marginBottom: index === workflowExecutions.length-1 ? 200 : 10,
+			      cursor: "pointer",
+			      color: theme.palette.text.primary,
+			      borderRadius: theme.palette.borderRadius,
+			      backgroundColor: theme.palette.platformColor,
+			    };
 
                 return (
                   <span
@@ -21916,7 +22432,7 @@ const AngularWorkflow = (defaultprops) => {
                           {foundnotifications > 0 ?
                             <Tooltip title={"This workflow created " + foundnotifications + " notification(s)"} placement="top">
                               <ErrorOutlineIcon
-                                style={{ color: theme.palette.text.primary, marginTop: 10, marginRight: 10, }}
+                                style={{ color: "#f85a3e", marginTop: 10, marginRight: 10, }}
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -22991,14 +23507,15 @@ const AngularWorkflow = (defaultprops) => {
     return (
       <div style={{ maxWidth: 600, overflowX: "hidden", }}>
         {data.value.length > 60 || checked.valid ?
+		  <span>
           <IconButton
             style={{
               marginBottom: 0,
               marginTop: 5,
               cursor: "pointer",
-              padding: 3,
               border: "1px solid rgba(255,255,255,0.3)",
               borderRadius: theme.palette?.borderRadius,
+              padding: "3px 8px 3px 8px",
             }}
             onClick={() => {
               if (!showVariable) {
@@ -23022,6 +23539,37 @@ const AngularWorkflow = (defaultprops) => {
               {showVariable ? data.value : null}
             </Typography>
           </IconButton>
+		  <IconButton
+			aria-label="Copy webhook"
+			style={{marginLeft: 10, }}
+			onClick={() => {
+			  var copyText = document.getElementById("copy_element_shuffle");
+			  if (copyText !== undefined && copyText !== null) {
+				const clipboard = navigator.clipboard;
+				if (clipboard === undefined) {
+				  toast("Can only copy over HTTPS (port 3443)");
+				  return;
+				}
+
+				navigator.clipboard.writeText(data.value);
+				copyText.select();
+				copyText.setSelectionRange(
+				  0,
+				  99999
+				); /* For mobile devices */
+
+				/* Copy the text inside the text field */
+				document.execCommand("copy");
+				toast("Copied to clipboard");
+			  } else {
+				console.log("Couldn't find the copy field: ", copyText);
+			  }
+			}}
+			edge="end"
+		  >
+			<ContentCopyIcon style={{heigth: 15, }}/>
+		  </IconButton>
+		  </span>
           :
           <Typography
             variant="body1"
@@ -23052,7 +23600,7 @@ const AngularWorkflow = (defaultprops) => {
               variant="body2"
               style={{
 				marginTop: 5, 
-                whiteSpace: 'pre-line',
+                whiteSpace: 'pre-wrap',
                 cursor: showlink ? "pointer" : "default",
               }}
               onClick={(e) => {
@@ -23175,6 +23723,10 @@ const AngularWorkflow = (defaultprops) => {
 
     if (stringjson.includes("kms/")) {
       return `KMS authentication most likely failed. Check your notifications for more details on this page: /admin?admin_tab=notifications. If you need help with KMS, please contact ${supportEmail}`
+    }
+
+    if (stringjson.includes("string indices must be integers")) {
+      return `String indices must be integers typically means you are getting a list, while you expected a dictionary. Check the Variable & Debug for more information.` 
     }
 
     if (stringjson.includes("invalidurl")) {
@@ -23688,6 +24240,7 @@ const AngularWorkflow = (defaultprops) => {
                 globalUrl={globalUrl}
                 setSelectedActionEnvironment={setSelectedActionEnvironment}
                 requiresAuthentication={requiresAuthentication}
+                setRequiresAuthentication={setRequiresAuthentication}
                 setLastSaved={setLastSaved}
                 lastSaved={lastSaved}
                 aiSubmit={aiSubmit}
@@ -24415,6 +24968,7 @@ const AngularWorkflow = (defaultprops) => {
                       },
                     }}
                     fullWidth
+		    multiline={!!data.multiline}
                     type={
                       data.example !== undefined && data.example.includes("**")
                         ? "password"
@@ -24510,7 +25064,10 @@ const AngularWorkflow = (defaultprops) => {
       </Dialog>
     ) : null;
 
-  // This whole part is redundant. Made it part of Arguments instead.
+  // This whole part is redundant. Made it part of Arguments instead?
+  const foundIntegrationApp = selectedAction.app_id === "integration" || selectedAction.app_id === "shuffle_agent" ? selectedAction?.parameters?.find(param => param.name === "app_name") : undefined
+  const authApp = !authenticationModalOpen ? undefined : foundIntegrationApp === undefined || (selectedApp.id !== "integration" && selectedApp.id !== "shuffle_agent") ? selectedApp : apps.find(app => app.name === foundIntegrationApp?.value) || selectedApp;
+
   const authenticationModal = authenticationModalOpen ? (
     <Dialog
       PaperComponent={PaperComponent}
@@ -24561,11 +25118,11 @@ const AngularWorkflow = (defaultprops) => {
           backgroundColor: theme.palette.DialogStyle.backgroundColor,
         }}
       >
-        {selectedApp.reference_info === undefined ||
-          selectedApp.reference_info === null ||
-          selectedApp.reference_info.github_url === undefined ||
-          selectedApp.reference_info.github_url === null ||
-          selectedApp.reference_info.github_url.length === 0 ? (
+        { authApp.reference_info === undefined ||
+          authApp.reference_info === null ||
+          authApp.reference_info.github_url === undefined ||
+          authApp.reference_info.github_url === null ||
+          authApp.reference_info.github_url.length === 0 ? (
 
           <a
             rel="noopener noreferrer"
@@ -24574,8 +25131,8 @@ const AngularWorkflow = (defaultprops) => {
             style={{ textDecoration: "none", color: theme.palette.linkColor }}
           >
             <img
-              alt={`Documentation image for ${selectedApp.name}`}
-              src={selectedApp.large_image}
+              alt={`Documentation image for ${authApp.name}`}
+              src={authApp.large_image}
               style={{
                 width: 30,
                 height: 30,
@@ -24592,12 +25149,12 @@ const AngularWorkflow = (defaultprops) => {
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href={selectedApp.reference_info.github_url}
+            href={authApp.reference_info.github_url}
             style={{ textDecoration: "none", color: theme.palette.linkColor }}
           >
             <img
-              alt={`Documentation image for ${selectedApp.name}`}
-              src={selectedApp.large_image}
+              alt={`Documentation image for ${authApp.name}`}
+              src={authApp.large_image}
               style={{
                 width: 30,
                 height: 30,
@@ -24653,10 +25210,10 @@ const AngularWorkflow = (defaultprops) => {
         <div
           style={{
             flex: 
-			  selectedApp.authentication === undefined ||
-			  selectedApp.authentication.parameters === null ||
-			  selectedApp.authentication.parameters === undefined ||
-			  selectedApp.authentication.parameters.length === 0 ? 0 : 2,
+			  authApp.authentication === undefined ||
+			  authApp.authentication.parameters === null ||
+			  authApp.authentication.parameters === undefined ||
+			  authApp.authentication.parameters.length === 0 ? 0 : 2,
             paddingLeft: 15,
             paddingTop: 15,
             paddingBottom: 15,
@@ -24670,7 +25227,7 @@ const AngularWorkflow = (defaultprops) => {
           {authenticationType.type === "oauth2" || authenticationType.type === "oauth2-app" ?
             <AuthenticationOauth2
               saveWorkflow={saveWorkflow}
-              selectedApp={selectedApp}
+              selectedApp={authApp}
               workflow={workflow}
               selectedAction={selectedAction}
               authenticationType={authenticationType}
@@ -24682,7 +25239,7 @@ const AngularWorkflow = (defaultprops) => {
               isCloud={isCloud}
             />
             :
-            <AuthenticationData app={selectedApp} />
+            <AuthenticationData app={authApp} />
           }
         </div>
         <div
@@ -24711,9 +25268,9 @@ const AngularWorkflow = (defaultprops) => {
           */
           }}
         >
-          {selectedApp.documentation === undefined ||
-            selectedApp.documentation === null ||
-            selectedApp.documentation.length === 0 ? (
+          { authApp.documentation === undefined ||
+            authApp.documentation === null ||
+            authApp.documentation.length === 0 ? (
             <span
               style={{ textAlign: "center" }}
             >
@@ -24738,7 +25295,7 @@ const AngularWorkflow = (defaultprops) => {
                     textAlign: "left",
                   }}
                 >
-                  {selectedApp.description}
+                  {authApp.description}
                 </Markdown>
               </div>
               <Divider
@@ -24767,7 +25324,7 @@ const AngularWorkflow = (defaultprops) => {
                     toast.success("Opening remote Github documentation link. Thanks for contributing!")
 
                     setTimeout(() => {
-                      window.open(`https://github.com/Shuffle/openapi-apps/new/master/docs?filename=${selectedApp.name.toLowerCase()}.md`, "_blank")
+                      window.open(`https://github.com/Shuffle/openapi-apps/new/master/docs?filename=${authApp.name.toLowerCase()}.md`, "_blank")
                     }, 2500)
                   }}
                 >
@@ -24791,11 +25348,11 @@ const AngularWorkflow = (defaultprops) => {
               <Typography variant="h6" style={{ marginTop: 50 }}>
                 Want to help change this app directly?
               </Typography>
-              {selectedApp.reference_info === undefined ||
-                selectedApp.reference_info === null ||
-                selectedApp.reference_info.github_url === undefined ||
-                selectedApp.reference_info.github_url === null ||
-                selectedApp.reference_info.github_url.length === 0 ? (
+              { authApp.reference_info === undefined ||
+                authApp.reference_info === null ||
+                authApp.reference_info.github_url === undefined ||
+                authApp.reference_info.github_url === null ||
+                authApp.reference_info.github_url.length === 0 ? (
                 <span>
                   <Typography variant="body1" style={{ marginTop: 25 }}>
                     <a
@@ -24814,7 +25371,7 @@ const AngularWorkflow = (defaultprops) => {
                     <a
                       rel="noopener noreferrer"
                       target="_blank"
-                      href={selectedApp.reference_info.github_url}
+                      href={authApp.reference_info.github_url}
                       style={{ textDecoration: "none", color: "#f86a3e" }}
                     >
                       Check it out on Github!
@@ -24921,7 +25478,7 @@ const AngularWorkflow = (defaultprops) => {
                   maxWidth: "100%", minWidth: "100%",
                 }}
               >
-                {selectedApp.documentation}
+                {authApp.documentation}
               </Markdown>
             </div>
           )}
@@ -25002,7 +25559,7 @@ const AngularWorkflow = (defaultprops) => {
     const [responseMsg, setResponseMsg] = useState("");
 
     if (suggestionBox === undefined || suggestionBox.open === false) {
-      return false
+      return <span />
     }
 
     return (
@@ -25474,7 +26031,7 @@ const AngularWorkflow = (defaultprops) => {
     };
 
     // Check if event.target.value is an array. If it is, split with comma
-    if (parametername !== undefined && parametername.startsWith("${") && parametername.endsWith("}")) {
+    if (parametername !== undefined && parametername !== undefined && parametername?.startsWith("${") && parametername?.endsWith("}")) {
       var paramcheckIndex = selectedAction.parameters.findIndex(param => param.name === parametername)
       if (paramcheckIndex !== -1) {
         // Replace the value in the field
@@ -25708,6 +26265,20 @@ const AngularWorkflow = (defaultprops) => {
         <VariablesModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
         <ExecutionVariableModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
         {aiQueryModal}
+
+        <WorkflowGenerationModal
+          open={workflowGenerationModalOpen}
+          globalUrl={globalUrl}
+          isCloud={isCloud}
+          workflow={workflow}
+          setWorkflow={setWorkflow}
+          saveWorkflow={saveWorkflow}
+          setWorkflowGenerationModalOpen={setWorkflowGenerationModalOpen}
+
+          theme={theme}
+          isMobile={isMobile}
+        />
+
         {conditionsModal}
         {codePopoutModal}
         {workflowRevisions}
@@ -25886,7 +26457,11 @@ const AngularWorkflow = (defaultprops) => {
 				<Prompt when={!lastSaved} message={unloadText} />
 			*/}
       {loadedCheck}
-
+      <SearchModal
+      open={searchModalOpen}
+      onClose={() => setSearchModalOpen(false)}
+      workflow={workflow}
+      />
     </div>
   );
 };

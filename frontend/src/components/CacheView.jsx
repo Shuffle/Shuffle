@@ -35,6 +35,7 @@ import {
 	InputLabel,
 	Pagination,
 	PaginationItem,
+	Avatar,
 } from "@mui/material";
 
 import { 
@@ -134,7 +135,7 @@ const CacheView = memo((props) => {
 	// Direct category migration from ../components/Files.jsx
     const [selectAllChecked, setSelectAllChecked] = React.useState(false)
   	const [renderTextBox, setRenderTextBox] = React.useState(false);
-  	const [datastoreCategories, setDatastoreCategories] = React.useState(["default"]);
+  	const [datastoreCategories, setDatastoreCategories] = React.useState(["default", "protected"]);
 	const [selectedCategory, setSelectedCategory] = React.useState("default");
 	const [selectedFileId, setSelectedFileId] = React.useState("");
     const [updateToThisCategory, setUpdateToThisCategory] = useState("")
@@ -322,7 +323,6 @@ const CacheView = memo((props) => {
 		}
 
 		var url = `${globalUrl}/api/v1/orgs/${orgId}/list_cache`
-
 		if (category !== undefined && category !== null && category !== "default" && category !== "") {
 			url += "?category=" + category.replaceAll(" ", "_")
 		} else {
@@ -398,7 +398,7 @@ const CacheView = memo((props) => {
 					}
 				}
 
-				if ((category === undefined || category === "default" || category === "") && datastoreCategories.length === 1 && datastoreCategories[0] === "default") {
+				if ((category === undefined || category === "default" || category === "") && datastoreCategories.length === 2 && datastoreCategories[0] === "default") {
 					var newcategories = ["default"]
 					for (var key in responseJson.keys) {
 						var foundcategory = responseJson.keys[key].category
@@ -585,7 +585,7 @@ const CacheView = memo((props) => {
             })
             .then((responseJson) => {
                 setAddCache(responseJson);
-                toast("New key added Successfully!");
+                toast.success("New key added!");
                 listOrgCache(orgId, selectedCategory, 0, pageSize, page);
                 setModalOpen(false);
             })
@@ -699,6 +699,7 @@ const CacheView = memo((props) => {
 						</IconButton>
 					</Tooltip>
 				</div>
+
                 <TextField
                     color="primary"
                     style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, marginTop: 0, }}
@@ -1461,12 +1462,25 @@ const CacheView = memo((props) => {
 		  sortable: true,
 	  },
 	  {
-		width: 600,
+		width: 540,
 		field: 'value',
 		filterable: true,
 		headerName: 'Value',
 		renderCell: (props) => {
 			const data = props.row
+
+			if (data?.category?.toLowerCase() === "protected") { 
+				return (
+					<Typography 
+						variant="body2" 
+						type="password"
+						style={{maxHeight: 200, overflow: "hidden", }}
+					>
+						***************
+					</Typography>
+				)
+			}
+
         	const validate = validateJson(data.value)
 
 			return (
@@ -1485,8 +1499,8 @@ const CacheView = memo((props) => {
 								backgroundColor: theme.palette.platformColor,
 								border: theme.palette.defaultBorder,
 								padding: 5,
-								minWidth: 600, 
-								maxHeight: 600,
+								minWidth: 500, 
+								maxHeight: 500,
 								overflowY: "auto",
 							}}
 							collapsed={true}
@@ -1508,6 +1522,74 @@ const CacheView = memo((props) => {
 		}
 	  },
 	  {
+		field: 'category',
+		headerName: 'Category',
+		description: 'Category for this key.',
+		width: 75,
+		filterable: false,
+		  sortable: true,
+		  renderCell: (props) => {
+			  // Return avatar with hover for the category
+			  const data = props.row
+			  const clickCategory = (e) => {
+				setCategoryConfig(undefined)
+				setCategoryAutomations(defaultAutomation)
+
+				if (selectAllChecked || selectedFiles.length > 0) {
+					setUpdateToThisCategory(data.category)
+					return
+				}
+
+				setSelectedCategory(data.category)
+				if (data.category === "all" || data.category === "default") {
+					listOrgCache(orgId, "", 0, pageSize, page)
+				} else {
+					listOrgCache(orgId, data.category, 0, pageSize, page)
+				}
+
+				// Add it to the url as a query
+				if (window.location.search.includes("category=")) {
+					const newurl = window.location.href.replace(/category=[^&]+/, `category=${data.category}`)
+					window.history.pushState({ path: newurl }, "", newurl)
+				} else {
+					window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${data.category}`)
+				}
+			  }
+
+
+			  const iconDetails = GetIconInfo({
+			  	"app_name": data.category,
+			  	"name": data.category,
+			  })
+
+			  const avatarLetter = (data.category === "" || data.category === "default" ? " " : data.category.charAt(0).toUpperCase())[0]
+			  return (
+				  <Tooltip title={data.category === "" || data.category === "default" ? "No category" : `Category name: ${data.category}`} placement="left">
+				  	<Avatar
+				  		onClick={(e) => {
+							clickCategory(e)
+						}}
+				  		style={{
+							color: "white",
+							backgroundColor: iconDetails?.iconBackgroundColor || theme.palette.primary.secondary,
+							marginLeft: 15, 
+							height: 30,
+							width: 30, 
+							cursor: data.category !== "" && data.category !== "default" ? "pointer" : "default",
+						}}
+				  		variant="rounded"
+				  	>
+				  	{iconDetails?.originalIcon ?
+						iconDetails?.originalIcon
+						: 
+				  		avatarLetter
+					}
+				  	</Avatar>
+				  </Tooltip>
+			  )
+		  }
+	  },
+	  {
 		field: 'actions',
 		headerName: 'Actions',
 		description: 'Actions for this key.',
@@ -1520,7 +1602,7 @@ const CacheView = memo((props) => {
 
 			return ( 
 				<span style={{ display: "flex" }}>
-					{data?.workflow_id === "" || data?.workflow_id === null || data?.workflow_id === undefined ?
+					{data?.workflow_id === "" || data?.workflow_id === null || data?.workflow_id === undefined || data?.workflow_id?.length !== 36 ?
 						<IconButton
 							disabled={data.workflow_id?.length === 0}
 							style={{}}
@@ -1528,7 +1610,7 @@ const CacheView = memo((props) => {
 							<OpenInNewIcon
 								style={{
 									color:
-										data.workflow_id?.length !== 0
+										data.workflow_id?.length === 36 
 											? "#FF8444"
 											: "grey",
 								}}
@@ -1539,6 +1621,7 @@ const CacheView = memo((props) => {
 							title={"Go to workflow"}
 							style={{}}
 							aria-label={"Download"}
+							placement="left"
 						>
 							<span>
 								<a
@@ -1552,13 +1635,13 @@ const CacheView = memo((props) => {
 									>
 										<IconButton
 											disabled={data.workflow_id?.length ===0}
-											style={{marginLeft: 10}}
+											style={{marginLeft: 0}}
 										>
 											<OpenInNewIcon
 												style={{
 													width: 24, height: 24,
 													color:
-														data.workflow_id?.length !== 0
+														data.workflow_id?.length === 36
 															? "#FF8444"
 															: "grey",
 												}}
@@ -1825,6 +1908,13 @@ const CacheView = memo((props) => {
                     >
                         Learn more
                     </a>
+
+					{selectedCategory === "protected" ?
+						<div style={{ color: red, }}>
+							Protected keys are encrypted, only available to admins, and will be masked when used in workflows. This is a basic protection, and is NOT bulletproof.
+						</div>
+					: null}
+
                 </Typography>
             </div>
 
@@ -2244,7 +2334,7 @@ const CacheView = memo((props) => {
 				setSelectedRows(newSelection);
 				}}
 				keepNonExistentRowsSelected={false}
-				getRowId={(row) => row.key}
+				getRowId={(row) => `${row?.key}_${row?.category}`}
 
 				autoHeight={true}
 				sx={{

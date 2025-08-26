@@ -418,6 +418,10 @@ const LicencePopup = (props) => {
             showSupport = true
         }
 
+        if (userdata?.app_execution_limit >= 300000) {
+                top_text = "Enterprise Plan"
+        }
+
         if (subscription.name.includes("Open Source")) {
             top_text = "Open Source"
             showSupport = true
@@ -761,7 +765,7 @@ const LicencePopup = (props) => {
 							{
 									isCloud ?
                                         userdata?.app_execution_limit && userdata?.app_execution_limit !== 10000 ?
-                                            "You have already subscribed to the Scale plan, which includes " + (userdata?.app_execution_limit/1000) + "K app runs/month. You can increase the limit by upgrading current plan. Contact support@shuffler.io for more information." :
+                                            `You have already subscribed to the ${top_text}, which includes ${userdata?.app_execution_limit/1000}K app runs/month. You can increase the limit by upgrading current plan. Contact support@shuffler.io for more information.` :
                                             `You are using free Starter plan with max ${userdata?.app_execution_limit === 10000 ? "10,000" : "2,000"} runs per month. Upgrade to increase this limit.`
 
 										:

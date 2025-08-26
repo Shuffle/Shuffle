@@ -3,6 +3,7 @@ import { getTheme } from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import { MuiChipsInput } from "mui-chips-input";
 import { toast } from "react-toastify"
+import ReactGA from 'react-ga4';
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import dayjs from 'dayjs';
@@ -63,7 +64,10 @@ import {
 	Add as AddIcon,
 	Remove as RemoveIcon,
 	EditNote as EditNoteIcon,
-	AutoAwesome as AutoAwesomeIcon
+	AutoAwesome as AutoAwesomeIcon,
+	CloudUpload as CloudUploadIcon,
+	CheckCircle as CheckCircleIcon,
+	Close as CloseIcon
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
@@ -94,6 +98,11 @@ const EditWorkflow = (props) => {
 	const [selectedCleanupActions, setSelectedCleanupActions] = React.useState(workflow?.form_control?.cleanup_actions !== undefined && workflow?.form_control?.cleanup_actions !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.cleanup_actions)) : [])
 
 	const [formWidth, setFormWidth] = React.useState(boxWidth === undefined || boxWidth === null ? 500 : boxWidth)
+	
+	// Flowchart upload states
+	const [uploadedImage, setUploadedImage] = React.useState(null)
+	const [imageBase64, setImageBase64] = React.useState("")
+	const [imageUploading, setImageUploading] = React.useState(false)
 
 	const classes = useStyles();
 
@@ -102,6 +111,59 @@ const EditWorkflow = (props) => {
 			setBoxWidth(formWidth)
 		}
 	}, [formWidth])
+
+	// Handle file upload and base64 conversion
+	const handleImageUpload = (file) => {
+		const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg']
+		if (!allowedTypes.includes(file.type)) {
+			toast.error("Please upload a PNG, JPG, or JPEG image")
+			return
+		}
+
+		const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+		if (file.size > maxSize) {
+			toast.error("Image must be less than 5MB")
+			return
+		}
+
+		setImageUploading(true)
+		
+		const reader = new FileReader()
+		reader.onload = (e) => {
+			const base64 = e.target.result
+			setImageBase64(base64)
+			setUploadedImage({
+				name: file.name,
+				size: file.size,
+				type: file.type
+			})
+			setImageUploading(false)
+			
+			// Disable "Create from scratch" when image is uploaded
+			if (newWorkflow) {
+				setWorkflowAsCode(false)
+			}
+		}
+		reader.onerror = () => {
+			toast.error("Failed to read image file")
+			setImageUploading(false)
+		}
+		reader.readAsDataURL(file)
+	}
+
+	const removeUploadedImage = () => {
+		setUploadedImage(null)
+		setImageBase64("")
+		setImageUploading(false)
+	}
+
+	const formatFileSize = (bytes) => {
+		if (bytes === 0) return '0 Bytes'
+		const k = 1024
+		const sizes = ['Bytes', 'KB', 'MB', 'GB']
+		const i = Math.floor(Math.log(bytes) / Math.log(k))
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+	}
 
 	if (scrollTo !== undefined && scrollTo !== null && scrollTo.length > 0 && scrollDone === false) {
 		setTimeout(() => {
@@ -308,7 +370,7 @@ const EditWorkflow = (props) => {
 								variant="contained"
 								style={{}}
 								id="save_workflow_button"
-								disabled={name.length === 0 || submitLoading === true || aiGenerateLoading === true}
+								disabled={name.length === 0 || submitLoading === true || aiGenerateLoading === true || uploadedImage !== null}
 								onClick={() => {
 									setSubmitLoading(true)
 
@@ -395,23 +457,45 @@ const EditWorkflow = (props) => {
 							<Tooltip placement="top" arrow
 								title={
 									<Typography variant="body1" style={{padding: 10, }}>
-										Generate using the name, description, usecases and tags provided. Required: Name + Description
+										Generate using the name, description, usecases and tags provided. Required: Name + (Description OR Flowchart Image)
 									</Typography>
 								}
 							>
 								<span>
 								<Button
-									disabled={name.length === 0 || innerWorkflow?.default_return_value?.length === 0 || aiGenerateLoading === true || submitLoading === true}
+									disabled={
+										name.length === 0 || 
+										aiGenerateLoading === true || 
+										submitLoading === true ||
+										(uploadedImage === null && innerWorkflow?.default_return_value?.trim()?.length === 0)
+									}
 									variant="aiButton"
 									onClick={async () => {
-										// Check if description is provided in the visible field for new workflows
-										if (!innerWorkflow.default_return_value || innerWorkflow.default_return_value.trim().length === 0) {
-											toast.error("You need to describe what you want to generate so the AI can auto generate the entire workflow");
+										// Track AI Generate button click
+										if (isCloud) {
+											ReactGA.event({
+												category: "AIGeneratedNewWorkflow",
+												action: "button_click",
+												label: userdata?.active_org?.id || "",
+											});
+										}
+
+										// check AI enabled for local installations (not cloud)
+										if (!isCloud && (!userdata?.ai_enabled || userdata?.ai_enabled === false)) {
+											toast.warn("Local AI is not enabled. Setup required: https://shuffler.io/docs/AI-Features");
+											return;
+										}
+
+										// Check if description is provided OR image is uploaded for new workflows
+										if (uploadedImage === null && (!innerWorkflow?.default_return_value || innerWorkflow?.default_return_value?.trim()?.length === 0)) {
+											toast.error("You need to either upload a flowchart image OR describe what you want to generate so the AI can auto generate the entire workflow");
 											return;
 										}
 
 										setAiGenerateLoading(true);
 										toast.info("Creating workflow...");
+
+										let workflowId = null;
 
 										try {
 											// Step 1: Create basic workflow WITHOUT using setNewWorkflow (to avoid modal closing)
@@ -455,14 +539,19 @@ const EditWorkflow = (props) => {
 												return;
 											}
 
-											const workflowId = workflowJson.id;
-											console.log("Created workflow with ID:", workflowId);
+											workflowId = workflowJson.id;
+											toast.success("Workflow created! AI is now generating your workflow - please wait a few minutes...");
 
-											// Step 2: Generate AI content for the workflow
+											// Step 3: Generate AI content for the workflow
 											const data = { 
 												query: innerWorkflow.default_return_value,
 												workflow_id: workflowId,
 											};
+
+											// Only include image_url if an image was uploaded
+											if (imageBase64 && imageBase64.length > 0) {
+												data.image_url = imageBase64;
+											}
 
 											const aiResponse = await fetch(globalUrl + "/api/v2/workflows/generate/llm", {
 												method: "POST",
@@ -477,36 +566,55 @@ const EditWorkflow = (props) => {
 											const json = await aiResponse.json();
 
 											// Handle AI response and provide feedback
-											if (aiResponse.status !== 200) {
-												console.log("AI generation failed, but workflow created:", json.message || "Unexpected response");
-												toast.warning("Workflow created successfully, but AI generation failed. Opening workflow editor...");
-											} else if (json.success === true && typeof json.message === "string") {
-												// AI "rejection" message
-												console.log("AI rejected request:", json.message);
-												toast.warning(`AI: ${json.message}. Opening empty workflow editor...`);
-											} else if (json.success === false) {
-												console.log("AI generation failed:", json.message || "Operation failed");
-												toast.warning("AI generation failed. Opening empty workflow editor...");
-											} else if (!json || Object.keys(json).length === 0) {
-												console.log("Empty AI response");
-												toast.warning("AI returned empty response. Opening workflow editor...");
+											if (aiResponse.status === 422) {
+												// AI rejection with reason
+												if (isCloud) {
+													ReactGA.event({
+														category: "AIGeneratedNewWorkflow",
+														action: "ai_rejected",
+														label: workflowId,
+													});
+												}
+												toast.warning(`AI: ${json.reason || "Request rejected"}. Opening workflow editor...`);
+											} else if (aiResponse.status !== 200) {
+												// Other HTTP errors
+												if (isCloud) {
+													ReactGA.event({
+														category: "AIGeneratedNewWorkflow", 
+														action: "generation_failed",
+														label: workflowId,
+													});
+												}
+												toast.warning("Workflow created, but AI generation failed. Opening workflow editor...");
 											} else {
+												// Successful generation
+												if (isCloud) {
+													ReactGA.event({
+														category: "AIGeneratedNewWorkflow",
+														action: "generation_success",
+														label: workflowId,
+													});
+												}
 												toast.success("Workflow generated successfully! Opening editor...");
-												console.log("AI generation successful");
 											}
 
-											// Step 3: Now close modal and redirect (only after everything is complete)
+											// Step 4: Close modal and redirect (after everything is complete)
 											setTimeout(() => {
 												setModalOpen(false);
 												setAiGenerateLoading(false);
 												window.location.href = `/workflows/${workflowId}`;
-											}, 1500); // Give user time to read the final message
+											}, 1500); 
 
 										} catch (error) {
-											console.error("Error in AI workflow generation:", error);
+											if (isCloud) {
+												ReactGA.event({
+													category: "AIGeneratedNewWorkflow",
+													action: "error",
+													label: workflowId || "no_workflow",
+												});
+											}
 											toast.error("Failed to generate. Please try again later: " + error.message);
 											setAiGenerateLoading(false);
-											// Don't close modal on error so user can try again
 										}
 									}}
 								>
@@ -752,6 +860,98 @@ const EditWorkflow = (props) => {
 								}}
 							/>
 						</div>
+
+						{/* Flowchart Upload Section - Only for new workflows */}
+						{newWorkflow === true ? (
+							<div style={{ marginTop: 100, }}>
+								{!uploadedImage ? (
+									<div
+										style={{
+											border: `2px solid rgba(255,255,255,0.3)`,
+											borderRadius: 8,
+											padding: 20,
+											textAlign: 'center',
+											cursor: 'pointer',
+											transition: 'all 0.2s ease',
+											backgroundColor: theme.palette.surfaceColor,
+											'&:hover': {
+												backgroundColor: theme.palette.primary.main + '10'
+											}
+										}}
+										onClick={() => {
+											const input = document.createElement('input')
+											input.type = 'file'
+											input.accept = 'image/png,image/jpeg,image/jpg'
+											input.onchange = (e) => {
+												if (e.target.files.length > 0) {
+													handleImageUpload(e.target.files[0])
+												}
+											}
+											input.click()
+										}}
+									>
+										{imageUploading ? (
+											<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+												<CircularProgress size={24} style={{ marginBottom: 10 }} />
+												<Typography variant="body2" color="textSecondary">
+													Processing image...
+												</Typography>
+											</div>
+										) : (
+											<div>
+												<CloudUploadIcon 
+													style={{ 
+														fontSize: 48, 
+														color: theme.palette.textSecondary || '#666',
+														marginBottom: 10 
+													}} 
+												/>
+												<Typography variant="h6" style={{ marginBottom: 5 }}>
+													Generate Workflow from Flowchart
+												</Typography>
+												<Typography variant="body2" color="textSecondary" style={{ marginBottom: 10 }}>
+													Click to upload your flowchart - AI will convert it to a workflow
+												</Typography>
+												<Typography variant="caption" color="textSecondary">
+													PNG, JPG, JPEG • Max 5MB
+												</Typography>
+											</div>
+										)}
+									</div>
+								) : (
+									<div
+										style={{
+											border: `1px solid ${theme.palette.primary.main}`,
+											borderRadius: 8,
+											padding: 15,
+											backgroundColor: theme.palette.primary.main + '10',
+											display: 'flex',
+											alignItems: 'center',
+											gap: 15
+										}}
+									>
+										<div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+											<CheckCircleIcon style={{ color: theme.palette.success.main }} />
+											<div>
+												<Typography variant="body2" style={{ fontWeight: 'bold' }}>
+													{uploadedImage.name}
+												</Typography>
+												<Typography variant="caption" color="textSecondary">
+													{formatFileSize(uploadedImage.size)}
+												</Typography>
+											</div>
+										</div>
+										<IconButton 
+											onClick={removeUploadedImage}
+											style={{ color: theme.palette.text.secondary }}
+											size="small"
+										>
+											<CloseIcon />
+										</IconButton>
+									</div>
+								)}
+							</div>
+						) : null}
 
 						{showMoreClicked === true ?
 							<div style={{ marginTop: 50, }}>
@@ -1104,7 +1304,7 @@ const EditWorkflow = (props) => {
 									</Typography>
 
 									<Typography variant="body2" color="textSecondary" style={{ marginBottom: 20, }}>
-										<b>Beta Feature</b>: When a workflow run is done, the data from the selected actions will be removed by replacing it with a default value. This is useful for cleaning up sensitive data, or data that is no longer needed. This is done after a workflow run is finished or aborted, and is not reversible. Data will remain in the workflow run result (last node value) even if the action result itself is cleaned up.
+										When a workflow run is done, the data from the selected actions will be removed by replacing it with a default value. This is useful for cleaning up sensitive data, or data that is no longer needed. This is done after a workflow run is finished or aborted, and is not reversible. Data will remain in the workflow run result (last node value) even if the action result itself is cleaned up.
 									</Typography>
 
 									<FormControl style={{ marginTop: 15, }}>

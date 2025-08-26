@@ -47,6 +47,8 @@ import {
 	RestartAlt as RestartAltIcon,
 	ArrowForward as ArrowForwardIcon,
 	KeyboardReturn as KeyboardReturnIcon, 
+	FormatIndentIncrease as FormatIndentIncreaseIcon,
+	Fullscreen as FullscreenIcon,
 } from '@mui/icons-material';
 
 
@@ -143,6 +145,34 @@ const CodeEditor = (props) => {
 		handleConditionFieldChange,
 	} = props
 
+	// Auto-indent JSON-like content (with safety hehe)
+	const autoIndentContent = React.useCallback((content) => {
+		// Safety checks :)
+		if (!content || typeof content !== 'string' || content.trim().length === 0) {
+			return content;
+		}
+		
+		try {
+			// Check if content looks like JSON (starts with { or [)
+			const trimmedContent = content.trim();
+			if (trimmedContent.startsWith('{') || trimmedContent.startsWith('[')) {
+				try {
+					const parsed = JSON.parse(trimmedContent);
+					return IndentJsonLikeString(JSON.stringify(parsed), 2);
+				} catch (parseError) {
+					return IndentJsonLikeString(content, 2);
+				}
+			}
+			
+			// Return original content if it doesn't look like JSON
+			return content;
+		} catch (error) {
+			// If anything goes wrong, return original content
+			console.warn('Auto-indent failed, using original content:', error);
+			return content;
+		}
+	}, []);
+
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
 	// const {codelang, setcodelang} = props
@@ -184,6 +214,7 @@ const CodeEditor = (props) => {
 		"result": baseResult,
 	})
 	const [executing, setExecuting] = useState(false)
+	const [fullScreenModeEnabled, setFullScreenModeEnabled] = useState(fullScreenMode === true || fullScreenMode === "true" || localStorage.getItem("codeEditorFullScreen") === "true")
 
 	const liquidOpen = Boolean(anchorEl);
 	const mathOpen = Boolean(anchorEl2);
@@ -199,6 +230,22 @@ const CodeEditor = (props) => {
 		highlight_variables(localcodedata)
 		expectedOutput(localcodedata)
 	}, [localcodedata])
+
+	// Auto-indent when codedata prop changes
+	useEffect(() => {
+		if (codedata && codedata !== localcodedata && typeof codedata === 'string') {
+			try {
+				const indentedContent = autoIndentContent(codedata);
+				if (indentedContent !== undefined && indentedContent !== null) {
+					setlocalcodedata(indentedContent);
+				}
+			} catch (error) {
+				console.warn('Failed to auto-indent codedata:', error);
+				// Fallback to original codedata
+				setlocalcodedata(codedata);
+			}
+		}
+	}, [codedata, autoIndentContent])
 
 	let navigate = useNavigate();
 	const [searchParams] = useSearchParams();
@@ -217,7 +264,13 @@ const CodeEditor = (props) => {
 		}
 
 		const action = workflow?.actions?.find(action => action.id === actionId);
-		setlocalcodedata(editorData?.value);
+		try {
+			const indentedContent = autoIndentContent(editorData?.value);
+			setlocalcodedata(indentedContent || editorData?.value);
+		} catch (error) {
+			console.warn('Failed to auto-indent action data:', error);
+			setlocalcodedata(editorData?.value);
+		}
 		setSelectedAction(action);
 
 		// Update available variables when action changes
@@ -230,7 +283,13 @@ const CodeEditor = (props) => {
 		}
 
 		const trigger = workflow?.triggers?.find(trigger => trigger.id === triggerId);
-		setlocalcodedata(editorData?.value);
+		try {
+			const indentedContent = autoIndentContent(editorData?.value);
+			setlocalcodedata(indentedContent || editorData?.value);
+		} catch (error) {
+			console.warn('Failed to auto-indent trigger data:', error);
+			setlocalcodedata(editorData?.value);
+		}
 		setSelectedTrigger(trigger);
 
 		// Update available variables when trigger changes
@@ -244,7 +303,13 @@ const CodeEditor = (props) => {
 		}
 
 		const condition = selectedEdge?.conditions?.find(condition => condition.id === conditionId);
-		setlocalcodedata(editorData?.value);
+		try {
+			const indentedContent = autoIndentContent(editorData?.value);
+			setlocalcodedata(indentedContent || editorData?.value);
+		} catch (error) {
+			console.warn('Failed to auto-indent condition data:', error);
+			setlocalcodedata(editorData?.value);
+		}
 		setSelectedCondition(condition);
 		// Update available variables when condition changes
 		updateAvailableVariables(actionlist);
@@ -963,7 +1028,6 @@ const CodeEditor = (props) => {
 						// vs
 						// $variable.#.subvalue
 						// if you put both of those lines in the same editor, then it will replace both (somehow). Make sure $variable.#.subvalue exists while testing.
-						console.log("FOUNDLOC: ", fixedVariable, foundlocation)
 						for (var j = 0; j < actionlist.length; j++) {
 							if (fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()) {
 								continue
@@ -990,7 +1054,6 @@ const CodeEditor = (props) => {
 							}
 
 							try {
-								console.log("REPLACE: ", foundlocation, fixedVariable, newvalue)
 								if (newvalue !== "") {
 									if (foundlocation === -1) {
 										input = input.replace(fixedVariable, newvalue, 1)
@@ -1303,7 +1366,7 @@ const CodeEditor = (props) => {
 		editor.completers = [customCompleter]
 	}
 
-	if (fullScreenMode) {
+	if (fullScreenMode && fullScreenModeEnabled === true) {
 		return (
 			<AceEditor
 				mode="python"
@@ -1454,6 +1517,60 @@ const CodeEditor = (props) => {
 		)
 	}
 
+	const IndentJsonLikeString = (input, indentSize = 2) => {
+	  const indent = ' '.repeat(indentSize);
+	  let level = 0;
+	  let inString = false;
+	  let escapeNext = false;
+	  let result = '';
+
+	  for (let i = 0; i < input.length; i++) {
+		let char = input[i];
+
+		if (escapeNext) {
+		  result += char;
+		  escapeNext = false;
+		  continue;
+		}
+
+		if (char === '\\') {
+		  escapeNext = true;
+		  result += char;
+		  continue;
+		}
+
+		if (char === '"') {
+		  inString = !inString;
+		  result += char;
+		  continue;
+		}
+
+		if (!inString) {
+		  if (char === '{' || char === '[') {
+			result += char + '\n' + indent.repeat(++level);
+			continue;
+		  } else if (char === '}' || char === ']') {
+			result += '\n' + indent.repeat(--level) + char;
+			continue;
+		  } else if (char === ',') {
+			result += char + '\n' + indent.repeat(level);
+			continue;
+		  } else if (char === ':') {
+			result += ': ';
+			continue;
+		  } else if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+			// Skip whitespace characters when not in string
+			continue;
+		  }
+		}
+
+		result += char;
+	  }
+
+	  return result;
+	}
+
+
 	const SourceDataOption = (option) => {
 		const { innerdata, parsedPaths, defaultExpanded } = option
 
@@ -1526,15 +1643,15 @@ const CodeEditor = (props) => {
 					// zIndex: 12501,
 					pointerEvents: "auto",
 					color: theme.palette.DialogStyle.color,
-					minWidth: isMobile || isWorkflowEditor ? "100%" : isFileEditor ? "650px" : "80%",
-					maxWidth: isMobile || isWorkflowEditor ? "100%" : isFileEditor ? "650px" : "1100px",
-					minHeight: isMobile || isWorkflowEditor ? "100%" : "auto",
-					maxHeight: isMobile || isWorkflowEditor ? "100%" : "700px",
+					minWidth: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : isFileEditor ? "650px" : "80%",
+					maxWidth: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : isFileEditor ? "650px" : "1100px",
+					minHeight: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : "auto",
+					maxHeight: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : "700px",
 					border: "3px solid rgba(255,255,255,0.3)",
-					padding: isMobile ? "25px 10px 25px 10px" : isWorkflowEditor ? "25px 10px 25px 200px" : "25px",
+					padding: fullScreenModeEnabled ? "50px 0px 20px 200px" : isMobile ? "25px 10px 25px 10px" : isWorkflowEditor ? "25px 10px 25px 200px" : "25px",
 					backgroundColor: themeMode === "dark" ? "black" : theme.palette.DialogStyle.backgroundColor,
 
-					opacity: isWorkflowEditor ? 0.93 : 1,
+					opacity: isWorkflowEditor || fullScreenModeEnabled ? 0.93 : 1,
 				},
 			}}
 		>
@@ -1549,39 +1666,66 @@ const CodeEditor = (props) => {
 				</Tooltip>
 				: null}
 
+			{fullScreenModeEnabled ? null : 
+				<Tooltip
+					color="primary"
+					title={`Move window`}
+					placement="left"
+				>
+					<IconButton
+						id="draggable-dialog-title"
+						style={{
+							zIndex: 5000,
+							position: "absolute",
+							top: fullScreenModeEnabled ? 50 : 6,
+							right: fullScreenModeEnabled ? 166 : 66,
+							color: "grey",
+
+							cursor: "move",
+						}}
+						onClick={() => {
+						}}
+					>
+						<DragIndicatorIcon />
+					</IconButton>
+				</Tooltip>
+			}
 			<Tooltip
 				color="primary"
-				title={`Move window`}
-				placement="left"
+				title={fullScreenModeEnabled ? `Exit Fullscreen Mode` : `Enter Fullscreen Mode`}
+				placement="top"
 			>
 				<IconButton
-					id="draggable-dialog-title"
 					style={{
 						zIndex: 5000,
 						position: "absolute",
-						top: 6,
-						right: 56,
+						top: fullScreenModeEnabled ? 50 : 6,
+						right: fullScreenModeEnabled ? 136 : 36,
 						color: "grey",
-
-						cursor: "move",
 					}}
 					onClick={() => {
+						setFullScreenModeEnabled(!fullScreenModeEnabled)
+						localStorage.setItem("codeEditorFullScreen", !fullScreenModeEnabled)
 					}}
 				>
-					<DragIndicatorIcon />
+					{!fullScreenModeEnabled ?
+						<FullscreenIcon />
+						:
+						<FullscreenExitIcon />
+					}
 				</IconButton>
 			</Tooltip>
 			<Tooltip
 				color="primary"
 				title={`Close window without saving`}
-				placement="left"
+				placement="right"
 			>
 				<IconButton
 					style={{
 						zIndex: 5000,
 						position: "absolute",
-						top: 6,
-						right: 6,
+						top: fullScreenModeEnabled ? 50 : 6,
+						right: fullScreenModeEnabled ? 106 : 6,
 						color: "grey",
 					}}
 					onClick={() => {
@@ -2128,6 +2272,30 @@ const CodeEditor = (props) => {
 									}}
 									disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
 									onClick={() => {
+										const indentedText = IndentJsonLikeString(localcodedata, 2)
+										if (indentedText !== undefined && indentedText !== null) {
+											setlocalcodedata(indentedText)
+										} else {
+											toast.warn("Could not indent the text. Please check the input format.", { autoClose: 5000 })
+										}
+									}}
+									color="secondary"
+								>
+									<Tooltip
+										title={"Indent Text"}
+										placement="top"
+									>
+										<FormatIndentIncreaseIcon />
+									</Tooltip>
+								</IconButton>
+
+								<IconButton
+									style={{
+										height: 50,
+										width: 50,
+									}}
+									disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
+									onClick={() => {
 										if (fixExample !== undefined) {
 											const newExample = fixExample(editorData.example)
 											setlocalcodedata(newExample)
@@ -2196,14 +2364,15 @@ const CodeEditor = (props) => {
 								value={localcodedata}
 								mode={isWorkflowEditor ? "yaml" : selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
 								theme="gruvbox"
-								height={isFileEditor ? 450 : isWorkflowEditor ? "90vh" : 550}
-								width={isFileEditor ? 650 : isWorkflowEditor ? "90vw" : "100%"}
+								height={fullScreenModeEnabled ? "84vh" : isFileEditor ? 450 : isWorkflowEditor ? "90vh" : 550}
+								width={isFileEditor ? 650 : fullScreenModeEnabled ? "50vw" : isWorkflowEditor ? "90vw" : "100%"}
 
 								markers={markers}
 								highlightActiveLine={false}
 
 								enableBasicAutocompletion={true}
 								completers={[customCompleter]}
+								showPrintMargin={false}
 
 								style={{
 									wordBreak: "break-word",
@@ -2351,8 +2520,9 @@ const CodeEditor = (props) => {
 										style={{
 											border: `1px solid rgba(255, 255, 255, 0.15)`,
 											position: "absolute",
-											top: 20,
-											right: 100,
+											top: fullScreenModeEnabled ? 50 : 20,
+											right: fullScreenModeEnabled ? 240 : 120,
+
 											maxHeight: 35,
 											minWidth: 70,
 											zIndex: 1200,
@@ -2466,8 +2636,8 @@ const CodeEditor = (props) => {
 										borderRadius: 5,
 										border: `2px solid ${theme.palette.inputColor}`,
 										padding: 10,
-										maxHeight: 190,
-										minheight: 190,
+										maxHeight: fullScreenModeEnabled ? 300 : 190,
+										minheight: fullScreenModeEnabled ? 300 : 190,
 										overflow: "auto",
 									}}
 									collapsed={false}
@@ -2528,7 +2698,7 @@ const CodeEditor = (props) => {
 			</div>
 
 
-			<div style={{ display: 'flex', width: isWorkflowEditor ? "90%" : "100%",  }}>
+			<div style={{ display: 'flex', width: fullScreenModeEnabled ? "92%" : isWorkflowEditor ? "90%" : "100%",  }}>
 				<Button
 					style={{
 						height: 35,

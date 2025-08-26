@@ -17,11 +17,13 @@ import GetAppIcon from '@mui/icons-material/GetApp';
 // Material UI & Components
 import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
+import { isMobile } from "react-device-detect"
+
+import LineChartWrapper from "../components/LineChartWrapper.jsx";
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import Priority from "../components/Priority.jsx";
 import { Context } from "../context/ContextApi.jsx";
-import { isMobile } from "react-device-detect"
 
 // Material UI Components
 import {
@@ -99,6 +101,9 @@ import {
 	Psychology as PsychologyIcon,
 	Wifi as WifiIcon,
 	Devices as DevicesIcon,
+	AutoAwesome as AutoAwesomeIcon,
+	BarChart as BarChartIcon,
+	Lock as LockIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -115,13 +120,13 @@ import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinem
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 
-import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
+import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/AngularWorkflow.jsx"
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
 
 const svgSize = 24;
-const imagesize = 22;
+const imagesize = 23;
 
 
 
@@ -212,8 +217,14 @@ export const GetIconInfo = (action) => {
                 "release",
             ],
         },
-
-
+		{
+			key: "secret",
+			values: [
+				"api",
+				"password",
+				"protect",
+			],
+		}
     ];
 
     var selectedKey = ""
@@ -402,6 +413,12 @@ export const GetIconInfo = (action) => {
             iconBackgroundColor: "green",
             originalIcon: <DevicesIcon />,
 		},
+		secret: {
+			icon: "",
+			iconColor: "white",
+			iconBackgroundColor: "green",
+			originalIcon: <LockIcon />,
+		}
     }
 
 		/*
@@ -670,6 +687,8 @@ const Workflows2 = (props) => {
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
+	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true" || false);
+
     const imgSize = 60;
 
     const { themeMode, brandColor, brandName } = useContext(Context);
@@ -728,6 +747,8 @@ const Workflows2 = (props) => {
     var upload = "";
 
     const [workflows, setWorkflows] = React.useState([]);
+    const [workflowTimelines, setWorkflowTimelines] = React.useState([]);
+    const [backgroundWorkflows, setBackgroundWorkflows] = React.useState([]);
     const [backupWorkflows, setBackupWorkflows] = React.useState([]);
     const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
     const [selectedUsecases, setSelectedUsecases] = React.useState([]);
@@ -767,6 +788,7 @@ const Workflows2 = (props) => {
     const [actionImageList, setActionImageList] = React.useState([{ "large_image": "" }])
 
     const [firstLoad, setFirstLoad] = React.useState(true);
+    const [aiAnnouncementModalOpen, setAiAnnouncementModalOpen] = React.useState(false);
     const [showMoreClicked, setShowMoreClicked] = React.useState(false);
     const [usecases, setUsecases] = React.useState([]);
     const [allUsecases, setAllUsecases] = React.useState({
@@ -874,6 +896,53 @@ const Workflows2 = (props) => {
         }
 
     }
+
+    React.useEffect(() => {
+        const bannerID = "banner_ai_announcement";
+        
+        if (isLoggedIn === true && userdata && userdata.tutorials !== undefined && userdata.tutorials !== null) {
+            // Check if user has already dismissed this banner - tutorials is array of objects with 'name' field
+            const alreadyDismissed = userdata.tutorials.some(tutorial => tutorial.name === bannerID);
+            
+            if (!alreadyDismissed && !aiAnnouncementModalOpen) {
+                // Show the banner as the user hasn't seen it yet
+                setAiAnnouncementModalOpen(true);
+            }
+        }
+    }, [isLoggedIn, userdata]); 
+
+    const dismissAiAnnouncement = () => {
+        const bannerID = "banner_ai_announcement";
+
+        setAiAnnouncementModalOpen(false);
+        
+        fetch(globalUrl + '/api/v1/users/updateuser', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                tutorial: bannerID,
+                user_id: userdata.id
+            }),
+            credentials: "include",
+        })
+        .then((response) => {
+            if (response.status !== 200) {
+                console.log("Failed to dismiss AI announcement banner");
+            }
+            return response.json();
+        })
+        .then((responseJson) => {
+            if (responseJson.success) {
+                console.log("AI announcement banner dismissed successfully");
+            }
+        })
+        .catch((error) => {
+            console.log("Error dismissing AI announcement:", error);
+        });
+    };
 
     //const isCloud =
     //    window.location.host === "localhost:3002" ||
@@ -1154,6 +1223,74 @@ const Workflows2 = (props) => {
         </Dialog>
     ) : null;
 
+    const aiAnnouncementModal = aiAnnouncementModalOpen ? (
+        <Dialog
+            open={aiAnnouncementModalOpen}
+            onClose={() => setAiAnnouncementModalOpen(false)}
+            PaperProps={{
+                style: {
+                    backgroundColor: "#1a1a1a",
+                    color: "white",
+                    minWidth: 500,
+                    maxWidth: 550,
+                    padding: 30,
+                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                    border: "1px solid #333",
+                },
+            }}
+        >
+            <DialogTitle style={{ marginBottom: 0, textAlign: "center", position: "relative", paddingBottom: 10 }}>
+                <IconButton
+                    style={{
+                        position: "absolute",
+                        top: -10,
+                        right: -15,
+                        color: "rgba(255,255,255,0.7)",
+                    }}
+                    onClick={() => setAiAnnouncementModalOpen(false)}
+                >
+                    <CloseIcon />
+                </IconButton>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 15 }}>
+                    <AutoAwesomeIcon style={{ marginRight: 12, color: "#f85a3e", fontSize: 32 }} />
+                    <Typography variant="h5" style={{ color: "rgba(255,255,255,0.9)" }}>
+                        🎉 Introducing AI Workflow Generation!
+                    </Typography>
+                </div>
+            </DialogTitle>
+            <DialogContent style={{ color: "rgba(255,255,255,0.8)", textAlign: "left", paddingTop: 0 }}>
+                <Typography variant="body1" style={{ marginBottom: 18, fontSize: "15px", lineHeight: 1.5 }}>
+                    🤖 Simply describe what you want your workflow to do, and our AI will automatically generate the workflow for you!
+                </Typography>
+
+                <Typography variant="body1" style={{ marginBottom: 18, fontSize: "15px", lineHeight: 1.5 }}>
+                    ✨ <strong>Quick start:</strong> Click "Create Workflow" → Describe your workflow → "AI Generate" → Done!
+                </Typography>
+
+                <Typography variant="body1" style={{ marginBottom: 25, fontSize: "14px", lineHeight: 1.4, color: "rgba(255,255,255,0.6)" }}>
+                    For self-hosted setups: <a href="https://shuffler.io/docs/AI-Features" target="_blank" rel="noopener noreferrer" style={{ color: "#f85a3e", textDecoration: "none" }}>setup docs</a>
+                </Typography>
+
+                <div style={{ textAlign: "center", marginTop: 20 }}>
+                    <Button
+                        variant="contained"
+                        onClick={dismissAiAnnouncement}
+                        style={{ 
+                            backgroundColor: "#f85a3e", 
+                            color: "white",
+                            padding: "10px 25px",
+                            fontSize: "15px",
+                            textTransform: "none",
+                            borderRadius: "6px"
+                        }}
+                    >
+                        Got it, let's try it! 🚀
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    ) : null;
+
     const deleteModal = deleteModalOpen ? (
         <Dialog
             open={deleteModalOpen}
@@ -1170,13 +1307,13 @@ const Workflows2 = (props) => {
                     backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     zIndex: 1000,
                     '& .MuiDialogContent-root': {
-                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    	backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                     '& .MuiDialogTitle-root': {
-                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    	backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                 }
-                }}
+            }}
         >
             <DialogTitle>
                 <div style={{ textAlign: "center", color: theme.palette.DialogStyle?.color }}>
@@ -1351,6 +1488,53 @@ const Workflows2 = (props) => {
          window.location.reload();
         }
     }, []);
+
+	useEffect(() => {
+		if (workflows?.length === 0) {
+			return
+		}
+
+		if (workflowTimelines?.length > 0) {
+			return
+		}
+
+		//if (isLoggedIn !== true) {
+		//	return
+		//}
+		  
+		const results = Promise.all(
+			workflows.slice(0,16).map((workflow, index) => {
+
+				return fetch(`${globalUrl}/api/v2/workflows/${workflow.id}/executions`, {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+					},
+					credentials: "include",
+				}).then((response) => response.json())
+			})
+	    )
+
+		results.then((res) => {
+			var newarray = []
+			for (var resKey in res) {
+				const result = res[resKey]
+				if (result?.timeline === undefined || result?.timeline === null) {
+					continue
+				}
+
+				newarray.push({
+					"id": result.id,
+					"timeline": result.timeline,
+				})
+			}
+
+			setWorkflowTimelines(newarray)
+		})
+
+
+	}, [workflows])
     
     const getAvailableWorkflows = (amount) => {
         var storageWorkflows = []
@@ -1407,17 +1591,28 @@ const Workflows2 = (props) => {
 							toast.info("No workflows found in this org. Feel free to look into our public workflows!" , {
 								timeout: 7500,
 							})
+
 							setCurrTab(2)
 						}
+
+						localStorage.setItem("workflows", "[]")
+						setWorkflows([])
+						setFilteredWorkflows([])
 					}
 
                     var newarray = []
 					var backupWf = []
+					var backgroundWf = []
                     for (var wfkey in responseJson) {
                         const wf = responseJson[wfkey]
-                        if (wf.public === true || wf.hidden === true) {
+                        if (wf?.public === true || wf?.hidden === true) {
                             continue
                         }
+
+						if (wf?.background_processing === true) {
+							backgroundWf.push(wf)
+							continue
+						}
 
 						if (wf?.backup_config?.onprem_backup === true) {
 							backupWf.push(wf)
@@ -1426,6 +1621,10 @@ const Workflows2 = (props) => {
 
                         newarray.push(wf)
                     }
+
+					if (backgroundWf.length > 0) {
+						setBackgroundWorkflows(backgroundWf)
+					}
 
 					if (backupWf.length > 0) {
 						setBackupWorkflows(backupWf)
@@ -1659,11 +1858,9 @@ const Workflows2 = (props) => {
 
     const paperAppStyle = {
         minHeight: 146,
-        maxHeight: 146,
         overflow: "hidden",
         width: "100%",
         color: "white",
-        display: "flex",
         fontFamily: theme.typography?.fontFamily,
         boxSizing: "border-box",
         position: "relative",
@@ -2449,26 +2646,25 @@ const Workflows2 = (props) => {
 
         var orgName = "";
         var orgId = "";
+
+		var imageStyle = {
+			width: imagesize,
+			height: imagesize,
+			pointerEvents: "none",
+			marginLeft:
+				data.creator_org !== undefined && data.creator_org.length > 0
+					? 20
+					: 0,
+			borderRadius: 10,
+			cursor: "pointer",
+			marginRight: 10,
+		}
+
         if (userdata.orgs !== undefined) {
             const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
             if (foundOrg !== undefined && foundOrg !== null) {
                 //position: "absolute", bottom: 5, right: -5,
-                const imageStyle = {
-                    width: imagesize,
-                    height: imagesize,
-                    pointerEvents: "none",
-                    marginLeft:
-                        data.creator_org !== undefined && data.creator_org.length > 0
-                            ? 20
-                            : 0,
-                    borderRadius: 10,
-                    border:
-                        foundOrg.id === userdata.active_org.id
-                            ? `3px solid ${boxColor}`
-                            : null,
-                    cursor: "pointer",
-                    marginRight: 10,
-                };
+				imageStyle.border = foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null
 
 
                 image =
@@ -2491,6 +2687,44 @@ const Workflows2 = (props) => {
                 orgId = foundOrg.id;
             }
         }
+
+		var triggerfound = false
+		var triggerstarted = false
+		var relevantTrigger = {}
+		for (var triggerkey in data?.triggers) {
+
+			const trigger = data?.triggers[triggerkey]
+			if (trigger?.trigger_type === "WEBHOOK") {
+				triggerfound = true
+				image = wfTriggers[0].large_image 
+
+				relevantTrigger = trigger
+				if (trigger?.status === "running") {
+					imageStyle.border = `3px solid ${green}`
+					break
+				} else {
+					imageStyle.border = `3px solid ${red}`
+				}
+
+
+			} else if (trigger?.trigger_type === "SCHEDULE") {
+				triggerfound = true
+				image = wfTriggers[1].large_image 
+
+				relevantTrigger = trigger
+				if (trigger?.status === "running") {
+					imageStyle.border = `3px solid ${green}`
+					break
+				} else {
+					imageStyle.border = `3px solid ${red}`
+				}
+
+			} 
+		}
+
+		if (!triggerfound) {
+			image = ""
+		}
 
         var selectedCategory = ""
         if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0 && usecases !== null && usecases !== undefined && usecases.length > 0) {
@@ -2534,6 +2768,7 @@ const Workflows2 = (props) => {
             }
 
             image = data.creator_info !== undefined && data.creator_info !== null && data.creator_info.image !== undefined && data.creator_info.image !== null && data.creator_info.image.length > 0 ? <Avatar alt={data.creator} src={data.creator_info.image} style={imageStyle} /> : <Avatar alt={"shuffle_image"} src={theme.palette.defaultImage} style={imageStyle} />
+
             const creatorname = data.creator_info !== undefined && data.creator_info !== null && data.creator_info.username !== undefined && data.creator_info.username !== null && data.creator_info.username.length > 0 ? data.creator_info.username : "Shuffle"
             if ((data.objectID === undefined || data.objectID === null) && data.id !== undefined && data.id !== null) {
                 data.objectID = data.id
@@ -2546,10 +2781,12 @@ const Workflows2 = (props) => {
             }
         }
 
-
+		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
         return (
             <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily }}>
+
                 <Paper square style={paperAppStyle}>
+
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
                             <div
@@ -2558,11 +2795,12 @@ const Workflows2 = (props) => {
                                     position: "absolute",
                                     top: 0,
                                     left: 0,
-                                    height: paperAppStyle.minHeight,
                                     width: 3,
                                     backgroundColor: boxColor,
                                     borderRadius: "0 100px 0 0",
                                     fontFamily: theme.typography?.fontFamily,
+
+                                    height: "100%",
                                 }}
                                 onClick={() => {
                                     addFilter(selectedCategory)
@@ -2577,17 +2815,27 @@ const Workflows2 = (props) => {
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
 							{currTab === 2 ? null : 
-								<Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
+								<Tooltip title={`${relevantTrigger?.name}: ${relevantTrigger?.status}`} placement="bottom">
+
 									<div
-										styl={{ cursor: "pointer" }}
+										style={{ cursor: "" }}
 										onClick={() => {
-											navigate("/admin")
+											//navigate("/admin")
 										}}
 									>
-										{image}
+										{image?.includes("data:image") ? 
+											<img
+												alt={orgName}
+												src={image}
+												style={imageStyle}
+											/>
+											:
+											image
+										}
 									</div>
 								</Tooltip>
 							}
+
                             <Tooltip arrow
                                 onMouseEnter={() => {
                                     /*
@@ -2874,7 +3122,8 @@ const Workflows2 = (props) => {
                                 })
                                 : null}
                         </Grid>
-                        {data.actions !== undefined && data.actions !== null && type !== "public" ? (
+
+                        {type !== "public" ? (
                             <div style={{ position: "absolute", top: 10, right: 10, }}>
                                 <IconButton
                                     aria-label="more"
@@ -2891,7 +3140,7 @@ const Workflows2 = (props) => {
 
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
-                                <div style={{ position: "absolute", top: 50, right: 8, }}>
+                                <div style={{ position: "absolute", top: 80, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2908,8 +3157,8 @@ const Workflows2 = (props) => {
                         : null}
 
 						{(data?.validation?.validation_ran === true && data?.validation?.valid === false && data?.validation?.errors?.length > 0 ) ?                            
-							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} notifications. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
-                                <div style={{ position: "absolute", top: 85, right: 8, }}>
+							<Tooltip title={`Explore more than ${data?.validation?.errors?.length} notifications for this workflow. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
+                                <div style={{ position: "absolute", top: 40, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2919,19 +3168,38 @@ const Workflows2 = (props) => {
                                         }}
                                         style={{ 
 											padding: "0px", 
-											color: "#979797",
+											transparency: 0.5,
 										}}
+										color="primary"
                                     >
-										<ErrorOutlineIcon style={{ 
-											marginRight: 2, 
-										}} />
+										<ErrorOutlineIcon 
+											style={{ 
+												color: "#f86a3e",
+												marginRight: 2, 
+											}} 
+										/>
                                     </IconButton>
                                 </div>
                             </Tooltip>
 						: null}
 
                     </Grid>
+
+					{showExecutionStats === true && foundTimeline !== undefined && foundTimeline?.timeline?.length > 0 && 
+					  <div style={{ margin: "40px 15px 0px 15px", paddingTop: 0, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+						<LineChartWrapper 
+							inputname={""}
+							keys={foundTimeline?.timeline}
+							height={100}
+							width={100}
+							border={false}
+
+							color={"#808080"}
+						/>
+					  </div>
+					}
                 </Paper>
+
             </div>
         )
     }
@@ -4414,16 +4682,33 @@ const Workflows2 = (props) => {
 								{backupWorkflows.length > 0 &&
 									<Tab
 										label={`Onprem Backup (${backupWorkflows.length})`}
+										value={3}
 										style={{
 											...tabStyle,
+											borderLeft: "1px solid rgba(255,255,255,0.3)",
 											marginLeft: 25, 
 											...(currTab === 3 ? tabActive : {})
 										}}
 									/>
 								}
 
+								{backgroundWorkflows.length > 0 &&
+									<Tab
+										label={`Background Processes`}
+										value={4}
+										style={{
+											...tabStyle,
+											borderLeft: "1px solid rgba(255,255,255,0.3)",
+											borderRight: "1px solid rgba(255,255,255,0.3)",
+											marginLeft: 25, 
+											...(currTab === 4 ? tabActive : {})
+										}}
+									/>
+								}
+
                                 <Tab
                                     label="Org Forms"
+									value={5}
 									onClick={() => {
 										navigate("/forms")
 									}}
@@ -4431,7 +4716,7 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
 										marginLeft: 25, 
-                                        ...(currTab === 4 ? tabActive : {})
+                                        ...(currTab === 5 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>
@@ -4664,7 +4949,22 @@ const Workflows2 = (props) => {
                                     paddingRight: 1,
                                     gap: 4
                                 }}>
-                                    <Tooltip title="Explore Workflow Runs" placement="top">
+
+                                    <Tooltip title="Show/Hide Workflow Runs for top workflows" placement="top">
+                                        <IconButton
+                                            onClick={() => {
+
+                                                const newView = !showExecutionStats
+                                                localStorage.setItem("showExecutionStats", newView)
+												setShowExecutionStats(!showExecutionStats)
+											}}
+											color={showExecutionStats ? "primary" : "default"}
+                                        >
+                                            <BarChartIcon />
+                                        </IconButton>
+                                    </Tooltip>
+
+                                    <Tooltip title="Explore Workflow Runs (debugger)" placement="top">
                                         <IconButton
                                             style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => navigate("/workflows/debug")}
@@ -4816,6 +5116,28 @@ const Workflows2 = (props) => {
                                                         </span>
                                                     )
                                                 })}
+
+                                                {currTab === 4 && backgroundWorkflows.map((data, index) => {
+                                                    // Shouldn't be a part of this list
+                                                    if (data.public === true) {
+                                                        return null
+                                                    }
+
+                                                    // if (firstLoad) {
+                                                    //     workflowDelay += 75
+                                                    // } else {
+                                                    //     return <WorkflowPaper key={index} data={data} />
+                                                    // }
+
+                                                    return (
+                                                        <span key={index}>
+                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+                                                            <WorkflowPaper data={data} />
+                                                            {/*</Zoom>*/}
+                                                        </span>
+                                                    )
+                                                })}
+
 
                                                 {
                                                     currTab !== 1 ? null :
@@ -5216,6 +5538,7 @@ const Workflows2 = (props) => {
                 {deleteModal}
                 {exportVerifyModal}
                 {publishModal}
+                {aiAnnouncementModal}
                 {workflowDownloadModalOpen}
 
                 {/*!drawerOpen ? 
@@ -5279,8 +5602,10 @@ const Workflows2 = (props) => {
         width: '100%',
         height: '100%',
     }
+
     // Maybe use gridview or something, idk
-    return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
+    //return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
+    return <div style={isSafari ? safariStyle : {minHeight: "80vh",}}>{loadedCheck}</div>;
 };
 
 

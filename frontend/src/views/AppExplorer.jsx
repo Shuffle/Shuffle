@@ -767,7 +767,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     })
       .then((response) => {
         if (response.status !== 200) {
-          console.log("Failed to activate");
+          console.log("Failed to activate: " + response.statusText);
         }
 
         return response.json();
@@ -776,27 +776,27 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
         if (responseJson.success === false) {
 			if (action === undefined || action === null) {
 				if (responseJson.reason !== undefined) {
-					toast("Failed to activate the app: "+responseJson.reason);
+					toast.warn("Failed to activate the app: "+responseJson.reason);
 				} else {
-					toast("Failed to activate the app");
+					toast.warn("Failed to activate the app");
 				}
 			} else {
 				if (responseJson.reason !== undefined) {
-					toast("Failed to perform action: "+responseJson.reason);
+					toast.warn("Failed to perform action: "+responseJson.reason);
 				} else {
-					toast(`Failed to perform action. Please try again or contact ${supportEmail}`);
+					toast.warn(`Failed to perform action. Please try again or contact ${supportEmail}`);
 				}
 			}
       } else {
-          if ((checkLogin !== undefined && checkLogin !== null) && !multiple_request) {
+          if (!showDistributionPopup && (checkLogin !== undefined && checkLogin !== null) && !multiple_request) {
             checkLogin()
           }
 
 		  if (action === undefined || action === null) {
 			  if (appExists) {
-				toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
+				toast.success("App deactivated for your organization! Existing workflows with the app will continue to work.")
 			  } else {
-				toast("App activated for your organization!")
+				toast.success("App activated for your organization!")
 			  }
 		  } else {
         if (responseJson.success && !multiple_request &&(responseJson.reason !== undefined || responseJson.reason !== null)) {
@@ -806,7 +806,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
         }
       })
       .catch((error) => {
-        toast(error.toString());
+        toast.error(error.toString());
       });
   };
 
@@ -1450,7 +1450,12 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     const index = searchClient.initIndex("appsearch");
 
     console.log("Running appsearch for: ", appname);
-
+	if (appname === "integration") {
+		// Redirect to https://singul.io
+		window.location.href = "https://singul.io"
+	} else if (appname === "shuffle_agent") {
+		navigate("/agents")
+	}
 
     index
       .search(appname)
@@ -3921,19 +3926,22 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     if (action === "activate_all") {
       const childOrgs = userdata.orgs.filter(
         (data) => data.creator_org === userdata.active_org.id
-      );
+      )
+
+      // run app activation request for each org
       const orgIds = childOrgs.map((data) => data.id);
-      // run app activation requset for each org
       orgIds.forEach((orgId) => {
         activateApp("activate", orgId, true)
-      });
+      })
+
       setTimeout(() => {
         toast.success("App activated for all sub-orgs");
-      }, 5000);
+      }, 5000)
     } else if (action === "deactivate_all") {
       const childOrgs = userdata.orgs.filter(
         (data) => data.creator_org === userdata.active_org.id
-      );
+      )
+
       const orgIds = childOrgs.map((data) => data.id);
       // run app deactivation request for each org
       orgIds.forEach((orgId) => {
@@ -3949,12 +3957,14 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
         toast.error("Please select a sub-org to activate the app for.");
         return;
       }
+
       activateApp("activate", id);
     } else if (action === "deactivate_single") {
       if (id === null) {
         toast.error("Please select a sub-org to deactivate the app for.");
         return;
       }
+
       activateApp("deactivate", id);
     }
   };
@@ -3973,8 +3983,8 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
         fontFamily: theme?.typography?.fontFamily,
         backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
         zIndex: 1000,
-        minWidth: "600px",
-        minHeight: "320px",
+        minWidth: 600,
+        minHeight: 320,
         overflow: "auto",
         '& .MuiDialogContent-root': {
             backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
@@ -3997,9 +4007,12 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
         pr: 1,
         pb: 1,
       }}
+	  style={{
+		padding: "50px 50px 50px 50px",
+	  }}
     >
       <Typography variant="h6" fontWeight={600} color="text.primary">
-        Select sub-org to distribute App
+	  	Suborg App Distribution
       </Typography>
       <IconButton
         onClick={() => setShowDistributionPopup(false)}

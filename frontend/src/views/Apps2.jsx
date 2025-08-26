@@ -949,29 +949,33 @@ const CustomLabelDropdown = connectRefinementList(LabelDropdown);
 const filterApps = (apps, searchQuery, selectedCategory, selectedLabel) => {
   if (!Array.isArray(apps)) return [];
 
+  const normalizedSearchQuery = (searchQuery || "").toLowerCase();
+
   return apps.filter((app) => {
+    if (!app) return false;
+
     const matchesSearchQuery = (
-      searchQuery === "" || // If searchQuery is empty, match all apps
-      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (app.tags && app.tags.some(tag =>
-        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      normalizedSearchQuery === "" || // If searchQuery is empty, match all apps
+      (app.name && app.name.toLowerCase().includes(normalizedSearchQuery)) ||
+      (app.tags && Array.isArray(app.tags) && app.tags.some(tag =>
+        tag && typeof tag === 'string' && tag.toLowerCase().includes(normalizedSearchQuery)
       )) ||
-      (app.categories && app.categories.some((category) =>
-        category.toLowerCase().includes(searchQuery.toLowerCase())
+      (app.categories && Array.isArray(app.categories) && app.categories.some((category) =>
+        category && typeof category === 'string' && category.toLowerCase().includes(normalizedSearchQuery)
       ))
     );
 
     const matchesSelectedCategories = (
-      selectedCategory.length === 0 || // If no category is selected, match all apps
-      (app.categories && app.categories.some(category =>
-        selectedCategory.includes(category)
+      !Array.isArray(selectedCategory) || selectedCategory.length === 0 || // If no category is selected, match all apps
+      (app.categories && Array.isArray(app.categories) && app.categories.some(category =>
+        category && selectedCategory.includes(category)
       ))
     );
 
     const matchesSelectedTags = (
-      selectedLabel.length === 0 || // If no label is selected, match all apps
-      (app.tags && app.tags.some(tag =>
-        selectedLabel.includes(tag)
+      !Array.isArray(selectedLabel) || selectedLabel.length === 0 || // If no label is selected, match all apps
+      (app.tags && Array.isArray(app.tags) && app.tags.some(tag =>
+        tag && selectedLabel.includes(tag)
       ))
     );
 

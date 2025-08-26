@@ -87,15 +87,15 @@ const menuData = {
   ],
   Services: [
     {
-      title: "Professional Services",
+      title: "Proof of Concept",
       description:
-        "Professional Services help you solve problems at your convenience.",
+        "Register for POC to test the best of Shuffle for free for 30 days.",
       icon: "/images/ProfessionalServices.svg",
-      path: "/professional-services",
+      path: "/poc",
       gaData: {
         category: "navbar",
         action: "services_click",
-        label: "professional_services_click"
+        label: "proof_of_concept_click"
       }
     },
     {
@@ -103,7 +103,7 @@ const menuData = {
       description:
         "Support to help you build automations with confidence.",
       icon: "/images/Support.svg",
-      path: "/contact?category=support",
+      path: "/support",
       gaData: {
         category: "navbar",
         action: "services_click",
@@ -1486,7 +1486,7 @@ const Navbar = (props) => {
                 }
               }}
             >
-              Become a partner
+              Become a Partner
             </Button>
             <Button
               fullWidth
@@ -1516,7 +1516,7 @@ const Navbar = (props) => {
                 }
               }}
             >
-              Discover partners
+              Discover Partners
             </Button>
           </Box>
         </Box>
@@ -1661,7 +1661,7 @@ const Navbar = (props) => {
 
   const topbarHeight = showTopbar ? 40 : 0
   const topbar = !isCloud || !showTopbar ? null :
-    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/professional-services" ?
+    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/poc" || curpath === "/professional-services" ?
       <span style={{ zIndex: 50001, marginTop: -4}}>
         {/* uncommit this to show topbar for release */}
         {/* <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>

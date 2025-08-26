@@ -91,10 +91,13 @@ const Billing = memo((props) => {
 	const [currentTab, setCurrentTab] = useState(0)
 	const [allChildOrgs, setAllChildOrgs] = useState([])
 	const [allChildOrgsStats, setAllChildOrgsStats] = useState([])
+	const [statistics, setStatistics] = useState([])
+	const [monthlyAppRunsParent, setMonthlyAppRunsParent] = useState(0)
+	const [monthlyAllSuborgExecutions, setMonthlyAllSuborgExecutions] = useState(0)
 
 	useEffect(() => {
-		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
-			const percentage = ((userdata.app_execution_usage + userdata.app_executions_suborgs) / userdata.app_execution_limit) * 100;
+		if (monthlyAppRunsParent > 0 || monthlyAllSuborgExecutions > 0) {
+			const percentage = ((monthlyAppRunsParent + monthlyAllSuborgExecutions) / userdata.app_execution_limit) * 100;
 			setCurrentAppRunsInPercentage(Math.round(percentage));
 			setCurrentAppRunsInNumber(userdata.app_execution_limit - userdata.app_execution_usage - userdata.app_executions_suborgs);
 		}
@@ -102,7 +105,7 @@ const Billing = memo((props) => {
 		if (userdata?.id?.length > 0 && isLoggedIn === false){
 			setIsLoggedIn(true)
 		}
-	}, [userdata]);
+	}, [monthlyAppRunsParent, monthlyAllSuborgExecutions, userdata]);
 
 	const [BillingEmail, setBillingEmail] = useState(selectedOrganization?.Billing?.Email);
 
@@ -198,6 +201,48 @@ const Billing = memo((props) => {
 			handleGetDeals(selectedOrganization.id);
 		}
 	}, [])
+
+
+	const getStats = (orgid) => {
+		
+		if (orgid === undefined || orgid === null) {
+			return
+		}
+
+		fetch(`${globalUrl}/api/v1/orgs/${orgid}/stats`, {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!: ", response.status);
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson["success"] === false) {
+				return
+			}
+
+			setStatistics(responseJson);
+		})
+		.catch((error) => {
+			console.log("error: ", error)
+		});
+	}
+
+
+	useEffect(() => {
+		if (selectedOrganization && selectedOrganization?.id?.length > 0) {
+			getStats(selectedOrganization.id);
+		}
+	}, [selectedOrganization]);
 
 	const paperStyle = {
 		padding: 20,
@@ -1973,7 +2018,13 @@ const Billing = memo((props) => {
 	};
 
 	const isChildOrg = userdata?.active_org?.creator_org !== "" && userdata?.active_org?.creator_org !== undefined && userdata?.active_org?.creator_org !== null
-	
+
+	useEffect(() => {
+		if (isChildOrg && currentTab === 0) {
+			setCurrentTab(1);
+		}
+	}, [isChildOrg, currentTab]);
+
 	return (
 		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
 			<div style={{ height: "100%", width: "100%"}}>
@@ -2373,8 +2424,8 @@ const Billing = memo((props) => {
 					<Typography variant="body2" color="textSecondary" style={{fontSize: 16,}}>
 						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at {supportEmail}.
 					</Typography>We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at
-					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5, }}>
-						{billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
+					<div style={{ display: 'flex', width: '50%', flexDirection: 'row', marginTop: 5, }}>
+						{/* {billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
 							isChildOrg ? null : (
 								<ConsultationManagement
 									globalUrl={globalUrl}
@@ -2382,7 +2433,7 @@ const Billing = memo((props) => {
 									selectedOrganization={selectedOrganization}
 								/>
 							)
-						) : null}
+						) : null} */}
 						<TrainingService />
 					</div>
 				</div>
@@ -2410,17 +2461,17 @@ const Billing = memo((props) => {
 					}}
 				/>
 				<Typography style={{marginTop: 10, fontSize: 16,}} color="textSecondary">
-					You have used <strong>{currentAppRunsInPercentage}%</strong> of total app execution limit or <strong>{userdata.app_execution_usage + userdata.app_executions_suborgs}</strong> app runs out of <strong>{userdata.app_execution_limit}</strong> app runs.
+					You have used <strong>{currentAppRunsInPercentage}%</strong> of total app execution limit or <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs out of <strong>{userdata.app_execution_limit}</strong> app runs this month.
 				</Typography>
 				
 				{userdata?.active_org?.creator_org?.length > 0 ? null :
 					(
 					<>
 						<Typography color="textSecondary" style={{ marginTop: 20, fontSize: 16 }}>
-							Parent Organization App Executions: <strong>{userdata.app_execution_usage}</strong>
+							Parent Organization App Executions: <strong>{monthlyAppRunsParent}</strong>
 						</Typography>
 						<Typography color="textSecondary" style={{ fontSize: 16 }}>
-							Sub-Organization App Executions: <strong>{userdata.app_executions_suborgs || "N/A"}</strong>
+							Sub-Organization App Executions: <strong>{monthlyAllSuborgExecutions || "N/A"}</strong>
 						</Typography>
 					</>
 				)}
@@ -2602,12 +2653,7 @@ const Billing = memo((props) => {
 					<Tabs
 					value={currentTab}
 					onChange={(event, newValue) => {
-						setCurrentTab(-1)
-
-						// Force re-render
-						setTimeout(() => {
-							setCurrentTab(newValue)
-						}, 100);
+						setCurrentTab(newValue)
 					}}
 					style={{ marginTop: 20 }}
 					TabIndicatorProps={{
@@ -2619,52 +2665,66 @@ const Billing = memo((props) => {
 						}
 					}}
 					>
-						<Tab
-							label="Parent Organization"
+						{isChildOrg ? null :
+						<Tab 
+							label="All Organization Stats"
 							style={{ textTransform: 'none',}}
 							value={0}
+						/>}
+						<Tab
+							label={isChildOrg ? "Organization Stats" : "Parent Organization Stats"}
+							style={{ textTransform: 'none',}}
+							value={1}
 						/>
-
-						{isCloud ? 
-							<Tab
-								label="Cloud-Synced Stats"
-								style={{ textTransform: 'none', }}
-								value={1}
-							/>
-						: null}
-
+						{isChildOrg ? null :
 						<Tab
 							label="Child Organization Stats"
 							disabled={isChildOrg}
 							style={{ textTransform: 'none', }}
 							value={2}
-						/>
+						/>}
+						{isCloud ? 
+							<Tab
+								label="Cloud-Synced Stats"
+								style={{ textTransform: 'none', }}
+								value={3}
+							/>
+						: null}
 					</Tabs>
 
 					<div style={{paddingBottom: 200, minHeight: 750, }}>
-						{currentTab === 0 ? 
-							<div style={{ marginTop: 30,}}>
-								<BillingStats
-									isCloud={isCloud}
-									clickedFromOrgTab={clickedFromOrgTab}
-									globalUrl={globalUrl}
-									selectedOrganization={selectedOrganization}
-									userdata={userdata}
-								/>
-							</div>
+						{
+						currentTab === 0 ? 
+							<BillingStats
+								isCloud={isCloud}
+								clickedFromOrgTab={clickedFromOrgTab}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								userdata={userdata}
+								statistics={statistics}
+								monthlyAppRunsParent={monthlyAppRunsParent}
+								monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
+								setMonthlyAllSuborgExecutions={setMonthlyAllSuborgExecutions}
+								setMonthlyAppRunsParent={setMonthlyAppRunsParent}
+								currentTab={currentTab}
+							/>
 						: currentTab === 1 ? 
-							<div style={{ marginTop: 30,}}>
+							<div>
 								<BillingStats
 									isCloud={isCloud}
 									clickedFromOrgTab={clickedFromOrgTab}
 									globalUrl={globalUrl}
 									selectedOrganization={selectedOrganization}
 									userdata={userdata}
-
-									syncStats={true}
+									statistics={statistics}
+									monthlyAppRunsParent={monthlyAppRunsParent}
+									monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
+									setMonthlyAllSuborgExecutions={setMonthlyAllSuborgExecutions}
+									setMonthlyAppRunsParent={setMonthlyAppRunsParent}
+									currentTab={currentTab}
 								/>
 							</div>
-						: 
+						: currentTab === 2 ? 
 							<BillingStatsChildOrg
 								isCloud={isCloud}
 								clickedFromOrgTab={clickedFromOrgTab}
@@ -2675,7 +2735,18 @@ const Billing = memo((props) => {
 								setAllChildOrgs={setAllChildOrgs}
 								allChildOrgsStats={allChildOrgsStats}
 								setAllChildOrgsStats={setAllChildOrgsStats}
+								currentTab={currentTab}
 							/>
+						: 
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+									currentTab={currentTab}
+									syncStats={true}
+								/>
 						}
 					</div>
 				</span>

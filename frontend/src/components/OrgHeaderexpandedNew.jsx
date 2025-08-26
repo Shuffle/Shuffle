@@ -419,7 +419,7 @@ const OrgHeaderexpandedNew = (props) => {
 								<div style={{ marginTop: 8, display: "flex" }} />
 								<div style={{ display: "flex" }}>
 									<div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
-										<Typography variant="text" style={{color: theme.palette.text.primary}}>Name</Typography>
+										<Typography variant="text" style={{color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily}}>Name</Typography>
 										<TextField
 											required
 											style={{
@@ -499,7 +499,7 @@ const OrgHeaderexpandedNew = (props) => {
 									</div>
 									{userdata?.support ? (
 										<div style={{ alignItems: 'center' }}>
-											<div style={{ marginRight: '12px', color: theme.palette.text.primary }}>Status</div>
+											<div style={{ marginRight: '12px', color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}>Status</div>
 											<FormControl style={{ width: 220, height: 35 }}>
 												<Select
 													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
@@ -525,13 +525,13 @@ const OrgHeaderexpandedNew = (props) => {
 
 									{isCloud ? (
 										<div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }} >
-											<Typography variant="text" style={{color: theme.palette.text.primary}}>Change Region</Typography>
+											<Typography variant="text" style={{color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily}}>Change Region</Typography>
 											<RegionChangeModal selectedOrganization={selectedOrganization} setSelectedRegion={setSelectedRegion} userdata={userdata} handleSendChangeRegionMail={handleSendChangeRegionMail} />
 										</div>
 									) : null}
 								</div>
 								<div style={{ marginTop: "10px" }} />
-								<Typography variant="text" style={{color: theme.palette.text.primary}}>Description</Typography>
+								<Typography variant="text" style={{color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily}}>Description</Typography>
 								<div style={{ display: "flex" }}>
 									<TextField
 										required

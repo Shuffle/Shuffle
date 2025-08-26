@@ -23,7 +23,11 @@ import {
 import {
 	Rocket as RocketIcon,
 	FilterAlt as FilterAltIcon,
+	Add as AddIcon,
 } from '@mui/icons-material';
+
+import algoliasearch from 'algoliasearch/lite';
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 
 const CollectIngestModal = (props) => {
 	const { globalUrl, open, setOpen, workflows, getWorkflows, apps,  } = props;
@@ -86,11 +90,13 @@ const CollectIngestModal = (props) => {
 	}
 
 	const IngestItem = (props) => {
-		const { type, appCategory, index } = props
+		const { type, appCategory, index, webhook } = props
 
 		const [hovering, setHovering] = useState(false);
 		const [selectedApps, setSelectedApps] = useState([]);
-		//const [isFinished, setIsFinished] = useState(false);
+
+		const [showAppsearch, setShowAppsearch] = useState(false);
+		const [algoliaOptions, setAlgoliaOptions] = useState([]);
 
 		const appname = type
 		const ingestedAmount = 20
@@ -167,7 +173,7 @@ const CollectIngestModal = (props) => {
 			//<Grid item xs={hovering ? 12 : 5.9}
 			<Grid item xs={12}
 				style={{
-					minHeight: hovering ? 250 : 140, 
+					minHeight: hovering ? 200 : 200, 
 					maxHeight: hovering ? "auto" : 140, 
 					cursor: "pointer",
 					position: "relative",
@@ -176,7 +182,7 @@ const CollectIngestModal = (props) => {
 					borderRadius: theme.palette.borderRadius,
 					border: hovering ? `2px solid ${theme.palette.primary.main}` : foundMatchingWorkflow !== null ? `2px solid ${theme.palette.success.main}` : `2px solid ${theme.palette.secondary.main}`,
 					textAlign: "center", 
-					marginBottom: 5, 
+					marginBottom: 10, 
 
 					overflow: "hidden",
 				}}
@@ -189,86 +195,116 @@ const CollectIngestModal = (props) => {
 				}}
 				onMouseLeave={() => setHovering(false)}
 			>
-				<div style={{marginTop: 35, marginBottom: 35, }}>
-					{iconDetails?.originalIcon && (
-						iconDetails?.originalIcon
-					)}
+				<div style={{display: "flex", }}>
 
-					<Typography variant="h4" style={{marginTop: 10, }}>
+					<div style={{flex: 1, margin: "auto", marginTop: 50, }}>
 
-						{appname}
-					</Typography> 
-				</div>
+						<div style={{width: 50+selectedApps?.length*50, margin: "auto", itemAlign: "center", textAlign: "center", display: "flex", }}>
+							{selectedApps.map((app, index) => {
+								// Show image of each one
+								return (
+									<div key={index} style={{display: "flex", alignItems: "center", marginLeft: 10, }}>
+										<Tooltip title={app.name} placement="top">
+											<img
+												style={{height: 40, width: 40, borderRadius: 50}}
+												src={app?.large_image || app?.icon || app?.image || "/static/images/default_app_icon.png"}
+											/>
+										</Tooltip>
+									</div>
+								)
+							})}
 
-				<div style={{display: "flex", width: 400, margin: "auto", }}>
-					{matchingapps.length > 0 ?
-						<Autocomplete
-						  style={{flex: 1,  }}
-						  multiple
-						  filterSelectedOptions
-						  options={matchingapps}
+							<Tooltip title="Select Apps" placement="top">
+								<IconButton
+									style={{marginLeft: 10, marginRight: 50, }}
+									variant="outlined"
+									color="secondary"
+									onClick={() => {
+										setShowAppsearch(!showAppsearch)
+									}}
+								>
+									<AddIcon style={{color: theme.palette.primary.main, }} />
+								</IconButton>
+							</Tooltip>
+						</div>
 
-						  value={selectedApps}
-						  onChange={(event, value) => {
-							  setSelectedApps(value)
-						  }}
+						{showAppsearch ?
+							<Autocomplete
+							  style={{flex: 1, maxWidth: 200, minWidth: 200, margin: "auto", marginTop: 10, }}
+							  multiple
+							  filterSelectedOptions
+							  options={matchingapps}
 
-						  getOptionLabel={(option) => {
-							  const parsedname = option.name.replaceAll("_", " ")
+							  value={selectedApps}
+							  onChange={(event, value) => {
+								  setSelectedApps(value)
+							  }}
 
-							  return (
-								<div>
-									<img src={option?.large_image} alt={option.name} style={{ width: 24, height: 24, marginRight: 10, borderRadius: 5, }} />
-									<Typography variant="body1" style={{ display: "inline-block", verticalAlign: "middle", marginTop: -12, }}>
-										{parsedname}
-									</Typography>
-								</div>
-							  )
-						  }}
-						  renderInput={(params) => {
-							  return ( 
-								<TextField 
-								  {...params} 
-								  variant="outlined" 
-								  label="Select apps" 
-								/>
-							  )
-						  }}
-						/>
-					: null}
+							  getOptionLabel={(option) => {
+								  const parsedname = option.name.replaceAll("_", " ")
 
+								  return (
+									<div>
+										<img src={option?.large_image} alt={option.name} style={{ width: 24, height: 24, marginRight: 10, borderRadius: 5, }} />
+										<Typography variant="body1" style={{ display: "inline-block", verticalAlign: "middle", marginTop: -12, }}>
+											{parsedname}
+										</Typography>
+									</div>
+								  )
+							  }}
+							  renderInput={(params) => {
+								  return ( 
+									<TextField 
+									  {...params} 
+									  variant="outlined" 
+									  label="Select apps" 
+									/>
+								  )
+							  }}
+							/>
+						: 
+							<Button 
+								style={{width: 250, margin: 25, }}
+								variant={foundMatchingWorkflow !== null ? "outlined" : "contained"}
+								onClick={() => {
 
-					<Button 
-						style={{flex: 1, }}
-						variant={foundMatchingWorkflow !== null ? "outlined" : "contained"}
-						onClick={() => {
+									toast.info("Starting ingest for relevant apps")
+									var newapps = ""
+									for (var key in selectedApps) {
+										const app = selectedApps[key]
 
-						//if (foundMatchingWorkflow !== null) {
-						//	toast.error("Deletion not implemented for this POC. Please delete the workflow.")
-						//} 
+										if (newapps.length > 0) {
+											newapps += ","
+										}
 
-						//else {
-						toast.info("Starting ingest for relevant apps")
-						var newapps = ""
-						for (var key in selectedApps) {
-							const app = selectedApps[key]
+										newapps += app.name
+									}
 
-							if (newapps.length > 0) {
-								newapps += ","
-							}
-
-							newapps += app.name
+									startIngestion(appname, newapps, appCategory, index)
+									if (webhook === true) {
+										startIngestion(appname+"_webhook", newapps, appCategory, index)
+									}
+								}}
+							>
+								{foundMatchingWorkflow !== null ? 
+									"Re-Create Ingestion"
+									:
+									"Start Ingestion"	
+								}
+							</Button>
 						}
+					</div>
 
-						startIngestion(appname, newapps, appCategory, index)
-						//}
-					}}>
-						{foundMatchingWorkflow !== null ? 
-							"Re-Create Ingestion"
-							:
-							"Start Ingestion"	
-						}
-					</Button>
+					<div style={{flex: 1, marginTop: 50, }}>
+						{iconDetails?.originalIcon && (
+							iconDetails?.originalIcon
+						)}
+
+						<Typography variant="h4" style={{marginTop: 10, }}>
+
+							{appname}
+						</Typography> 
+					</div>
 				</div>
 
 				{foundMatchingWorkflow !== null ?
@@ -319,7 +355,7 @@ const CollectIngestModal = (props) => {
 				sx: {
 					borderRadius: theme?.palette?.DialogStyle?.borderRadius,
 					border: theme?.palette?.DialogStyle?.border,
-					minWidth: 500,
+					minWidth: 850,
 					minHeight: 700,
 					fontFamily: theme?.typography?.fontFamily,
 					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
@@ -350,13 +386,14 @@ const CollectIngestModal = (props) => {
 				</Typography>
 
 				<Grid container>
-					<IngestItem type="Ingest Tickets" appCategory={"cases"} index={1} />
+					<IngestItem type="Ingest Tickets" appCategory={"cases"} webhook={true} index={1} />
 					<IngestItem type="Enable Threat feeds" index={2} />
+					<IngestItem type="Ingest Assets" appCategory={"assets"} index={2} />
+					<IngestItem type="Ingest Users " appCategory={"users"} index={2} />
 					<IngestItem type="Enable Search" index={2} />
 					<IngestItem type="Enable Mitre Att&ck techniques" index={2} />
 					<IngestItem type="Enable Detection Rules" index={2} />
 					<IngestItem type="Ingest Logs" index={2} />
-					<IngestItem type="Track Assets" appCategory={"assets"} index={2} />
 				</Grid>
 			</DialogContent>
 		</Dialog>

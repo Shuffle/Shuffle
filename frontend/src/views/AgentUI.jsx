@@ -39,6 +39,7 @@ const AgentUI = (props) => {
 	const [buttonState, setButtonState] = useState("timeline")
 	const [execution, setExecution] = useState(null)
 	const [agentActionResult, setAgentActionResult] = useState(null)
+	const [agentRequestLoading, setAgentRequestLoading] = useState(false)
 	const [data, setData] = useState({})
 	const [openIndexes, setOpenIndexes] = useState([])
 	const [disableButtons, setDisableButtons] = useState(false)
@@ -571,8 +572,9 @@ const AgentUI = (props) => {
 	}
 
 	const submitInput = (inputText) => {
-		toast.info("Submitting AI Agent input: " + inputText);
+		//toast.info("Submitting AI Agent input: " + inputText);
 
+		setAgentRequestLoading(true)
 		//setShowAgentStarter(false);
 		//GetExecution(execution?.execution_id, execution?.node_id, execution?.authorization);
 
@@ -615,10 +617,11 @@ const AgentUI = (props) => {
 			credentials: "include",
 		})
 		.then((response) => {
+			setAgentRequestLoading(false)
 			return response.json()
 		})
 		.then((responseJson) => {
-			toast.success("Got response!")
+			//toast.success("Got response!")
 			console.log("Agent run response: ", responseJson)
 
 			if (responseJson.success === true && responseJson.authorization !== undefined && responseJson.execution_id !== undefined) { 
@@ -628,6 +631,7 @@ const AgentUI = (props) => {
 			}
 		})
 		.catch((error) => {
+			setAgentRequestLoading(false)
 			toast.error("Error: " + error)
 		})
 
@@ -651,15 +655,21 @@ const AgentUI = (props) => {
 						Shuffle AI Agents 
 					</Typography>
 					<TextField
-						label="Agent Input"
+						label="What do you want to do?"
 						variant="outlined"
-						style={{width: 300, marginRight: 20, marginTop: 30, }}
+						disabled={agentRequestLoading}
+						style={{width: 450, marginRight: 20, marginTop: 30, }}
+						multiline
+						minRows={2}
 						defaultValue={execution?.execution_id || ""}
 						onChange={(e) => {
 							setActionInput(e.target.value)
 						}}
 						InputProps={{
 							endAdornment: (
+								agentRequestLoading ?
+									<CircularProgress size={24} style={{marginRight: 10, }} />
+								: 
 								<Tooltip title="This is the input for the AI Agent. It can be any valid JSON.">
 									<IconButton type="submit"> 
 										<SendIcon 

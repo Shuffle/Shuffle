@@ -66,18 +66,17 @@ const PartnerTab = (props) => {
         })
         .then((response) => {
             if (response.status !== 200) {
-                toast("Failed to get partner data")
+                toast.info("No partner details found");
             }
             return response.json();
         })
         .then((responseJson) => {
             if(responseJson.success) {
                 setPartnerData(responseJson?.partner);
-                console.log("responseJson", responseJson)
                 setLoadingPartnerData(false);
             }else{  
                 setLoadingPartnerData(false);
-                toast(responseJson?.reason)
+                console.error(responseJson?.reason)
             }
         })
         .catch((error) => {

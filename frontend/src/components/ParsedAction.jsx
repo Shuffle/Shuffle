@@ -150,6 +150,7 @@ const ParsedAction = (props) => {
 		globalUrl,
 		setSelectedActionEnvironment,
 		requiresAuthentication,
+		setRequiresAuthentication,
 		hideExtraTypes,
 		scrollConfig,
 		setScrollConfig,
@@ -1076,8 +1077,8 @@ const ParsedAction = (props) => {
 				var toReplace = event.target.value
 
 
-				if (!toReplace.startsWith("{") && !toReplace.startsWith("[")) {
-					toReplace = toReplace.replaceAll('\\"', '"').replaceAll('"', '\\"')
+				if (!toReplace?.startsWith("{") && !toReplace?.startsWith("[")) {
+					toReplace = toReplace?.replaceAll('\\"', '"').replaceAll('"', '\\"')
 				}
 
 				if (
@@ -1234,7 +1235,7 @@ const ParsedAction = (props) => {
 			console.log("APIKEY - this shouldn't show up!")
 		}
 
-		if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && data.name === "input_list") {
+		if (selectedAction.app_name === "Shuffle Tools" && (selectedAction.name === "filter_list" || selectedAction.name === "is_in_datastore") && data.name === "input_list") {
 			//console.log("FILTER LIST!: ", event, count, data)
 			const parsedvalue = event.target.value
 			if (parsedvalue.includes(".#")) {
@@ -1250,7 +1251,7 @@ const ParsedAction = (props) => {
 					selectedAction.parameters[1].value = splitparsed[1]
 
 					if (splitparsed.length >= 2) {
-						toast.warn("Filter list only supports filtering on the first list. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.", {
+						toast.warn("Datastore checker/Filter list only supports filtering on the first list. If you want multi-level filtering, please use the 'execute python' action with the 'filter a list' function in the code editor.", {
 							autoClose: 10000,
 						})
 					} else if (selectedAction.parameters[1].value.includes(".#")) {
@@ -1293,7 +1294,7 @@ const ParsedAction = (props) => {
 			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 			if (paramcheck !== undefined) {
 				// Escapes all double quotes
-				const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+				const toReplace = event.target.value?.trim()?.replaceAll("\\\"", "\"")?.replaceAll("\"", "\\\"");
 				console.log("REPLACE WITH: ", toReplace)
 				if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 					paramcheck["value_replace"] = [{
@@ -2056,14 +2057,14 @@ const ParsedAction = (props) => {
 								value={appActionName}
 								onChange={(event) => {
 									let newValue = event.target.value
-									newValue = newValue.replaceAll(" ", "_")
+									newValue = newValue?.replaceAll(" ", "_")
 									setAppActionName(newValue)
 								}}
 								onBlur={(e) => {
 									// Copy the name value
 									const name = e.target.value
-									const parsedBaseLabel = "$" + prevActionName.toLowerCase().replaceAll(" ", "_")
-									const newname = "$" + name.toLowerCase().replaceAll(" ", "_")
+									const parsedBaseLabel = "$" + prevActionName?.toLowerCase()?.replaceAll(" ", "_")
+									const newname = "$" + name?.toLowerCase()?.replaceAll(" ", "_")
 
 									// Check if it's the same as the current name in use
 									//if (name === selectedAction.label) { 
@@ -2288,9 +2289,9 @@ const ParsedAction = (props) => {
 			)}
 
 			{selectedApp.name !== undefined &&
-				selectedAction.authentication !== null &&
+				((selectedAction.authentication !== null &&
 				selectedAction.authentication !== undefined &&
-				selectedAction.authentication.length === 0 &&
+				selectedAction.authentication.length === 0) || isAgent || isIntegration) &&
 				requiresAuthentication ? (
 				<div style={{ marginTop: 15 }}>
 					<Tooltip
@@ -2303,6 +2304,7 @@ const ParsedAction = (props) => {
 								color="primary"
 								style={{
 									textTransform: "none",
+									fontWeight: "bold",
 								}}
 								fullWidth
 								variant="contained"
@@ -2315,7 +2317,7 @@ const ParsedAction = (props) => {
 								}}
 							>
 								<AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
-								{selectedApp.name.replaceAll("_", " ")}
+								{isAgent || isIntegration ? "API" : selectedApp.name?.replaceAll("_", " ")}
 							</Button>
 						</span>
 					</Tooltip>
@@ -2813,7 +2815,7 @@ const ParsedAction = (props) => {
 						}}
 						filterOptions={(options, { inputValue }) => {
 							const lowercaseValue = inputValue.toLowerCase()
-							options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
+							options = options.filter(x => x.name?.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description?.toLowerCase().includes(lowercaseValue))
 
 							return options
 						}}
@@ -2823,8 +2825,8 @@ const ParsedAction = (props) => {
 							}
 
 							const newname = (
-								option.name.charAt(0).toUpperCase() + option.name.substring(1)
-							).replaceAll("_", " ");
+								option.name?.charAt(0).toUpperCase() + option.name?.substring(1)
+							)?.replaceAll("_", " ");
 
 							return newname;
 						}}
@@ -2876,7 +2878,7 @@ const ParsedAction = (props) => {
 								option.label = "No name"
 							}
 
-							newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
+							newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1))?.replaceAll("_", " ");
 
 							var method = ""
 							var extraDescription = ""
@@ -3151,8 +3153,20 @@ const ParsedAction = (props) => {
 														setSelectedAction(selectedAction)
 														setUpdate(Math.random())
 
+											
+          												var requiresAuth = app?.authentication?.required
+														if (requiresAuth && appAuthentication?.length > 0) {
+															for (var key in appAuthentication) {
+																if (appAuthentication[key]?.app?.name === app?.name) {
+																	requiresAuth = false
+																	break
+																}
+															}
+														}
+
+														setRequiresAuthentication(requiresAuth);
 													}}>
-														<Tooltip title={`Select ${app.name.replaceAll("_", " ")}`} placement="top">
+														<Tooltip title={`Select ${app.name?.replaceAll("_", " ")}`} placement="top">
 															<img
 																src={app.large_image}
 																style={{
@@ -3227,8 +3241,8 @@ const ParsedAction = (props) => {
 												}
 
 												const newname = (
-													option.app_name.charAt(0).toUpperCase() + option.app_name.substring(1)
-												).replaceAll("_", " ");
+													option.app_name?.charAt(0).toUpperCase() + option.app_name?.substring(1)
+												)?.replaceAll("_", " ");
 												return newname;
 											}}
 											options={selectedAction.matching_actions}
@@ -3262,8 +3276,8 @@ const ParsedAction = (props) => {
 
 												newActionname = (
 													newActionname.charAt(0).toUpperCase() +
-													newActionname.substring(1)
-												).replaceAll("_", " ");
+													newActionname?.substring(1)
+												)?.replaceAll("_", " ");
 
 												return (
 													<div style={{ display: "flex" }}>
@@ -3505,6 +3519,8 @@ const ParsedAction = (props) => {
 									if (data.name === "key" && selectedAction.name.includes("cache") && selectedAction.app_name === "Shuffle Tools") {
 										// Show a key popout button
 										showCacheConfig = true
+									}  else if (data.name === "category" && selectedAction.app_name === "Shuffle Tools") {
+										showCacheConfig = true
 									}
 
 									var disabled = false;
@@ -3732,6 +3748,7 @@ const ParsedAction = (props) => {
 									}
 
 									const clickedFieldId = "rightside_field_" + count;
+									const parameterFieldId = "param_" + data.name.replace(/[^a-zA-Z0-9_-]/g, '_');
 
 									var baseHelperText = ""
 									if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
@@ -3748,8 +3765,8 @@ const ParsedAction = (props) => {
 									}
 
 									tmpitem = (
-										tmpitem.charAt(0).toUpperCase() + tmpitem.substring(1)
-									).replaceAll("_", " ");
+										tmpitem?.charAt(0).toUpperCase() + tmpitem?.substring(1)
+									)?.replaceAll("_", " ");
 
 									if (tmpitem === "Username basic") {
 										tmpitem = "Username"
@@ -3873,6 +3890,9 @@ const ParsedAction = (props) => {
 												autofill="off"
 												autoComplete="off"
 												id={clickedFieldId}
+												data-parameter={data.name}
+												data-param-id={parameterFieldId}
+												name={data.name}
 												disabled={disabled}
 												style={{
 													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
@@ -4315,7 +4335,7 @@ const ParsedAction = (props) => {
 															viewed_data = split_data[0]
 														}
 
-														viewed_data = (viewed_data.charAt(0).toUpperCase() + viewed_data.slice(1)).replaceAll("_", " ")
+														viewed_data = (viewed_data?.charAt(0).toUpperCase() + viewed_data?.slice(1))?.replaceAll("_", " ")
 
 														// Check if it's selected or not and highlight
 														var selected = false
@@ -4378,9 +4398,9 @@ const ParsedAction = (props) => {
 												? values[0].autocomplete
 												: "$" + values[0].autocomplete;
 
-											toComplete = toComplete.toLowerCase().replaceAll(" ", "_");
+											toComplete = toComplete?.toLowerCase()?.replaceAll(" ", "_");
 											for (let [key, keyval] in Object.entries(values)) {
-												if (key == 0 || values[key].autocomplete.length === 0) {
+												if (key == 0 || values[key]?.autocomplete?.length === 0) {
 													continue;
 												}
 
@@ -4730,7 +4750,7 @@ const ParsedAction = (props) => {
 										);
 									}
 
-									const buttonTitle = `Authenticate API ${selectedApp.name.replaceAll("_", " ")}`
+									const buttonTitle = `Authenticate the ${selectedApp?.name?.replaceAll("_", " ")} API`
 									const hasAutocomplete = data?.autocompleted === true
 									if (data.variant === undefined || data.variant === null) {
 										data.variant = "STATIC_VALUE"
