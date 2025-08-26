@@ -463,6 +463,7 @@ const EditWorkflow = (props) => {
 							>
 								<span>
 								<Button
+									id="ai-generate-button"
 									disabled={
 										name.length === 0 || 
 										aiGenerateLoading === true || 
@@ -744,6 +745,7 @@ const EditWorkflow = (props) => {
 
 						{newWorkflow === true ?
 							<TextField
+								id="Workflow-Description"
 								onBlur={(event) => {
 									innerWorkflow.default_return_value = event.target.value
 									setInnerWorkflow(innerWorkflow)
@@ -867,7 +869,7 @@ const EditWorkflow = (props) => {
 								{!uploadedImage ? (
 									<div
 										style={{
-											border: `2px solid rgba(255,255,255,0.3)`,
+											border: `1px solid ${theme.palette.primary.main}`,
 											borderRadius: 8,
 											padding: 20,
 											textAlign: 'center',

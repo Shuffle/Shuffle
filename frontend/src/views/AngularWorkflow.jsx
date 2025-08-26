@@ -934,9 +934,8 @@ const AngularWorkflow = (defaultprops) => {
   // Add keyboard shortcut handler in your main component
   useEffect(() => {
     const handleKeyPress = (event) => {
-      const hasSupport = userdata?.support === true;
       
-      if (hasSupport && ((event.metaKey || event.ctrlKey) && event.key === 'f')) {
+      if (((event.metaKey || event.ctrlKey) && event.key === 'f')) {
 
         // Check if any modal is currently open
         const isAnyModalOpen = codeEditorModalOpen || executionModalOpen || 

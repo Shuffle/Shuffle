@@ -128,6 +128,18 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b
 const svgSize = 24;
 const imagesize = 23;
 
+// Session-based modal visibility helper
+const AI_ANNOUNCEMENT_SESSION_KEY = "ai_announcement_session";
+
+const getCookie = (name) => {
+  if (typeof document === "undefined") return "";
+  const pattern = `; ${document.cookie}`;
+  const parts = pattern.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return decodeURIComponent(parts.pop().split(";").shift() || "");
+  }
+  return "";
+};
 
 
 
@@ -791,6 +803,7 @@ const Workflows2 = (props) => {
 
     const [firstLoad, setFirstLoad] = React.useState(true);
     const [aiAnnouncementModalOpen, setAiAnnouncementModalOpen] = React.useState(false);
+    const sessionRef = useRef("");
     const [showMoreClicked, setShowMoreClicked] = React.useState(false);
     const [usecases, setUsecases] = React.useState([]);
     const [allUsecases, setAllUsecases] = React.useState({
@@ -900,23 +913,129 @@ const Workflows2 = (props) => {
     }
 
     React.useEffect(() => {
+        if (!isLoggedIn) return;
+      
         const bannerID = "banner_ai_announcement";
-        
-        if (isLoggedIn === true && userdata && userdata.tutorials !== undefined && userdata.tutorials !== null) {
-            // Check if user has already dismissed this banner - tutorials is array of objects with 'name' field
-            const alreadyDismissed = userdata.tutorials.some(tutorial => tutorial.name === bannerID);
-            
-            if (!alreadyDismissed && !aiAnnouncementModalOpen) {
-                // Show the banner as the user hasn't seen it yet
-                //setAiAnnouncementModalOpen(true);
+        const cookieSession = getCookie("__session") || "";
+        sessionRef.current = cookieSession;
+      
+        try {
+          const storedSession = localStorage.getItem(AI_ANNOUNCEMENT_SESSION_KEY) || "";
+      
+          // If backend says it's dismissed, sync storage and exit
+          if (userdata && Array.isArray(userdata.tutorials)) {
+            const alreadyDismissed = userdata.tutorials.some((t) => t?.name === bannerID);
+            if (alreadyDismissed) {
+              if (cookieSession && storedSession !== cookieSession) {
+                localStorage.setItem(AI_ANNOUNCEMENT_SESSION_KEY, cookieSession);
+              }
+              return;
             }
+          } else if (!userdata) {
+            // Wait for userdata to load
+            return;
+          }
+      
+          // Open only if not dismissed in this session
+          if (cookieSession && storedSession !== cookieSession) {
+            setAiAnnouncementModalOpen(true);
+          }
+        } catch {
+          // If storage is unavailable, fallback to a single open per mount
+          setAiAnnouncementModalOpen((open) => open || true);
         }
-    }, [isLoggedIn, userdata]); 
+      }, [isLoggedIn, userdata]);
+      
+      const handleCloseAiAnnouncement = React.useCallback(() => {
+        try {
+          const cookieSession = sessionRef.current || getCookie("__session") || "";
+          if (cookieSession) {
+            localStorage.setItem(AI_ANNOUNCEMENT_SESSION_KEY, cookieSession);
+          }
+        } catch {
+          // ignore storage access issues
+        }
+        setAiAnnouncementModalOpen(false);
+      }, []);
+      
 
     const dismissAiAnnouncement = () => {
         const bannerID = "banner_ai_announcement";
 
-        setAiAnnouncementModalOpen(false);
+        handleCloseAiAnnouncement();
+
+        // Open Create Workflow modal (EditWorkflow) and temporarily highlight inputs/buttons
+        try {
+            setModalOpen(true)
+            setIsEditing(false)
+            setNewWorkflowName("")
+            setNewWorkflowDescription("")
+            setDefaultReturnValue("")
+            setEditingWorkflow({})
+            setNewWorkflowTags([])
+            setSelectedUsecases([])
+
+            // Wait a moment for the drawer to mount, then highlight
+            setTimeout(() => {
+                const BORDER = '#4CAF50';
+                const DURATION = 1500;
+
+                const highlightTextField = (inputEl) => {
+                    if (!inputEl) return;
+                    const formControl = inputEl.closest('.MuiFormControl-root') || inputEl.closest('.MuiInputBase-root') || inputEl.parentElement;
+                    const inputRoot = formControl?.querySelector('.MuiOutlinedInput-root') || formControl?.querySelector('.MuiInputBase-root') || formControl;
+                    const notch = formControl?.querySelector('fieldset');
+
+                    const prevBoxShadow = inputRoot?.style?.boxShadow;
+                    const prevBorderColor = notch?.style?.borderColor;
+                    const prevBorderWidth = notch?.style?.borderWidth;
+
+                    if (inputRoot) inputRoot.style.boxShadow = '0 0 0 3px rgba(76,175,80,0.45)';
+                    if (notch) {
+                        notch.style.borderColor = BORDER;
+                        notch.style.borderWidth = '2px';
+                    }
+
+                    setTimeout(() => {
+                        try {
+                            if (inputRoot) inputRoot.style.boxShadow = prevBoxShadow || '';
+                            if (notch) {
+                                notch.style.borderColor = prevBorderColor || '';
+                                notch.style.borderWidth = prevBorderWidth || '';
+                            }
+                        } catch (_) {}
+                    }, DURATION);
+                };
+
+                const highlightButton = (btnEl) => {
+                    if (!btnEl) return;
+                    const prevBoxShadow = btnEl.style.boxShadow;
+                    const prevBorder = btnEl.style.border;
+                    const prevRadius = btnEl.style.borderRadius;
+                    btnEl.style.boxShadow = '0 0 0 3px rgba(76,175,80,0.45)';
+                    btnEl.style.border = '2px solid ' + BORDER;
+                    btnEl.style.borderRadius = '6px';
+                    setTimeout(() => {
+                        try {
+                            btnEl.style.boxShadow = prevBoxShadow || '';
+                            btnEl.style.border = prevBorder || '';
+                            btnEl.style.borderRadius = prevRadius || '';
+                        } catch (_) {}
+                    }, DURATION);
+                };
+
+                const nameEl = document.getElementById('Enter-Workflow-Name');
+                highlightTextField(nameEl);
+
+                const descEl = document.getElementById('Workflow-Description');
+                highlightTextField(descEl);
+
+                const aiBtn = document.getElementById('ai-generate-button');
+                highlightButton(aiBtn);
+            }, 250);
+        } catch (e) {
+            console.debug('Failed to open and highlight Create Workflow modal:', e);
+        }
         
         fetch(globalUrl + '/api/v1/users/updateuser', {
             method: 'PUT',
@@ -1223,70 +1342,184 @@ const Workflows2 = (props) => {
 
     const aiAnnouncementModal = aiAnnouncementModalOpen ? (
         <Dialog
-            open={aiAnnouncementModalOpen}
-            onClose={() => setAiAnnouncementModalOpen(false)}
-            PaperProps={{
-                style: {
-                    backgroundColor: "#1a1a1a",
-                    color: "white",
-                    minWidth: 500,
-                    maxWidth: 550,
-                    padding: 30,
-                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
-                    border: "1px solid #333",
-                },
+        open={aiAnnouncementModalOpen}
+        onClose={handleCloseAiAnnouncement}
+        TransitionComponent={Zoom}
+        TransitionProps={{ timeout: 300 }}
+        PaperProps={{
+          style: {
+            background: theme.palette.DialogStyle.backgroundColor,
+            minWidth: isMobile ? "90vw" : 780,
+            maxWidth: isMobile ? "90vw" : 860,
+            borderRadius: 8,
+            overflow: "hidden",
+            transformOrigin: "center",
+          },
+        }}
+      >
+        <DialogTitle style={{ position: "relative", padding: 0, margin: 0 }}>
+          <IconButton
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
             }}
+            onClick={() => handleCloseAiAnnouncement()}
+            aria-label="Close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            height: "380px",
+            overflow: "hidden",
+          }}
         >
-            <DialogTitle style={{ marginBottom: 0, textAlign: "center", position: "relative", paddingBottom: 10 }}>
-                <IconButton
-                    style={{
-                        position: "absolute",
-                        top: -10,
-                        right: -15,
-                        color: "rgba(255,255,255,0.7)",
-                    }}
-                    onClick={() => setAiAnnouncementModalOpen(false)}
+          {/* Main two-column layout */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: { xs: 3, sm: 4 },
+              alignItems: "stretch",
+              p: { xs: 2.5, sm: 3 },
+              mt: 1,
+            }}
+          >
+            {/* Left: steps image (38%) */}
+            <Box
+              sx={{
+                flex: { xs: "0 0 auto", sm: "0 0 38%" },
+                maxWidth: { xs: "100%", sm: "38%" },
+              }}
+            >
+              <Box
+                component="img"
+                src="/aiGenerateWorkflowSteps.svg"
+                alt="AI workflow generation steps"
+                sx={{
+                  width: "100%",
+                  height: {xs: "auto", md: "80%"},
+                  marginLeft: -2,
+                  objectFit: "contain",
+                  borderRadius: "6px",
+                }}
+              />
+            </Box>
+
+            {/* Right: content (62%) */}
+            <Box
+              sx={{
+                flex: { xs: "1 1 auto", sm: "0 0 62%" },
+                maxWidth: { xs: "100%", sm: "62%" },
+                display: "flex",
+                flexDirection: "column",
+                gap: { xs: 1.5, sm: 2 },
+                py: 1.2,
+              }}
+            >
+              {/* NEW badge */}
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 1,
+                  py: 0.5,
+                  px: 1.25,
+                  border: "1px solid #2bc07e",
+                  color: "#f85a3e",
+                  background: "transparent",
+                  borderRadius: 999,
+                  width: "fit-content",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  mb: { xs: 0.5, sm: 1 },
+                }}
+              >
+                <AutoAwesomeIcon sx={{ fontSize: 16, color: "#2bc07e" }} />
+                <Box
+                  component="span"
+                  sx={{
+                    color: "#2bc07e",
+                  }}
                 >
-                    <CloseIcon />
-                </IconButton>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 15 }}>
-                    <AutoAwesomeIcon style={{ marginRight: 12, color: "#f85a3e", fontSize: 32 }} />
-                    <Typography variant="h5" style={{ color: "rgba(255,255,255,0.9)" }}>
-                        🎉 Introducing AI Workflow Generation!
-                    </Typography>
-                </div>
-            </DialogTitle>
-            <DialogContent style={{ color: "rgba(255,255,255,0.8)", textAlign: "left", paddingTop: 0 }}>
-                <Typography variant="body1" style={{ marginBottom: 18, fontSize: "15px", lineHeight: 1.5 }}>
-                    🤖 Simply describe what you want your workflow to do, and our AI will automatically generate the workflow for you!
-                </Typography>
+                  NEW
+                </Box>
+              </Box>
 
-                <Typography variant="body1" style={{ marginBottom: 18, fontSize: "15px", lineHeight: 1.5 }}>
-                    ✨ <strong>Quick start:</strong> Click "Create Workflow" → Describe your workflow → "AI Generate" → Done!
-                </Typography>
+              {/* Title */}
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  lineHeight: 1.25,
+                  fontFamily: theme.typography.fontFamily,
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                Introducing AI Workflow Generation
+              </Typography>
 
-                <Typography variant="body1" style={{ marginBottom: 25, fontSize: "14px", lineHeight: 1.4, color: "rgba(255,255,255,0.6)" }}>
-                    For self-hosted setups: <a href="https://shuffler.io/docs/AI-Features" target="_blank" rel="noopener noreferrer" style={{ color: "#f85a3e", textDecoration: "none" }}>setup docs</a>
-                </Typography>
+              {/* Body text */}
+              <Typography
+                variant="body2"
+                sx={{
+                  lineHeight: 1.7,
+                  fontFamily: theme.typography.fontFamily,
+                }}
+              >
+                Simply describe what you want your workflow to do, and our AI
+                will automatically generate the workflow for you.
+              </Typography>
 
-                <div style={{ textAlign: "center", marginTop: 20 }}>
-                    <Button
-                        variant="contained"
-                        onClick={dismissAiAnnouncement}
-                        style={{ 
-                            backgroundColor: "#f85a3e", 
-                            color: "white",
-                            padding: "10px 25px",
-                            fontSize: "15px",
-                            textTransform: "none",
-                            borderRadius: "6px"
-                        }}
-                    >
-                        Got it, let's try it! 🚀
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: theme.typography.fontFamily }}
+              >
+                <strong>Quick start:</strong> Create Workflow → Describe → AI
+                Generate → Done.
+              </Typography>
+
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: theme.typography.fontFamily }}
+              >
+                For self-hosted setups, see the{" "}
+                <Box
+                  component="a"
+                  href="https://shuffler.io/docs/AI"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#ff8544", textDecoration: "underline" }}
+                >
+                  setup docs
+                </Box>
+              </Typography>
+
+              {/* CTA button */}
+              <Box sx={{ display: "flex", mt: { xs: 2, sm: 2.5 } }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={dismissAiAnnouncement}
+                  disableElevation
+                  sx={{
+                    py: 1.1,
+                    px: 2.7,
+                    textTransform: "none",
+                    mt: 3,
+                    borderRadius: "8px",
+                    fontSize: 14,
+                    width: { xs: "100%", sm: "auto" },
+                  }}
+                >
+                  Let's try it out
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
     ) : null;
 
     const deleteModal = deleteModalOpen ? (
@@ -4950,6 +5183,7 @@ const Workflows2 = (props) => {
 
                                     <Tooltip title="Show/Hide Workflow Runs for top workflows" placement="top">
                                         <IconButton
+                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => {
 
                                                 const newView = !showExecutionStats
@@ -5601,8 +5835,8 @@ const Workflows2 = (props) => {
     }
 
     // Maybe use gridview or something, idk
-    //return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
-    return <div style={isSafari ? safariStyle : {minHeight: "80vh",}}>{loadedCheck}</div>;
+    return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
+    // return <div style={isSafari ? safariStyle : {minHeight: "80vh",}}>{loadedCheck}</div>;
 };
 
 
