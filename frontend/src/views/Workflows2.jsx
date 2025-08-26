@@ -1487,7 +1487,7 @@ const Workflows2 = (props) => {
                 For self-hosted setups, see the{" "}
                 <Box
                   component="a"
-                  href="https://shuffler.io/docs/AI"
+                  href="/docs/AI#self-hosting-models"
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{ color: "#ff8544", textDecoration: "underline" }}

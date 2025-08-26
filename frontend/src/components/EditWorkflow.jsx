@@ -483,8 +483,15 @@ const EditWorkflow = (props) => {
 
 										// check AI enabled for local installations (not cloud)
 										if (!isCloud && (!userdata?.ai_enabled || userdata?.ai_enabled === false)) {
-											toast.warn("Local AI is not enabled. Setup required: https://shuffler.io/docs/AI-Features");
-											return;
+											// Toast with onclick
+											toast.info("AI credits haven't been applied and no Local AI is not enabled. Click here to set it up!", {
+												autoClose: 10000,
+												onClick: () => {
+													window.open("/docs/AI#self-hosting-models", "_blank")
+												}
+											})
+
+											return
 										}
 
 										// Check if description is provided OR image is uploaded for new workflows
