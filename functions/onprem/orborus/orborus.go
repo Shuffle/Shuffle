@@ -51,6 +51,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -734,7 +735,7 @@ func deployServiceWorkers(image string) {
 				var updatedNetworks []swarm.NetworkAttachmentConfig
 				for _, net := range serviceSpec.Networks {
 					if net.Target != "shuffle_shuffle" {
-					updatedNetworks = append(updatedNetworks, net)
+						updatedNetworks = append(updatedNetworks, net)
 					}
 				}
 				serviceSpec.Networks = updatedNetworks
@@ -786,6 +787,48 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
+func buildResourcesFromEnv() corev1.ResourceRequirements {
+	reqs := corev1.ResourceList{}
+	lims := corev1.ResourceList{}
+
+	type item struct {
+		env string
+		rn  corev1.ResourceName
+		to  *corev1.ResourceList
+	}
+
+	items := []item{
+		// kubernetes requests
+		{env: "KUBERNETES_CPU_REQUEST", rn: corev1.ResourceCPU, to: &reqs},
+		{env: "KUBERNETES_MEMORY_REQUEST", rn: corev1.ResourceMemory, to: &reqs},
+		{env: "KUBERNETES_EPHEMERAL_STORAGE_REQUEST", rn: corev1.ResourceEphemeralStorage, to: &reqs},
+		// kubernetes limits
+		{env: "KUBERNETES_CPU_LIMIT", rn: corev1.ResourceCPU, to: &lims},
+		{env: "KUBERNETES_MEMORY_LIMIT", rn: corev1.ResourceMemory, to: &lims},
+		{env: "KUBERNETES_EPHEMERAL_STORAGE_LIMIT", rn: corev1.ResourceEphemeralStorage, to: &lims},
+	}
+
+	for _, it := range items {
+		if v := strings.TrimSpace(os.Getenv(it.env)); v != "" {
+			if q, err := resource.ParseQuantity(v); err == nil {
+				(*it.to)[it.rn] = q
+			} else {
+				log.Printf("[WARN] Cannot parse %s=%q as resource quantity: %v", it.env, v, err)
+			}
+		}
+	}
+
+	rr := corev1.ResourceRequirements{}
+	if len(reqs) > 0 {
+		rr.Requests = reqs
+	}
+	if len(lims) > 0 {
+		rr.Limits = lims
+	}
+
+	return rr
+}
+
 func handleBackendImageDownload(ctx context.Context, images string) error {
 
 	// Replicate images with lowercase, as the name may be wrong
@@ -813,20 +856,20 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		newImages = append(newImages, curimage)
 
 		// Force remove the current image to avoid cached layers
-	//	if swarmConfig == "run" || swarmConfig == "swarm" {
-	//		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
-	//			Force:         true,
-	//			PruneChildren: true,
-	//		})
+		//	if swarmConfig == "run" || swarmConfig == "swarm" {
+		//		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
+		//			Force:         true,
+		//			PruneChildren: true,
+		//		})
 
-	//		if err != nil {
-	//			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
-	//		} else {
-	//			log.Printf("[DEBUG] Removed image: %s", curimage)
-	//		}
-	//	} else {
-	//		//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
-	//	}
+		//		if err != nil {
+		//			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+		//		} else {
+		//			log.Printf("[DEBUG] Removed image: %s", curimage)
+		//		}
+		//	} else {
+		//		//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
+		//	}
 
 		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
@@ -887,7 +930,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 						log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 					} else {
 						log.Printf("[DEBUG] Updated service %s with the new image %s. Resp: %#v", service.Spec.Annotations.Name, image, resp)
-							
+
 						found = true
 
 						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
@@ -1173,6 +1216,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		Image:           kubernetesImage,
 		Env:             buildEnvVars(envMap),
 		SecurityContext: containerSecurityContext,
+		Resources:       buildResourcesFromEnv(),
 
 		//ImagePullPolicy: "Never",
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -2213,7 +2257,6 @@ func main() {
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
-
 
 	hasStarted := false
 	for {
