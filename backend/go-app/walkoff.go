@@ -2857,24 +2857,24 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	location := strings.Split(request.URL.String(), "/")
-	var fileId string
+	var appId string
 	if location[1] == "api" {
 		if len(location) <= 4 {
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
-		fileId = location[4]
+		appId = location[4]
 	}
 
 	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
-	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, fileId)
+	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, appId)
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("[INFO] Failed single execution POST body read: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -2899,7 +2899,15 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		decisionId = decision[0]
 	}
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction, decisionId)
+	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, appId, body, runValidationAction, decisionId)
+	if appId == "agent_starter" { 
+		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
 
 	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 	resp.Header().Add("X-Debug-Url", debugUrl)
@@ -2940,6 +2948,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
 	executionRequest := shuffle.ExecutionRequest{
+		Priority: 15, 
 		ExecutionId:   workflowExecution.ExecutionId,
 		WorkflowId:    workflowExecution.Workflow.ID,
 		Authorization: workflowExecution.Authorization,

@@ -2057,6 +2057,11 @@ func main() {
 		log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
 	}
 
+	// Default to 120 instead of default 30
+	if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) == 0 {
+		os.Setenv("SHUFFLE_APP_SDK_TIMEOUT", "120")
+	}
+
 	workerTimeout := 600
 	if workerTimeoutEnv != "" {
 		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
@@ -3951,7 +3956,13 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		//Transport: &http.Transport{
+		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		//},
+		Timeout: time.Duration(120 * time.Second),
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamUrl,

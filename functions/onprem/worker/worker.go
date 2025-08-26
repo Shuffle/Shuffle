@@ -4298,6 +4298,7 @@ func main() {
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		logsDisabled = "true"
 	}
+
 	/*** ENDREMOVE ***/
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
 	// Recursive import kind of :)
