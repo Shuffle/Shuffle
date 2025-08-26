@@ -3220,7 +3220,11 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		networkName = swarmNetworkName
 	}
 
-	replicas := uint64(2)
+	// Apps used a lot should have 2 replicas (default)
+	replicas := uint64(1)
+	if (strings.Contains(strings.ToLower(name), "shuffle") && strings.Contains(strings.ToLower(name), "tools")) || strings.Contains(strings.ToLower(name), "http") {
+		replicas = 2
+	}
 
 	// Sent from Orborus
 	// Should be equal to
@@ -4115,6 +4119,10 @@ func checkStandaloneRun() {
 	// Check if the required argc/argv is set
 	//log.Printf("ARGS: %#v", os.Args)
 	if len(os.Args) < 4 {
+		if debug {
+			log.Printf("[DEBUG] You can run the worker in standalone mode with: go run worker.go standalone <executionid> <authorization> <optional:url>")
+		}
+
 		return
 	}
 
@@ -4273,6 +4281,10 @@ func checkStandaloneRun() {
 
 // Initial loop etc
 func main() {
+	// Testing swarm auto-replacements.
+	//findAppInfo("frikky/shuffle:shuffle-ai_1.0.0", "shuffle-ai_1-0-0", true)
+	//findAppInfo("frikky/shuffle:shuffle-ai_1.0.0", "singul_1-0-0", true)
+
 	checkStandaloneRun()
 
 	if os.Getenv("DEBUG") == "true" {

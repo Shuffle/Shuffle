@@ -3870,7 +3870,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	var options container.StopOptions
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
-		dockercli.ContainerStop(ctx, containername, options)
+		go dockercli.ContainerStop(ctx, containername, options)
 		removeContainers = append(removeContainers, containername)
 	}
 
