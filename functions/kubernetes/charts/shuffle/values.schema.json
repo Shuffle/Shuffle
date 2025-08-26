@@ -2084,6 +2084,16 @@
                         }
                     }
                 },
+                "resourcesPreset": {
+                    "type": "string",
+                    "description": "Set worker container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if worker.resources is set (worker.resources is recommended for production).",
+                    "default": "nano"
+                },
+                "resources": {
+                    "type": "object",
+                    "description": "Set worker container requests and limits for different resources like CPU or memory (essential for production workloads)",
+                    "default": {}
+                },
                 "podSecurityContext": {
                     "type": "object",
                     "properties": {
@@ -2259,6 +2269,16 @@
         "app": {
             "type": "object",
             "properties": {
+                "resourcesPreset": {
+                    "type": "string",
+                    "description": "Set app container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if app.resources is set (app.resources is recommended for production).",
+                    "default": "nano"
+                },
+                "resources": {
+                    "type": "object",
+                    "description": "Set app container requests and limits for different resources like CPU or memory (essential for production workloads)",
+                    "default": {}
+                },
                 "podSecurityContext": {
                     "type": "object",
                     "properties": {
