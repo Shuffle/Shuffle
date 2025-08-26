@@ -687,7 +687,9 @@ const Workflows2 = (props) => {
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
-	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true" || false);
+
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true" || isCloud) 
 
     const imgSize = 60;
 
@@ -906,7 +908,7 @@ const Workflows2 = (props) => {
             
             if (!alreadyDismissed && !aiAnnouncementModalOpen) {
                 // Show the banner as the user hasn't seen it yet
-                setAiAnnouncementModalOpen(true);
+                //setAiAnnouncementModalOpen(true);
             }
         }
     }, [isLoggedIn, userdata]); 
@@ -944,10 +946,6 @@ const Workflows2 = (props) => {
         });
     };
 
-    //const isCloud =
-    //    window.location.host === "localhost:3002" ||
-    //    window.location.host === "shuffler.io";
-	const isCloud = false
 
     const findWorkflow = (filters) => {
         console.log("Using filters: ", filters)
@@ -3186,7 +3184,7 @@ const Workflows2 = (props) => {
                     </Grid>
 
 					{showExecutionStats === true && foundTimeline !== undefined && foundTimeline?.timeline?.length > 0 && 
-					  <div style={{ margin: "40px 15px 0px 15px", paddingTop: 0, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+					  <div style={{ margin: "40px 10px 0px 10px", paddingTop: 0, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
 						<LineChartWrapper 
 							inputname={""}
 							keys={foundTimeline?.timeline}
@@ -5534,7 +5532,6 @@ const Workflows2 = (props) => {
 				</ShepherdTour>
 				*/}
                 <DropzoneWrapper onDrop={uploadFile} WorkflowView={WorkflowView} />
-                {/* {modalView} */}
                 {deleteModal}
                 {exportVerifyModal}
                 {publishModal}

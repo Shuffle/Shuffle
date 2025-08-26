@@ -257,7 +257,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// This is really the environment's name - NOT org-id
+	// This is really the environment's name - NOT OrgId 
 	environment := request.Header.Get("Org-Id")
 	if len(environment) == 0 {
 		log.Printf("[AUDIT] No org-id header set")
@@ -266,6 +266,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Org => Org ID here
 	orgId := request.Header.Get("Org")
 	if len(orgId) == 0 {
 		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
@@ -275,9 +276,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			return
 		*/
 	}
-
-	orborusLabel := request.Header.Get("x-orborus-label")
-	_ = orborusLabel
 	
 	// This section is cloud custom for now
 	auth := request.Header.Get("Authorization")
@@ -290,12 +288,10 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		*/
 	}
 
-	//log.Printf("[AUDIT] Get workflow queue for org %s, env %s, orborus label %s", orgId, environment, orborusLabel)
-
 	ctx := shuffle.GetContext(request)
 	envs, err := shuffle.GetEnvironments(ctx, orgId)
 	if err != nil || len(envs) == 0 {
-		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
+		//log.Printf("[WARNING] No env found for orgId %s during queue loading", orgId)
 	}
 
 	var env *shuffle.Environment
@@ -308,6 +304,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	// Only works onprem - shared queues across tenants
+	// without tenancy  
 	if !found {
 		env, err = shuffle.GetEnvironment(ctx, environment, "")
 		if err != nil {
@@ -315,22 +313,21 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	timeNow := time.Now().Unix()
+	// Handles failover control between Orborus'
+	// Further tracks checkin time to ensure this works properly
+	// across instances
 	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
 	if err != nil {
 		log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
 	}
 
-	//log.Printf("Found env: %#v", env)
 	if len(env.OrgId) > 0 {
 		orgId = env.OrgId
 	}
 
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, environment, 100)
 	if err != nil {
-		// Skipping as this comes up over and over
-		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -339,10 +336,11 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-		//log.Printf("In workflowqueue with %d", len(executionRequests.Data))
 
-		// Try again :)
+		// Try again? I don't think this is necessary, and shouldn't really ever occur. 
+		/*
 		if len(env.Id) == 0 && len(env.Name) == 0 {
+			timeNow := int64(time.Now().Unix())
 			foundId := ""
 			for _, requestData := range executionRequests.Data {
 				execution, err := shuffle.GetWorkflowExecution(ctx, requestData.ExecutionId)
@@ -373,6 +371,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 				}
 			}
 		}
+		*/
 
 		if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]

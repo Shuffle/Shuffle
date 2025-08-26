@@ -18661,9 +18661,10 @@ const AngularWorkflow = (defaultprops) => {
       </div>
 
     </div>
-  const defaultEnvironment = environments.find(
+
+  const defaultEnvironment = environments?.find(
     (env) => env.default && env.Name.toLowerCase() !== "cloud"
-  );
+  )
 
   if (selectedTrigger.trigger_type === "PIPELINE" && selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
     selectedTrigger.environment = defaultEnvironment.Name
@@ -19269,15 +19270,15 @@ const AngularWorkflow = (defaultprops) => {
   const TopCytoscapeBar = (props) => {
     const [hovered, setHovered] = useState(false)
 
-    if (workflow.public === true) {
+    if (workflow?.public === true) {
       return null
     }
 
-    if (userdata.active_org === undefined || userdata.active_org === null) {
+    if (userdata?.active_org === undefined || userdata?.active_org === null) {
       return null
     }
 
-    const isCorrectOrg = workflow.public === true || userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id
+    const isCorrectOrg = workflow?.public === true || userdata?.active_org.id === undefined || userdata?.active_org.id === null || workflow?.org_id === null || workflow?.org_id === undefined || workflow?.org_id?.length === 0 || userdata?.active_org?.id === workflow?.org_id
 
     return (
       <div style={topBarStyle}>
@@ -19305,7 +19306,7 @@ const AngularWorkflow = (defaultprops) => {
               setLastSaved(false)
             }}
           >
-			{workflow.name !== undefined && workflow.name !== null && workflow.name.length > 0 ?
+			{workflow?.name !== undefined && workflow?.name !== null && workflow?.name?.length > 0 ?
             	<EditIcon style={{ position: "absolute", top: 7, height: 20, width: 20, }} />
 				: 
 				null
@@ -19361,7 +19362,7 @@ const AngularWorkflow = (defaultprops) => {
           {originalWorkflow?.suborg_distribution === undefined || originalWorkflow?.suborg_distribution === null || originalWorkflow?.suborg_distribution?.length === 0 || originalWorkflow?.suborg_distribution.includes("none") ? 
 
 			<div>
-			  {originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow.length > 0 ?
+			  {originalWorkflow?.parentorg_workflow !== undefined && originalWorkflow?.parentorg_workflow !== null && originalWorkflow?.parentorg_workflow?.length > 0 || workflow?.parentorg_workflow !== undefined && workflow?.parentorg_workflow !== null && workflow?.parentorg_workflow?.length > 0 ?
 
 				null
 
@@ -19391,7 +19392,7 @@ const AngularWorkflow = (defaultprops) => {
 
 				: null}
 
-			  {userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 && userdata?.active_org?.creator_org?.length === 0 && userdata?.active_org?.id == workflow?.org_id ?
+			  {userdata !== undefined && userdata !== null && userdata?.orgs !== undefined && userdata?.orgs !== null && userdata?.orgs?.length > 1 && workflow?.id !== undefined && workflow?.id && workflow?.id?.length > 0 && userdata?.active_org?.creator_org?.length === 0 && userdata?.active_org?.id == workflow?.org_id ?
 					<Button
 					  color="secondary"
 					  variant="outlined"
@@ -19518,10 +19519,10 @@ const AngularWorkflow = (defaultprops) => {
             	            //toast("Loading correct info for suborg")
             	          }
 
-            	          if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
+            	          if (originalWorkflow?.childorg_workflow_ids === undefined || originalWorkflow?.childorg_workflow_ids === null || originalWorkflow?.childorg_workflow_ids?.length === 0) {
             	            //console.log("Childorg doesn't exist (?). Suborgworkflows: ", suborgWorkflows)
 
-            	            if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
+            	            if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows?.length > 0) {
             	              var found = false
             	              for (var suborgkey in suborgWorkflows) {
             	                const suborgWorkflow = suborgWorkflows[suborgkey]
@@ -19623,8 +19624,8 @@ const AngularWorkflow = (defaultprops) => {
             	        marginLeft:
             	          data.creator_org !== undefined &&
             	            data.creator_org !== null &&
-            	            data.creator_org.length > 0
-            	            ? data.id === userdata.active_org.id
+            	            data.creator_org?.length > 0
+            	            ? data?.id === userdata?.active_org?.id
             	              ? 0
             	              : 0
             	            : 0,
@@ -19670,7 +19671,7 @@ const AngularWorkflow = (defaultprops) => {
 							    title={
 								 <div style={{ overflow: "auto", }}>
 								   <Typography variant="body1" style={{margin: 16, }}>
-        							<b>{foundMatchingWorkflow.errors.length} Workflow Issue{foundMatchingWorkflow.errors.length > 1 ? "s" : ""}</b>
+        							<b>{foundMatchingWorkflow?.errors?.length} Workflow Issue{foundMatchingWorkflow?.errors?.length > 1 ? "s" : ""}</b>
 								   </Typography>
 								  </div>
 								}
@@ -19697,7 +19698,7 @@ const AngularWorkflow = (defaultprops) => {
 									}
 
 								  	{orgDiff?.actions?.length > 0 &&
-										<span>- Actions ({orgDiff.actions.length}): <br/>
+										<span>- Actions ({orgDiff.actions?.length}): <br/>
 											{orgDiff.actions.map((orgDiffAction, index) => {
 												//console.log("DIFF2: ", orgDiffAction)
 												var formattedError = ""
@@ -19705,7 +19706,7 @@ const AngularWorkflow = (defaultprops) => {
 												var paramchanges = ""
 												for (var diffActionKey in orgDiffAction) {
 													if (diffActionKey !== "id" && diffActionKey !== "label" && diffActionKey !== "parameters" && diffActionKey !== "params" && diffActionKey !== "large_image") {
-														if (formattedError.length > 0) {
+														if (formattedError?.length > 0) {
 															formattedError += ", "
 														}
 														formattedError += diffActionKey 
@@ -19716,7 +19717,7 @@ const AngularWorkflow = (defaultprops) => {
 													}
 												}
 
-												if (paramchanges.length > 0) {
+												if (paramchanges?.length > 0) {
 													formattedError += paramchanges 
 												}
 
@@ -19747,7 +19748,7 @@ const AngularWorkflow = (defaultprops) => {
           }
         </div>
 
-        {showEnvironment === true && environments.length > 0 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
+        {showEnvironment === true && environments?.length > 0 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
 			<Tooltip 
 				arrow
 				title={

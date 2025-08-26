@@ -496,7 +496,8 @@ func deployServiceWorkers(image string) {
 		//}
 	}
 
-	replicas := uint64(1)
+	// Running 2 by default instead of 1. Higher scale mechanisms - es
+	replicas := uint64(2)
 	scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	if len(scaleReplicas) > 0 {
 		tmpInt, err := strconv.Atoi(scaleReplicas)
@@ -521,7 +522,7 @@ func deployServiceWorkers(image string) {
 	}
 
 	appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
-	appReplicaCnt := 1
+	appReplicaCnt := 2
 	if len(appReplicas) > 0 {
 		newCnt, err := strconv.Atoi(appReplicas)
 		if err != nil {

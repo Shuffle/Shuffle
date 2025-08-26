@@ -63,6 +63,7 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
+var debug = false
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
@@ -5487,6 +5488,10 @@ func initHandlers() {
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
+
+	if os.Getenv("DEBUG") == "true" {
+		debug = true
+	}
 
 	initHandlers()
 	hostname, err := os.Hostname()
