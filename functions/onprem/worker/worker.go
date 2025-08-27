@@ -876,10 +876,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		} else {
 			// ** STARTREMOVE ***/
 			exposedPort = 80
-			deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
-			if err == nil {
-				exposedPort = deployport
-			}
+			//deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
+			//if err == nil {
+			//	exposedPort = deployport
+			//}
 
 			err = findAppInfoKubernetes(image, appName, env)
 			if err != nil {
