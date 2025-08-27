@@ -612,7 +612,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// use deployment instead of pod
 	// then expose a service similarly.
 	// number of replicas can be set to os.Getenv("SHUFFLE_SCALE_REPLICAS")
-	replicaNumber := 2
+	replicaNumber := 1
 	replicaNumberStr := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	if len(replicaNumberStr) > 0 {
 		tmpInt, err := strconv.Atoi(replicaNumberStr)
@@ -3222,9 +3222,9 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 
 	// Apps used a lot should have 2 replicas (default)
 	replicas := uint64(1)
-	if (strings.Contains(strings.ToLower(name), "shuffle") && strings.Contains(strings.ToLower(name), "tools")) || strings.Contains(strings.ToLower(name), "http") {
-		replicas = 2
-	}
+	//if (strings.Contains(strings.ToLower(name), "shuffle") && strings.Contains(strings.ToLower(name), "tools")) || strings.Contains(strings.ToLower(name), "http") {
+	//	replicas = 2
+	//}
 
 	// Sent from Orborus
 	// Should be equal to

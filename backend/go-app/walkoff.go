@@ -2016,14 +2016,14 @@ func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 
 	//fmt.Printf("File type: %s. MIME: %s\n", kind.Extension, kind.MIME.Value)
 	if kind == filetype.Unknown {
-		fmt.Println("Unknown file type")
+		log.Println("Unknown file type")
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	if kind.MIME.Value != "application/zip" {
-		fmt.Println("Not zip, can't unzip")
+		log.Println("Not zip, can't unzip")
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3005,7 +3005,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 }
 
 // Onlyname is used to
-func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) ([]shuffle.BuildLaterStruct, []shuffle.BuildLaterStruct, error) {
+func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate, duringStartup bool) ([]shuffle.BuildLaterStruct, []shuffle.BuildLaterStruct, error) {
 	var err error
 
 	allapps := []shuffle.WorkflowApp{}
@@ -3017,7 +3017,13 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"YARA",
 		"ATTACK-PREDICTOR",
 	}
-	//if strings.ToUpper(workflowapp.Name) == strings.ToUpper(appname) {
+
+	startupNames := []string{
+		"shuffle-tools",
+		"http",
+		"email",
+		"shuffle-ai",
+	}
 
 	// It's here to prevent getting them in every iteration
 	buildLaterFirst := []shuffle.BuildLaterStruct{}
@@ -3025,6 +3031,19 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
+		}
+
+		//duringStartup 
+		if duringStartup {
+			// Look for names: shuffle tools, http, email, shuffle ai
+			if shuffle.ArrayContains(startupNames, strings.ToLower(file.Name())) {
+				// Allowed to build during startup
+
+				//log.Printf("\n\n\nFOUND MATCHING APP: %s\n\n\n", file.Name())
+			} else {
+				//log.Printf("\n\n\nWRONG APP (2): %s\n\n\n", file.Name())
+				continue
+			}
 		}
 
 		// Folder?
@@ -3043,7 +3062,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			buildFirst, buildLast, err := IterateAppGithubFolders(ctx, fs, dir, tmpExtra, "", forceUpdate)
+			buildFirst, buildLast, err := IterateAppGithubFolders(ctx, fs, dir, tmpExtra, "", forceUpdate, false)
 
 			for _, item := range buildFirst {
 				buildLaterFirst = append(buildLaterFirst, item)
@@ -3055,7 +3074,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 
 			if err != nil {
 				log.Printf("[WARNING] Error reading folder: %s", err)
-				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
+				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate, false)
 
 				if !forceUpdate {
 					continue
@@ -3355,6 +3374,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"http",
 		"email",
 	}
+
 	for _, buildLater := range buildLaterFirst {
 		found := false
 		for _, appname := range initApps {
@@ -3373,12 +3393,19 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 	}
 
 	// Prepend newSortedList to buildLaterFirst
+	handledImages := []string{}
 	buildLaterFirst = append(newSortedList, buildLaterFirst...)
-
 	if len(extra) == 0 {
 		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
 		for _, item := range buildLaterFirst {
+
+			if len(item.Tags) > 0 && shuffle.ArrayContains(handledImages, item.Tags[0]) {
+				continue
+			} 
+
+			handledImages = append(handledImages, item.Tags[0])
 			err = buildImageMemory(fs, item.Tags, item.Extra, true)
+
 			if err != nil {
 				orgId := ""
 
@@ -3408,6 +3435,12 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		if len(buildLaterList) > 0 {
 			log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
 			for _, item := range buildLaterList {
+				if len(item.Tags) > 0 && shuffle.ArrayContains(handledImages, item.Tags[0]) {
+					continue
+				} 
+
+				handledImages = append(handledImages, item.Tags[0])
+
 				err = buildImageMemory(fs, item.Tags, item.Extra, true)
 				if err != nil {
 					log.Printf("[INFO] Failed image build memory: %s", err)
@@ -3541,7 +3574,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate)
+		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate, false)
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/

@@ -321,7 +321,7 @@ func checkError(cmdName string, cmdArgs []string) error {
 	scanner := bufio.NewScanner(cmdReader)
 	go func() {
 		for scanner.Scan() {
-			fmt.Printf("Out: %s\n", scanner.Text())
+			log.Printf("Out: %s\n", scanner.Text())
 		}
 	}()
 
@@ -1402,7 +1402,7 @@ func parseWorkflowParameters(resp http.ResponseWriter, request *http.Request) (m
 		return t, err
 	}
 
-	//fmt.Println(curjson.String())
+	//log.Println(curjson.String())
 	//log.Printf("Parsing json a second time: %s", string(curjson.String()))
 
 	err = json.Unmarshal(curjson.Bytes(), &t)
@@ -2556,7 +2556,7 @@ func execSubprocess(cmdName string, cmdArgs []string) error {
 	scanner := bufio.NewScanner(cmdReader)
 	go func() {
 		for scanner.Scan() {
-			fmt.Printf("Out: %s\n", scanner.Text())
+			log.Printf("Out: %s\n", scanner.Text())
 		}
 	}()
 
@@ -3528,7 +3528,7 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 		return err
 	}
 
-	_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
+	_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate, false)
 	if err != nil {
 		log.Printf("[WARNING] Githubfolders error: %s", err)
 		return err
@@ -3981,7 +3981,7 @@ func runInitCloudSetup() {
 	if err != nil {
 		log.Printf("[INFO] Failed initial setup: %s", err)
 	} else {
-		log.Printf("[INFO] Ran initial setup!")
+		log.Printf("[INFO] Finished initial cloudsync setup!")
 	}
 }
 
@@ -4419,20 +4419,8 @@ func runInitEs(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
-	// FIXME: Isn't this a little backwards?
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
-
-	// accept any certificate (might be useful for testing)
-	//customGitClient := &http.Client{
-	//	Transport: &http.Transport{
-	//		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	//	},
-	//	Timeout: 15 * time.Second,
-	//}
-	//client.InstallProtocol("http", githttp.NewClient(customGitClient))
-	//client.InstallProtocol("https", githttp.NewClient(customGitClient))
-
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) < 10 {
@@ -4442,8 +4430,9 @@ func runInitEs(ctx context.Context) {
 
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
-			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/shuffle/shuffle-apps")
-			url = "https://github.com/shuffle/shuffle-apps"
+			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/shuffle/python-apps")
+			
+			url = "https://github.com/shuffle/python-apps"
 			//url = ""
 			//return
 		}
@@ -4483,7 +4472,7 @@ func runInitEs(ctx context.Context) {
 		_ = r
 		//iterateAppGithubFolders(fs, dir, "", "testing")
 
-		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
+		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate, true)
 		if err != nil {
 			log.Printf("[WARNING] Error from app load in init: %s", err)
 		}
@@ -5266,6 +5255,7 @@ func initHandlers() {
 	// App specific. Partially Singul.
 	r.HandleFunc("/api/v1/apps/categories", shuffle.GetActiveCategories).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories/run", singul.RunCategoryAction).Methods("POST", "OPTIONS")
+
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 

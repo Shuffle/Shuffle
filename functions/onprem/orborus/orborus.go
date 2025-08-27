@@ -497,7 +497,7 @@ func deployServiceWorkers(image string) {
 	}
 
 	// Running 2 by default instead of 1. Higher scale mechanisms - es
-	replicas := uint64(2)
+	replicas := uint64(1)
 	scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	if len(scaleReplicas) > 0 {
 		tmpInt, err := strconv.Atoi(scaleReplicas)

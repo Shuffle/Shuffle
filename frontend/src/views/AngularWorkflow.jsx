@@ -12044,7 +12044,6 @@ const AngularWorkflow = (defaultprops) => {
         prioritizedApps,
         Array.prototype.concat.apply(
           filteredApps.filter((innerapp) => !internalIds.includes(innerapp.id.toLowerCase())),
-          triggers
         )
       )
     )
@@ -12820,9 +12819,9 @@ const AngularWorkflow = (defaultprops) => {
                   </InstantSearch>
                 </div>
                 :
-                <div style={{ marginLeft: 10, marginTop: 10, marginBottom: 100, }}>
+                <div style={{ marginLeft: 10, marginTop: 15, marginBottom: 100, }}>
                   <Typography variant="body1" color="textSecondary">
-                    Apps need to be activated before they can be used. Search from our 2500+ apps to activate them for your organisation.
+                    <b>Apps need to be activated</b> before they can be used. Search in the search bar from our 2500+ apps to activate them for.
                   </Typography>
                 </div>
               }
