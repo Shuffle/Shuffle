@@ -2182,17 +2182,24 @@ func handleSingleAppHotloadRequest(resp http.ResponseWriter, request *http.Reque
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
 	if user.Role != "admin" {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Must be admin to hotload apps"}`))
 		return
 	}
+
 	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		location = "./shuffle-apps"
+	}
+
 	if len(location) == 0 {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
 		return
 	}
+
 	requestUrlFields := strings.Split(request.URL.String(), "/")
 	var appName string
 	if requestUrlFields[1] == "api" {
@@ -2256,6 +2263,10 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		location = "./shuffle-apps"
+	}
+
 	if len(location) == 0 {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))

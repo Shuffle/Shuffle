@@ -11992,7 +11992,19 @@ const AngularWorkflow = (defaultprops) => {
         const json = await response.json();
 
         if (response.status !== 200) {
-          toast(json.message || "Unexpected response");
+			if (json.reason !== undefined && json.reason !== null && json.reason.length > 0) {
+				toast.error("Workflow generation failed: " + json.reason)
+			}
+
+			if (!isCloud) { 
+				toast.info("Click here to set up a local LLM!", {
+					autoClose: 10000,
+					onClick: () => {
+						window.open("/docs/AI#self-hosting-models", "_blank")
+					}
+				})
+			}
+
           return null;
         }
 
@@ -20969,10 +20981,10 @@ const AngularWorkflow = (defaultprops) => {
 				</Tooltip>
 			: null}
 
-            {userdata.support == true ?
+            {userdata.support == true || !isCloud ?
               <Tooltip
                 color="secondary"
-                title="Generate workflow (support only)"
+                title="Generate workflow (requires LLM model)"
                 placement="top-start"
               >
                 <span>

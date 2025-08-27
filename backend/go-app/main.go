@@ -4491,6 +4491,10 @@ func runInitEs(ctx context.Context) {
 
 		// Hotloads locally
 		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+		if len(location) == 0 {
+			location = "./shuffle-apps"
+		}
+
 		if len(location) != 0 {
 			handleAppHotload(ctx, location, false)
 		}
@@ -5332,6 +5336,8 @@ func initHandlers() {
 
 	// First v2 API
 	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/workflows/generate/llm", shuffle.HandleWorkflowGenerationResponse).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/workflows/edit/llm", shuffle.HandleEditWorkflowWithLLM).Methods("POST", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")

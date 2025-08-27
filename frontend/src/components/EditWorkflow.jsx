@@ -464,6 +464,7 @@ const EditWorkflow = (props) => {
 								<span>
 								<Button
 									id="ai-generate-button"
+									style={{marginLeft: 10, }}
 									disabled={
 										name.length === 0 || 
 										aiGenerateLoading === true || 
@@ -484,7 +485,7 @@ const EditWorkflow = (props) => {
 										// check AI enabled for local installations (not cloud)
 										if (!isCloud && (!userdata?.ai_enabled || userdata?.ai_enabled === false)) {
 											// Toast with onclick
-											toast.info("AI credits haven't been applied and no Local AI is not enabled. Click here to set it up!", {
+											toast.info("Local AI is not enabled, and no cloud AI credits added. Click here to set it up!", {
 												autoClose: 10000,
 												onClick: () => {
 													window.open("/docs/AI#self-hosting-models", "_blank")

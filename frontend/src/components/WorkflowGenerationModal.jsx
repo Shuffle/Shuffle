@@ -131,8 +131,15 @@ const WorkflowGenerationModal = (props) => {
       .then((response) => {
         return response.json().then((json) => {
           if (response.status !== 200) {
-            toast.error(json.message || "Unexpected response. Please contact support@shuffler.io if this persists.");
+            toast.error(json.reason || "Unexpected response. Please contact support@shuffler.io if this persists.", {
+				autoClose: 10000,
+				onClick: () => {
+					window.open("/docs/AI#self-hosting-models", "_blank")
+				}
+			})
+
             setIsAiEditing(false);
+
             return null;
           }
 
