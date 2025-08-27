@@ -399,7 +399,7 @@ const CacheView = memo((props) => {
 				}
 
 				if ((category === undefined || category === "default" || category === "") && datastoreCategories.length === 2 && datastoreCategories[0] === "default") {
-					var newcategories = ["default"]
+					var newcategories = ["default", "protected"]
 					for (var key in responseJson.keys) {
 						var foundcategory = responseJson.keys[key].category
 						if (foundcategory !== undefined && foundcategory !== null && foundcategory !== ""){

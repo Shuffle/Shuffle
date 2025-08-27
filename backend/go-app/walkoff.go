@@ -3023,6 +3023,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"http",
 		"email",
 		"shuffle-ai",
+		"shuffle-subflow",
 	}
 
 	// It's here to prevent getting them in every iteration

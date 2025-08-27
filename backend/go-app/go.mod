@@ -14,7 +14,7 @@ require (
 	cloud.google.com/go/storage v1.55.0
 	github.com/basgys/goxml2json v1.1.0
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
-	github.com/docker/docker v28.2.2+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/frikky/kin-openapi v0.42.0
 	github.com/fsouza/go-dockerclient v1.12.1
 	github.com/ghodss/yaml v1.0.0
@@ -24,7 +24,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.8
+	github.com/shuffle/shuffle-shared v0.9.9
 	github.com/shuffle/singul v0.0.16
 	golang.org/x/crypto v0.40.0
 	google.golang.org/api v0.236.0
