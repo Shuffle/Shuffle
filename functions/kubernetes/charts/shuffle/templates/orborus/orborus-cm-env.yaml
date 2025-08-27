@@ -17,7 +17,7 @@ data:
 
   # Shuffle worker configuration
   SHUFFLE_WORKER_IMAGE: {{ include "shuffle.worker.image" . | quote }}
-  SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME: {{ include "shuffle.worker.serviceAccount.name" . | quote  }}"
+  SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME: {{ include "shuffle.worker.serviceAccount.name" . | quote  }}
   {{- if .Values.worker.podSecurityContext.enabled }}
   SHUFFLE_WORKER_POD_SECURITY_CONTEXT: {{ omit .Values.worker.podSecurityContext "enabled" | mustToJson | quote }}
   {{- end }}
