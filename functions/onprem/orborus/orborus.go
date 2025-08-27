@@ -788,42 +788,42 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 }
 
 func buildResourcesFromEnv() corev1.ResourceRequirements {
-	reqs := corev1.ResourceList{}
-	lims := corev1.ResourceList{}
+	requests := corev1.ResourceList{}
+	limits := corev1.ResourceList{}
 
 	type item struct {
-		env string
-		rn  corev1.ResourceName
-		to  *corev1.ResourceList
+		env          string
+		resourceName corev1.ResourceName
+		resourceList corev1.ResourceList
 	}
 
 	items := []item{
 		// kubernetes requests
-		{env: "SHUFFLE_WORKER_CPU_REQUEST", rn: corev1.ResourceCPU, to: &reqs},
-		{env: "SHUFFLE_WORKER_MEMORY_REQUEST", rn: corev1.ResourceMemory, to: &reqs},
-		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST", rn: corev1.ResourceEphemeralStorage, to: &reqs},
+		{env: "SHUFFLE_WORKER_CPU_REQUEST", resourceName: corev1.ResourceCPU, resourceList: requests},
+		{env: "SHUFFLE_WORKER_MEMORY_REQUEST", resourceName: corev1.ResourceMemory, resourceList: requests},
+		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST", resourceName: corev1.ResourceEphemeralStorage, resourceList: requests},
 		// kubernetes limits
-		{env: "SHUFFLE_WORKER_CPU_LIMIT", rn: corev1.ResourceCPU, to: &lims},
-		{env: "SHUFFLE_WORKER_MEMORY_LIMIT", rn: corev1.ResourceMemory, to: &lims},
-		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT", rn: corev1.ResourceEphemeralStorage, to: &lims},
+		{env: "SHUFFLE_WORKER_CPU_LIMIT", resourceName: corev1.ResourceCPU, resourceList: limits},
+		{env: "SHUFFLE_WORKER_MEMORY_LIMIT", resourceName: corev1.ResourceMemory, resourceList: limits},
+		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT", resourceName: corev1.ResourceEphemeralStorage, resourceList: limits},
 	}
 
 	for _, it := range items {
-		if v := strings.TrimSpace(os.Getenv(it.env)); v != "" {
-			if q, err := resource.ParseQuantity(v); err == nil {
-				(*it.to)[it.rn] = q
+		if value := strings.TrimSpace(os.Getenv(it.env)); value != "" {
+			if quantity, err := resource.ParseQuantity(value); err == nil {
+				it.resourceList[it.resourceName] = quantity
 			} else {
-				log.Printf("[WARN] Cannot parse %s=%q as resource quantity: %v", it.env, v, err)
+				log.Printf("[WARNING] Cannot parse %s=%q as resource quantity: %v", it.env, value, err)
 			}
 		}
 	}
 
 	rr := corev1.ResourceRequirements{}
-	if len(reqs) > 0 {
-		rr.Requests = reqs
+	if len(requests) > 0 {
+		rr.Requests = requests
 	}
-	if len(lims) > 0 {
-		rr.Limits = lims
+	if len(limits) > 0 {
+		rr.Limits = limits
 	}
 
 	return rr
