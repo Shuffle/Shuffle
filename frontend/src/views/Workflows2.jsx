@@ -5183,14 +5183,14 @@ const Workflows2 = (props) => {
 
                                     <Tooltip title="Show/Hide Workflow Runs for top workflows" placement="top">
                                         <IconButton
-                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
+                                            style={currTab === 2 ? iconButtonDisabledStyle : {...iconButtonStyle, color: showExecutionStats ? "#1a1a1a" : theme.palette.text.primary, background: showExecutionStats ? theme.palette.primary.main : theme.palette.platformColor}}
                                             onClick={() => {
 
                                                 const newView = !showExecutionStats
                                                 localStorage.setItem("showExecutionStats", newView)
 												setShowExecutionStats(!showExecutionStats)
 											}}
-											color={showExecutionStats ? "primary" : "default"}
+                                            disabled={currTab === 2}
                                         >
                                             <BarChartIcon />
                                         </IconButton>
