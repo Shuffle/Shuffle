@@ -2,7 +2,6 @@
 // import Switch from '@mui/material/Switch';
 // import { Typography, Button } from '@mui/material';
 // import { useNavigate, Link, useParams } from "react-router-dom";
-// import { Bar } from 'react-chartjs-2';
 // import Grid from '@mui/material/Grid';
 // import SearchIcon from '@mui/icons-material/Search';
 // import NewReleasesIcon from '@mui/icons-material/NewReleases';

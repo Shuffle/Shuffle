@@ -13,7 +13,66 @@ data:
   TZ: "{{ .Values.shuffle.timezone }}"
   BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}"
   KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
-  KUBERNETES_SERVICE_ACCOUNT: {{ include "shuffle.orborus.serviceAccount.name" . }}
-  SHUFFLE_WORKER_IMAGE: "{{ include "shuffle.worker.image" . }}"
   REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
-  SHUFFLE_SWARM_CONFIG: run
+
+  # Shuffle worker configuration
+  SHUFFLE_WORKER_IMAGE: {{ include "shuffle.worker.image" . | quote }}
+  SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME: {{ include "shuffle.worker.serviceAccount.name" . | quote  }}
+  {{- if .Values.worker.podSecurityContext.enabled }}
+  SHUFFLE_WORKER_POD_SECURITY_CONTEXT: {{ omit .Values.worker.podSecurityContext "enabled" | mustToJson | quote }}
+  {{- end }}
+  {{- if .Values.worker.containerSecurityContext.enabled }}
+  SHUFFLE_WORKER_CONTAINER_SECURITY_CONTEXT: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.worker.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+  {{- end }}
+
+  # Shuffle worker resources
+  {{- $workerResources := (.Values.worker.resources | default (include "common.resources.preset" (dict "type" .Values.worker.resourcesPreset)) | fromYaml) -}}
+  {{- if $workerResources.requests.cpu }}
+  SHUFFLE_WORKER_CPU_REQUEST: {{ $workerResources.requests.cpu | quote }}
+  {{- end }}
+  {{- if $workerResources.requests.memory}}
+  SHUFFLE_WORKER_MEMORY_REQUEST: {{ $workerResources.requests.memory | quote }}
+  {{- end }}
+  {{- if (index $workerResources.requests "ephemeral-storage") }}
+  SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST: {{ (index $workerResources.requests "ephemeral-storage") | quote }}
+  {{- end }}
+  {{- if $workerResources.limits.cpu }}
+  SHUFFLE_WORKER_CPU_LIMIT: {{ $workerResources.limits.cpu | quote }}
+  {{- end }}
+  {{- if $workerResources.limits.memory}}
+  SHUFFLE_WORKER_MEMORY_LIMIT: {{ $workerResources.limits.memory | quote }}
+  {{- end }}
+  {{- if (index $workerResources.limits "ephemeral-storage") }}
+  SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT: {{ (index $workerResources.limits "ephemeral-storage") | quote }}
+  {{- end }}
+
+  # Shuffle app configuration
+  SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
+  SHUFFLE_APP_SERVICE_ACCOUNT_NAME: {{ include "shuffle.app.serviceAccount.name" . | quote }}
+  {{- if .Values.app.podSecurityContext.enabled }}
+  SHUFFLE_APP_POD_SECURITY_CONTEXT: {{ omit .Values.app.podSecurityContext "enabled" | mustToJson | quote }}
+  {{- end }}
+  {{- if .Values.app.containerSecurityContext.enabled }}
+  SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.app.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+  {{- end }}
+
+  # Shuffle app resources
+  {{- $appResources := (.Values.app.resources | default (include "common.resources.preset" (dict "type" .Values.app.resourcesPreset)) | fromYaml) -}}
+  {{- if $appResources.requests.cpu }}
+  SHUFFLE_APP_CPU_REQUEST: {{ $appResources.requests.cpu | quote }}
+  {{- end }}
+  {{- if $appResources.requests.memory}}
+  SHUFFLE_APP_MEMORY_REQUEST: {{ $appResources.requests.memory | quote }}
+  {{- end }}
+  {{- if (index $appResources.requests "ephemeral-storage") }}
+  SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST: {{ (index $appResources.requests "ephemeral-storage") | quote }}
+  {{- end }}
+  {{- if $appResources.limits.cpu }}
+  SHUFFLE_APP_CPU_LIMIT: {{ $appResources.limits.cpu | quote }}
+  {{- end }}
+  {{- if $appResources.limits.memory}}
+  SHUFFLE_APP_MEMORY_LIMIT: {{ $appResources.limits.memory | quote }}
+  {{- end }}
+  {{- if (index $appResources.limits "ephemeral-storage") }}
+  SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT: {{ (index $appResources.limits "ephemeral-storage") | quote }}
+  {{- end }}

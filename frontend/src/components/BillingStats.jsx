@@ -31,56 +31,9 @@ import {
 	Box,
 } from "@mui/material";
 
-import { 
-	BarChart,
-	BarSeries,
-	Bar,
-	BarLabel,
-
-	GridlineSeries,
-	Gridline,
-	TooltipArea,
-	ChartTooltip,
-	TooltipTemplate,
-} from 'reaviz';
-
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
+import LineChartWrapper from '../components/LineChartWrapper.jsx';
 import { Context } from '../context/ContextApi.jsx';
-
-const LineChartWrapper = ({keys, inputname, height, width}) => {
-  const [hovered, setHovered] = useState("");
-	const inputdata = keys.data === undefined ? keys : keys.data
-	const {themeMode} = useContext(Context)
-	const theme = getTheme(themeMode)
-
-
-	return (
-		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
-			<Typography variant="h6" style={{marginBotton: 30, }}>
-				{inputname}
-			</Typography>
-
-			<BarChart
-				style={{marginTop: 100, }}
-				width={"100%"}
-				height={height}
-				data={inputdata}
-
-		      	series={
-					<BarSeries
-					  bar={
-						<Bar />
-					  } 
-					/>
-				}
-				gridlines={
-					<GridlineSeries line={<Gridline direction="all" />} />
-				}
-			/>
-
-		</div>
-	)
-}
 
 
 const AppStats = (defaultprops) => {
@@ -92,6 +45,12 @@ const AppStats = (defaultprops) => {
 	  inputWorkflows,
 	  clickedFromOrgTab,
 	  syncStats,
+	  statistics,
+	  monthlyAppRunsParent,
+	  setMonthlyAppRunsParent,
+	  monthlyAllSuborgExecutions,
+	  setMonthlyAllSuborgExecutions,
+	  currentTab
   } = defaultprops;
 
   const [keys, setKeys] = useState([])
@@ -104,7 +63,6 @@ const AppStats = (defaultprops) => {
 
   const [endTime, setEndTime] = useState("")
   const [startTime, setStartTime] = useState("")
-  const [statistics, setStatistics] = useState(undefined);
   const [filteredStatistics, setFilteredStatistics] = useState(undefined);
 
   const [apprunCost, setApprunCost] = useState(0)
@@ -125,6 +83,11 @@ const AppStats = (defaultprops) => {
 	  }
   }, [])
 
+  useEffect(() => {
+	if (statistics && statistics?.org_id?.length > 0) {
+		handleDataSetting(statistics, "day")
+	}
+}, [statistics])
 
   const getWorkflowStats = async (workflow, startTime, endTime) => {
 
@@ -266,6 +229,7 @@ const AppStats = (defaultprops) => {
 		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
 		if (statistics[statKey] === undefined || statistics[statKey] === null) {
 			setFilteredStatistics(statistics)
+			setMonthlyAppRunsParent(statistics["monthly_app_executions"] ?? 0)
 			return
 		}
 
@@ -312,20 +276,27 @@ const AppStats = (defaultprops) => {
 			}
 		}
 
-		// Make a date at the 1st of the current month
+		// Make a date at the 1st of the current month - only when no start time is selected
 		var foundstarttime = (new Date())
-		foundstarttime.setDate(1)
 		if (startTime !== "" && startTime !== undefined && startTime !== null) {
-			foundstarttime = startTime 
+			foundstarttime = new Date(startTime)
+			// Set to start of day to include the entire start date
+			foundstarttime.setHours(0, 0, 0, 0)
+		} else {
+			// Default to 1st of current month when no start time is selected
+			foundstarttime.setDate(1)
+			foundstarttime.setHours(0, 0, 0, 0)
 		}
 
-		// Set to tomorrow by default
+		// Set end time properly
 		var foundendtime = (new Date())
-		foundendtime.setDate(foundendtime.getDate() + 1)
-
-		// Check if endtime is after the daily statistics["date"] string
 		if (endTime !== "" && endTime !== undefined && endTime !== null) { 
-			foundendtime = endTime
+			foundendtime = new Date(endTime)
+			// Set to end of day to include the entire end date
+			foundendtime.setHours(23, 59, 59, 999)
+		} else {
+			// Default to current date when no end time is selected
+			foundendtime.setHours(23, 59, 59, 999)
 		}
 
 		// Check if start time is before the daily statistics["date"] string
@@ -337,8 +308,20 @@ const AppStats = (defaultprops) => {
 			}
 
 			const date = new Date(item["date"])
-			if (date >= foundstarttime) {
-				if (date <= foundendtime) {
+			// Normalize the date to start of day for comparison
+			const normalizedDate = new Date(date)
+			normalizedDate.setHours(0, 0, 0, 0)
+			
+			// Normalize foundstarttime for comparison
+			const normalizedStartTime = new Date(foundstarttime)
+			normalizedStartTime.setHours(0, 0, 0, 0)
+			
+			// Normalize foundendtime for comparison  
+			const normalizedEndTime = new Date(foundendtime)
+			normalizedEndTime.setHours(0, 0, 0, 0)
+			
+			if (normalizedDate >= normalizedStartTime) {
+				if (normalizedDate <= normalizedEndTime) {
 					newlist.push(item)
 				}
 			}
@@ -373,6 +356,10 @@ const AppStats = (defaultprops) => {
 				workflowexecutions += item["workflow_executions"]
 				appexecutions += item["app_executions"]
 
+				if (currentTab === 0) {
+					appexecutions += (item["child_app_executions"] ?? 0)
+				}
+
 				estimatedcost += (item["app_executions"] * invocationCost)
 			}
 
@@ -390,7 +377,16 @@ const AppStats = (defaultprops) => {
 		}
 
 		setFilteredStatistics(tmpstats)
-		handleDataSetting(tmpstats, "day") 
+		handleDataSetting(tmpstats, "day")
+		// if we have done monthly reset than only show monthly app runs as current month app run
+		const currentMonth = new Date().getMonth() + 1
+		if (!monthlyAppRunsParent && statistics["monthly_app_executions"] > 0 && currentMonth === statistics["last_monthly_reset_month"]) {
+			setMonthlyAppRunsParent(statistics["monthly_app_executions"])
+		}
+
+		if (!monthlyAllSuborgExecutions && statistics["monthly_child_app_executions"]> 0 && currentMonth === statistics["last_monthly_reset_month"]) {
+			setMonthlyAllSuborgExecutions(statistics["monthly_child_app_executions"])
+		}
 
 
 		if (workflows !== undefined && workflows !== null && workflows.length > 0) {
@@ -476,7 +472,7 @@ const AppStats = (defaultprops) => {
 			if (item["child_app_executions"] !== undefined && item["child_app_executions"] !== null) {
 				childorgappRuns["data"].push({
 					key: new Date(item["date"]),
-					data: inputdata["child_app_executions"]
+					data: item["child_app_executions"]
 				})
 			}
 
@@ -496,40 +492,45 @@ const AppStats = (defaultprops) => {
 			}
 		}
 
-		// Adds data for today 
-		if (inputdata["daily_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
-			appRuns["data"].push({
-				key: new Date(),
-				data: inputdata["daily_app_executions"]
-			})
+		// Only add today's data if endTime is not set or if today falls within the selected date range
+		const today = new Date()
+		const shouldAddTodayData = endTime === "" || endTime === undefined || endTime === null || 
+			(new Date(endTime) >= today.setHours(0, 0, 0, 0))
 
-			appcostRuns["data"].push({
-				key: new Date(),
-				data: (inputdata["daily_app_executions"] * invocationCost).toFixed(2)
-			})
-		}
+		if (shouldAddTodayData) {
+			// Adds data for today 
+			if (inputdata["daily_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
+				appRuns["data"].push({
+					key: new Date(),
+					data: inputdata["daily_app_executions"]
+				})
 
-		if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
-			childorgappRuns["data"].push({
-				key: new Date(),
-				data: inputdata["daily_child_app_executions"]
-			})
+				appcostRuns["data"].push({
+					key: new Date(),
+					data: (inputdata["daily_app_executions"] * invocationCost).toFixed(2)
+				})
+			}
 
-			//setApprunCosts(appcostRuns)
-		}
+			if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
+				childorgappRuns["data"].push({
+					key: new Date(),
+					data: inputdata["daily_child_app_executions"]
+				})
+			}
 
-		if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
-			workflowRuns["data"].push({
-				key: new Date(),
-				data: inputdata["daily_workflow_executions"]
-			})
-		}
+			if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
+				workflowRuns["data"].push({
+					key: new Date(),
+					data: inputdata["daily_workflow_executions"]
+				})
+			}
 
-		if (inputdata["daily_subflow_executions"] !== undefined && inputdata["daily_subflow_executions"] !== null) {
-			subflowRuns["data"].push({
-				key: new Date(),
-				data: inputdata["daily_subflow_executions"]
-			})
+			if (inputdata["daily_subflow_executions"] !== undefined && inputdata["daily_subflow_executions"] !== null) {
+				subflowRuns["data"].push({
+					key: new Date(),
+					data: inputdata["daily_subflow_executions"]
+				})
+			}
 		}
 
 		// Only for parent orgs
@@ -541,49 +542,8 @@ const AppStats = (defaultprops) => {
 		setWorkflowRuns(workflowRuns)
 		setAppruns(appRuns)
 		setApprunCosts(appcostRuns)
-	}	
-
-	const getStats = (orgid) => {
-		
-		if (orgid === undefined || orgid === null) {
-			return
-		}
-
-		fetch(`${globalUrl}/api/v1/orgs/${orgid}/stats`, {
-		  method: "GET",
-		  headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		  },
-		  credentials: "include",
-		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for workflows :O!: ", response.status);
-				return;
-			}
-
-			return response.json();
-		})
-		.then((responseJson) => {
-			if (responseJson["success"] === false) {
-				return
-			}
-
-			setStatistics(responseJson)
-			handleDataSetting(responseJson, "day")
-		})
-		.catch((error) => {
-			console.log("error: ", error)
-		});
 	}
 	
-	useEffect(() => {
-		if(selectedOrganization?.id?.length > 0) {
-			getStats(selectedOrganization.id)
-		}
-	}, [selectedOrganization])
-
 	const paperStyle = {
 		textAlign: "center", 
 		padding: "40px", 
@@ -703,15 +663,19 @@ const AppStats = (defaultprops) => {
 	]
 
   	const data = (
-    <div className="content" style={{width: "100%", margin: "auto", }}>
+    <div className="content" style={{width: "100%", margin: "auto", marginTop: 20}}>
 		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
 			All shown statistics are gathered from <a 
 				href={`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/stats`} 
 				target="_blank"
 				style={{ textDecoration: "none", color: theme.palette.linkColor,}}
 			>Your Organisation Statistics. </a>
-			It exists to give you more insight into your workflows, and to understand your utilization of the Shuffle platform. <b>The billing tracker is in Beta, and is always calculated manually before being invoiced.</b>
 
+			{currentTab === 0 ? 
+		<span>
+			All Organization app runs are calculated base on addition of parent org app runs + all child org app runs.
+		 </span>: <span>It exists to give you more insight into your workflows, and to
+        understand your utilization of the Shuffle platform.{" "}</span>}
 			<br style={{}}/>
 			{syncStats !== true ? null : 
 				"PS: You are currently looking at data from your onprem synced org"}
@@ -722,7 +686,7 @@ const AppStats = (defaultprops) => {
 			{filteredStatistics !== undefined ?
 				<div style={{flex: 1, display: "flex", textAlign: "center",}}>
 
-					{syncStats == true ? null : 
+					{/* {syncStats == true ? null : 
 						<Tooltip title={
 							<Typography variant="body1" style={{padding: 10, }}>
 								The cost of app runs in the selected period based on {filteredStatistics.monthly_app_executions} App Runs. These numbers do not exclude your included 10.000/month or {includedExecutions} App Runs per month. App Run cost: ${invocationCost}. 
@@ -742,7 +706,7 @@ const AppStats = (defaultprops) => {
 								</Typography>
 							</Box>
 						</Tooltip>
-					}
+					} */}
 
 					{syncStats === true ? null :
 					<Tooltip title={
@@ -761,7 +725,7 @@ const AppStats = (defaultprops) => {
 					</Tooltip> 
 					}
 
-					{syncStats === true ? null :
+					{syncStats === true || currentTab === 0 ? null :
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							Workflow runs in the selected period 
@@ -778,7 +742,7 @@ const AppStats = (defaultprops) => {
 					</Tooltip>
 					}
 
-					{syncStats === true ? null :
+					{/* {syncStats === true ? null :
 						<Tooltip title={
 							<Typography variant="body1" style={{padding: 10, }}>
 								Estimated cost to be billed at the end of the current month. Subtracted contractually included app runs. Actual cost month to date: ${monthToDateCost}. App Run cost: ${invocationCost}.
@@ -793,15 +757,9 @@ const AppStats = (defaultprops) => {
 								</Typography>
 							</Box>
 						</Tooltip>
-					}
-				</div>
-			: null}
-			</div>
-			
-
-			{clickedFromOrgTab? (
-				<LocalizationProvider dateAdapter={AdapterDayjs} style={{ flex: 1 }}>
-				<div style={{ display: "flex", flexDirection: "row", width: "100%", gap: "10px", justifyContent: 'center', alignItems: 'center', paddingTop: 10 }}>
+					} */}
+					<LocalizationProvider dateAdapter={AdapterDayjs} style={{ flex: 1 }}>
+				<div style={{ display: "flex", flexDirection: "column", gap: "10px", justifyContent: 'center', alignItems: 'flex-start', paddingTop: 10 }}>
 				  <div
 					style={{
 					  display: "flex",
@@ -925,64 +883,33 @@ const AppStats = (defaultprops) => {
 				  </div>
 				</div>
 			  </LocalizationProvider>
-			):(
-			<LocalizationProvider dateAdapter={AdapterDayjs} style={{flex: 1, }}>
-				<div style={{display: "flex", flexDirection: "column", }}>
-					<DateTimePicker
-					  sx={{
-						marginTop: 1, 
-						marginLeft: 1,
-						minWidth: 240,
-						maxWidth: 240,
-					  }}
-					  ampm={false}
-					  label="Search from"
-					  format="YYYY-MM-DD HH:mm:ss"
-					  value={startTime}
-					  onChange={handleStartTimeChange}
-					  renderInput={(params) => <TextField {...params} />}
-					/>
-					<DateTimePicker
-					  sx={{
-						marginTop: 1, 
-						marginLeft: 1,
-						minWidth: 240,
-						maxWidth: 240,
-					  }}
-					  ampm={false}
-					  label="Search until"
-					  format="YYYY-MM-DD HH:mm:ss"
-					  value={endTime}
-					  onChange={handleEndTimeChange}
-					  renderInput={(params) => <TextField {...params} />}
-					/>
 				</div>
-			</LocalizationProvider>
-			)}
+			: null}
+			</div>
 		</div>
 
 		{appRuns === undefined ? 
 			null
 			: 
-			<LineChartWrapper keys={appRuns} height={300} width={"100%"} inputname={"App Runs - Current Org"}/>
+			<LineChartWrapper keys={appRuns} height={300} width={"100%"} inputname={"App Runs - Current Org"} border={false}/>
 		}
 
-		{childOrgsAppRuns === undefined ? 
+		{childOrgsAppRuns === undefined || currentTab === 1 ? 
 			null
 			: 
-			<LineChartWrapper keys={childOrgsAppRuns} height={300} width={"100%"} inputname={"Child Org App Runs"}/>
+			<LineChartWrapper keys={childOrgsAppRuns} height={300} width={"100%"} inputname={"Child Org App Runs"} border={false} />
 		}
 
-		{workflowRuns === undefined ? 
+		{workflowRuns === undefined || currentTab === 0? 
 			null
 			: 
-			<LineChartWrapper keys={workflowRuns} height={300} width={"100%"} inputname={"Daily Workflow Runs (including subflows)"}/>
+			<LineChartWrapper keys={workflowRuns} height={300} width={"100%"} inputname={"Daily Workflow Runs (including subflows)"} border={false} />
 		}
 
-		{subflowRuns === undefined ? 
+		{subflowRuns === undefined || currentTab === 0 ? 
 			null
 			: 
-			<LineChartWrapper keys={subflowRuns} height={300} width={"100%"} inputname={"Subflow Runs"}/>
+			<LineChartWrapper keys={subflowRuns} height={300} width={"100%"} inputname={"Subflow Runs"} border={false} />
 		}
 
 		{/*appRunCosts === undefined ? 
@@ -991,7 +918,7 @@ const AppStats = (defaultprops) => {
 			<LineChartWrapper keys={appRunCosts} height={300} width={"100%"} inputname={"Apprun cost - Cost per day"}/>
 		*/}
 
-		{syncStats === true ? null : 
+		{syncStats === true || currentTab === 0 ? null : 
 			<div style={{height: 150+resultRows.length * 25, padding: "10px 0px 10px 0px", }}>
 				{resultLoading ? 
 					<div style={{margin: "auto", alignItems: "center", width: 350, height: "100%", }}>
@@ -1047,7 +974,7 @@ const AppStats = (defaultprops) => {
   )
 
   const dataWrapper = (
-    <div style={{ maxWidth: 1366, margin: "auto" }}>{data}</div>
+    <div style={{ maxWidth: 1366, margin: "auto", }}>{data}</div>
   );
 
   return dataWrapper;

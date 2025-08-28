@@ -91,18 +91,21 @@ const Billing = memo((props) => {
 	const [currentTab, setCurrentTab] = useState(0)
 	const [allChildOrgs, setAllChildOrgs] = useState([])
 	const [allChildOrgsStats, setAllChildOrgsStats] = useState([])
+	const [statistics, setStatistics] = useState([])
+	const [monthlyAppRunsParent, setMonthlyAppRunsParent] = useState(0)
+	const [monthlyAllSuborgExecutions, setMonthlyAllSuborgExecutions] = useState(0)
 
 	useEffect(() => {
-		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
-			const percentage = (userdata.app_execution_usage / userdata.app_execution_limit) * 100;
+		if (monthlyAppRunsParent > 0 || monthlyAllSuborgExecutions > 0) {
+			const percentage = ((monthlyAppRunsParent + monthlyAllSuborgExecutions) / userdata.app_execution_limit) * 100;
 			setCurrentAppRunsInPercentage(Math.round(percentage));
-			setCurrentAppRunsInNumber(userdata.app_execution_limit - userdata.app_execution_usage);
+			setCurrentAppRunsInNumber(userdata.app_execution_limit - userdata.app_execution_usage - userdata.app_executions_suborgs);
 		}
 
 		if (userdata?.id?.length > 0 && isLoggedIn === false){
 			setIsLoggedIn(true)
 		}
-	}, [userdata]);
+	}, [monthlyAppRunsParent, monthlyAllSuborgExecutions, userdata]);
 
 	const [BillingEmail, setBillingEmail] = useState(selectedOrganization?.Billing?.Email);
 
@@ -198,6 +201,48 @@ const Billing = memo((props) => {
 			handleGetDeals(selectedOrganization.id);
 		}
 	}, [])
+
+
+	const getStats = (orgid) => {
+		
+		if (orgid === undefined || orgid === null) {
+			return
+		}
+
+		fetch(`${globalUrl}/api/v1/orgs/${orgid}/stats`, {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!: ", response.status);
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson["success"] === false) {
+				return
+			}
+
+			setStatistics(responseJson);
+		})
+		.catch((error) => {
+			console.log("error: ", error)
+		});
+	}
+
+
+	useEffect(() => {
+		if (selectedOrganization && selectedOrganization?.id?.length > 0) {
+			getStats(selectedOrganization.id);
+		}
+	}, [selectedOrganization]);
 
 	const paperStyle = {
 		padding: 20,
@@ -1860,19 +1905,6 @@ const Billing = memo((props) => {
 
 	const updateAlertThreshold = (index, field, value) => {
 
-		if (field === 'percentage') {
-			if (value > 100 || value < 0) {
-				value = 0
-				toast("The percentage value should be between 0 and 100")
-			}
-		} else if (field === 'count') {
-			if (value < 0 || value >= userdata.app_execution_limit) {
-				value = 0
-				toast("The count value should be greater than 0 and less than the total app execution limit")
-			}
-		}
-
-
 		const totalValue = userdata.app_execution_limit;
 		const newAlertThresholds = alertThresholds.map((threshold, i) => {
 			if (i === index) {
@@ -1986,7 +2018,13 @@ const Billing = memo((props) => {
 	};
 
 	const isChildOrg = userdata?.active_org?.creator_org !== "" && userdata?.active_org?.creator_org !== undefined && userdata?.active_org?.creator_org !== null
-	
+
+	useEffect(() => {
+		if (isChildOrg && currentTab === 0) {
+			setCurrentTab(1);
+		}
+	}, [isChildOrg, currentTab]);
+
 	return (
 		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
 			<div style={{ height: "100%", width: "100%"}}>
@@ -2386,8 +2424,8 @@ const Billing = memo((props) => {
 					<Typography variant="body2" color="textSecondary" style={{fontSize: 16,}}>
 						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at {supportEmail}.
 					</Typography>We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at
-					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5, }}>
-						{billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
+					<div style={{ display: 'flex', width: '50%', flexDirection: 'row', marginTop: 5, }}>
+						{/* {billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
 							isChildOrg ? null : (
 								<ConsultationManagement
 									globalUrl={globalUrl}
@@ -2395,7 +2433,7 @@ const Billing = memo((props) => {
 									selectedOrganization={selectedOrganization}
 								/>
 							)
-						) : null}
+						) : null} */}
 						<TrainingService />
 					</div>
 				</div>
@@ -2423,9 +2461,21 @@ const Billing = memo((props) => {
 					}}
 				/>
 				<Typography style={{marginTop: 10, fontSize: 16,}} color="textSecondary">
-					You have used <strong>{currentAppRunsInPercentage}%</strong> of total app execution limit or <strong>{userdata.app_execution_usage}</strong> app runs out of <strong>{userdata.app_execution_limit}</strong> app runs.
+					You have used <strong>{currentAppRunsInPercentage}%</strong> of total app execution limit or <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs out of <strong>{userdata.app_execution_limit}</strong> app runs this month.
 				</Typography>
-
+				
+				{userdata?.active_org?.creator_org?.length > 0 ? null :
+					(
+					<>
+						<Typography color="textSecondary" style={{ marginTop: 20, fontSize: 16 }}>
+							Parent Organization App Executions: <strong>{monthlyAppRunsParent}</strong>
+						</Typography>
+						<Typography color="textSecondary" style={{ fontSize: 16 }}>
+							Sub-Organization App Executions: <strong>{monthlyAllSuborgExecutions || "N/A"}</strong>
+						</Typography>
+					</>
+				)}
+				
 				<div>
 					<Typography style={{ marginTop: 20, fontSize: 18 }}>
 						Set email alert thresholds for app runs
@@ -2442,8 +2492,8 @@ const Billing = memo((props) => {
 							: " " + 0 + " "}
 						app runs.
 					</Typography>
-					<Typography color="textSecondary" style={{ fontSize: 16 }}>
-						<span style={{fontWeight: 'bold'}}>Please note</span>: Once your app runs reach the set alert threshold, all admins in the organization will receive an email notification.
+					<Typography color="textSecondary" style={{ fontSize: 16, marginTop: 10 }}>
+						<span style={{fontWeight: 'bold'}}>Please note</span>: Once your app runs reach the set alert threshold, all admins in the organization will receive an email notification. For Parent organizations, the alert will be sent base on the total app runs from both parent and sub-organizations. For Sub-organizations, the alert will be sent based on the app runs of the sub-organization only.
 					</Typography>
 					<div style={{ marginTop: 15 }}>
 						{alertThresholds.map((threshold, index) => (
@@ -2603,12 +2653,7 @@ const Billing = memo((props) => {
 					<Tabs
 					value={currentTab}
 					onChange={(event, newValue) => {
-						setCurrentTab(-1)
-
-						// Force re-render
-						setTimeout(() => {
-							setCurrentTab(newValue)
-						}, 100);
+						setCurrentTab(newValue)
 					}}
 					style={{ marginTop: 20 }}
 					TabIndicatorProps={{
@@ -2620,52 +2665,66 @@ const Billing = memo((props) => {
 						}
 					}}
 					>
-						<Tab
-							label="Parent Organization"
+						{isChildOrg ? null :
+						<Tab 
+							label="All Organization Stats"
 							style={{ textTransform: 'none',}}
 							value={0}
+						/>}
+						<Tab
+							label={isChildOrg ? "Organization Stats" : "Parent Organization Stats"}
+							style={{ textTransform: 'none',}}
+							value={1}
 						/>
-
-						{isCloud ? 
-							<Tab
-								label="Cloud-Synced Stats"
-								style={{ textTransform: 'none', }}
-								value={1}
-							/>
-						: null}
-
+						{isChildOrg ? null :
 						<Tab
 							label="Child Organization Stats"
 							disabled={isChildOrg}
 							style={{ textTransform: 'none', }}
 							value={2}
-						/>
+						/>}
+						{isCloud ? 
+							<Tab
+								label="Cloud-Synced Stats"
+								style={{ textTransform: 'none', }}
+								value={3}
+							/>
+						: null}
 					</Tabs>
 
 					<div style={{paddingBottom: 200, minHeight: 750, }}>
-						{currentTab === 0 ? 
-							<div style={{ marginTop: 30,}}>
-								<BillingStats
-									isCloud={isCloud}
-									clickedFromOrgTab={clickedFromOrgTab}
-									globalUrl={globalUrl}
-									selectedOrganization={selectedOrganization}
-									userdata={userdata}
-								/>
-							</div>
+						{
+						currentTab === 0 ? 
+							<BillingStats
+								isCloud={isCloud}
+								clickedFromOrgTab={clickedFromOrgTab}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								userdata={userdata}
+								statistics={statistics}
+								monthlyAppRunsParent={monthlyAppRunsParent}
+								monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
+								setMonthlyAllSuborgExecutions={setMonthlyAllSuborgExecutions}
+								setMonthlyAppRunsParent={setMonthlyAppRunsParent}
+								currentTab={currentTab}
+							/>
 						: currentTab === 1 ? 
-							<div style={{ marginTop: 30,}}>
+							<div>
 								<BillingStats
 									isCloud={isCloud}
 									clickedFromOrgTab={clickedFromOrgTab}
 									globalUrl={globalUrl}
 									selectedOrganization={selectedOrganization}
 									userdata={userdata}
-
-									syncStats={true}
+									statistics={statistics}
+									monthlyAppRunsParent={monthlyAppRunsParent}
+									monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
+									setMonthlyAllSuborgExecutions={setMonthlyAllSuborgExecutions}
+									setMonthlyAppRunsParent={setMonthlyAppRunsParent}
+									currentTab={currentTab}
 								/>
 							</div>
-						: 
+						: currentTab === 2 ? 
 							<BillingStatsChildOrg
 								isCloud={isCloud}
 								clickedFromOrgTab={clickedFromOrgTab}
@@ -2676,7 +2735,18 @@ const Billing = memo((props) => {
 								setAllChildOrgs={setAllChildOrgs}
 								allChildOrgsStats={allChildOrgsStats}
 								setAllChildOrgsStats={setAllChildOrgsStats}
+								currentTab={currentTab}
 							/>
+						: 
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+									currentTab={currentTab}
+									syncStats={true}
+								/>
 						}
 					</div>
 				</span>
@@ -2705,6 +2775,7 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 	const [filteredRows, setFilteredRows] = useState([]);
 	const { themeMode, brandColor, supportEmail } = useContext(Context);
 	const theme = getTheme(themeMode, brandColor);
+
 
 	// Handle page change
 	const handleChangePage = (event, newPage) => {
@@ -2830,6 +2901,7 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 				usage: stat?.monthly_app_executions || "N/A",
 				workflows_usage: stat?.total_workflow_executions || "N/A",
 				workflow_usage_limit: subOrg?.sync_features?.workflow_executions?.limit || "N/A",
+				app_runs_hard_limit: subOrg?.Billing?.app_runs_hard_limit || 0,
 			}
 		})
 
@@ -2890,6 +2962,33 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 					</>
 				)}
 			},
+			{
+				field: "app_runs_hard_limit", headerName: "App Executions Hard Limit", width: 200, renderCell: (params) => {
+					console.log("params.row: ", params.row)
+					return (
+						<>
+							<Typography style={{ fontSize: 16 }}>
+								{params.row.app_runs_hard_limit}
+							</Typography>
+							<IconButton
+								style={{ color: theme.palette.primary.main }}
+								onClick={() => {
+									setOpen(true)
+									setEditingOrgId(params.row.orgId)
+									setEditing("app_executions_hard_limit")
+									if (params.row.app_runs_hard_limit === "N/A") {
+										setLimit("")
+									} else {
+										setLimit(params.row.app_runs_hard_limit)
+									}
+								}}
+							>
+								<Edit/>
+							</IconButton>
+						</>
+					)
+				}
+			}
 		]
 
 		setSubOrgStatsColumns(columns)
@@ -2913,7 +3012,7 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 			return
 		}
 
-		if (selectedOrganization.sync_features.app_executions.limit <= 10000) {
+		if (selectedOrganization.sync_features.app_executions.limit <= 10000 && editing === "app_executions") {
 			toast.error("Insufficient app execution limit to increase child org limit")
 			return
 		}
@@ -2939,12 +3038,22 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 
 		const org = subOrgs[orgIndex]
 
-		org.sync_features[editing].limit = limit
+		if (editing !== "app_executions_hard_limit") {
+			org.sync_features[editing].limit = limit
+		}
+
 		org.sync_features.editing = true
 		const sync_features = org.sync_features
 		const data = {
 			org_id: orgId,
             sync_features: sync_features,
+		}
+
+		if (editing === "app_executions_hard_limit") {
+			data.editing = "app_runs_hard_limit";
+			data.billing = {
+				app_runs_hard_limit: limit || 0
+			};
 		}
 
 		const url = `${globalUrl}/api/v1/orgs/${orgId}`;
@@ -2972,6 +3081,12 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 							setSubOrgStatsRows((prevRows) => {
 								const newRows = [...prevRows];
 								newRows[orgIndex].workflow_usage_limit = limit;
+								return newRows;
+							});
+						}else if (editing === "app_executions_hard_limit") {
+							setSubOrgStatsRows((prevRows) => {
+								const newRows = [...prevRows];
+								newRows[orgIndex].app_runs_hard_limit = limit;
 								return newRows;
 							});
 						}
@@ -3087,10 +3202,21 @@ const IncreaseLimitPopUp = memo(({ open, onClose, limit, setLimit, HandleEditLim
 			}
 		}}
 	>
-			<DialogTitle style={{ fontSize: 24, fontWeight: "bold" }}>
+			{editing === "app_executions_hard_limit" ? (
+					<DialogTitle style={{ fontSize: 24, fontWeight: "bold" }}>
+						Add {editing.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase())}
+					</DialogTitle>
+			) : (
+				<DialogTitle style={{ fontSize: 24, fontWeight: "bold" }}>
 				Increase {editing.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase())} Limit
 			</DialogTitle>
+			)}
 			<DialogContent>
+			 {	editing === "app_executions_hard_limit" ? (
+				<Typography style={{  marginRight: 20, marginBottom: 20,  fontSize: 16, color: theme.palette.text.secondary }}>
+					Please note that once you set a hard limit for app runs workflows will not be able to run if the limit is reached. You will be notified by email when you reach the limit.
+				</Typography>
+			) : null}
 			<TextField 
 				value={currentLimit}
 				onChange={(e) => setCurrentLimit(e.target.value)}

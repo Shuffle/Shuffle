@@ -79,9 +79,14 @@ const RuntimeDebugger = (props) => {
 	const [searchLoading, setSearchLoading] = useState(false)
 	const [rowCursor, setCursor] = useState("")
 	const [rowsPerPage, setRowsPerPage] = useState(10)
+	const [maxExecutionCount, setMaxExecutionCount] = useState(50)
 	const [resultRows, setResultRows] = useState([])
 	const [selectedWorkflowExecutions, setSelectedWorkflowExecutions] = useState([])
 	const [suborgWorkflowRuns, setSuborgWorkflowRuns] = useState(false)
+	const [paginationModel, setPaginationModel] = useState({
+		page: 0,
+		pageSize: 10,
+	})
 	const [openWorkflowMenu, setOpenWorkflowMenu] = useState(false)
 	const [workflows, setWorkflows] = useState([
 		{"id": "", "name": "All Workflows",}
@@ -666,13 +671,20 @@ const RuntimeDebugger = (props) => {
 	]
 
 	useEffect(() => {
+		setPaginationModel(prev => ({
+			...prev,
+			pageSize: rowsPerPage
+		}))
+	}, [rowsPerPage])
+
+	useEffect(() => {
 		// Check if the user is currently focusing a texxtfield or not
 		// If they are, don't submit the search
 		if (document.activeElement.tagName === "INPUT") {
 			return
 		}
 
-		submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns)
+		submitSearch(workflowId, status, startTime, endTime, rowCursor, maxExecutionCount, suborgWorkflowRuns)
 	}, [workflowId, status, startTime, endTime])
 
 	const textfieldStyle = {
@@ -723,7 +735,7 @@ const RuntimeDebugger = (props) => {
 		setWorkflowId(e.target.value.id)
 		setSuborgWorkflowRuns(false)
 
-		submitSearch(e.target.value.id, status, startTime, endTime, rowCursor, rowsPerPage, false)
+		submitSearch(e.target.value.id, status, startTime, endTime, rowCursor, maxExecutionCount, false)
 	}
 
 	const executeWorkflow = (execution) => {
@@ -819,9 +831,12 @@ const RuntimeDebugger = (props) => {
 			<div style={{display: "flex", paddingTop: 50, }}>
 				<div style={{display: 'flex', flexDirection: 'column'}}>
 					<div style={{display: "flex", width: "100%", }}>
-							<Typography  variant="h3" style={{flex: 3, whiteSpace: "nowrap" }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</Typography>
+						<Typography  variant="h3" style={{flex: 3, whiteSpace: "nowrap" }}>
+							Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}
+						</Typography>
+
 					{selectedWorkflowExecutions.length > 0 ?
-					<ButtonGroup>
+					  <ButtonGroup>
 						<Tooltip title="Reruns ALL selected workflows. This will make a new execution for them, and not continue the existing.">
 							<Button
 								variant="outlined"
@@ -864,7 +879,7 @@ const RuntimeDebugger = (props) => {
 									} else {
 										toast("Aborted "+aborted+" workflows.")
 										// Research
-										submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns)
+										submitSearch(workflowId, status, startTime, endTime, rowCursor, maxExecutionCount, suborgWorkflowRuns)
 
 										setSelectedWorkflowExecutions([])
 									}
@@ -902,7 +917,7 @@ const RuntimeDebugger = (props) => {
 							marginTop: 20,
 							marginLeft: 10,
 							marginRight: 12,
-							width: 693,
+							width: 643,
 							height: 51,
 							borderRadius: 4,
 							fontSize: 16,
@@ -913,7 +928,7 @@ const RuntimeDebugger = (props) => {
 							color: theme.palette.textColor,
 							fontSize: "1em",
 							height: 51,
-							width: 693,
+							width: 643,
 							borderRadius: 4,
 							},
 							startAdornment: (
@@ -942,6 +957,34 @@ const RuntimeDebugger = (props) => {
 						placeholder="Filter by Workflow Name, Status, Execution Argument, Results"
 						id="shuffle_search_field"
         				/>
+						<Tooltip title="Set the maximum number of workflow executions to retrieve in search results" placement="top">
+							<FormControl style={{ minWidth: 120, marginTop: 20 }}>
+							<InputLabel id="max-execution-count-label" style={{ fontSize: '0.875rem' }}>Max Results</InputLabel>
+								<Select
+									labelId="max-execution-count-label"
+									id="max-execution-count-select"
+									value={maxExecutionCount}
+									label="Max Results"
+									size="small"
+									onChange={(e) => {
+										setMaxExecutionCount(e.target.value)
+										submitSearch(workflowId, status, startTime, endTime, rowCursor, e.target.value, suborgWorkflowRuns)
+									}}
+									style={{ 
+										height: 50,
+										backgroundColor: theme.palette.backgroundColor,
+										color: theme.palette.textColor,
+									}}
+								>
+									<MenuItem value={10}>10</MenuItem>
+									<MenuItem value={25}>25</MenuItem>
+									<MenuItem value={50}>50</MenuItem>
+									<MenuItem value={100}>100</MenuItem>
+									<MenuItem value={200}>200</MenuItem>
+									<MenuItem value={500}>500</MenuItem>
+								</Select>
+							</FormControl>
+						</Tooltip>
 					</div>
 					{userdata?.active_org?.creator_org?.length === 0 ? (
 						<div style={{display: "flex", margin: 'auto',marginTop: 20,justifyContent: 'center', alignItems: 'center', }}>
@@ -956,7 +999,8 @@ const RuntimeDebugger = (props) => {
 								setStartTime("")
 								setEndTime("")
 								setSearchQuery("")
-								submitSearch("", "", "", "", rowCursor, rowsPerPage, !suborgWorkflowRuns)}
+								setMaxExecutionCount(50)
+								submitSearch("", "", "", "", rowCursor, 50, !suborgWorkflowRuns)}
 							}
 							color="secondary"
 						/>
@@ -967,7 +1011,7 @@ const RuntimeDebugger = (props) => {
 				</div>
 			</div>
 			<form onSubmit={(e) => {
-				submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns)
+				submitSearch(workflowId, status, startTime, endTime, rowCursor, maxExecutionCount, suborgWorkflowRuns)
 			}} style={{display: "flex", justifyContent: "center", alignItems: "center", }}>
 				<FormControl fullWidth style={{marginTop: 5, }}>
 				  <InputLabel id="status-label">Status</InputLabel>
@@ -1158,7 +1202,8 @@ const RuntimeDebugger = (props) => {
 							setEndTime("")
 							setSearchQuery("")
 							setSuborgWorkflowRuns(false)
-							submitSearch("", "", "", "", rowCursor, rowsPerPage, false)
+							setMaxExecutionCount(50)
+							submitSearch("", "", "", "", rowCursor, 50, false)
 						}}
 					>
 						<FilterAltOffIcon />
@@ -1169,7 +1214,7 @@ const RuntimeDebugger = (props) => {
 					variant="outlined"
 					color="primary"
 					onClick={() => {
-						submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage, suborgWorkflowRuns) 
+						submitSearch(workflowId, status, startTime, endTime, rowCursor, maxExecutionCount, suborgWorkflowRuns) 
 					}}
 					disabled={searchLoading}
 					style={{height: 50, minWidth: 100, marginTop: 15, }}
@@ -1181,20 +1226,18 @@ const RuntimeDebugger = (props) => {
 				<DataGrid
 					rows={filteredRows}
 					columns={columns}
-					pageSize={rowsPerPage}
-					rowsPerPageOptions={[10, 20, 50, 100]}
+					paginationModel={paginationModel}
+					pageSizeOptions={[10, 20, 50, 75, 100]}
 					checkboxSelection
 					disableSelectionOnClick
-					onPageSizeChange={(newPageSize) => {
-						setRowsPerPage(newPageSize)
-						submitSearch(workflowId, status, startTime, endTime, rowCursor, newPageSize, suborgWorkflowRuns) 
+
+					onPaginationModelChange={(newPaginationModel) => {
+						setPaginationModel(newPaginationModel)
+						setRowsPerPage(newPaginationModel.pageSize)
+						// No API call needed - this is just for client-side pagination
 					}}
-					// event for when clicking next page
-					// Hide page changer
-					onPageChange={(params) => {
-						console.log("params: ", params)
-					}}
-		  			onSelectionModelChange={(newSelection) => {
+
+		  			onRowSelectionModelChange={(newSelection) => {
 						//console.log("newSelection: ", newSelection)
 		  			    //setSelectedWorkflowExecutionsIndexes(newSelection)
 						var found = []	

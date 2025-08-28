@@ -66,18 +66,17 @@ const PartnerTab = (props) => {
         })
         .then((response) => {
             if (response.status !== 200) {
-                toast("Failed to get partner data")
+                toast.info("No partner details found");
             }
             return response.json();
         })
         .then((responseJson) => {
             if(responseJson.success) {
                 setPartnerData(responseJson?.partner);
-                console.log("responseJson", responseJson)
                 setLoadingPartnerData(false);
             }else{  
                 setLoadingPartnerData(false);
-                toast(responseJson?.reason)
+                console.error(responseJson?.reason)
             }
         })
         .catch((error) => {
@@ -195,14 +194,17 @@ const PartnerTab = (props) => {
         // Enable the tab by default
         return false;
     }
+
+    const isSupportOnlyTab = (tabName) => {
+        return tabName === "Apps" || tabName === "Articles" || tabName === "AI Agents";
+    }
    
     return (
         <div style={{ height: "100%", width: "100%", color: theme.palette.platformColor, backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-around', width: "100%", borderBottom: theme.palette.defaultBorder ,boxSizing: 'border-box' }}>
                 {tabsOnPartnerTab?.map((tabName, index) => (
-                        <div style={{ pointerEvents: 'auto', width: '100%',}}>
+                        <div key={tabName} style={{ pointerEvents: 'auto', width: '100%', position: 'relative'}}>
                             <Button
-                                key={tabName}
                                 onClick={() => {
                                     setCurIndex(index); 
                                     handleTabClick(index === 0 ? "partner_settings" : tabName.toLowerCase().replace(/[\s&]+/g, ''));
@@ -232,6 +234,26 @@ const PartnerTab = (props) => {
                             >
                               {tabName}
                             </Button>
+                            {isSupportOnlyTab(tabName) && userdata?.support && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '8px',
+                                    right: '8px',
+                                    backgroundColor: '#4D4D4D',
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    width: '20px',
+                                    height: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    zIndex: 1
+                                }}>
+                                    S
+                                </div>
+                            )}
                         </div>
                 ))}
             </div>

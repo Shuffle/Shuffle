@@ -92,7 +92,7 @@ const App = (message, props) => {
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
-  const { themeMode, handleThemeChange, setBrandColor, brandColor,setThemeMode} = useContext(Context);
+  const { themeMode, handleThemeChange, setBrandColor, brandColor,setThemeMode, setSupportEmail, setLogoutUrl, setBrandName} = useContext(Context);
   const currentTheme = getTheme(themeMode, brandColor);
   const mainColor = currentTheme?.palette?.backgroundColor
   const [isPreviousThemeLight, setIsPreviousThemeLight] = useState(false)
@@ -192,11 +192,44 @@ const App = (message, props) => {
               { path: "/" }
             );
           }
-		  if (responseJson?.theme?.length > 0) {
-			handleThemeChange(responseJson.theme)
-		  }else{
-			handleThemeChange("dark")
-		  }
+		  if (responseJson?.org_status?.includes("integration_partner")) {
+			if (responseJson?.active_org?.branding?.enable_chat !== true) {
+
+				// Find the drift chatbox and remove it
+			}
+
+				if (responseJson?.active_org?.branding?.theme?.length > 0 ) {
+					handleThemeChange(responseJson?.active_org?.branding?.theme)
+				}
+
+				if (responseJson?.active_org?.branding?.brand_color?.length > 0 ) {
+					setBrandColor(responseJson?.active_org?.branding?.brand_color)
+					localStorage.setItem("brandColor", responseJson?.active_org?.branding?.brand_color)
+				}
+
+				if (responseJson?.active_org?.branding?.brand_name?.length > 0 ) {
+					setBrandName(responseJson?.active_org?.branding?.brand_name)
+					localStorage.setItem("brandName", responseJson?.active_org?.branding?.brand_name)
+				}
+
+				if (responseJson?.active_org?.branding?.support_email?.length > 0 ) {
+					setSupportEmail(responseJson?.active_org?.branding?.support_email)
+				}
+					
+				if (responseJson?.active_org?.branding?.logout_url?.length > 0 ) {
+					setLogoutUrl(responseJson?.active_org?.branding?.logout_url)
+				}
+			} else {
+				localStorage.removeItem("brandColor")
+				setBrandColor("#ff8544")
+				setBrandName("Shuffle")	
+				localStorage.removeItem("brandName")
+				if(responseJson?.theme?.length > 0){
+					handleThemeChange(responseJson?.theme)
+				}else{
+					handleThemeChange("dark")
+				}
+			}
         }else {
 			handleThemeChange("dark")
 			setThemeMode("dark")

@@ -1465,7 +1465,11 @@ const UserManagmentTab = memo((props) => {
                             <ListItem key={index} style={{ backgroundColor: bgColor, display: 'table-row', borderBottomLeftRadius: users?.length - 1 === index ? 8 : 0, borderBottomRightRadius: users?.length - 1 === index ? 8 : 0 }}>
                                 {isCloud ? (
                                     <ListItemText
-                                    primary={(<img src={`https://flagcdn.com/48x36/${userRegion.toLowerCase()}.png`} alt={data?.user_geo_info?.country?.iso_code} style={{ marginRight: 30, width: 25, height: 23, }} />)}
+                                    primary={(
+                                        userRegion ? (
+                                            <img src={`https://flagcdn.com/48x36/${userRegion.toLowerCase()}.png`} alt={data?.user_geo_info?.country?.iso_code} style={{ marginRight: 30, width: 25, height: 23, }} />
+                                        ) : null
+                                    )}
                                     style={{ display: 'table-cell', verticalAlign: 'middle', textAlign: 'center' }}
                                 />) : null}
                                 <ListItemText

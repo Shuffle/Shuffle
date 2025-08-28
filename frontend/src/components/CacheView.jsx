@@ -4,7 +4,8 @@ import { getTheme } from "../theme.jsx";
 import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
-import { GetIconInfo } from "../views/Workflows2.jsx";
+import { GetIconInfo, } from "../views/Workflows2.jsx";
+import { validateJson, handleReactJsonClipboard,  } from "../views/Workflows.jsx";
 import { red } from "../views/AngularWorkflow.jsx";
 import CollectIngestModal from "../components/CollectIngestModal.jsx";
 import {
@@ -34,6 +35,7 @@ import {
 	InputLabel,
 	Pagination,
 	PaginationItem,
+	Avatar,
 } from "@mui/material";
 
 import { 
@@ -76,8 +78,8 @@ import {
 	SmartToy as SmartToyIcon,
 	Settings as SettingsIcon,
 	FilterAlt as FilterAltIcon,
+	CompareArrows as CompareArrowsIcon, 
 } from "@mui/icons-material";
-import { validateJson, } from "../views/Workflows.jsx";
 import { Context } from "../context/ContextApi.jsx";
 
 const scrollStyle1 = {
@@ -130,21 +132,22 @@ const CacheView = memo((props) => {
 	})
 	const [_, setUpdate] = useState(Math.random()) 
 	const [selectedRows, setSelectedRows] = useState([]);
-
 	// Direct category migration from ../components/Files.jsx
     const [selectAllChecked, setSelectAllChecked] = React.useState(false)
   	const [renderTextBox, setRenderTextBox] = React.useState(false);
-  	const [datastoreCategories, setDatastoreCategories] = React.useState(["default"]);
+  	const [datastoreCategories, setDatastoreCategories] = React.useState(["default", "protected"]);
 	const [selectedCategory, setSelectedCategory] = React.useState("default");
 	const [selectedFileId, setSelectedFileId] = React.useState("");
     const [updateToThisCategory, setUpdateToThisCategory] = useState("")
 	const [workflows, setWorkflows] = useState([]);
+	const [apps, setApps] = useState([]);
 
     const [selectedFiles, setSelectedFiles] = useState([]);
 	const [showAutomationMenu, setShowAutomationMenu] = useState(false);
 	const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 	const [showCollectIngestMenu, setShowCollectIngestMenu] = useState(false);
 
+    var to_be_copied = "";
 	const defaultAutomation = [
 		{
 			"name": "Run workflow",
@@ -156,6 +159,42 @@ const CacheView = memo((props) => {
 			"icon": <AirIcon />, 
 			"enabled": false,
 		},
+		{
+			"name": "Correlate Categories",
+			"description": "",
+			"type": "singul",
+			"options": [{
+				"key": "datastore_categories",
+				"value": "",
+			}],
+			"icon": <CompareArrowsIcon />,
+			"enabled": false,
+			"disabled": false,
+		},
+		{
+			"name": "Run AI Agent",
+			"description": "",
+			"options": [{
+				"key": "",
+				"value": "",
+			}],
+			"icon": <SmartToyIcon />,
+			"enabled": false,
+			"disabled": true,
+		},
+		{
+			"name": "Send webhook",
+			"description": "Sends the updated value to a specified webhook URL.",
+			"options": [{
+				"key": "webhook_url",
+				"value": "",
+			}],
+			"icon": <WebhookIcon />, 
+			"enabled": false,
+		},
+
+
+
 		{
 			"name": "Send message",
 			"description": "",
@@ -180,27 +219,6 @@ const CacheView = memo((props) => {
 			"enabled": false,
 			"disabled": true,
 		},
-		{
-			"name": "Run AI Agent",
-			"description": "",
-			"options": [{
-				"key": "",
-				"value": "",
-			}],
-			"icon": <SmartToyIcon />,
-			"enabled": false,
-			"disabled": true,
-		},
-		{
-			"name": "Send webhook",
-			"description": "Sends the updated value to a specified webhook URL.",
-			"options": [{
-				"key": "webhook_url",
-				"value": "",
-			}],
-			"icon": <WebhookIcon />, 
-			"enabled": false,
-		},
 	]
 
 	const [categoryAutomations, setCategoryAutomations] = useState(defaultAutomation)
@@ -210,6 +228,35 @@ const CacheView = memo((props) => {
     const theme = getTheme(themeMode, brandColor);
 	const classes = useStyles();
 
+	const getApps = () => {
+		const url = `${globalUrl}/api/v1/apps`
+		fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!");
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success === false) {
+				toast.warn("Failed to load apps. Please try again or contact support@shuffler if this persists.")
+			} else {
+				setApps(responseJson)
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		});
+	}
 
 	const getWorkflows = () => {
 		const url = `${globalUrl}/api/v1/workflows`
@@ -251,6 +298,7 @@ const CacheView = memo((props) => {
 
     useEffect(() => {
 		getWorkflows()
+		getApps() 
         listOrgCache(orgId, selectedCategory, 0, pageSize, page)
     }, [])
 
@@ -275,7 +323,6 @@ const CacheView = memo((props) => {
 		}
 
 		var url = `${globalUrl}/api/v1/orgs/${orgId}/list_cache`
-
 		if (category !== undefined && category !== null && category !== "default" && category !== "") {
 			url += "?category=" + category.replaceAll(" ", "_")
 		} else {
@@ -322,7 +369,7 @@ const CacheView = memo((props) => {
 		.then((responseJson) => {
             setCachedLoaded(true);
 			if (responseJson?.success === true) {
-				setListCache(responseJson.keys)
+				setListCache(responseJson.keys);
 
 				if (responseJson.total_amount !== undefined && responseJson.total_amount !== null && responseJson.total_amount > 0) {
 					setTotalAmount(responseJson.total_amount)
@@ -351,8 +398,8 @@ const CacheView = memo((props) => {
 					}
 				}
 
-				if ((category === undefined || category === "default" || category === "") && datastoreCategories.length === 1 && datastoreCategories[0] === "default") {
-					var newcategories = ["default"]
+				if ((category === undefined || category === "default" || category === "") && datastoreCategories.length === 2 && datastoreCategories[0] === "default") {
+					var newcategories = ["default", "protected"]
 					for (var key in responseJson.keys) {
 						var foundcategory = responseJson.keys[key].category
 						if (foundcategory !== undefined && foundcategory !== null && foundcategory !== ""){
@@ -538,7 +585,7 @@ const CacheView = memo((props) => {
             })
             .then((responseJson) => {
                 setAddCache(responseJson);
-                toast("New key added Successfully!");
+                toast.success("New key added!");
                 listOrgCache(orgId, selectedCategory, 0, pageSize, page);
                 setModalOpen(false);
             })
@@ -562,34 +609,6 @@ const CacheView = memo((props) => {
 			})
 		}
 	}
-
-    const handleReactJsonClipboard = (copy) => {
-        const elementName = "copy_element_shuffle";
-        let copyText = document.getElementById(elementName);
-    
-        if (copyText) {
-          if (copy.namespace && copy.name && copy.src) {
-            copy = copy.src;
-          }
-    
-          const clipboard = navigator.clipboard;
-          if (!clipboard) {
-            toast("Can only copy over HTTPS (port 3443)");
-            return;
-          }
-    
-          let stringified = JSON.stringify(copy);
-          if (stringified.startsWith('"') && stringified.endsWith('"')) {
-            stringified = stringified.slice(1, -1);
-          }
-    
-          navigator.clipboard.writeText(stringified);
-          toast("Copied value to clipboard, NOT json path.");
-        } else {
-          console.log("Failed to copy from " + elementName + ": ", copyText);
-        }
-      };
-
 
 	const timestamp = (timestamp) => {
 		if (timestamp === undefined || timestamp === null || timestamp === "") {
@@ -680,6 +699,7 @@ const CacheView = memo((props) => {
 						</IconButton>
 					</Tooltip>
 				</div>
+
                 <TextField
                     color="primary"
                     style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, marginTop: 0, }}
@@ -1096,7 +1116,153 @@ const CacheView = memo((props) => {
 
 				{showOptions && (
 					updatedAutomation.options.map((option, optionIndex) => {
-						if (option?.key === "workflow_id") {
+						if (option?.key === "datastore_categories") {
+							if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
+								return (
+									<Typography key={optionIndex} style={{ color: theme.palette.text.secondary, marginTop: 10 }}>
+										No categories available. Please add categories in the settings.
+									</Typography>
+								)
+							}
+
+							return (
+								<Autocomplete
+									key={optionIndex}
+
+									multiple
+									label="Choose Datastore Categories"
+									id="datastore_category_search"
+									autoHighlight
+									freeSolo
+									value={datastoreCategories?.filter(c => option?.value.includes(c)) || []}
+									classes={{ inputRoot: classes.inputRoot }}
+									ListboxProps={{
+										style: {
+											backgroundColor: theme.palette.surfaceColor,
+											color: theme.palette.text.primary,
+											borderRadius: theme.palette.borderRadius,
+										},
+									}}
+									onChange={(event, newValue) => {
+										console.log("New Value: ", newValue)
+
+										option.value = ""
+										for (var i = 0; i < newValue.length; i++) {
+											option.value += newValue[i] + ","
+										}
+
+										if (newValue.length > 0) {
+											updatedAutomation.enabled = true
+										} else {
+											updatedAutomation.enabled = false 
+										}
+
+										updatedAutomation.options[optionIndex] = option
+										setUpdatedAutomation(updatedAutomation)
+										setUpdated(true)
+
+										setUpdate(Math.random()) // Force re-render
+									}}
+
+									getOptionLabel={(option) => {
+										if (option === undefined || option === null) {
+											return "No Categories Selected";
+										}
+
+										return option
+									}}
+									options={datastoreCategories}
+									fullWidth
+									style={{
+										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+										borderRadius: theme.palette.textFieldStyle.borderRadius,
+										color: theme.palette.textFieldStyle.color,
+										height: 35,
+										marginBottom: 40,
+									}}
+									renderOption={(props, data, state) => {
+										const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
+										const iconDetails = GetIconInfo({
+											"app_name": fixedname,
+											"name": fixedname,
+										})
+
+										const keyfound = option?.value.includes(data)
+
+										return (
+											<Tooltip arrow placement="left" title={
+												<span style={{}}>
+													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
+														: null}
+													<Typography>
+														Choose {data}
+													</Typography>
+												</span>
+											} >
+												<MenuItem
+													{...props}
+													style={{
+														backgroundColor: theme.palette.surfaceColor,
+													}}
+													value={data}
+												>
+													<Typography style={{
+														display: "flex", 
+														marginTop: 5, 
+														color: keyfound ? red : theme.palette.text.primary,
+													}}>
+														<div style={{marginRight: 10, }}>
+															{iconDetails?.originalIcon && (
+																iconDetails?.originalIcon
+															)}
+														</div>
+
+														{fixedname}
+													</Typography>
+												</MenuItem>
+											</Tooltip>
+										)
+									}}
+									renderInput={(params) => {
+										return (
+											<TextField
+												{...params}
+												style={{
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													color: theme.palette.textFieldStyle.color,
+													borderRadius: theme.palette.textFieldStyle.borderRadius,
+													height: 35,
+													fontSize: 16,
+													marginTop: "16px"
+												}}
+												InputProps={{
+													...params.InputProps,
+													style: {
+														height: 35,
+														display: "flex",
+														alignItems: "center",
+														padding: "0px 8px",
+														fontSize: 16,
+														borderRadius: 4,
+													},
+													inputProps: {
+														...params.inputProps,
+														style: {
+															height: "100%",
+															boxSizing: "border-box",
+														}
+
+													}
+												}}
+												variant="outlined"
+												placeholder="Select Categories to Correlate"
+											/>
+										)
+									}}
+								/>
+							)
+						} else if (option?.key === "workflow_id") {
 							return ( 
 								<Autocomplete
 									key={optionIndex}
@@ -1181,8 +1347,7 @@ const CacheView = memo((props) => {
 													{...props}
 													style={{
 														backgroundColor: theme.palette.surfaceColor,
-														color: data.id === option?.value ? "red" : theme.palette.text.primary,
-														borderBottom: data.id === "parent" ? "2px solid rgba(255,255,255,0.5)" : null
+														color: data.id === option?.value ? red : theme.palette.text.primary,
 													}}
 													value={data}
 												>
@@ -1297,12 +1462,25 @@ const CacheView = memo((props) => {
 		  sortable: true,
 	  },
 	  {
-		width: 600,
+		width: 540,
 		field: 'value',
 		filterable: true,
 		headerName: 'Value',
 		renderCell: (props) => {
 			const data = props.row
+
+			if (data?.category?.toLowerCase() === "protected") { 
+				return (
+					<Typography 
+						variant="body2" 
+						type="password"
+						style={{maxHeight: 200, overflow: "hidden", }}
+					>
+						***************
+					</Typography>
+				)
+			}
+
         	const validate = validateJson(data.value)
 
 			return (
@@ -1321,22 +1499,17 @@ const CacheView = memo((props) => {
 								backgroundColor: theme.palette.platformColor,
 								border: theme.palette.defaultBorder,
 								padding: 5,
-								minWidth: 600, 
-								maxHeight: 600,
+								minWidth: 500, 
+								maxHeight: 500,
 								overflowY: "auto",
 							}}
 							collapsed={true}
 							enableClipboard={(copy) => {
-								// handleReactJsonClipboard(copy);
+								handleReactJsonClipboard(copy)
 							}}
 							collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 							iconStyle={theme.palette.jsonIconStyle}
 							displayDataTypes={false}
-							onSelect={(select) => {
-
-								// HandleJsonCopy(showResult, select, data.action.label);
-								console.log("SELECTED!: ", select);
-							}}
 							name={null}
 							/>
 					:
@@ -1347,6 +1520,74 @@ const CacheView = memo((props) => {
 				</div>
 			)
 		}
+	  },
+	  {
+		field: 'category',
+		headerName: 'Category',
+		description: 'Category for this key.',
+		width: 75,
+		filterable: false,
+		  sortable: true,
+		  renderCell: (props) => {
+			  // Return avatar with hover for the category
+			  const data = props.row
+			  const clickCategory = (e) => {
+				setCategoryConfig(undefined)
+				setCategoryAutomations(defaultAutomation)
+
+				if (selectAllChecked || selectedFiles.length > 0) {
+					setUpdateToThisCategory(data.category)
+					return
+				}
+
+				setSelectedCategory(data.category)
+				if (data.category === "all" || data.category === "default") {
+					listOrgCache(orgId, "", 0, pageSize, page)
+				} else {
+					listOrgCache(orgId, data.category, 0, pageSize, page)
+				}
+
+				// Add it to the url as a query
+				if (window.location.search.includes("category=")) {
+					const newurl = window.location.href.replace(/category=[^&]+/, `category=${data.category}`)
+					window.history.pushState({ path: newurl }, "", newurl)
+				} else {
+					window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${data.category}`)
+				}
+			  }
+
+
+			  const iconDetails = GetIconInfo({
+			  	"app_name": data.category,
+			  	"name": data.category,
+			  })
+
+			  const avatarLetter = (data.category === "" || data.category === "default" ? " " : data.category.charAt(0).toUpperCase())[0]
+			  return (
+				  <Tooltip title={data.category === "" || data.category === "default" ? "No category" : `Category name: ${data.category}`} placement="left">
+				  	<Avatar
+				  		onClick={(e) => {
+							clickCategory(e)
+						}}
+				  		style={{
+							color: "white",
+							backgroundColor: iconDetails?.iconBackgroundColor || theme.palette.primary.secondary,
+							marginLeft: 15, 
+							height: 30,
+							width: 30, 
+							cursor: data.category !== "" && data.category !== "default" ? "pointer" : "default",
+						}}
+				  		variant="rounded"
+				  	>
+				  	{iconDetails?.originalIcon ?
+						iconDetails?.originalIcon
+						: 
+				  		avatarLetter
+					}
+				  	</Avatar>
+				  </Tooltip>
+			  )
+		  }
 	  },
 	  {
 		field: 'actions',
@@ -1361,7 +1602,7 @@ const CacheView = memo((props) => {
 
 			return ( 
 				<span style={{ display: "flex" }}>
-					{data?.workflow_id === "" || data?.workflow_id === null || data?.workflow_id === undefined ?
+					{data?.workflow_id === "" || data?.workflow_id === null || data?.workflow_id === undefined || data?.workflow_id?.length !== 36 ?
 						<IconButton
 							disabled={data.workflow_id?.length === 0}
 							style={{}}
@@ -1369,7 +1610,7 @@ const CacheView = memo((props) => {
 							<OpenInNewIcon
 								style={{
 									color:
-										data.workflow_id?.length !== 0
+										data.workflow_id?.length === 36 
 											? "#FF8444"
 											: "grey",
 								}}
@@ -1380,6 +1621,7 @@ const CacheView = memo((props) => {
 							title={"Go to workflow"}
 							style={{}}
 							aria-label={"Download"}
+							placement="left"
 						>
 							<span>
 								<a
@@ -1393,13 +1635,13 @@ const CacheView = memo((props) => {
 									>
 										<IconButton
 											disabled={data.workflow_id?.length ===0}
-											style={{marginLeft: 10}}
+											style={{marginLeft: 0}}
 										>
 											<OpenInNewIcon
 												style={{
 													width: 24, height: 24,
 													color:
-														data.workflow_id?.length !== 0
+														data.workflow_id?.length === 36
 															? "#FF8444"
 															: "grey",
 												}}
@@ -1419,7 +1661,9 @@ const CacheView = memo((props) => {
 								<IconButton
 									style={{ padding: "6px" }}
 									disabled={data.org_id !== selectedOrganization.id ? true : false}
-									onClick={() => {
+									onClick={(e) => {
+										e.preventDefault()
+										e.stopPropagation()
 										// Try to make the value JSON indented 
 										const valid = validateJson(data.value)
 										var newvalue = data.value
@@ -1469,7 +1713,9 @@ const CacheView = memo((props) => {
 								<IconButton
 									style={{ padding: "6px" }}
 									disabled={data.public_authorization === undefined || data.public_authorization === null || data.public_authorization === "" || data.org_id !== selectedOrganization.id ? true : false}
-									onClick={() => {
+									onClick={(e) => {
+										e.preventDefault()
+										e.stopPropagation()
 										window.open(`${globalUrl}/api/v1/orgs/${orgId}/cache/${data.key}?type=text&authorization=${data.public_authorization}`, "_blank");
 									}}
 								>
@@ -1486,7 +1732,9 @@ const CacheView = memo((props) => {
 								<IconButton
 									style={{ padding: "6px" }}
 									disabled={selectedOrganization?.id === undefined ? false : data.org_id !== selectedOrganization.id ? true : false}
-									onClick={() => {
+									onClick={(e) => {
+										e.preventDefault()
+										e.stopPropagation()
 										deleteEntry(orgId, data.key, data.category)
 									}}
 								>
@@ -1609,6 +1857,8 @@ const CacheView = memo((props) => {
 
 				workflows={workflows}
 				getWorkflows={getWorkflows}
+
+				apps={apps}
 			/>
 
             {cacheDistributionModal}
@@ -1658,6 +1908,13 @@ const CacheView = memo((props) => {
                     >
                         Learn more
                     </a>
+
+					{selectedCategory === "protected" ?
+						<div style={{ color: red, }}>
+							Protected keys are encrypted, only available to admins, and will be masked when used in workflows. This is a basic protection, and is NOT bulletproof.
+						</div>
+					: null}
+
                 </Typography>
             </div>
 
@@ -2067,15 +2324,17 @@ const CacheView = memo((props) => {
 		      <DataGrid
 				rows={listCache}
 				columns={columns}
-
 				checkboxSelection
 				disableRowSelectionOnClick
 				rowSelectionModel={selectedRows}
+				onSelectionModelChange={(newSelection) => {
+					setSelectedRows(newSelection);
+				}}
 				onRowSelectionModelChange={(newSelection) => {
-					setSelectedRows(newSelection)
+				setSelectedRows(newSelection);
 				}}
 				keepNonExistentRowsSelected={false}
-				getRowId={(row) => row.key}
+				getRowId={(row) => `${row?.key}_${row?.category}`}
 
 				autoHeight={true}
 				sx={{
@@ -2245,6 +2504,11 @@ const CacheView = memo((props) => {
 
               </div>
             </div>
+			<TextField
+			  id="copy_element_shuffle"
+			  value={to_be_copied}
+			  style={{ display: "none" }}
+			/>
         </div>
     );
 })

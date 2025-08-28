@@ -17,11 +17,14 @@ import GetAppIcon from '@mui/icons-material/GetApp';
 // Material UI & Components
 import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
+import { isMobile } from "react-device-detect"
+import ReactGA from 'react-ga4';
+
+import LineChartWrapper from "../components/LineChartWrapper.jsx";
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import Priority from "../components/Priority.jsx";
 import { Context } from "../context/ContextApi.jsx";
-import { isMobile } from "react-device-detect"
 
 // Material UI Components
 import {
@@ -99,6 +102,9 @@ import {
 	Psychology as PsychologyIcon,
 	Wifi as WifiIcon,
 	Devices as DevicesIcon,
+	AutoAwesome as AutoAwesomeIcon,
+	BarChart as BarChartIcon,
+	Lock as LockIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -115,14 +121,26 @@ import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinem
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 
-import {green, yellow, red, grey } from "../views/AngularWorkflow.jsx"
+import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/AngularWorkflow.jsx"
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
 
 const svgSize = 24;
-const imagesize = 22;
+const imagesize = 23;
 
+// Session-based modal visibility helper
+const AI_ANNOUNCEMENT_SESSION_KEY = "ai_announcement_session";
+
+const getCookie = (name) => {
+  if (typeof document === "undefined") return "";
+  const pattern = `; ${document.cookie}`;
+  const parts = pattern.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return decodeURIComponent(parts.pop().split(";").shift() || "");
+  }
+  return "";
+};
 
 
 
@@ -212,8 +230,14 @@ export const GetIconInfo = (action) => {
                 "release",
             ],
         },
-
-
+		{
+			key: "secret",
+			values: [
+				"api",
+				"password",
+				"protect",
+			],
+		}
     ];
 
     var selectedKey = ""
@@ -402,6 +426,12 @@ export const GetIconInfo = (action) => {
             iconBackgroundColor: "green",
             originalIcon: <DevicesIcon />,
 		},
+		secret: {
+			icon: "",
+			iconColor: "white",
+			iconBackgroundColor: "green",
+			originalIcon: <LockIcon />,
+		}
     }
 
 		/*
@@ -670,6 +700,10 @@ const Workflows2 = (props) => {
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
+
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true" || isCloud) 
+
     const imgSize = 60;
 
     const { themeMode, brandColor, brandName } = useContext(Context);
@@ -728,6 +762,8 @@ const Workflows2 = (props) => {
     var upload = "";
 
     const [workflows, setWorkflows] = React.useState([]);
+    const [workflowTimelines, setWorkflowTimelines] = React.useState([]);
+    const [backgroundWorkflows, setBackgroundWorkflows] = React.useState([]);
     const [backupWorkflows, setBackupWorkflows] = React.useState([]);
     const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
     const [selectedUsecases, setSelectedUsecases] = React.useState([]);
@@ -767,6 +803,8 @@ const Workflows2 = (props) => {
     const [actionImageList, setActionImageList] = React.useState([{ "large_image": "" }])
 
     const [firstLoad, setFirstLoad] = React.useState(true);
+    const [aiAnnouncementModalOpen, setAiAnnouncementModalOpen] = React.useState(false);
+    const sessionRef = useRef("");
     const [showMoreClicked, setShowMoreClicked] = React.useState(false);
     const [usecases, setUsecases] = React.useState([]);
     const [allUsecases, setAllUsecases] = React.useState({
@@ -875,10 +913,167 @@ const Workflows2 = (props) => {
 
     }
 
-    //const isCloud =
-    //    window.location.host === "localhost:3002" ||
-    //    window.location.host === "shuffler.io";
-	const isCloud = false
+    React.useEffect(() => {
+        if (!isLoggedIn) return;
+      
+        const bannerID = "banner_ai_announcement";
+        const cookieSession = getCookie("__session") || "";
+        sessionRef.current = cookieSession;
+      
+        try {
+          const storedSession = localStorage.getItem(AI_ANNOUNCEMENT_SESSION_KEY) || "";
+      
+          // If backend says it's dismissed, sync storage and exit
+          if (userdata && Array.isArray(userdata.tutorials)) {
+            const alreadyDismissed = userdata.tutorials.some((t) => t?.name === bannerID);
+            if (alreadyDismissed) {
+              if (cookieSession && storedSession !== cookieSession) {
+                localStorage.setItem(AI_ANNOUNCEMENT_SESSION_KEY, cookieSession);
+              }
+              return;
+            }
+          } else if (!userdata) {
+            // Wait for userdata to load
+            return;
+          }
+      
+          // Open only if not dismissed in this session
+          if (cookieSession && storedSession !== cookieSession) {
+            setAiAnnouncementModalOpen(true);
+          }
+        } catch {
+          // If storage is unavailable, fallback to a single open per mount
+          setAiAnnouncementModalOpen((open) => open || true);
+        }
+      }, [isLoggedIn, userdata]);
+      
+      const handleCloseAiAnnouncement = React.useCallback(() => {
+        try {
+          const cookieSession = sessionRef.current || getCookie("__session") || "";
+          if (cookieSession) {
+            localStorage.setItem(AI_ANNOUNCEMENT_SESSION_KEY, cookieSession);
+          }
+        } catch {
+          // ignore storage access issues
+        }
+        setAiAnnouncementModalOpen(false);
+      }, []);
+      
+
+    const dismissAiAnnouncement = () => {
+        const bannerID = "banner_ai_announcement";
+
+        if (isCloud) {
+            ReactGA.event({
+                category: "AIGeneratedNewWorkflow",
+                action: "dismiss_announcement",
+                label: userdata?.active_org?.id || userdata?.id || "",
+            });
+        }
+
+        handleCloseAiAnnouncement();
+
+        // Open Create Workflow modal (EditWorkflow) and temporarily highlight inputs/buttons
+        try {
+            setModalOpen(true)
+            setIsEditing(false)
+            setNewWorkflowName("")
+            setNewWorkflowDescription("")
+            setDefaultReturnValue("")
+            setEditingWorkflow({})
+            setNewWorkflowTags([])
+            setSelectedUsecases([])
+
+            // Wait a moment for the drawer to mount, then highlight
+            setTimeout(() => {
+                const BORDER = '#4CAF50';
+                const DURATION = 1500;
+
+                const highlightTextField = (inputEl) => {
+                    if (!inputEl) return;
+                    const formControl = inputEl.closest('.MuiFormControl-root') || inputEl.closest('.MuiInputBase-root') || inputEl.parentElement;
+                    const inputRoot = formControl?.querySelector('.MuiOutlinedInput-root') || formControl?.querySelector('.MuiInputBase-root') || formControl;
+                    const notch = formControl?.querySelector('fieldset');
+
+                    const prevBoxShadow = inputRoot?.style?.boxShadow;
+                    const prevBorderColor = notch?.style?.borderColor;
+                    const prevBorderWidth = notch?.style?.borderWidth;
+
+                    if (inputRoot) inputRoot.style.boxShadow = '0 0 0 3px rgba(76,175,80,0.45)';
+                    if (notch) {
+                        notch.style.borderColor = BORDER;
+                        notch.style.borderWidth = '2px';
+                    }
+
+                    setTimeout(() => {
+                        try {
+                            if (inputRoot) inputRoot.style.boxShadow = prevBoxShadow || '';
+                            if (notch) {
+                                notch.style.borderColor = prevBorderColor || '';
+                                notch.style.borderWidth = prevBorderWidth || '';
+                            }
+                        } catch (_) {}
+                    }, DURATION);
+                };
+
+                const highlightButton = (btnEl) => {
+                    if (!btnEl) return;
+                    const prevBoxShadow = btnEl.style.boxShadow;
+                    const prevBorder = btnEl.style.border;
+                    const prevRadius = btnEl.style.borderRadius;
+                    btnEl.style.boxShadow = '0 0 0 3px rgba(76,175,80,0.45)';
+                    btnEl.style.border = '2px solid ' + BORDER;
+                    btnEl.style.borderRadius = '6px';
+                    setTimeout(() => {
+                        try {
+                            btnEl.style.boxShadow = prevBoxShadow || '';
+                            btnEl.style.border = prevBorder || '';
+                            btnEl.style.borderRadius = prevRadius || '';
+                        } catch (_) {}
+                    }, DURATION);
+                };
+
+                const nameEl = document.getElementById('Enter-Workflow-Name');
+                highlightTextField(nameEl);
+
+                const descEl = document.getElementById('Workflow-Description');
+                highlightTextField(descEl);
+
+                const aiBtn = document.getElementById('ai-generate-button');
+                highlightButton(aiBtn);
+            }, 250);
+        } catch (e) {
+            console.debug('Failed to open and highlight Create Workflow modal:', e);
+        }
+        
+        fetch(globalUrl + '/api/v1/users/updateuser', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                tutorial: bannerID,
+                user_id: userdata.id
+            }),
+            credentials: "include",
+        })
+        .then((response) => {
+            if (response.status !== 200) {
+                console.log("Failed to dismiss AI announcement banner");
+            }
+            return response.json();
+        })
+        .then((responseJson) => {
+            if (responseJson.success) {
+                console.log("AI announcement banner dismissed successfully");
+            }
+        })
+        .catch((error) => {
+            console.log("Error dismissing AI announcement:", error);
+        });
+    };
+
 
     const findWorkflow = (filters) => {
         console.log("Using filters: ", filters)
@@ -1154,6 +1349,199 @@ const Workflows2 = (props) => {
         </Dialog>
     ) : null;
 
+    const aiAnnouncementModal = aiAnnouncementModalOpen ? (
+        <Dialog
+        open={aiAnnouncementModalOpen}
+        onClose={handleCloseAiAnnouncement}
+        TransitionComponent={Zoom}
+        TransitionProps={{ timeout: 300 }}
+        PaperProps={{
+          style: {
+            background: theme.palette.DialogStyle.backgroundColor,
+            minWidth: isMobile ? "90vw" : 780,
+            maxWidth: isMobile ? "90vw" : 860,
+            borderRadius: 8,
+            overflow: "hidden",
+            transformOrigin: "center",
+          },
+        }}
+      >
+        <DialogTitle style={{ position: "relative", padding: 0, margin: 0 }}>
+          <IconButton
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+            }}
+            onClick={
+                () => {
+                    if (isCloud) {
+                        ReactGA.event({
+                            category: "AIGeneratedNewWorkflow",
+                            action: "close_announcement",
+                            label: userdata?.active_org?.id || userdata?.id || "",
+                        });
+                    }
+                    handleCloseAiAnnouncement();
+                }
+            }
+            aria-label="Close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            height: "380px",
+            overflow: "hidden",
+          }}
+        >
+          {/* Main two-column layout */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: { xs: 3, sm: 4 },
+              alignItems: "stretch",
+              p: { xs: 2.5, sm: 3 },
+              mt: 1,
+            }}
+          >
+            {/* Left: steps image (38%) */}
+            <Box
+              sx={{
+                flex: { xs: "0 0 auto", sm: "0 0 38%" },
+                maxWidth: { xs: "100%", sm: "38%" },
+              }}
+            >
+              <Box
+                component="img"
+                src="/aiGenerateWorkflowSteps.svg"
+                alt="AI workflow generation steps"
+                sx={{
+                  width: "100%",
+                  height: {xs: "auto", md: "80%"},
+                  marginLeft: -2,
+                  objectFit: "contain",
+                  borderRadius: "6px",
+                }}
+              />
+            </Box>
+
+            {/* Right: content (62%) */}
+            <Box
+              sx={{
+                flex: { xs: "1 1 auto", sm: "0 0 62%" },
+                maxWidth: { xs: "100%", sm: "62%" },
+                display: "flex",
+                flexDirection: "column",
+                gap: { xs: 1.5, sm: 2 },
+                py: 1.2,
+              }}
+            >
+              {/* NEW badge */}
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 1,
+                  py: 0.5,
+                  px: 1.25,
+                  border: "1px solid #2bc07e",
+                  color: "#f85a3e",
+                  background: "transparent",
+                  borderRadius: 999,
+                  width: "fit-content",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  mb: { xs: 0.5, sm: 1 },
+                }}
+              >
+                <AutoAwesomeIcon sx={{ fontSize: 16, color: "#2bc07e" }} />
+                <Box
+                  component="span"
+                  sx={{
+                    color: "#2bc07e",
+                  }}
+                >
+                  NEW
+                </Box>
+              </Box>
+
+              {/* Title */}
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  lineHeight: 1.25,
+                  fontFamily: theme.typography.fontFamily,
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                Introducing AI Workflow Generation
+              </Typography>
+
+              {/* Body text */}
+              <Typography
+                variant="body2"
+                sx={{
+                  lineHeight: 1.7,
+                  fontFamily: theme.typography.fontFamily,
+                }}
+              >
+                Simply describe what you want your workflow to do, and our AI
+                will automatically generate the workflow for you.
+              </Typography>
+
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: theme.typography.fontFamily }}
+              >
+                <strong>Quick start:</strong> Create Workflow → Describe → AI
+                Generate → Done.
+              </Typography>
+
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: theme.typography.fontFamily }}
+              >
+                For self-hosted setups, see the{" "}
+                <Box
+                  component="a"
+                  href="/docs/AI#self-hosting-models"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: "#ff8544", textDecoration: "underline" }}
+                >
+                  setup docs
+                </Box>
+              </Typography>
+
+              {/* CTA button */}
+              <Box sx={{ display: "flex", mt: { xs: 2, sm: 2.5 } }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={dismissAiAnnouncement}
+                  disableElevation
+                  sx={{
+                    py: 1.1,
+                    px: 2.7,
+                    textTransform: "none",
+                    mt: 3,
+                    borderRadius: "8px",
+                    fontSize: 14,
+                    width: { xs: "100%", sm: "auto" },
+                  }}
+                >
+                  Let's try it out
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
+    ) : null;
+
     const deleteModal = deleteModalOpen ? (
         <Dialog
             open={deleteModalOpen}
@@ -1170,13 +1558,13 @@ const Workflows2 = (props) => {
                     backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     zIndex: 1000,
                     '& .MuiDialogContent-root': {
-                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    	backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                     '& .MuiDialogTitle-root': {
-                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    	backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                 }
-                }}
+            }}
         >
             <DialogTitle>
                 <div style={{ textAlign: "center", color: theme.palette.DialogStyle?.color }}>
@@ -1351,6 +1739,53 @@ const Workflows2 = (props) => {
          window.location.reload();
         }
     }, []);
+
+	useEffect(() => {
+		if (workflows?.length === 0) {
+			return
+		}
+
+		if (workflowTimelines?.length > 0) {
+			return
+		}
+
+		//if (isLoggedIn !== true) {
+		//	return
+		//}
+		  
+		const results = Promise.all(
+			workflows.slice(0,16).map((workflow, index) => {
+
+				return fetch(`${globalUrl}/api/v2/workflows/${workflow.id}/executions`, {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+					},
+					credentials: "include",
+				}).then((response) => response.json())
+			})
+	    )
+
+		results.then((res) => {
+			var newarray = []
+			for (var resKey in res) {
+				const result = res[resKey]
+				if (result?.timeline === undefined || result?.timeline === null) {
+					continue
+				}
+
+				newarray.push({
+					"id": result.id,
+					"timeline": result.timeline,
+				})
+			}
+
+			setWorkflowTimelines(newarray)
+		})
+
+
+	}, [workflows])
     
     const getAvailableWorkflows = (amount) => {
         var storageWorkflows = []
@@ -1407,17 +1842,28 @@ const Workflows2 = (props) => {
 							toast.info("No workflows found in this org. Feel free to look into our public workflows!" , {
 								timeout: 7500,
 							})
+
 							setCurrTab(2)
 						}
+
+						localStorage.setItem("workflows", "[]")
+						setWorkflows([])
+						setFilteredWorkflows([])
 					}
 
                     var newarray = []
 					var backupWf = []
+					var backgroundWf = []
                     for (var wfkey in responseJson) {
                         const wf = responseJson[wfkey]
-                        if (wf.public === true || wf.hidden === true) {
+                        if (wf?.public === true || wf?.hidden === true) {
                             continue
                         }
+
+						if (wf?.background_processing === true) {
+							backgroundWf.push(wf)
+							continue
+						}
 
 						if (wf?.backup_config?.onprem_backup === true) {
 							backupWf.push(wf)
@@ -1426,6 +1872,10 @@ const Workflows2 = (props) => {
 
                         newarray.push(wf)
                     }
+
+					if (backgroundWf.length > 0) {
+						setBackgroundWorkflows(backgroundWf)
+					}
 
 					if (backupWf.length > 0) {
 						setBackupWorkflows(backupWf)
@@ -1659,11 +2109,9 @@ const Workflows2 = (props) => {
 
     const paperAppStyle = {
         minHeight: 146,
-        maxHeight: 146,
         overflow: "hidden",
         width: "100%",
         color: "white",
-        display: "flex",
         fontFamily: theme.typography?.fontFamily,
         boxSizing: "border-box",
         position: "relative",
@@ -2449,26 +2897,25 @@ const Workflows2 = (props) => {
 
         var orgName = "";
         var orgId = "";
+
+		var imageStyle = {
+			width: imagesize,
+			height: imagesize,
+			pointerEvents: "none",
+			marginLeft:
+				data.creator_org !== undefined && data.creator_org.length > 0
+					? 20
+					: 0,
+			borderRadius: 10,
+			cursor: "pointer",
+			marginRight: 10,
+		}
+
         if (userdata.orgs !== undefined) {
             const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
             if (foundOrg !== undefined && foundOrg !== null) {
                 //position: "absolute", bottom: 5, right: -5,
-                const imageStyle = {
-                    width: imagesize,
-                    height: imagesize,
-                    pointerEvents: "none",
-                    marginLeft:
-                        data.creator_org !== undefined && data.creator_org.length > 0
-                            ? 20
-                            : 0,
-                    borderRadius: 10,
-                    border:
-                        foundOrg.id === userdata.active_org.id
-                            ? `3px solid ${boxColor}`
-                            : null,
-                    cursor: "pointer",
-                    marginRight: 10,
-                };
+				imageStyle.border = foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null
 
 
                 image =
@@ -2491,6 +2938,44 @@ const Workflows2 = (props) => {
                 orgId = foundOrg.id;
             }
         }
+
+		var triggerfound = false
+		var triggerstarted = false
+		var relevantTrigger = {}
+		for (var triggerkey in data?.triggers) {
+
+			const trigger = data?.triggers[triggerkey]
+			if (trigger?.trigger_type === "WEBHOOK") {
+				triggerfound = true
+				image = wfTriggers[0].large_image 
+
+				relevantTrigger = trigger
+				if (trigger?.status === "running") {
+					imageStyle.border = `3px solid ${green}`
+					break
+				} else {
+					imageStyle.border = `3px solid ${red}`
+				}
+
+
+			} else if (trigger?.trigger_type === "SCHEDULE") {
+				triggerfound = true
+				image = wfTriggers[1].large_image 
+
+				relevantTrigger = trigger
+				if (trigger?.status === "running") {
+					imageStyle.border = `3px solid ${green}`
+					break
+				} else {
+					imageStyle.border = `3px solid ${red}`
+				}
+
+			} 
+		}
+
+		if (!triggerfound) {
+			image = ""
+		}
 
         var selectedCategory = ""
         if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0 && usecases !== null && usecases !== undefined && usecases.length > 0) {
@@ -2534,6 +3019,7 @@ const Workflows2 = (props) => {
             }
 
             image = data.creator_info !== undefined && data.creator_info !== null && data.creator_info.image !== undefined && data.creator_info.image !== null && data.creator_info.image.length > 0 ? <Avatar alt={data.creator} src={data.creator_info.image} style={imageStyle} /> : <Avatar alt={"shuffle_image"} src={theme.palette.defaultImage} style={imageStyle} />
+
             const creatorname = data.creator_info !== undefined && data.creator_info !== null && data.creator_info.username !== undefined && data.creator_info.username !== null && data.creator_info.username.length > 0 ? data.creator_info.username : "Shuffle"
             if ((data.objectID === undefined || data.objectID === null) && data.id !== undefined && data.id !== null) {
                 data.objectID = data.id
@@ -2546,10 +3032,12 @@ const Workflows2 = (props) => {
             }
         }
 
-
+		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
         return (
             <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily }}>
+
                 <Paper square style={paperAppStyle}>
+
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
                             <div
@@ -2558,11 +3046,12 @@ const Workflows2 = (props) => {
                                     position: "absolute",
                                     top: 0,
                                     left: 0,
-                                    height: paperAppStyle.minHeight,
                                     width: 3,
                                     backgroundColor: boxColor,
                                     borderRadius: "0 100px 0 0",
                                     fontFamily: theme.typography?.fontFamily,
+
+                                    height: "100%",
                                 }}
                                 onClick={() => {
                                     addFilter(selectedCategory)
@@ -2577,17 +3066,27 @@ const Workflows2 = (props) => {
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
 							{currTab === 2 ? null : 
-								<Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
+								<Tooltip title={`${relevantTrigger?.name}: ${relevantTrigger?.status}`} placement="bottom">
+
 									<div
-										styl={{ cursor: "pointer" }}
+										style={{ cursor: "" }}
 										onClick={() => {
-											navigate("/admin")
+											//navigate("/admin")
 										}}
 									>
-										{image}
+										{image?.includes("data:image") ? 
+											<img
+												alt={orgName}
+												src={image}
+												style={imageStyle}
+											/>
+											:
+											image
+										}
 									</div>
 								</Tooltip>
 							}
+
                             <Tooltip arrow
                                 onMouseEnter={() => {
                                     /*
@@ -2695,7 +3194,7 @@ const Workflows2 = (props) => {
                                                     style={{
                                                         height: 24,
                                                         width: 24,
-                                                        filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(0.9)",
+                                                        filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(1)",
                                                         cursor: "pointer",
                                                     }}
                                                     onClick={() => {
@@ -2716,7 +3215,7 @@ const Workflows2 = (props) => {
                                                         style={{
                                                             height: 24,
                                                             width: 24,
-                                                            filter: "brightness(0.6)",
+                                                            filter: themeMode === "dark" ? "brightness(0.6)" : "brightness(1)",
                                                             cursor: "pointer",
                                                         }}
                                                         onClick={() => {
@@ -2874,7 +3373,8 @@ const Workflows2 = (props) => {
                                 })
                                 : null}
                         </Grid>
-                        {data.actions !== undefined && data.actions !== null && type !== "public" ? (
+
+                        {type !== "public" ? (
                             <div style={{ position: "absolute", top: 10, right: 10, }}>
                                 <IconButton
                                     aria-label="more"
@@ -2891,7 +3391,7 @@ const Workflows2 = (props) => {
 
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
-                                <div style={{ position: "absolute", top: 50, right: 8, }}>
+                                <div style={{ position: "absolute", top: 80, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2908,8 +3408,8 @@ const Workflows2 = (props) => {
                         : null}
 
 						{(data?.validation?.validation_ran === true && data?.validation?.valid === false && data?.validation?.errors?.length > 0 ) ?                            
-							<Tooltip title={`Explore more than  ${data?.validation?.errors?.length} notifications. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
-                                <div style={{ position: "absolute", top: 85, right: 8, }}>
+							<Tooltip title={`Explore more than ${data?.validation?.errors?.length} notifications for this workflow. When the last execution finishes without errors AND notifications stop occuring, this icon disappears.`} placement="top">
+                                <div style={{ position: "absolute", top: 40, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -2919,19 +3419,38 @@ const Workflows2 = (props) => {
                                         }}
                                         style={{ 
 											padding: "0px", 
-											color: "#979797",
+											transparency: 0.5,
 										}}
+										color="primary"
                                     >
-										<ErrorOutlineIcon style={{ 
-											marginRight: 2, 
-										}} />
+										<ErrorOutlineIcon 
+											style={{ 
+												color: "#f86a3e",
+												marginRight: 2, 
+											}} 
+										/>
                                     </IconButton>
                                 </div>
                             </Tooltip>
 						: null}
 
                     </Grid>
+
+					{showExecutionStats === true && foundTimeline !== undefined && foundTimeline?.timeline?.length > 0 && 
+					  <div style={{ margin: "40px 10px 0px 10px", paddingTop: 0, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+						<LineChartWrapper 
+							inputname={""}
+							keys={foundTimeline?.timeline}
+							height={100}
+							width={100}
+							border={false}
+
+							color={"#808080"}
+						/>
+					  </div>
+					}
                 </Paper>
+
             </div>
         )
     }
@@ -4414,16 +4933,33 @@ const Workflows2 = (props) => {
 								{backupWorkflows.length > 0 &&
 									<Tab
 										label={`Onprem Backup (${backupWorkflows.length})`}
+										value={3}
 										style={{
 											...tabStyle,
+											borderLeft: "1px solid rgba(255,255,255,0.3)",
 											marginLeft: 25, 
 											...(currTab === 3 ? tabActive : {})
 										}}
 									/>
 								}
 
+								{backgroundWorkflows.length > 0 &&
+									<Tab
+										label={`Background Processes`}
+										value={4}
+										style={{
+											...tabStyle,
+											borderLeft: "1px solid rgba(255,255,255,0.3)",
+											borderRight: "1px solid rgba(255,255,255,0.3)",
+											marginLeft: 25, 
+											...(currTab === 4 ? tabActive : {})
+										}}
+									/>
+								}
+
                                 <Tab
                                     label="Org Forms"
+									value={5}
 									onClick={() => {
 										navigate("/forms")
 									}}
@@ -4431,7 +4967,7 @@ const Workflows2 = (props) => {
                                         ...tabStyle,
                                         marginRight: 0,
 										marginLeft: 25, 
-                                        ...(currTab === 4 ? tabActive : {})
+                                        ...(currTab === 5 ? tabActive : {})
                                     }}
                                 />
                             </Tabs>
@@ -4664,7 +5200,23 @@ const Workflows2 = (props) => {
                                     paddingRight: 1,
                                     gap: 4
                                 }}>
-                                    <Tooltip title="Explore Workflow Runs" placement="top">
+
+                                    <Tooltip title="Show/Hide Workflow Runs for top workflows" placement="top">
+                                        <IconButton
+                                            style={currTab === 2 ? iconButtonDisabledStyle : {...iconButtonStyle, color: showExecutionStats ? "#1a1a1a" : theme.palette.text.primary, background: showExecutionStats ? theme.palette.primary.main : theme.palette.platformColor}}
+                                            onClick={() => {
+
+                                                const newView = !showExecutionStats
+                                                localStorage.setItem("showExecutionStats", newView)
+												setShowExecutionStats(!showExecutionStats)
+											}}
+                                            disabled={currTab === 2}
+                                        >
+                                            <BarChartIcon />
+                                        </IconButton>
+                                    </Tooltip>
+
+                                    <Tooltip title="Explore Workflow Runs (debugger)" placement="top">
                                         <IconButton
                                             style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
                                             onClick={() => navigate("/workflows/debug")}
@@ -4816,6 +5368,28 @@ const Workflows2 = (props) => {
                                                         </span>
                                                     )
                                                 })}
+
+                                                {currTab === 4 && backgroundWorkflows.map((data, index) => {
+                                                    // Shouldn't be a part of this list
+                                                    if (data.public === true) {
+                                                        return null
+                                                    }
+
+                                                    // if (firstLoad) {
+                                                    //     workflowDelay += 75
+                                                    // } else {
+                                                    //     return <WorkflowPaper key={index} data={data} />
+                                                    // }
+
+                                                    return (
+                                                        <span key={index}>
+                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+                                                            <WorkflowPaper data={data} />
+                                                            {/*</Zoom>*/}
+                                                        </span>
+                                                    )
+                                                })}
+
 
                                                 {
                                                     currTab !== 1 ? null :
@@ -5212,10 +5786,10 @@ const Workflows2 = (props) => {
 				</ShepherdTour>
 				*/}
                 <DropzoneWrapper onDrop={uploadFile} WorkflowView={WorkflowView} />
-                {/* {modalView} */}
                 {deleteModal}
                 {exportVerifyModal}
                 {publishModal}
+                {aiAnnouncementModal}
                 {workflowDownloadModalOpen}
 
                 {/*!drawerOpen ? 
@@ -5279,8 +5853,10 @@ const Workflows2 = (props) => {
         width: '100%',
         height: '100%',
     }
+
     // Maybe use gridview or something, idk
     return <div style={isSafari ? safariStyle : {zoom: 0.7, minHeight: "80vh",}}>{loadedCheck}</div>;
+    // return <div style={isSafari ? safariStyle : {minHeight: "80vh",}}>{loadedCheck}</div>;
 };
 
 

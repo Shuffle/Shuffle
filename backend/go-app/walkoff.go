@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math/rand"
+	//"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,6 +26,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	newscheduler "github.com/carlescere/scheduler"
+	"github.com/go-co-op/gocron"
 	"github.com/frikky/kin-openapi/openapi3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -42,17 +43,22 @@ var baseEnvironment = "onprem"
 var cloudname = "cloud"
 
 var scheduledJobs = map[string]*newscheduler.Job{}
+var cronJobs = map[string]*gocron.Job{}
 var scheduledOrgs = map[string]*newscheduler.Job{}
+
+var CronScheduler = gocron.NewScheduler(time.UTC)
 
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
 	var err error
 	testSplit := strings.Split(frequency, "*")
 	cronJob := ""
+	isCron := false
 	newfrequency := 0
 
 	if len(testSplit) > 5 {
 		cronJob = frequency
+		isCron = true
 	} else {
 		newfrequency, err = strconv.Atoi(frequency)
 		if err != nil {
@@ -65,12 +71,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		//} else if int(newfrequency) <
 	}
 
-	// Reverse. Can't handle CRON, only numbers
-	if len(cronJob) > 0 {
-		return errors.New("cronJob isn't formatted correctly")
-	}
-
-	if newfrequency < 1 {
+	if newfrequency < 1 && !isCron {
 		return errors.New("Frequency has to be more than 0")
 	}
 
@@ -96,17 +97,27 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		}
 	}
 
-	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
+	log.Printf("[INFO] Starting frequency for execution: %s", frequency)
 
-	//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
-	jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
-	if err != nil {
-		log.Printf("Failed to schedule workflow: %s", err)
-		return err
+	if isCron {
+		cronJob, err := CronScheduler.Cron(cronJob).Do(job)
+		if err != nil {
+			log.Printf("[ERROR] Failed to start schedule with cron(%s): %s", cronJob, err)
+		}
+
+		cronJobs[scheduleId] = cronJob
+	} else {
+		//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
+		jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
+		if err != nil {
+			log.Printf("Failed to schedule workflow: %s", err)
+			return err
+		}
+
+		scheduledJobs[scheduleId] = jobret
 	}
 
 	//scheduledJobs = append(scheduledJobs, jobret)
-	scheduledJobs[scheduleId] = jobret
 
 	// Doesn't need running/not running. If stopped, we just delete it.
 	timeNow := int64(time.Now().Unix())
@@ -117,6 +128,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		Argument:             string(body),
 		WrappedArgument:      bodyWrapper,
 		Seconds:              newfrequency,
+		Frequency:            frequency,
 		CreationTime:         timeNow,
 		LastModificationtime: timeNow,
 		LastRuntime:          timeNow,
@@ -245,7 +257,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// This is really the environment's name - NOT org-id
+	// This is really the environment's name - NOT OrgId 
 	environment := request.Header.Get("Org-Id")
 	if len(environment) == 0 {
 		log.Printf("[AUDIT] No org-id header set")
@@ -254,7 +266,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	orgId := request.Header.Get("org")
+	// Org => Org ID here
+	orgId := request.Header.Get("Org")
 	if len(orgId) == 0 {
 		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 		/*
@@ -263,9 +276,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			return
 		*/
 	}
-
-	orborusLabel := request.Header.Get("x-orborus-label")
-
+	
 	// This section is cloud custom for now
 	auth := request.Header.Get("Authorization")
 	if len(auth) == 0 {
@@ -277,192 +288,46 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		*/
 	}
 
-	//log.Printf("[AUDIT] Get workflow queue for org %s, env %s, orborus label %s", orgId, environment, orborusLabel)
-
 	ctx := shuffle.GetContext(request)
-	// Get all env and check the name?
 	envs, err := shuffle.GetEnvironments(ctx, orgId)
-
 	if err != nil || len(envs) == 0 {
-		log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
+		//log.Printf("[WARNING] No env found for orgId %s during queue loading", orgId)
 	}
 
 	var env *shuffle.Environment
-	for _, e := range envs {
-		if e.Name == environment {
-			env = &e
+	found := false
+	for i := range envs {
+		if envs[i].Name == environment {
+			env = &envs[i]
+			found = true
 			break
 		}
 	}
 
-	timeNow := time.Now().Unix()
-	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
-	if err != nil {
-		if !strings.Contains(err.Error(), "mismatch") {
-			log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
+	// Only works onprem - shared queues across tenants
+	// without tenancy  
+	if !found {
+		env, err = shuffle.GetEnvironment(ctx, environment, "")
+		if err != nil {
+			log.Printf("[WARNING] Failed to find the environment(%s) in org(%s). Could cause with Failover test", environment, orgId)
 		}
-
-		return
 	}
 
-	//log.Printf("Found env: %#v", env)
+	// Handles failover control between Orborus'
+	// Further tracks checkin time to ensure this works properly
+	// across instances
+	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
+	if err != nil {
+		log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
+	}
+
 	if len(env.OrgId) > 0 {
 		orgId = env.OrgId
 	}
 
-	// FIXME: Workflow stats disabled for now
-	// as it caused too many problems
-	// goal: track docker stuff once a minute and graph it
-	// For now: Disable this as it caused too many problems
-	if request.Method == "POST" && true == false {
-		//log.Printf("[DEBUG] POST to workflowqueue")
-		if rand.Intn(10) == 0 {
-			// Parse out body
-			body, err := ioutil.ReadAll(request.Body)
-			if err == nil {
-
-				// Parse out CPU, memory and disk.
-
-				var envData shuffle.OrborusStats
-				err = json.Unmarshal(body, &envData)
-				if err == nil && !envData.Swarm && !envData.Kubernetes && (envData.CPU > 0 || envData.Memory > 0 || envData.Disk > 0) {
-
-					// Set the input in memory
-					envData.OrgId = orgId
-					envData.Environment = environment
-					envData.OrborusLabel = orborusLabel
-					envData.Timestamp = time.Now().Unix()
-
-					if envData.CPU > 0 && envData.MaxCPU > 0 {
-						envData.CPUPercent = float64(envData.CPU) / float64(envData.MaxCPU)
-					}
-
-					if envData.Memory > 0 && envData.MaxMemory > 0 {
-						envData.MemoryPercent = float64(envData.Memory) / float64(envData.MaxMemory)
-					}
-
-					// Check if CPU percent constantly has stayed above X% for the last Y requests
-					percentageCheck := 90
-					concurrentChecks := 2
-
-					//if int(envData.CPUPercent) > percentageCheck {
-					// Get cached data
-					percentages := []float64{}
-					cacheKey := fmt.Sprintf("%s_%s_percent", environment , strings.ToLower(orgId))
-
-					// Marshal float list into []byte
-					cacheData := []byte{}
-					cache, err := shuffle.GetCache(ctx, cacheKey)
-					if err == nil {
-						// Unmarshal into percentages
-						cacheData := []byte(cache.([]uint8))
-						err = json.Unmarshal(cacheData, &percentages)
-						if err != nil {
-							log.Printf("[INFO] error in cache unmarshal for percentages: %s", err)
-						}
-
-						if len(percentages) > concurrentChecks {
-							percentages = percentages[:concurrentChecks]
-						}
-
-						percentages = append(percentages, envData.CPUPercent)
-						if len(percentages) > concurrentChecks {
-							//log.Printf("[INFO] Checking percentages: %v", percentages)
-
-							// percentageCheck := 1
-							sendAlert := true
-							for _, p := range percentages {
-								if int(p) < percentageCheck {
-									//log.Printf("[AUDIT] CPU percent is below %d: %d", percentageCheck, int(p))
-									sendAlert = false
-									break
-								}
-							}
-
-							if sendAlert {
-								log.Printf("[INFO] CPU percent has been above %d percent for the last 5 requests. Sending alert. Env: %s, org: %s", percentageCheck, environment, orgId)
-
-								// Set notification + alert for organization
-								err = shuffle.CreateOrgNotification(
-									ctx,
-									fmt.Sprintf("CPU percent has been above %d percent", percentageCheck),
-									fmt.Sprintf("A environment %s has been using more than %d\\% CPU for the last 5 requests.", environment, percentageCheck),
-									fmt.Sprintf("/admin?tab=environments"),
-									environment,
-									true,
-								)
-
-								if err != nil {
-									log.Printf("[ERROR] error creating notification: %s", err)
-								}
-
-								org, err := shuffle.GetOrg(ctx, environment)
-								if err == nil {
-									foundRecommendation := false
-									for _, recommendation := range org.Priorities {
-										if strings.Contains(recommendation.Name, "CPU") {
-											foundRecommendation = true
-											break
-										}
-									}
-
-									if !foundRecommendation {
-										// Add to start of org.Priorities
-										org, _ = shuffle.AddPriority(*org, shuffle.Priority{
-											Name:        fmt.Sprintf("High CPU in environment %s", orgId),
-											Description: fmt.Sprintf("The environment %s has been using more than %d percent CPU. This indicates you may need to look at scaling.", orgId, percentageCheck),
-											Type:        "scale",
-											Active:      true,
-											URL:         fmt.Sprintf("/admin?tab=environments"),
-											Severity:    1,
-										}, false)
-
-										//Make last item the first item
-										org.Priorities = append([]shuffle.Priority{org.Priorities[len(org.Priorities)-1]}, org.Priorities[:len(org.Priorities)-1]...)
-										err = shuffle.SetOrg(ctx, *org, org.Id)
-										if err != nil {
-											log.Printf("[ERROR] Problem setting org: %s", err)
-										}
-									}
-								}
-							}
-
-							if len(percentages) > 1 {
-								percentages = percentages[1:]
-							}
-						}
-
-						// Marshal float list into []byte
-					} else {
-						//log.Printf("[ERROR] Failed getting cache: %s", err)
-						percentages = append(percentages, envData.CPUPercent)
-					}
-
-					if len(percentages) > 0 {
-						//log.Printf("[DEBUG] Setting cache for %s: %#v", cacheKey, percentages)
-						cacheData, err = json.Marshal(percentages)
-						if err != nil {
-							log.Printf("[INFO] error in cache marshal: %s", err)
-						}
-
-						// Add the new data
-						go shuffle.SetCache(ctx, cacheKey, cacheData, 5)
-					}
-				}
-
-				//log.Printf("CPU percent: %f", envData.CPUPercent)
-				//log.Printf("Memory percent: %f", envData.MemoryPercent*100)
-
-				go shuffle.SetenvStats(ctx, envData)
-			}
-		}
-	}
-
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, environment, 100)
 	if err != nil {
-		// Skipping as this comes up over and over
-		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -471,10 +336,11 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-		//log.Printf("In workflowqueue with %d", len(executionRequests.Data))
 
-		// Try again :)
+		// Try again? I don't think this is necessary, and shouldn't really ever occur. 
+		/*
 		if len(env.Id) == 0 && len(env.Name) == 0 {
+			timeNow := int64(time.Now().Unix())
 			foundId := ""
 			for _, requestData := range executionRequests.Data {
 				execution, err := shuffle.GetWorkflowExecution(ctx, requestData.ExecutionId)
@@ -487,9 +353,10 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			if len(environment) > 0 {
-				env, err := shuffle.GetEnvironment(ctx, foundId, environment)
+      
+				env, err := shuffle.GetEnvironment(ctx, environment, foundId)
 				if err != nil {
-					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
+					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
 					//resp.WriteHeader(401)
 					//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No env found matching %s"}`, id)))
 					//return
@@ -505,6 +372,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 				}
 			}
 		}
+		*/
 
 		if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]
@@ -1685,7 +1553,15 @@ func deleteSchedule(ctx context.Context, id string) error {
 			value.Lock()
 		} else {
 			// FIXME - allow it to kind of stop anyway?
-			return errors.New("Can't find the schedule.")
+			if j, ok := cronJobs[id]; ok {
+				err := CronScheduler.RemoveByID(j)
+				if err != nil {
+					log.Printf("[ERROR] Failed to remove the scheduler %s", err)
+					return err
+				}
+			} else {
+				return errors.New("Can't find the schedule.")
+			}
 		}
 	}
 
@@ -2141,14 +2017,14 @@ func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 
 	//fmt.Printf("File type: %s. MIME: %s\n", kind.Extension, kind.MIME.Value)
 	if kind == filetype.Unknown {
-		fmt.Println("Unknown file type")
+		log.Println("Unknown file type")
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	if kind.MIME.Value != "application/zip" {
-		fmt.Println("Not zip, can't unzip")
+		log.Println("Not zip, can't unzip")
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2307,17 +2183,24 @@ func handleSingleAppHotloadRequest(resp http.ResponseWriter, request *http.Reque
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
 	if user.Role != "admin" {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Must be admin to hotload apps"}`))
 		return
 	}
+
 	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		location = "./shuffle-apps"
+	}
+
 	if len(location) == 0 {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
 		return
 	}
+
 	requestUrlFields := strings.Split(request.URL.String(), "/")
 	var appName string
 	if requestUrlFields[1] == "api" {
@@ -2381,6 +2264,10 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		location = "./shuffle-apps"
+	}
+
 	if len(location) == 0 {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
@@ -2982,24 +2869,24 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	location := strings.Split(request.URL.String(), "/")
-	var fileId string
+	var appId string
 	if location[1] == "api" {
 		if len(location) <= 4 {
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
-		fileId = location[4]
+		appId = location[4]
 	}
 
 	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
-	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, fileId)
+	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, appId)
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("[INFO] Failed single execution POST body read: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -3024,7 +2911,15 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		decisionId = decision[0]
 	}
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction, decisionId)
+	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, appId, body, runValidationAction, decisionId)
+	if appId == "agent_starter" { 
+		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
 
 	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 	resp.Header().Add("X-Debug-Url", debugUrl)
@@ -3065,6 +2960,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
 	executionRequest := shuffle.ExecutionRequest{
+		Priority: 15, 
 		ExecutionId:   workflowExecution.ExecutionId,
 		WorkflowId:    workflowExecution.Workflow.ID,
 		Authorization: workflowExecution.Authorization,
@@ -3110,7 +3006,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 }
 
 // Onlyname is used to
-func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) ([]shuffle.BuildLaterStruct, []shuffle.BuildLaterStruct, error) {
+func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate, duringStartup bool) ([]shuffle.BuildLaterStruct, []shuffle.BuildLaterStruct, error) {
 	var err error
 
 	allapps := []shuffle.WorkflowApp{}
@@ -3122,7 +3018,14 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"YARA",
 		"ATTACK-PREDICTOR",
 	}
-	//if strings.ToUpper(workflowapp.Name) == strings.ToUpper(appname) {
+
+	startupNames := []string{
+		"shuffle-tools",
+		"http",
+		"email",
+		"shuffle-ai",
+		"shuffle-subflow",
+	}
 
 	// It's here to prevent getting them in every iteration
 	buildLaterFirst := []shuffle.BuildLaterStruct{}
@@ -3130,6 +3033,19 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
+		}
+
+		//duringStartup 
+		if duringStartup {
+			// Look for names: shuffle tools, http, email, shuffle ai
+			if shuffle.ArrayContains(startupNames, strings.ToLower(file.Name())) {
+				// Allowed to build during startup
+
+				//log.Printf("\n\n\nFOUND MATCHING APP: %s\n\n\n", file.Name())
+			} else {
+				//log.Printf("\n\n\nWRONG APP (2): %s\n\n\n", file.Name())
+				continue
+			}
 		}
 
 		// Folder?
@@ -3148,7 +3064,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			buildFirst, buildLast, err := IterateAppGithubFolders(ctx, fs, dir, tmpExtra, "", forceUpdate)
+			buildFirst, buildLast, err := IterateAppGithubFolders(ctx, fs, dir, tmpExtra, "", forceUpdate, false)
 
 			for _, item := range buildFirst {
 				buildLaterFirst = append(buildLaterFirst, item)
@@ -3160,7 +3076,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 
 			if err != nil {
 				log.Printf("[WARNING] Error reading folder: %s", err)
-				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
+				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate, false)
 
 				if !forceUpdate {
 					continue
@@ -3460,6 +3376,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"http",
 		"email",
 	}
+
 	for _, buildLater := range buildLaterFirst {
 		found := false
 		for _, appname := range initApps {
@@ -3478,12 +3395,19 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 	}
 
 	// Prepend newSortedList to buildLaterFirst
+	handledImages := []string{}
 	buildLaterFirst = append(newSortedList, buildLaterFirst...)
-
 	if len(extra) == 0 {
 		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
 		for _, item := range buildLaterFirst {
+
+			if len(item.Tags) > 0 && shuffle.ArrayContains(handledImages, item.Tags[0]) {
+				continue
+			} 
+
+			handledImages = append(handledImages, item.Tags[0])
 			err = buildImageMemory(fs, item.Tags, item.Extra, true)
+
 			if err != nil {
 				orgId := ""
 
@@ -3513,6 +3437,12 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		if len(buildLaterList) > 0 {
 			log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
 			for _, item := range buildLaterList {
+				if len(item.Tags) > 0 && shuffle.ArrayContains(handledImages, item.Tags[0]) {
+					continue
+				} 
+
+				handledImages = append(handledImages, item.Tags[0])
+
 				err = buildImageMemory(fs, item.Tags, item.Extra, true)
 				if err != nil {
 					log.Printf("[INFO] Failed image build memory: %s", err)
@@ -3646,7 +3576,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate)
+		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate, false)
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/

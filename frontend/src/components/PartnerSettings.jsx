@@ -42,7 +42,7 @@ const PartnerSettings = (props) => {
     // Partner Types handling : Getting from org status
     useEffect(() => {
         const partnerTypes = {};
-        userdata?.org_status.forEach(status => {
+        userdata?.org_status?.forEach(status => {
             if (status.includes("_partner")) {
                 partnerTypes[status] = true;
             }
@@ -54,7 +54,8 @@ const PartnerSettings = (props) => {
         "tech_partner": "#ff8544",
         "distribution_partner": "#2BC07E",
         "service_partner": "#a99cf9",
-        "integration_partner": "#fb47a0"
+        "integration_partner": "#fb47a0",
+        "channel_partner": "#4caf50",
     }
 
     const handleSendUpdateRequest = () => {
@@ -85,6 +86,7 @@ const PartnerSettings = (props) => {
             { field: partnerData?.landscape_image_url, name: "Landscape Image" },
             { field: partnerData?.website_url, name: "Website URL" },
             { field: partnerData?.article_url, name: "Article URL" },
+            { field: partnerData?.contact_email, name: "Contact Email" },
             { field: partnerData?.country, name: "Country" },
             { field: partnerData?.region, name: "Region" },
         ];
@@ -119,6 +121,12 @@ const PartnerSettings = (props) => {
             toast.error("There should be at least one partner type");
             return;
         }
+        
+        // Validate description length
+        if (partnerData?.description && partnerData.description.length > 1000) {
+            toast.error("Description should be less than or equal to 1000 characters");
+            return;
+        }
        
         setIsPublishing(true);
         const url = globalUrl + "/api/v1/partners/" + userdata?.active_org?.id;
@@ -129,6 +137,7 @@ const PartnerSettings = (props) => {
             description: partnerData.description?.trim(),
             website_url: partnerData.website_url?.trim(),
             article_url: partnerData.article_url?.trim(),
+            contact_email: partnerData.contact_email?.trim(),
             partner_type: partnerTypes,
             expertise: partnerData?.expertise || [],
             services: partnerData?.services || [],
@@ -150,17 +159,15 @@ const PartnerSettings = (props) => {
         })
         .then((response) => {
             setIsPublishing(false);
-            if (response.status !== 200) {
+            if (response.status === 200) {
+                toast.success("Partner details successfully updated");
+            } else {
                 toast.error("Failed to publish partner");
             }
-            return response.json();
-        })
-        .then((responseJson) => {
-            toast.success("Partner details successfully updated");
         })
         .catch((error) => {
             setIsPublishing(false);
-            toast.error("Failed to update partner details: " + error?.message);
+            toast.error("Failed to update partner details: " + error?.reason);
         })
     }
 
@@ -177,6 +184,7 @@ const PartnerSettings = (props) => {
             description: partnerData.description?.trim(),
             website_url: partnerData.website_url?.trim(),
             article_url: partnerData.article_url?.trim(),
+            contact_email: partnerData.contact_email?.trim(),
             partner_type: partnerTypes,
             usecases: partnerData?.usecases || [],
             expertise: partnerData?.expertise || [],
@@ -233,32 +241,41 @@ const PartnerSettings = (props) => {
                 sx={{display:"flex", alignItems:"flex-start", gap:2, justifyContent:"flex-start"
                 }}>
                 <Typography variant='h3' sx={{ marginBottom: "15px", marginTop: 0, }}>Configuration</Typography>
-                {Object?.entries(partnerTypes)?.map(([key, value]) => (
-                    <Box
-                        sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "999px",
-                        py: 1.2,
-                        px: 2.5,
-                        fontSize: "13px",
-                        fontWeight: 500,
-                        fontFamily: theme.typography.fontFamily,
-                        color: "#fff",
-                        backgroundColor: "transparent",
-                        border: `1.5px solid ${
-                            partnerTypeColors[key]
-                        }`,
-                        transition: "all 0.2s ease",
-                        textAlign: "center",
-                        whiteSpace: "nowrap",
-                        color: partnerTypeColors[key],
-                    }}
-                    >
-                    {key.replace("_", " ").replace(/\b\w/g, char => char.toUpperCase())}
-                </Box>
-                ))}
+                {Object?.entries(partnerTypes)
+                    ?.filter(([key, value]) => key !== "distribution_partner")
+                    ?.map(([key, value]) => {
+                        let displayText = key?.replace("_", " ")?.replace(/\b\w/g, char => char.toUpperCase());
+                        if (displayText === "Tech Partner") {
+                            displayText = "Technology Partner";
+                        }
+                        return (
+                            <Box
+                                key={key}
+                                sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: "999px",
+                                py: 1.2,
+                                px: 2.5,
+                                fontSize: "13px",
+                                fontWeight: 500,
+                                fontFamily: theme.typography.fontFamily,
+                                color: "#fff",
+                                backgroundColor: "transparent",
+                                border: `1.5px solid ${
+                                    partnerTypeColors[key]
+                                }`,
+                                transition: "all 0.2s ease",
+                                textAlign: "center",
+                                whiteSpace: "nowrap",
+                                color: partnerTypeColors[key],
+                            }}
+                            >
+                            {displayText}
+                        </Box>
+                        );
+                    })}
                 </Box>
                 <Box
                 sx={{
@@ -314,9 +331,9 @@ const PartnerSettings = (props) => {
                                     boxShadow: "none", 
                                     marginRight: 4,
                                     px: 3,
-                                    backgroundColor: partnerData?.public ? "#FD4C62" : "#4caf50",
+                                    backgroundColor: partnerData?.public ? "#FD4C62" : "#2BC07E",
                                     "&:hover": {
-                                        backgroundColor: partnerData?.public ? "#FD4C62" : "#4caf50"
+                                        backgroundColor: partnerData?.public ? "#FD4C62" : "#2BC07E"
                                     }
                                 }}
                                 variant="contained"

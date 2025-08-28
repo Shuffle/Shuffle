@@ -222,7 +222,7 @@ const PartnerDetails = (props) => {
                   <div style={{ marginTop: 8, display: "flex" }} />
                   <div style={{ display: "flex" }}>
                     <div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Name
                       </Typography>
                       <Skeleton 
@@ -267,7 +267,7 @@ const PartnerDetails = (props) => {
                       />
                     </div> */}
                     <div style={{ alignItems: "center" }}>
-                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary }}>
+                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Solutions
                       </div>
                       <Skeleton 
@@ -282,7 +282,7 @@ const PartnerDetails = (props) => {
                       />
                     </div>
                     <div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }}>
-                        <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                        <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                           Region
                         </Typography>
                         <Skeleton 
@@ -297,7 +297,7 @@ const PartnerDetails = (props) => {
                         />
                     </div>
                     <div style={{ alignItems: "center", marginLeft: 12 }}>
-                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary }}>
+                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Country
                       </div>
                       <Skeleton 
@@ -313,7 +313,7 @@ const PartnerDetails = (props) => {
                     </div>
                   </div>
                   <div style={{ marginTop: "10px" }}>
-                    <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                    <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                       Description
                     </Typography>
                     <Skeleton 
@@ -329,7 +329,7 @@ const PartnerDetails = (props) => {
                   </div>
                   <div>
                     <div style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 10 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Website URL
                       </Typography>
                       <Skeleton 
@@ -344,8 +344,23 @@ const PartnerDetails = (props) => {
                       />
                     </div>
                     <div style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 20 }}>
-                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
                         Article URL
+                      </Typography>
+                      <Skeleton 
+                        variant="rounded" 
+                        height={35} 
+                        width="100%"
+                        style={{ 
+                          marginTop: 5,
+                          borderRadius: 4 
+                        }}
+                        animation="wave"
+                      />
+                    </div>
+                    <div style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 10 }}>
+                      <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
+                        Contact Email
                       </Typography>
                       <Skeleton 
                         variant="rounded" 
@@ -382,7 +397,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Name
                     </Typography>
@@ -529,6 +544,7 @@ const PartnerDetails = (props) => {
                         style={{
                           marginRight: "12px",
                           color: theme.palette.text.primary,
+                          fontFamily: theme?.typography?.fontFamily
                         }}
                       >
                         Solutions
@@ -571,7 +587,7 @@ const PartnerDetails = (props) => {
                     >
                       <Typography
                         variant="text"
-                        style={{ color: theme.palette.text.primary }}
+                        style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                       >
                         Region
                       </Typography>
@@ -587,7 +603,7 @@ const PartnerDetails = (props) => {
                     <div style={{ alignItems: "flex-start", marginLeft: 13, display: "flex", flexDirection: "column" }}>
                       <Typography
                         variant="text"
-                        style={{ color: theme.palette.text.primary }}
+                        style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                       >
                         Country
                       </Typography>
@@ -671,7 +687,7 @@ const PartnerDetails = (props) => {
                 <div style={{ marginTop: "10px", }} />
                 <Typography
                   variant="text"
-                  style={{ color: theme.palette.text.primary }}
+                  style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                 >
                   Description
                 </Typography>
@@ -731,7 +747,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Website URL
                     </Typography>
@@ -794,7 +810,7 @@ const PartnerDetails = (props) => {
                   >
                     <Typography
                       variant="text"
-                      style={{ color: theme.palette.text.primary }}
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
                       Article URL
                     </Typography>
@@ -824,7 +840,7 @@ const PartnerDetails = (props) => {
                       value={partnerData?.article_url}
                       onBlur={() => {}}
                       onChange={(e) => {
-                        if (e.target.value.length > 100) {
+                        if (e.target.value.length > 1000) {
                           toast("Choose a shorter article URL.");
                           return;
                         }
@@ -851,7 +867,65 @@ const PartnerDetails = (props) => {
                         },
                       }}
                     />
-                  </div>
+                </div>
+                <div
+                    style={{ width: "100%", maxWidth: 500, marginRight: 10, marginTop: 20 }}
+                  >
+                    <Typography
+                      variant="text"
+                      style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
+                    >
+                      Contact Email
+                    </Typography>
+                    <TextField
+                      required
+                      disabled={isDisabled}
+                      style={{
+                        flex: "1",
+                        display: "flex",
+                        height: 35,
+                        width: "100%",
+                        maxWidth: 500,
+                        marginTop: "5px",
+                        marginRight: "15px",
+                        color: theme.palette.textFieldStyle.color,
+                        backgroundColor: isEditOrgTab
+                          ? theme.palette.textFieldStyle.backgroundColor
+                          : theme.palette.inputColor,
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                      }}
+                      fullWidth={true}
+                      placeholder="support@shuffler.io"
+                      type="name"
+                      id="standard-required"
+                      margin="normal"
+                      variant="outlined"
+                      value={partnerData?.contact_email}
+                      onBlur={() => {}}
+                      onChange={(e) => {
+                        setPartnerData({
+                          ...partnerData,
+                          contact_email: e.target.value,
+                        });
+                      }}
+                      color="primary"
+                      InputProps={{
+                        style: {
+                          color: theme.palette.textFieldStyle.color,
+                          height: "35px",
+                          fontSize: "1em",
+                          borderRadius: 4,
+                          backgroundColor:
+                            theme.palette.textFieldStyle.backgroundColor,
+                        },
+                        classes: {
+                          notchedOutline: isEditOrgTab
+                            ? null
+                            : classes.notchedOutline,
+                        },
+                      }}
+                    />
+                </div>
                 </div>
               </div>
             </div>

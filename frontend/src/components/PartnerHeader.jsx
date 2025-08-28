@@ -741,7 +741,7 @@ const PartnerHeader = (props) => {
           <div >
             <Button
               style={{ fontSize: 16, textTransform: 'capitalize',  boxShadow: "none", borderRadius: 4, width: 128, height: 40 }}
-              variant="contained"
+              variant="outlined"
               color="primary"
               disabled={isDisabled || isPublishing}
               onClick={() => {
@@ -812,7 +812,7 @@ const PartnerHeader = (props) => {
           <div >
             <Button
               style={{ fontSize: 16, textTransform: 'capitalize',  boxShadow: "none", borderRadius: 4, width: 128, height: 40 }}
-              variant="contained"
+              variant="outlined"
               color="primary"
               disabled={isDisabled || isPublishing}
               onClick={() => {

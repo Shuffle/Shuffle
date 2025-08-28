@@ -85,12 +85,11 @@ var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONT
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
 // var baseimagename = "shuffle/shuffle"
-var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
-
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 //var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
-// Used for cloud with auth
+// Used for cloud with auth. Onprem in certain cases too.
 var auth = os.Getenv("AUTH")
 var org = os.Getenv("ORG")
 
@@ -497,6 +496,7 @@ func deployServiceWorkers(image string) {
 		//}
 	}
 
+	// Running 2 by default instead of 1. Higher scale mechanisms - es
 	replicas := uint64(1)
 	scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	if len(scaleReplicas) > 0 {
@@ -522,7 +522,7 @@ func deployServiceWorkers(image string) {
 	}
 
 	appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
-	appReplicaCnt := 1
+	appReplicaCnt := 2
 	if len(appReplicas) > 0 {
 		newCnt, err := strconv.Atoi(appReplicas)
 		if err != nil {
@@ -734,7 +734,7 @@ func deployServiceWorkers(image string) {
 				var updatedNetworks []swarm.NetworkAttachmentConfig
 				for _, net := range serviceSpec.Networks {
 					if net.Target != "shuffle_shuffle" {
-					updatedNetworks = append(updatedNetworks, net)
+						updatedNetworks = append(updatedNetworks, net)
 					}
 				}
 				serviceSpec.Networks = updatedNetworks
@@ -813,20 +813,20 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		newImages = append(newImages, curimage)
 
 		// Force remove the current image to avoid cached layers
-	//	if swarmConfig == "run" || swarmConfig == "swarm" {
-	//		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
-	//			Force:         true,
-	//			PruneChildren: true,
-	//		})
+		//	if swarmConfig == "run" || swarmConfig == "swarm" {
+		//		_, err := dockercli.ImageRemove(ctx, curimage, image.RemoveOptions{
+		//			Force:         true,
+		//			PruneChildren: true,
+		//		})
 
-	//		if err != nil {
-	//			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
-	//		} else {
-	//			log.Printf("[DEBUG] Removed image: %s", curimage)
-	//		}
-	//	} else {
-	//		//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
-	//	}
+		//		if err != nil {
+		//			log.Printf("[ERROR] Failed removing image for re-download: %s", err)
+		//		} else {
+		//			log.Printf("[DEBUG] Removed image: %s", curimage)
+		//		}
+		//	} else {
+		//		//log.Printf("[DEBUG] Skipping image removal for %s as swarmConfig is not set to run or swarm. Value: %#v", curimage, swarmConfig)
+		//	}
 
 		err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, curimage)
 		if err != nil {
@@ -887,7 +887,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 						log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
 					} else {
 						log.Printf("[DEBUG] Updated service %s with the new image %s. Resp: %#v", service.Spec.Annotations.Name, image, resp)
-							
+
 						found = true
 
 						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
@@ -1041,6 +1041,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
 	}
 
+	if len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_REGISTRY=%s", os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")))
+	}
+
 	if len(os.Getenv("REGISTRY_URL")) > 0 {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
@@ -1063,6 +1067,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	if len(appContainerSecurityContext) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT=%s", appContainerSecurityContext))
+	}
+
+	if len(os.Getenv("SHUFFLE_LOGS_DISABLED")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")))
 	}
 
 	clientset, _, err := shuffle.GetKubernetesClient()
@@ -1096,8 +1104,13 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		}
 	}
 
+	// Required format:
+	// url/org/repo/appname:tag
+	// url/org/repo/appname:tag
+
+	//env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
 	env = append(env, fmt.Sprintf("BASE_URL=%s", baseUrl))
-	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
+	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=run"))
 	env = append(env, fmt.Sprintf("WORKER_HOSTNAME=%s", "shuffle-workers"))
 
 	if len(kubernetesNamespace) == 0 {
@@ -2044,6 +2057,11 @@ func main() {
 		log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
 	}
 
+	// Default to 120 instead of default 30
+	if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) == 0 {
+		os.Setenv("SHUFFLE_APP_SDK_TIMEOUT", "120")
+	}
+
 	workerTimeout := 600
 	if workerTimeoutEnv != "" {
 		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
@@ -2133,14 +2151,15 @@ func main() {
 
 		if isKubernetes != "true" {
 			deployServiceWorkers(workerImage)
+
+			err := setBackendToSwarmNetwork(ctx)
+			if err != nil {
+				log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
+			}
+
 		} else {
 			deployK8sWorker(workerImage, "shuffle-workers", []string{})
 			runString = "Run: \"kubectl get pods\" for more info"
-		}
-
-		err := setBackendToSwarmNetwork(ctx)
-		if err != nil {
-			log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
 		}
 
 		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)
@@ -2213,7 +2232,6 @@ func main() {
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
-
 
 	hasStarted := false
 	for {
@@ -2298,7 +2316,7 @@ func main() {
 			}
 
 			if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" && os.Getenv("SHUFFLE_SCALE_REPLICAS") == "" {
-				// go AutoScale(ctx)
+				//go AutoScale(ctx)
 			}
 			hasStarted = true
 		}
@@ -3857,7 +3875,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	var options container.StopOptions
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
-		dockercli.ContainerStop(ctx, containername, options)
+		go dockercli.ContainerStop(ctx, containername, options)
 		removeContainers = append(removeContainers, containername)
 	}
 
@@ -3938,7 +3956,13 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		//Transport: &http.Transport{
+		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		//},
+		Timeout: time.Duration(120 * time.Second),
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamUrl,
@@ -4013,7 +4037,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 	debugCommand := fmt.Sprintf("docker service logs shuffle-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId)
 	if isKubernetes == "true" {
-		debugCommand = fmt.Sprintf("kubectl logs -n %s container=shuffle-worker | grep %s", kubernetesNamespace, workflowExecution.ExecutionId)
+		debugCommand = fmt.Sprintf("kubectl logs -n %s deployment/shuffle-workers | grep %s", kubernetesNamespace, workflowExecution.ExecutionId)
 	}
 
 	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)

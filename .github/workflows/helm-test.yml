@@ -1,0 +1,31 @@
+name: Helm Test
+
+on:
+  push:
+    paths:
+      - "functions/kubernetes/charts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install apt dependencies
+        run: |
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          sudo apt-get install apt-transport-https -y --no-install-recommends
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install helm -y --no-install-recommends
+
+      - name: Update helm dependencies
+        run: helm dependency update ./functions/kubernetes/charts/shuffle
+
+      - name: Template helm chart using default values
+        run: helm template shuffle ./functions/kubernetes/charts/shuffle --debug --values ./functions/kubernetes/charts/shuffle/values.yaml

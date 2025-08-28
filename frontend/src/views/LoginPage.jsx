@@ -5,6 +5,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import { isMobile } from "react-device-detect";
 import { toast } from 'react-toastify';
 import { useInterval } from "react-powerhooks";
+import ReactGA from 'react-ga4';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import {
@@ -157,7 +158,7 @@ const FreePlanCard = ({ classes }) => {
 	);
 };
 
-const MarketplaceCard = ({ classes }) => {
+const MarketplaceCard = ({ classes, isCloud }) => {
 	const marketplaceOptions = [
 		{
 			name: "Open Source Install",
@@ -216,6 +217,15 @@ const MarketplaceCard = ({ classes }) => {
 					>
 						<button
 							onClick={() => {
+								// Track marketplace click
+								if (isCloud) {
+									ReactGA.event({
+										category: "authentication",
+										action: "click_marketplace_option",
+										label: option.name,
+									});
+								}
+								
 								if (option.valid === true) {
 									window.open(option.link, "_blank")
 								}
@@ -443,7 +453,7 @@ const LoginPage = props => {
 			return (username.length > 0 && password.length > 0);
 		}
 
-		return (username.length > 1 && password.length > 8);
+		return (username.length > 1 && password.length > 9);
 	}
 
 	if (isLoggedIn === true && serverside !== true) {
@@ -512,6 +522,15 @@ const LoginPage = props => {
 	const onSubmit = (e) => {
 		//toast("Testing from login page")
 
+		// Track form submission attempt
+		if (isCloud) {
+			ReactGA.event({
+				category: "authentication",
+				action: register ? "submit_login_form" : "submit_register_form",
+				label: register ? (loginWithSSO ? "SSO Login Form" : "Email Login Form") : "Email Registration Form",
+			});
+		}
+
 		setMessage("")
 		setLoginLoading(true)
 		e.preventDefault()
@@ -556,6 +575,14 @@ const LoginPage = props => {
 				setLoginLoading(false)
 
 				if (responseJson["success"] === false) {
+					// Track failed login event
+					if (isCloud) {
+						ReactGA.event({
+							category: "authentication",
+							action: loginWithSSO ? "login_sso_failed" : "login_failed",
+							label: loginWithSSO ? "SSO Login Failed" : "Email Login Failed",
+						});
+					}
 					setLoginInfo(responseJson["reason"])
 				} else {
 					if (responseJson?.region_url !== undefined && responseJson?.region_url !== null && responseJson?.region_url !== "") {
@@ -583,6 +610,14 @@ const LoginPage = props => {
 						return
 					}
 
+					// Track successful login event
+					if (isCloud) {
+						ReactGA.event({
+							category: "authentication",
+							action: loginWithSSO ? "login_sso_success" : "login_success",
+							label: loginWithSSO ? "SSO Login" : "Email Login",
+						});
+					}
 
 					setLoginInfo("Successful login! Redirecting you in 3 seconds...")
 					for (var key in responseJson["cookies"]) {
@@ -643,6 +678,14 @@ const LoginPage = props => {
 				.then(response =>
 					response.json().then(responseJson => {
 						if (responseJson["success"] === false) {
+							// Track failed registration event
+							if (isCloud) {
+								ReactGA.event({
+									category: "authentication",
+									action: "register_failed",
+									label: "Email Registration Failed",
+								});
+							}
 							setLoginInfo(responseJson["reason"])
 						} else {
 							if (responseJson["reason"] === "shuffle_account") {
@@ -659,6 +702,16 @@ const LoginPage = props => {
 							}
 
 							setLoginLoading(false)
+							
+							// Track successful registration event
+							if (isCloud) {
+								ReactGA.event({
+									category: "authentication",
+									action: "register_success",
+									label: "Email Registration",
+								});
+							}
+							
 							setLoginInfo("Successful registration! Redirecting in 3 seconds...")
 
 
@@ -707,15 +760,40 @@ const LoginPage = props => {
 	}
 
 	const HandleLoginWithSSO = () => {
+		// Track SSO login attempt
+		if (isCloud) {
+			ReactGA.event({
+				category: "authentication",
+				action: "click_sso_login",
+				label: "SSO Login Attempt",
+			});
+		}
+		
 		setPassword("")
 		setLoginInfo("")
 		setLoginWithSSO(true)
 	}
 
 	var formtitle = register ? <div>Welcome Back!</div> : <div>Create your account</div>
-	var formButton = !isCloud ? "" : register ? <div style={{ display: "flex" }}> <div style={{ fontSize: "14px", paddingRight: "7px", textDecoration: "none", }}>Don’t have an account yet?</div> <Link style={hrefStyle} to={`/register${parsedsearch}`}><div>Register here</div></Link></div> : <>
+	var formButton = !isCloud ? "" : register ? <div style={{ display: "flex" }}> <div style={{ fontSize: "14px", paddingRight: "7px", textDecoration: "none", }}>Don’t have an account yet?</div> <Link style={hrefStyle} to={`/register${parsedsearch}`} onClick={() => {
+		if (isCloud) {
+			ReactGA.event({
+				category: "authentication",
+				action: "click_register_link",
+				label: "Switch to Register",
+			});
+		}
+	}}><div>Register here</div></Link></div> : <>
 
-		<div style={{ display: "flex", marginTop: 40, marginBottom: -10 }}> <div style={{ fontSize: "14px", paddingRight: "7px", textDecoration: "none", }}>Already have an account?</div> <Link style={hrefStyle} to={`/login${parsedsearch}`}><div>Login here</div></Link></div>
+		<div style={{ display: "flex", marginTop: 40, marginBottom: -10 }}> <div style={{ fontSize: "14px", paddingRight: "7px", textDecoration: "none", }}>Already have an account?</div> <Link style={hrefStyle} to={`/login${parsedsearch}`} onClick={() => {
+			if (isCloud) {
+				ReactGA.event({
+					category: "authentication",
+					action: "click_login_link",
+					label: "Switch to Login",
+				});
+			}
+		}}><div>Login here</div></Link></div>
 	</>
 	//<Link to={`/login${parsedsearch}`} style={hrefStyle}><div>Click here to Login</div></Link>
 
@@ -854,7 +932,7 @@ const LoginPage = props => {
 									helperText={
 										handleValidateForm(username, password)
 											? ""
-											: "Password must be at least 9 characters long"
+											: "Password must be at least 10 characters long"
 									}
 								/>
 							</div>
@@ -1025,7 +1103,7 @@ const LoginPage = props => {
 						<div className={classes.divider}>
 							<span>OR</span>
 						</div>
-						<MarketplaceCard classes={classes} />
+						<MarketplaceCard classes={classes} isCloud={isCloud} />
 					</>
 				)}
 			</div>

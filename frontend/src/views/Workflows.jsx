@@ -558,7 +558,7 @@ export const handleReactJsonClipboard = (copy) => {
 	  document.execCommand("copy");
 
 	  console.log("COPYING!");
-	  toast("Copied value to clipboard, NOT json path.")
+	  toast.success("Copied Value, NOT json path.")
 	} else {
 	  console.log("Failed to copy from " + elementName + ": ", copyText);
 	}

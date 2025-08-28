@@ -53,14 +53,14 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			: selectedOrganization.sso_config.SSORequired);
 
 	const [ssoCertificate, setSsoCertificate] = React.useState(
-		selectedOrganization.sso_config === undefined
-			? ""
-			: selectedOrganization.sso_config.sso_certificate === undefined ||
-				selectedOrganization.sso_config.sso_certificate.length === 0
-				? ""
-				: selectedOrganization.sso_config.sso_certificate
-	);
-
+        selectedOrganization.sso_config === undefined
+          ? ""
+          : selectedOrganization.sso_config.sso_certificate &&
+		  	selectedOrganization.sso_config.sso_certificate.length > 0
+				? selectedOrganization.sso_config.sso_certificate
+				: selectedOrganization.sso_config.sso_long_certificate || ""		  
+    );
+			  
     const [openidClientId, setOpenidClientId] = React.useState(
 		selectedOrganization.sso_config === undefined
 			? ""
@@ -115,8 +115,8 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			setOpenidToken(selectedOrganization?.sso_config?.openid_token)
 		}
 
-		if (ssoCertificate !== selectedOrganization?.sso_config?.sso_certificate) {
-			setSsoCertificate(selectedOrganization?.sso_config?.sso_certificate)
+		if (ssoCertificate !== selectedOrganization?.sso_config?.sso_certificate || ssoCertificate !== selectedOrganization?.sso_config?.sso_long_certificate) {
+			setSsoCertificate(selectedOrganization?.sso_config?.sso_certificate || selectedOrganization?.sso_config?.sso_long_certificate)
 		}
 
 		if (ssoEntrypoint !== selectedOrganization?.sso_config?.sso_entrypoint) {

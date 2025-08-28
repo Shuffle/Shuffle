@@ -176,11 +176,12 @@ const Priorities = memo((props) => {
 								credentials: "include",
 							}).then((response) => {
 								if (response.status !== 200) {
-									toast(`Failed getting config for ${item.id}: `, response.reason);
+									//toast.error(`Failed getting config for ${item.id}: `, response.reason)
 									console.log("Status not 200 for app config :O!");
-									return;
+									return
 								}
-								return response.json();
+
+								return response.json()
 							}).then((responseJson) => {
 								if (!responseJson.success) {
 									console.log("Could not get app config")
@@ -209,7 +210,7 @@ const Priorities = memo((props) => {
 
 							}).catch((error) => {
 								console.log("Error getting app config: " + error);
-								toast("Error getting app config: " + error);
+								//toast.error("Error getting app config: " + error);
 							})
 						})
 					})

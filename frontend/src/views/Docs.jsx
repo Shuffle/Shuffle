@@ -113,19 +113,29 @@ export const CopyToClipboard = (props) => {
 }
 
 export const Paragraph = (props) => {
+    // Filter out stray HTML artifacts like '>' or '/>' caused by HTML parsing edge-cases
+    const cleanedChildren = React.Children.toArray(props.children).filter((child) => {
+        if (typeof child === 'string') {
+            const trimmed = child.trim();
+            // Remove single '>' or '/>' leftovers
+            if (trimmed === '>' || trimmed === '/>') return false;
+        }
+        return true;
+    });
+
     const element = React.createElement(
         `p`,
         {},
-        props.children,
+        cleanedChildren,
     )
 
-    if (props.children[0] != undefined) {
-        if(typeof props.children[0] === "string") {
-            if (props.children[0].includes('.mp4')) {
+    if (cleanedChildren[0] !== undefined) {
+        if(typeof cleanedChildren[0] === "string") {
+            if (cleanedChildren[0].includes('.mp4')) {
                 return (
                     <div>
                         <video width="640" height="480" controls>
-                            <source src={`${props.children[0]}`} type="video/mp4" />
+                            <source src={`${cleanedChildren[0]}`} type="video/mp4" />
                         </video>
                     </div>
                 )
@@ -169,6 +179,7 @@ export const Img = (props) => {
 	// Find parent container and check width
     const isArticlePage = window.location.pathname.includes("/articles/")
     const isFormPage = window.location.pathname.includes("/forms/")
+    const isWorkflowPage = window.location.pathname.includes("/workflows/")
 	var height = "auto" 
 	var width = isArticlePage ? 1000 : isFormPage ? 400: 750
 
@@ -176,7 +187,7 @@ export const Img = (props) => {
     const theme = getTheme(themeMode)
 
     const docsImageStyle = {
-		border: isFormPage ? null : "1px solid rgba(255,255,255,0.3)", 
+		border: isFormPage || isWorkflowPage ? null : "1px solid rgba(255,255,255,0.3)", 
         borderRadius: theme.palette?.borderRadius, 
         width: width, 
         maxWidth: width, 

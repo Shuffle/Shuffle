@@ -392,8 +392,8 @@ export default function defaultCytoscapeStyle(theme) {
     {
       selector: ".success-highlight",
       css: {
-        "background-color": "#41dcab",
-        "border-color": "#41dcab",
+        "background-color": "#02CB70",
+        "border-color": "#02CB70",
         "border-width": "5px",
         "transition-property": "background-color",
         "transition-duration": "0.5s",
@@ -412,8 +412,8 @@ export default function defaultCytoscapeStyle(theme) {
     {
       selector: ".failure-highlight",
       css: {
-        "background-color": "#8e3530",
-        "border-color": "#8e3530",
+        "background-color": "#F53434",
+        "border-color": "#F53434",
         "border-width": "5px",
         "transition-property": "background-color",
         "transition-duration": "0.5s",
@@ -433,7 +433,7 @@ export default function defaultCytoscapeStyle(theme) {
       selector: ".executing-highlight",
       css: {
         //"background-color": "#ffef47",
-        "border-color": "#ffef47",
+        "border-color": "#FECC00",
         "border-width": "8px",
         "transition-property": "border-width",
         "transition-duration": "0.25s",
@@ -475,8 +475,8 @@ export default function defaultCytoscapeStyle(theme) {
       selector: "edge.executing-highlight",
       css: {
         width: "5px",
-        "target-arrow-color": "#ffef47",
-        "line-color": "#ffef47",
+        "target-arrow-color": "#FECC00",
+        "line-color": "#FECC00",
         "transition-property": "line-color, width",
         "transition-duration": "0.25s",
       },
@@ -495,9 +495,9 @@ export default function defaultCytoscapeStyle(theme) {
     {
       selector: "edge.success-highlight",
       css: {
-        width: "3px",
-        "target-arrow-color": "#41dcab",
-        "line-color": "#41dcab",
+        width: "4px",
+        "target-arrow-color": "#02CB70",
+        "line-color": "#02CB70",
         "transition-property": "line-color, width",
         "transition-duration": "0.5s",
         "line-fill": "linear-gradient",

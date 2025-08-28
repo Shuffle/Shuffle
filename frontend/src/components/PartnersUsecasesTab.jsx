@@ -29,9 +29,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import { toast } from "react-toastify";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
-import StarIcon from "@mui/icons-material/Star";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -1083,16 +1083,40 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
             }}
           >
             <FormControl>
-              <Typography
+            <Box
                 sx={{
-                  color: theme.palette.accentColor,
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: 1,
                   mb: 2,
-                  fontSize: "16px",
-                  fontWeight: 600,
+                  alignItems: "center",
                 }}
               >
-                Public Workflow
-              </Typography>
+                <Typography
+                  sx={{
+                    color: theme.palette.accentColor,
+                    fontSize: "16px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Public Workflow
+                </Typography>
+                <IconButton
+                  size="small"
+                  sx={{
+                    color: theme.palette.primary.main,
+                    "&:hover": {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                  }}
+                  onClick={() => {
+                    // Open workflow in new tab - adjust URL as needed
+                    window.open(`${window.location.origin}/workflows/${formData.mainContent.publicWorkflowId}`, "_blank");
+                  }}
+                >
+                  <OpenInNewIcon fontSize="small" />
+                </IconButton>
+              </Box>
               <Select
                 displayEmpty
                 value={
