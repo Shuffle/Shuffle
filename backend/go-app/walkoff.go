@@ -353,6 +353,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			if len(environment) > 0 {
+      
 				env, err := shuffle.GetEnvironment(ctx, environment, foundId)
 				if err != nil {
 					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)

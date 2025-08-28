@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/shuffle/shuffle-frontend:nightly
+    image: ghcr.io/shuffle/shuffle-frontend:latest
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -14,7 +14,7 @@ services:
     depends_on:
       - backend
   backend:
-    image: ghcr.io/shuffle/shuffle-backend:nightly
+    image: ghcr.io/shuffle/shuffle-backend:latest
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -33,7 +33,7 @@ services:
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
   orborus:
-    image: ghcr.io/shuffle/shuffle-orborus:nightly
+    image: ghcr.io/shuffle/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -55,7 +55,7 @@ services:
       - SHUFFLE_STATS_DISABLED=true
       - SHUFFLE_LOGS_DISABLED=true
       - SHUFFLE_SWARM_CONFIG=run
-      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:nightly
+      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:latest
     env_file: .env
     restart: unless-stopped
     security_opt:
@@ -65,7 +65,7 @@ services:
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms4096m -Xmx4096m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - bootstrap.memory_lock=true
       - DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI=true
       - cluster.initial_master_nodes=shuffle-opensearch

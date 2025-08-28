@@ -33,7 +33,6 @@
     "cytoscape-node-html-label": "^1.2.2",
     "cytoscape-panzoom": "^2.5.3",
     "cytoscape-undo-redo": "^1.3.3",
-    "d3": "~4.10.0",
     "dayjs": "^1.11.10",
     "dotenv": "^6.1.0",
     "downshift": "^3.4.8",
@@ -51,8 +50,6 @@
     "json-bigint": "^1.0.0",
     "match-sorter": "^6.3.1",
     "md5-file": "^4.0.0",
-    "mdbreact": "^4.21.1",
-    "moment": "~2.29.4",
     "mui-chips-input": "^2.1.3",
     "mui-nested-menu": "^3.2.1",
     "react": "^18.3.1",
@@ -60,7 +57,6 @@
     "react-alice-carousel": "^2.6.4",
     "react-avatar-editor": "^11.1.0",
     "react-beforeunload": "^2.2.1",
-    "react-chartjs-2": "^2.11.2",
     "react-cookie": "^4.0.1",
     "react-cytoscapejs": "^2.0.0",
     "react-device-detect": "^2.2.3",
@@ -91,11 +87,10 @@
     "shellwords": "^1.0.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.1",
-    "sync-fetch": "^0.3.0",
     "terser-webpack-plugin": "^4.2.3",
     "yaml": "^1.10.0",
     "yamljs": "^0.3.0",
-    "zone.js": "~0.8.26"
+    "zone.js": "^0.15.1"
   },
   "scripts": {
     "start": "HTTPS=false&&PORT=3000 GENERATE_SOURCEMAP=false react-scripts --openssl-legacy-provider start",
