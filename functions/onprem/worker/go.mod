@@ -8,10 +8,10 @@ toolchain go1.24.4
 //replace github.com/shuffle/singul => ../../../../singul
 
 require (
-	github.com/docker/docker v28.2.2+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.8
+	github.com/shuffle/shuffle-shared v0.9.14
 	github.com/shuffle/singul v0.0.16
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1

@@ -912,7 +912,7 @@ const EditWorkflow = (props) => {
 												<CloudUploadIcon 
 													style={{ 
 														fontSize: 48, 
-														color: theme.palette.textSecondary || '#666',
+														color: theme.palette.secondary || '#666',
 														marginBottom: 10 
 													}} 
 												/>

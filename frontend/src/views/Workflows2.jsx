@@ -18,6 +18,7 @@ import GetAppIcon from '@mui/icons-material/GetApp';
 import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
 import { isMobile } from "react-device-detect"
+import ReactGA from 'react-ga4';
 
 import LineChartWrapper from "../components/LineChartWrapper.jsx";
 import SecurityFramework from '../components/SecurityFramework.jsx';
@@ -962,6 +963,14 @@ const Workflows2 = (props) => {
     const dismissAiAnnouncement = () => {
         const bannerID = "banner_ai_announcement";
 
+        if (isCloud) {
+            ReactGA.event({
+                category: "AIGeneratedNewWorkflow",
+                action: "dismiss_announcement",
+                label: userdata?.active_org?.id || userdata?.id || "",
+            });
+        }
+
         handleCloseAiAnnouncement();
 
         // Open Create Workflow modal (EditWorkflow) and temporarily highlight inputs/buttons
@@ -1364,7 +1373,18 @@ const Workflows2 = (props) => {
               top: 10,
               right: 10,
             }}
-            onClick={() => handleCloseAiAnnouncement()}
+            onClick={
+                () => {
+                    if (isCloud) {
+                        ReactGA.event({
+                            category: "AIGeneratedNewWorkflow",
+                            action: "close_announcement",
+                            label: userdata?.active_org?.id || userdata?.id || "",
+                        });
+                    }
+                    handleCloseAiAnnouncement();
+                }
+            }
             aria-label="Close"
           >
             <CloseIcon />
