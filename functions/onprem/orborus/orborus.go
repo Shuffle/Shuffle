@@ -4038,7 +4038,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		log.Printf("[WARNING] POTENTIAL error running worker request (2) - status code is %d for %s, not 200. Body: %s", newresp.StatusCode, streamUrl, string(body))
 
 		// In case of old executions
-		if strings.Contains(string(body), "Bad status ") {
+		if strings.Contains(strings.ToLower(string(body)), "bad status ") {
+			return nil
+		}
+
+		if strings.Contains(strings.ToLower(string(body)), "no apps to handle") {
 			return nil
 		}
 
