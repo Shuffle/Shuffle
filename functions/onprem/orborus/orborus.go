@@ -60,7 +60,7 @@ var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
 // May cause some things to run slowly
-var maxConcurrency = 7
+var maxConcurrency = 25
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -2173,6 +2173,12 @@ func main() {
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 
+	// Increases default concurrency to 50 for swarm
+	if maxConcurrency < 50 && (swarmConfig == "run" || swarmConfig == "swarm") {
+		fullUrl += "?amount=50"
+	}
+
+
 	if isKubernetes == "true" {
 		log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
 	} else {
@@ -3938,7 +3944,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 		// Specific to debugging
 		if len(workerServerUrl) == 0 {
-			log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
+			if debug { 
+				log.Printf("[INFO] Using default worker server url as previous is invalid: %s. Swapping to shuffle-workers:33333", streamUrl)
+			}
 		}
 
 		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
