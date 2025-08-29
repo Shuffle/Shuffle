@@ -218,6 +218,10 @@ func skipCheckInCleanup(name string) bool {
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
+	if cleanupEnv == "false" {
+		log.Printf("[INFO] Skipping cleanup of existing workers as CLEANUP is set to false. This should be auto-discovered during executions then instead.")
+		return nil
+	}
 
 	if isKubernetes == "true" {
 		// Cleanup all workers created by orborus and all apps created by workers.
