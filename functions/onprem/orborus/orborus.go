@@ -81,6 +81,7 @@ var workerContainerSecurityContext = os.Getenv("SHUFFLE_WORKER_CONTAINER_SECURIT
 var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
 var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
+var debug = os.Getenv("DEBUG") == "true"
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
