@@ -4005,7 +4005,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Connection refused?
-		log.Printf("[ERROR] Error running worker request to %s (1): %s", streamUrl, err)
+		log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
 
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("ghcr.io/shuffle/shuffle-worker:%s", workerVersion)
@@ -4052,7 +4052,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		debugCommand = fmt.Sprintf("kubectl logs -n %s deployment/shuffle-workers | grep %s", kubernetesNamespace, workflowExecution.ExecutionId)
 	}
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
+	log.Printf("[DEBUG][%s] Ran worker from requests. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
 	return nil
 }
 

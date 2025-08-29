@@ -2022,7 +2022,9 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	}
 
 	if len(onpremApps) == 0 {
-		return errors.New(fmt.Sprintf("No apps to handle onprem (%s)", environment))
+		//return errors.New(fmt.Sprintf("No apps to handle onprem (%s)", environment))
+		log.Printf("[INFO][%s] No apps to handle onprem (%s). Returning 200 OK anyway", workflowExecution.ExecutionId, environment)
+		return nil
 	}
 
 	pullOptions := dockerimage.PullOptions{}
