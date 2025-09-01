@@ -3937,7 +3937,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	}
 
 	identifier := "shuffle-workers"
-
 	if isKubernetes == "true" {
 		if shuffle.IsRunningInCluster() {
 			log.Printf("[INFO] Running in Kubernetes cluster")

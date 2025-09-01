@@ -38,7 +38,7 @@ import {
 } from "@mui/icons-material";
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
-import { green, red } from '../views/AngularWorkflow.jsx'
+import { green, yellow, red } from '../views/AngularWorkflow.jsx'
 import AppSearch from "../components/AppSearch1.jsx";
 
 const EnvironmentTab = memo((props) => {
@@ -612,13 +612,6 @@ const EnvironmentTab = memo((props) => {
       }
   };
 
-    const queueSizeText = (queue) => {
-        if (queue === undefined || queue === null) return 0;
-        if (queue < 0) return 0;
-        if (queue > 1000) return ">1000";
-        return queue;
-    };
-
 	const LocationActionModal = (props) => {
 		const { showLocationActionModal } = props
 
@@ -990,11 +983,14 @@ const EnvironmentTab = memo((props) => {
         }
   
         const queueSize =
+          selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ?
+			  "N/A"
+		  :
           environment.queue !== undefined && environment.queue !== null
           ? environment.queue < 0
             ? 0
-            : environment.queue > 1000
-            ? ">1000"
+            : environment.queue >= 100
+            ? ">100"
             : environment.queue
           : 0;
   
@@ -1088,11 +1084,13 @@ const EnvironmentTab = memo((props) => {
 					<Tooltip title={
 						<Typography variant="body1" style={{margin: 10, }}>
 						{environment.Type !== "cloud"
-						  ? environment.running_ip === undefined ||
+						  ?
+        					selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ? "Parent Org Controlled. Status not available in suborgs."
+						  : environment.running_ip === undefined ||
 							environment.running_ip === null ||
 							environment.running_ip.length === 0
 							? 
-							"Not running. Click to get the start command that can be ran on your server."
+							"Probably not running. Check your Orborus instance."
 							: 
 							<span>IP / label: {environment?.running_ip?.split(":")[0]}. May stay running up to a minute after stopping Orborus.</span>
 						  : 
@@ -1102,7 +1100,7 @@ const EnvironmentTab = memo((props) => {
 						<br />
 						<br />
 
-						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"}
+						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"} {environment?.Type === "cloud" ? "" : "Timeout: 180 seconds"}
 						</Typography>
 					} placement="top">
 					  <Typography
@@ -1117,7 +1115,36 @@ const EnvironmentTab = memo((props) => {
 					  }}
 					  variant="body2"
 					>
-					  {environment.Type !== "cloud" &&  
+					  {environment.Type === "cloud" ?
+        	              <Chip
+        	                key={index}
+        	                style={{
+								color: green,
+								borderColor: green,
+							}}
+        	                label={"Running"}
+        	                onClick={() => {
+        	                  //handleChipClick
+        	                }}
+        	                variant="outlined"
+        	                color="primary"
+        	              />
+						  :
+        				selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ? 
+						  <Chip
+        	                key={index}
+        	                style={{
+								color: yellow,
+								borderColor: yellow,
+							}}
+        	                label={"N/A"}
+        	                onClick={() => {
+        	                  //handleChipClick
+        	                }}
+        	                variant="outlined"
+        	                color="primary"
+        	              />
+						  :
 						(environment.running_ip === undefined ||
 						  environment.running_ip === null ||
 						  environment.running_ip.length === 0)
@@ -1157,35 +1184,38 @@ const EnvironmentTab = memo((props) => {
 
             <ListItemText
             primary={
+        	  selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ? 
+				"N/A"
+				:
               environment.licensed ? (
               <Tooltip title="Scale configured (auto on cloud)" placement="top">
-                                <CheckCircleIcon style={{ color: "#4caf50" }} />
-                              </Tooltip>
-                            ) : (
-                              <Tooltip
-                                title="In Verbose mode. Set SHUFFLE_SWARM_CONFIG=run to Scale. This will not be as verbose. Details: https://shuffler.io/docs/configuration#scaling-shuffle"
-                                placement="top"
-                              >
-                                <a
-                                  href="/docs/configuration#scaling-shuffle"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <CancelIcon style={{ color: "#f85a3e" }} />
-                                </a>
-                              </Tooltip>
-                            )
-                          }
-                          style={{
-                            minWidth: 60,
-							marginLeft: 20, 
-                            overflow: "hidden",
-                            whiteSpace: "normal", 
-                            wordWrap: "break-word",
-                            padding: 8,
-                            display: "table-cell",
-                          }}
-                        />
+							<CheckCircleIcon style={{ color: "#4caf50" }} />
+						  </Tooltip>
+						) : (
+						  <Tooltip
+							title="In Verbose mode. Set SHUFFLE_SWARM_CONFIG=run to Scale. This will not be as verbose. Details: https://shuffler.io/docs/configuration#scaling-shuffle"
+							placement="top"
+						  >
+							<a
+							  href="/docs/configuration#scaling-shuffle"
+							  target="_blank"
+							  rel="noopener noreferrer"
+							>
+							  <CancelIcon style={{ color: "#f85a3e" }} />
+							</a>
+						  </Tooltip>
+						)
+					  }
+					  style={{
+						minWidth: 60,
+						marginLeft: 20, 
+						overflow: "hidden",
+						whiteSpace: "normal", 
+						wordWrap: "break-word",
+						padding: 8,
+						display: "table-cell",
+					  }}
+					/>
 
               		<ListItemText
                     	primary={
