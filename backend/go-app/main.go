@@ -3326,6 +3326,35 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 
 	log.Printf("[INFO] Successfully stitched ZIPFILE for %s", identifier)
 
+	// Copy baseline Dockerfile to build directory
+	dockerfileSource := "../app_gen/python-lib/baseline/Dockerfile"
+	dockerfileDestination := fmt.Sprintf("%s/Dockerfile", basePath)
+
+	// Read and copy the baseline Dockerfile
+	dockerfileContent, err := ioutil.ReadFile(dockerfileSource)
+	if err != nil {
+		log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
+		return
+	}
+
+	err = ioutil.WriteFile(dockerfileDestination, dockerfileContent, 0644)
+	if err != nil {
+		log.Printf("[ERROR] Failed to copy Dockerfile to build directory: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Failed to copy Dockerfile"}`))
+		return
+	}
+
+	// Verify the Dockerfile was created
+	if _, err := os.Stat(dockerfileDestination); os.IsNotExist(err) {
+		log.Printf("[ERROR] Dockerfile does not exist at destination: %s", dockerfileDestination)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Dockerfile was not created properly"}`))
+		return
+	}
+
 	// 4. Build the image locally.
 	// FIXME: Should be moved to a local docker registry
 	dockerLocation := fmt.Sprintf("%s/Dockerfile", basePath)
