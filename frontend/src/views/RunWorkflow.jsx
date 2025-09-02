@@ -85,6 +85,12 @@ const RunWorkflow = (defaultprops) => {
   const [boxWidth, setBoxWidth] = React.useState(500)
   const [inputQuestions, setInputQuestions] = React.useState([])
 
+  const searchParams = new URLSearchParams(window.location.search)
+  const answer = searchParams.get("answer")
+  const execution_id = searchParams.get("reference_execution")
+  const authorization = searchParams.get("authorization")
+  const sourceNode = searchParams.get("source_node")
+  const backendUrl = searchParams.get("backend_url") || globalUrl
 
   useEffect(() => {
 	  if (workflow === undefined || workflow === null || Object.keys(workflow).length === 0) {
@@ -173,7 +179,7 @@ const RunWorkflow = (defaultprops) => {
 			try {
 				executionArgument = JSON.parse(executionArgument)
 			} catch (e) {
-				console.log("Error parsing execution argument: ", e)
+				//console.log("Error parsing execution argument: ", e)
 				executionArgument = {}
 			}
 		}
@@ -189,7 +195,7 @@ const RunWorkflow = (defaultprops) => {
 	}
 
 	const getWorkflows = () => {
-		const url = `${globalUrl}/api/v1/workflows`
+		const url = `${backendUrl}/api/v1/workflows`
 		fetch(url, {
 			method: "GET",
 			headers: {
@@ -207,7 +213,7 @@ const RunWorkflow = (defaultprops) => {
 		})
 		.then((responseJson) => {
 			if (responseJson.success === false) {
-				toast.error("Failed saving workflow. Please try again.")
+				//toast.error("Failed getting workflows. Please try again.")
 			} else {
 				if (responseJson?.length > 0) {
 					setWorkflows(responseJson)
@@ -220,7 +226,7 @@ const RunWorkflow = (defaultprops) => {
 	}
 
 	const loadForms = (orgId) => {
-		const url = `${globalUrl}/api/v1/orgs/${orgId}/forms`
+		const url = `${backendUrl}/api/v1/orgs/${orgId}/forms`
 		fetch(url, {
 			method: "GET",
 			headers: {
@@ -238,7 +244,7 @@ const RunWorkflow = (defaultprops) => {
 		})
 		.then((responseJson) => {
 			if (responseJson.success === false) {
-				toast.error("Failed saving workflow. Please try again.")
+				//toast.error("Failed loading forms. Please try again or contact support@shuffler.io if this persists.")
 			} else {
 				if (responseJson?.length > 0) {
 					// Sort them by name
@@ -253,7 +259,7 @@ const RunWorkflow = (defaultprops) => {
 	}
 
 	const saveWorkflow = (workflow) => {
-		const url = `${globalUrl}/api/v1/workflows/${workflow.id}`
+		const url = `${backendUrl}/api/v1/workflows/${workflow.id}`
 		fetch(url, {
 			method: "PUT",
 			headers: {
@@ -283,7 +289,7 @@ const RunWorkflow = (defaultprops) => {
 	}
 
 	const getApps = () => {
-		fetch(globalUrl + "/api/v1/apps", {
+		fetch(backendUrl+ "/api/v1/apps", {
 		  method: "GET",
 		  headers: {
 			"Content-Type": "application/json",
@@ -423,7 +429,7 @@ const RunWorkflow = (defaultprops) => {
 			*/
 		}
 
-		var url = `${globalUrl}/api/v1/workflows/${props.match.params.key}/run`
+		var url = `${backendUrl}/api/v1/workflows/${props.match.params.key}/run`
 		var fetchBody = {
 			headers: {
 				'Content-Type': 'application/json; charset=utf-8',
@@ -474,8 +480,8 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
-			if (response.status === 401 || response.status === 403) {
-				toast(`This Form is not available for you to run. If you this is an error, contact ${supportEmail} with a link to this form`)
+			if ((response.status === 401 || response.status === 403) && authorization === undefined || authorization === null || authorization.length === 0) {
+				toast(`This form is not available for you to run. If you this is an error, contact ${supportEmail} with a link to this form`)
 			}
 
 			return response.json()
@@ -489,11 +495,15 @@ const RunWorkflow = (defaultprops) => {
 			if (responseJson.success === false) {
 				console.log("Failed sending execution request")
 				if (responseJson.reason !== undefined && responseJson.reason !== null) {
-					toast.warn(responseJson.reason)
+					if (responseJson?.reason?.toLowerCase().includes("already clicked")) {
+						setMessage("Already answered. You may close this window (2).")
+					} else {
+						toast.warn(responseJson.reason)
+					}
 				}
 
 				stop()
-				setMessage("")
+				//setMessage("")
 				setExecutionData({})
 				setExecutionInfo("")
 				setExecutionRunning(false)
@@ -556,7 +566,7 @@ const RunWorkflow = (defaultprops) => {
 
 	const loadInputWorkflowData = (workflow_id, inputWorkflow) => {
 
-		const url = `${globalUrl}/api/v1/workflows/${workflow_id}/run`
+		const url = `${backendUrl}/api/v1/workflows/${workflow_id}/run`
 		fetch(url, {
 			method: "POST",
 			headers: {
@@ -607,58 +617,13 @@ const RunWorkflow = (defaultprops) => {
 		})
 	}
 
-	const searchParams = new URLSearchParams(window.location.search)
-	const answer = searchParams.get("answer")
-	const execution_id = searchParams.get("reference_execution")
-	const authorization = searchParams.get("authorization")
-	const sourceNode = searchParams.get("source_node")
+	const setupSourcenode = (workflow, selectedNode) => { 
 
-	const getWorkflow = (workflow_id, selectedNode) => {
-  		setRealtimeMarkdown("")
-
-		const url = `${globalUrl}/api/v1/workflows/${workflow_id}`
-		fetch(url, {
-		  method: "GET",
-		  headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		  },
-		  credentials: "include",
-		})
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for workflows :O!");
-        }
-
-		if (response.status === 401 || response.status === 403) {
-			toast(`This Form is not available to you. If you think this is an error, please contact ${supportEmail} with the URL.`)
-		}
-
-        return response.json()
-      })
-      .then((responseJson) => {
-        // Not sure why this is necessary.
-        if (responseJson.isValid === undefined) {
-          responseJson.isValid = true;
-        }
-
-        if (responseJson.errors === undefined) {
-          responseJson.errors = [];
-        }
-
-        if (responseJson.actions === undefined || responseJson.actions === null) {
-          responseJson.actions = [];
-        }
-
-        if (responseJson.triggers === undefined || responseJson.triggers === null) {
-          responseJson.triggers = [];
-        }
-
-		if (responseJson.input_questions !== undefined && responseJson.input_questions !== null && responseJson.input_questions.length > 0) {
+		if (workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0) {
 
 			var newexec = {}
-			for (let questionkey in responseJson.input_questions) {
-				const question = responseJson.input_questions[questionkey]
+			for (let questionkey in workflow.input_questions) {
+				const question = workflow.input_questions[questionkey]
 
 				var multiChoiceOptions = question.value !== undefined && question.value !== null && question.value.length > 0 && question.value.includes(";") ? question.value.split(";") : []
 				if (multiChoiceOptions.length > 1) {
@@ -670,8 +635,8 @@ const RunWorkflow = (defaultprops) => {
 
 			// Override with just relevant fields
 			if (sourceNode !== undefined && sourceNode !== null && sourceNode.length > 0) {
-				for (var triggerkey in responseJson.triggers) {
-					const trig = responseJson.triggers[triggerkey]
+				for (var triggerkey in workflow.triggers) {
+					const trig = workflow.triggers[triggerkey]
 					if (trig.id !== sourceNode) {
 						continue
 					}
@@ -693,8 +658,8 @@ const RunWorkflow = (defaultprops) => {
 							const parsed = JSON.parse(param.value)
 
 							// Find this in the workflow.input_questions
-							for (var questionkey in responseJson.input_questions) {
-								var question = JSON.parse(JSON.stringify(responseJson.input_questions[questionkey]))
+							for (var questionkey in workflow.input_questions) {
+								var question = JSON.parse(JSON.stringify(workflow.input_questions[questionkey]))
 								question.value = question.value.split(";")[0]
 								if (parsed.includes(question.name)) {
 									keepfields.push(question.value)
@@ -724,38 +689,38 @@ const RunWorkflow = (defaultprops) => {
 		if (selectedNode !== undefined && selectedNode !== null && selectedNode.length > 0) {
 
 			var found = false
-			for (var actionkey in responseJson.actions) {
-				if (responseJson.actions[actionkey].id === selectedNode) {
+			for (var actionkey in workflow.actions) {
+				if (workflow.actions[actionkey].id === selectedNode) {
 					found = true
-					setFoundSourcenode(responseJson.actions[actionkey])
+					setFoundSourcenode(workflow.actions[actionkey])
 					break
 				}
 			}
 
 			if (!found) {
-				for (var triggerkey in responseJson.triggers) {
-					if (responseJson.triggers[triggerkey].id !== selectedNode) {
+				for (var triggerkey in workflow.triggers) {
+					if (workflow.triggers[triggerkey].id !== selectedNode) {
 						continue
 					}
 		
 
-					setFoundSourcenode(responseJson.triggers[triggerkey])
+					setFoundSourcenode(workflow.triggers[triggerkey])
 
-					if (responseJson.input_questions !== undefined && responseJson.input_questions !== null && responseJson.input_questions.length > 0 && responseJson.triggers[triggerkey].trigger_type === "USERINPUT") {
+					if (workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 && workflow.triggers[triggerkey].trigger_type === "USERINPUT") {
 
 						// Look for input questions param
-						for (var paramkey in responseJson.triggers[triggerkey].parameters) {
-							if (responseJson.triggers[triggerkey].parameters[paramkey].name === "input_questions") {
+						for (var paramkey in workflow.triggers[triggerkey].parameters) {
+							if (workflow.triggers[triggerkey].parameters[paramkey].name === "input_questions") {
 
 								var relevantquestions = []
-								for (var questionkey in responseJson.input_questions) {
-									if (responseJson.triggers[triggerkey].parameters[paramkey].value.includes(responseJson.input_questions[questionkey].name)) {
-										relevantquestions.push(responseJson.input_questions[questionkey])
+								for (var questionkey in workflow.input_questions) {
+									if (workflow.triggers[triggerkey].parameters[paramkey].value.includes(workflow.input_questions[questionkey].name)) {
+										relevantquestions.push(workflow.input_questions[questionkey])
 									}
 								}
 
 								setInputQuestions(relevantquestions)
-								//responseJson.input_questions = relevantquestions
+								//workflow.input_questions = relevantquestions
 							}
 						}
 					}
@@ -765,13 +730,13 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 		} else {
-			setInputQuestions(responseJson.input_questions)
+			setInputQuestions(workflow.input_questions)
 		}
 
-		if (responseJson.form_control.input_markdown !== undefined && responseJson.form_control.input_markdown !== null && responseJson.form_control.input_markdown.length > 0) {
+		if (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) {
 			// Look for {{ uuid }} format, and try to run that workflow with their account
 			// This is a hack, but a fun one.
-			var newmarkdown = responseJson.form_control.input_markdown.replace("", "")
+			var newmarkdown = workflow.form_control.input_markdown.replace("", "")
 			
 			const uuidRegex = /{{\s[a-f0-9-]+\s}}/g
 			const found = newmarkdown.match(uuidRegex)
@@ -810,7 +775,7 @@ const RunWorkflow = (defaultprops) => {
 					}
 
 					if (runWorkflow) {
-						loadInputWorkflowData(uuid, responseJson)
+						loadInputWorkflowData(uuid, workflow)
 					}
 
 				}
@@ -819,6 +784,53 @@ const RunWorkflow = (defaultprops) => {
 			}
 		}
 
+		if (workflow.status !== "WAITING") {
+			setMessage("Already answered. You may close this window (3).")
+		}
+	}
+
+	const getWorkflow = (workflow_id, selectedNode) => {
+  		setRealtimeMarkdown("")
+
+		const url = `${backendUrl}/api/v1/workflows/${workflow_id}`
+		fetch(url, {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for workflows :O!");
+        }
+
+		if ((response.status === 401 || response.status === 403) && authorization === undefined || authorization === null || authorization.length === 0) {
+			toast(`This form is not available to you. If you think this is an error, please contact ${supportEmail} with the URL.`)
+		}
+
+        return response.json()
+      })
+      .then((responseJson) => {
+        // Not sure why this is necessary.
+        if (responseJson.isValid === undefined) {
+          responseJson.isValid = true;
+        }
+
+        if (responseJson.errors === undefined) {
+          responseJson.errors = [];
+        }
+
+        if (responseJson.actions === undefined || responseJson.actions === null) {
+          responseJson.actions = [];
+        }
+
+        if (responseJson.triggers === undefined || responseJson.triggers === null) {
+          responseJson.triggers = [];
+        }
+
+		setupSourcenode(responseJson, selectedNode)
 
 		handleExecutionLoader()
 
@@ -914,7 +926,7 @@ const RunWorkflow = (defaultprops) => {
     }
 
     // Just use this one?
-    var url = execution_id !== undefined && authorization !== undefined ?  `${globalUrl}/api/v1/orgs/${orgId}?reference_execution=${execution_id}&authorization=${authorization}` : `${globalUrl}/api/v1/orgs/${orgId}`;
+    var url = execution_id !== undefined && authorization !== undefined ?  `${backendUrl}/api/v1/orgs/${orgId}?reference_execution=${execution_id}&authorization=${authorization}` : `${backendUrl}/api/v1/orgs/${orgId}`;
 
 	getWorkflows() 
 	loadForms(orgId)
@@ -977,7 +989,7 @@ const RunWorkflow = (defaultprops) => {
 			return
 		}
 
-		fetch(globalUrl + "/api/v1/streams/results", {
+		fetch(backendUrl + "/api/v1/streams/results", {
 		  method: "POST",
 		  headers: {
 			"Content-Type": "application/json",
@@ -989,6 +1001,8 @@ const RunWorkflow = (defaultprops) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!");
+
+				toast.warn("Error getting results.. Please try again or contact support@shuffler.io if this persists.")
 			}
 		
 			return response.json();
@@ -997,6 +1011,13 @@ const RunWorkflow = (defaultprops) => {
 			if (responseJson.success == false) {
 				return
 			}
+
+			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && (workflow.id === undefined || workflow.id === null || workflow.id.length === 0) && responseJson.workflow !== undefined && responseJson.workflow !== null) {
+
+				setupSourcenode(responseJson.workflow, sourceNode) 
+				setWorkflow(responseJson.workflow)
+			}
+
 
 			if (replaceMarkdown === true) {
 				if (responseJson.result.length > 0) {
@@ -1460,7 +1481,12 @@ const RunWorkflow = (defaultprops) => {
 						(answer !== undefined && answer !== null) || message !== ""  ? null :
 						
 							<span>
-								Runtime Argument
+								{foundSourcenode !== undefined && foundSourcenode !== null ? 
+									"Add Note"
+									:
+									"Runtime Argument"
+								}
+
 								<div style={{marginBottom: 5}}>
 									<TextField
 										color="primary"
@@ -1506,17 +1532,17 @@ const RunWorkflow = (defaultprops) => {
 								: null*/}
 							</span>
 							:
-							((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) ? 
+							(foundSourcenode !== undefined && foundSourcenode !== null) ? 
 								<span style={{marginTop: 20, }}>
 
 									{disabledButtons && message.length > 0 ?
 										<Typography variant="body1"  style={{textAlign: "center", marginTop: 30, marginBottom: 20,  }}>
-											{message}. You may close this window.
+											{message}
 										</Typography>
 									: 
 										<Fade in={true} timeout={2500}>
 											<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-												{disabledButtons ? "Answered. You may close this window." : ""}
+												{disabledButtons ? "Already answered. You may close this window." : ""}
 											</Typography>
 										</Fade>
 									}

@@ -57,14 +57,11 @@ func getParsedTar(tw *tar.Writer, baseDir, extra string) error {
 		switch mode := fi.Mode(); {
 		case mode.IsDir():
 			// do directory recursion
-			//log.Printf("DIR: %s", file)
-
-			// Append "src" as extra here
-			filenamesplit := strings.Split(file, "/")
+			// Cross-platform path handling for tar entries
+			filenamesplit := strings.Split(filepath.ToSlash(file), "/")
 			filename := fmt.Sprintf("%s%s/", extra, filenamesplit[len(filenamesplit)-1])
 
 			tmpExtra := fmt.Sprintf(filename)
-			//log.Printf("TmpExtra: %s", tmpExtra)
 			err = getParsedTar(tw, file, tmpExtra)
 			if err != nil {
 				log.Printf("Directory parse issue: %s", err)
@@ -86,9 +83,8 @@ func getParsedTar(tw *tar.Writer, baseDir, extra string) error {
 				return err
 			}
 
-			filenamesplit := strings.Split(file, "/")
+			filenamesplit := strings.Split(filepath.ToSlash(file), "/")
 			filename := fmt.Sprintf("%s%s", extra, filenamesplit[len(filenamesplit)-1])
-			//log.Printf("Filename: %s", filename)
 			tarHeader := &tar.Header{
 				Name: filename,
 				Size: int64(len(readFile)),
@@ -486,16 +482,22 @@ func buildImage(tags []string, dockerfileLocation string) error {
 	}
 
 	log.Printf("[INFO] Docker Tags: %s", tags)
-	dockerfileSplit := strings.Split(dockerfileLocation, "/")
+	log.Printf("[DEBUG] Dockerfile location: %s", dockerfileLocation)
+
+	// Convert to forward slashes for consistent handling across OS
+	normalizedPath := filepath.ToSlash(dockerfileLocation)
+	dockerfileSplit := strings.Split(normalizedPath, "/")
 
 	// Create a buffer
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
+
+	// Use the directory part of the dockerfile path
 	baseDir := strings.Join(dockerfileSplit[0:len(dockerfileSplit)-1], "/")
 
-	// Builds the entire folder into buf
-	err = getParsedTar(tw, baseDir, "")
+	// Builds the entire folder into buf using OS-specific path
+	err = getParsedTar(tw, filepath.FromSlash(baseDir), "")
 	if err != nil {
 		log.Printf("[ERROR] Tar issue during app build: %s", err)
 	}

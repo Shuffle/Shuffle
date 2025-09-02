@@ -304,7 +304,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		shutdownData, err := json.Marshal(workflowExecution)
 		if err == nil {
 			sendResult(workflowExecution, shutdownData)
-			log.Printf("[WARNING][%s] Sent shutdown update with %d results and result value %s", workflowExecution.ExecutionId, len(workflowExecution.Results), reason)
+			//log.Printf("[WARNING][%s] Sent shutdown update with %d results and result value %s", workflowExecution.ExecutionId, len(workflowExecution.Results), reason)
 		} else {
 			log.Printf("[WARNING][%s] Failed to send update: %s", workflowExecution.ExecutionId, err)
 		}
@@ -413,7 +413,6 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	log.Printf("[DEBUG] Deploying k8s app with identifier %s to namespace %s", identifier, kubernetesNamespace)
-
 	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
 	if err != nil {
 		deployport = 80
@@ -2022,7 +2021,9 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	}
 
 	if len(onpremApps) == 0 {
-		return errors.New(fmt.Sprintf("No apps to handle onprem (%s)", environment))
+		//return errors.New(fmt.Sprintf("No apps to handle onprem (%s)", environment))
+		log.Printf("[INFO][%s] No apps to handle onprem (%s). Returning 200 OK anyway", workflowExecution.ExecutionId, environment)
+		return nil
 	}
 
 	pullOptions := dockerimage.PullOptions{}
@@ -2803,7 +2804,7 @@ func sendSelfRequest(actionResult shuffle.ActionResult) {
 		if err != nil {
 			log.Printf("[ERROR][%s] Failed reading body: %s", actionResult.ExecutionId, err)
 		} else {
-			log.Printf("[DEBUG][%s] NEWRESP (from backend - 2): %s", actionResult.ExecutionId, string(body))
+			log.Printf("[DEBUG][%s] Sent update to backend - 2: %s", actionResult.ExecutionId, string(body))
 		}
 	}
 }
@@ -2863,7 +2864,7 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 		if err != nil {
 			log.Printf("[ERROR][%s] Failed reading body: %s", workflowExecution.ExecutionId, err)
 		} else {
-			log.Printf("[DEBUG][%s] NEWRESP (from backend): %s", workflowExecution.ExecutionId, string(body))
+			log.Printf("[DEBUG][%s] Sent request to backend: %s", workflowExecution.ExecutionId, string(body))
 		}
 	}
 }
@@ -3079,11 +3080,8 @@ func getAvailablePort() (net.Listener, error) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Printf("[WARNING] Failed to assign port by default. Defaulting to 5001")
-		//return ":5001"
 		return nil, err
 	}
-
-	//defer listener.Close()
 
 	return listener, nil
 	//return fmt.Sprintf(":%d", port)
@@ -3179,7 +3177,7 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 }
 
 /*** STARTREMOVE ***/
-func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int, retry bool) error {
+func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int, inputReplicas int64, retry bool) error {
 	log.Printf("[DEBUG] Deploying service for %s to swarm on port %d", name, deployport)
 	//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
 
@@ -3238,6 +3236,15 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		}
 
 		log.Printf("[DEBUG] SHUFFLE_APP_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, replicas)
+	}
+
+	// Max scale as well
+	if inputReplicas > 0 && inputReplicas < 100 { 
+		if replicas != uint64(inputReplicas) {
+			log.Printf("[DEBUG] Overwriting replicas to %d/node as inputReplicas is set to %d", inputReplicas, inputReplicas)
+		}
+
+		replicas = uint64(inputReplicas)
 	}
 
 	cnt, err := findActiveSwarmNodes(dockercli)
@@ -3380,8 +3387,18 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 
 			// Retry deploying the service (once)
 			if !retry { 
-				return deploySwarmService(dockercli, name, image, deployport, true)
+				return deploySwarmService(dockercli, name, image, deployport, -1, true)
 			}
+		}
+
+		// For port mapping. 
+		if strings.Contains(fmt.Sprintf("%s", err), "InvalidArgument") && strings.Contains(fmt.Sprintf("%s", err), "is already in use") {
+			//log.Printf("\n\n[WARNING] Port %d is already allocated. Trying to deploy on next port.\n\n", deployport)
+
+			// Random sleep 1-4 seconds
+			time.Sleep(time.Duration(rand.Intn(4)+1) * time.Second)
+
+			return deploySwarmService(dockercli, name, image, deployport+1, -1, retry)
 		}
 
 		log.Printf("[DEBUG] Failed deploying %s with image %s: %s", name, image, err)
@@ -3396,6 +3413,11 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 /*** ENDREMOVE ***/
 
 func findAppInfo(image, name string, redeploy bool) (int, error) {
+
+	// Sleep between 0 and 1.5 second - ensures deployments have a higher
+	// chance of being successful
+	time.Sleep(time.Duration(rand.Intn(1500)) * time.Millisecond)
+
 
 	highest := baseport
 	exposedPort := -1
@@ -3462,6 +3484,7 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 					continue
 				}
 
+				// This seems to have concurrency issues
 				portMappings[service.Spec.Annotations.Name] = int(endpoint.PublishedPort)
 				if int(endpoint.PublishedPort) > highest {
 					highest = int(endpoint.PublishedPort)
@@ -3478,10 +3501,11 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 			}
 
 			if redeploy {
+				log.Printf("Found it! Service: %s with image %s on port %d", name, image, exposedPort)
 				// Remove the service and redeploy it.
 				// There are cases where the service doesn't update properly
-				// Check when the last update happened. If it was within the last 5 minutes, skip
-				if int(time.Since(service.UpdatedAt).Seconds()) > 600 {
+				// Check when the last update happened. If it was within the last few minutes, skip
+				if int(time.Since(service.UpdatedAt).Seconds()) > 60 {
 
 					log.Printf("[INFO] Attempting redeploy of app %s with image %s since it is more than 10 minutes since last attempt with failure.", name, image)
 
@@ -3493,12 +3517,16 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 						log.Printf("[ERROR] Failed auto-removing service %s: %s", name, err)
 					} else {
 						log.Printf("[INFO] Auto-removed service %s successfully (rebuild due to redeploy).", name)
-						time.Sleep(10 * time.Second)
+
+						// Sleep between 8 and 12 seconds
+						time.Sleep(time.Duration(rand.Intn(4)+8) * time.Second)
+						replicas := service.Spec.Mode.Replicated.Replicas
 						err = deploySwarmService(
 							dockercli, 
 							name, 
 							image, 
 							exposedPort, 
+							int64(*replicas),
 							false,
 						)
 						if err != nil {
@@ -3508,7 +3536,7 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 						}
 					}
 				} else {
-					//log.Printf("[INFO] NOT redeploying service %s since it was updated less than 10  minutes ago.", name)
+					//log.Printf("[INFO] NOT redeploying service %s since it was updated less than 3 minutes ago.", name)
 				}
 			}
 
@@ -3536,7 +3564,7 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 		}
 
 		highest += 1
-		err = deploySwarmService(dockercli, name, image, highest, false)
+		err = deploySwarmService(dockercli, name, image, highest, -1, false)
 		if err != nil {
 			log.Printf("[WARNING] NOT Found service: %s. error: %s", name, err)
 			return highest, err
@@ -3898,7 +3926,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 // Has some issues with loading when running multiple workers and such.
 func baseDeploy() {
 
-	var cli *dockerclient.Client
+	//var cli *dockerclient.Client
 	//var err error
 
 	if isKubernetes != "true" {
@@ -3954,14 +3982,19 @@ func baseDeploy() {
 			env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
 		}
 
-		identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
-		if strings.Contains(identifier, " ") {
-			identifier = strings.ReplaceAll(identifier, " ", "-")
-		}
+		identifier := fmt.Sprintf("%s_%s", appname, appversion)
+		//identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
+		//if strings.Contains(identifier, " ") {
+		//	identifier = strings.ReplaceAll(identifier, " ", "-")
+		//}
 
 		//deployApp(cli, value, identifier, env, workflowExecution, action)
 		log.Printf("[DEBUG] Deploying app with identifier %s to ensure basic apps are available from the get-go", identifier)
-		go deployApp(cli, value, identifier, env, workflowExecution, action)
+
+		//findAppInfo("frikky/shuffle:http_1.4.0", "http_1-4-0", true)
+		go findAppInfo(value, identifier, false)
+
+		//go deployApp(cli, value, identifier, env, workflowExecution, action)
 		//err := deployApp(cli, value, identifier, env, workflowExecution, action)
 		//if err != nil {
 		//	log.Printf("[DEBUG] Failed deploying app %s: %s", value, err)
@@ -4281,12 +4314,10 @@ func checkStandaloneRun() {
 
 // Initial loop etc
 func main() {
-	// Testing swarm auto-replacements.
-	//findAppInfo("frikky/shuffle:shuffle-ai_1.0.0", "shuffle-ai_1-0-0", true)
-	//findAppInfo("frikky/shuffle:shuffle-ai_1.0.0", "singul_1-0-0", true)
+	// Testing swarm auto-replacements. This also tests ports 
+	// in rapid succession
 
 	checkStandaloneRun()
-
 	if os.Getenv("DEBUG") == "true" {
 		debug = true
 
@@ -4297,9 +4328,10 @@ func main() {
 	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		logsDisabled = "true"
+		os.Setenv("SHUFFLE_LOGS_DISABLED", "true")
 	}
-
 	/*** ENDREMOVE ***/
+
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
 	// Recursive import kind of :)
 	_, err := shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch", false, 0)
@@ -4757,7 +4789,7 @@ func runWebserver(listener net.Listener) {
 
 	//log.Fatal(http.Serve(listener, nil))
 
-	log.Printf("[DEBUG] NEW webserver setup")
+	log.Printf("[DEBUG] NEW webserver setup. Port: %s", listener.Addr().String())
 
 	http.Handle("/", r)
 	srv := http.Server{

@@ -60,7 +60,7 @@ var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
 // May cause some things to run slowly
-var maxConcurrency = 7
+var maxConcurrency = 25
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -81,6 +81,7 @@ var workerContainerSecurityContext = os.Getenv("SHUFFLE_WORKER_CONTAINER_SECURIT
 var appServiceAccountName = os.Getenv("SHUFFLE_APP_SERVICE_ACCOUNT_NAME")
 var appPodSecurityContext = os.Getenv("SHUFFLE_APP_POD_SECURITY_CONTEXT")
 var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT")
+var debug = os.Getenv("DEBUG") == "true"
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -218,6 +219,10 @@ func skipCheckInCleanup(name string) bool {
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
+	if cleanupEnv == "false" {
+		log.Printf("[INFO] Skipping cleanup of existing workers as CLEANUP is set to false. This should be auto-discovered during executions then instead.")
+		return nil
+	}
 
 	if isKubernetes == "true" {
 		// Cleanup all workers created by orborus and all apps created by workers.
@@ -2173,6 +2178,12 @@ func main() {
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 
+	// Increases default concurrency to 50 for swarm
+	if maxConcurrency < 50 && (swarmConfig == "run" || swarmConfig == "swarm") {
+		fullUrl += "?amount=50"
+	}
+
+
 	if isKubernetes == "true" {
 		log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
 	} else {
@@ -3926,7 +3937,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	}
 
 	identifier := "shuffle-workers"
-
 	if isKubernetes == "true" {
 		if shuffle.IsRunningInCluster() {
 			log.Printf("[INFO] Running in Kubernetes cluster")
@@ -3938,7 +3948,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 		// Specific to debugging
 		if len(workerServerUrl) == 0 {
-			log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
+			if debug { 
+				log.Printf("[INFO] Using default worker server url as previous is invalid: %s. Swapping to shuffle-workers:33333", streamUrl)
+			}
 		}
 
 		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
@@ -3993,7 +4005,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Connection refused?
-		log.Printf("[ERROR] Error running worker request to %s (1): %s", streamUrl, err)
+		log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
 
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("ghcr.io/shuffle/shuffle-worker:%s", workerVersion)
@@ -4026,7 +4038,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		log.Printf("[WARNING] POTENTIAL error running worker request (2) - status code is %d for %s, not 200. Body: %s", newresp.StatusCode, streamUrl, string(body))
 
 		// In case of old executions
-		if strings.Contains(string(body), "Bad status ") {
+		if strings.Contains(strings.ToLower(string(body)), "bad status ") {
+			return nil
+		}
+
+		if strings.Contains(strings.ToLower(string(body)), "no apps to handle") {
 			return nil
 		}
 
@@ -4040,7 +4056,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		debugCommand = fmt.Sprintf("kubectl logs -n %s deployment/shuffle-workers | grep %s", kubernetesNamespace, workflowExecution.ExecutionId)
 	}
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
+	log.Printf("[DEBUG][%s] Ran worker from requests. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
 	return nil
 }
 
