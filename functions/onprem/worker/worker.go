@@ -1302,8 +1302,7 @@ func getWorkerURLs() ([]string, error) {
 		// 		}
 		// 	}
 		// }
-
-		log.Printf("[DEBUG] Worker URLs for k8s: %#v", workerUrls)
+		//log.Printf("[DEBUG] Worker URLs for k8s: %#v", workerUrls)
 
 		return workerUrls, nil
 	}
@@ -3615,7 +3614,10 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 
 	for _, deployment := range deployments.Items {
 		if deployment.Name == name {
-			log.Printf("[INFO] Found deployment %s - no need to deploy another", name)
+			if debug { 
+				log.Printf("[DEBUG] Found deployment %s - no need to deploy another", name)
+			}
+
 			return nil
 		}
 	}

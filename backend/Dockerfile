@@ -20,7 +20,7 @@ RUN go mod tidy
 # From November 2022, CGO is enabled due to packages
 # that we use requiring it. This is a temporary fix
 # and makes us HAVE to install libc compatibility packages farther down.
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o webapp .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o shufflebackend .
 
 # Certificate build - gets required certs
 FROM alpine:latest as certs
@@ -40,4 +40,4 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifica
 
 WORKDIR /app
 EXPOSE 5001
-CMD ["./webapp"]
+CMD ["./shufflebackend"]
