@@ -3238,23 +3238,24 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	// Max scale as well
+	nodeCount := uint64(1)
 	if inputReplicas > 0 && inputReplicas < 100 { 
 		if replicas != uint64(inputReplicas) {
 			log.Printf("[DEBUG] Overwriting replicas to %d/node as inputReplicas is set to %d", inputReplicas, inputReplicas)
 		}
 
 		replicas = uint64(inputReplicas)
+	} else {
+		cnt, err := findActiveSwarmNodes(dockercli)
+		if err != nil {
+			log.Printf("[ERROR] Unable to find active swarm nodes: %s", err)
+		}
+
+		if cnt > 0 {
+			nodeCount = uint64(cnt)
+		}
 	}
 
-	cnt, err := findActiveSwarmNodes(dockercli)
-	if err != nil {
-		log.Printf("[ERROR] Unable to find active swarm nodes: %s", err)
-	}
-
-	nodeCount := uint64(1)
-	if cnt > 0 {
-		nodeCount = uint64(cnt)
-	}
 
 	replicatedJobs := uint64(replicas * nodeCount)
 	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
