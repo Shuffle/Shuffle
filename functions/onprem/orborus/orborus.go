@@ -220,8 +220,8 @@ func skipCheckInCleanup(name string) bool {
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
-	if cleanupEnv == "false" {
-		log.Printf("[INFO] Skipping cleanup of existing workers as CLEANUP is set to false. This should be auto-discovered during executions then instead.")
+	if cleanupEnv != "true" {
+		log.Printf("[INFO] Skipping cleanup of existing workers as CLEANUP is NOT set to true. Swarm actions are being auto-discovered during executions then instead.")
 		return nil
 	}
 
@@ -530,6 +530,7 @@ func deployServiceWorkers(image string) {
 		nodeCount = uint64(cnt)
 	}
 
+
 	appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
 	appReplicaCnt := 2
 	if len(appReplicas) > 0 {
@@ -542,6 +543,9 @@ func deployServiceWorkers(image string) {
 	}
 
 	log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
+
+	// FIXME: From September 2025 - This is set back to 1, as this doesn't really reflect how scale works at all. It is just confusing, and makes number larger/smaller "arbitrarily" instead of using default docker scale
+	nodeCount = 1
 	replicatedJobs := uint64(replicas * nodeCount)
 
 	log.Printf("[DEBUG] Deploying %d container(s) for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)

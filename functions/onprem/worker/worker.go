@@ -3254,6 +3254,9 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		if cnt > 0 {
 			nodeCount = uint64(cnt)
 		}
+
+		// FIXME: From September 2025 - This is set back to 1, as this doesn't really reflect how scale works at all. It is just confusing, and makes number larger/smaller "arbitrarily" instead of using default docker scale
+		nodeCount = 1
 	}
 
 
