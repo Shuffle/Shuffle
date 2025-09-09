@@ -3218,10 +3218,8 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	// Apps used a lot should have 2 replicas (default)
-	replicas := uint64(1)
-	//if (strings.Contains(strings.ToLower(name), "shuffle") && strings.Contains(strings.ToLower(name), "tools")) || strings.Contains(strings.ToLower(name), "http") {
-	//	replicas = 2
-	//}
+	// New default to 3 (as the chance of queues piling up is lower)
+	replicas := uint64(3)
 
 	// Sent from Orborus
 	// Should be equal to
