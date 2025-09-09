@@ -95,12 +95,16 @@ services:
   #  image: memcached:latest
   #  container_name: shuffle-cache
   #  hostname: shuffle-cache
-  #  mem_limit: 1024m
+  #  command: memcached -m 2048 -c 2500
   #  environment:
-  #    - MEMCACHED_MEMORY=1024
+  #    - MEMCACHED_MEMORY=2048
   #    - MEMCACHED_MAX_CONNECTIONS=2500
   #  ports:
   #    - 11211:11211
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        memory: 2048M
   
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy

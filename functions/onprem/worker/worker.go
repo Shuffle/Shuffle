@@ -4028,7 +4028,7 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 	if newresp.StatusCode != 200 {
 		log.Printf("[ERROR] StatusCode (1): %d - %s", newresp.StatusCode, string(body))
 		time.Sleep(time.Duration(sleepTime) * time.Second)
-		return environments, errors.New(fmt.Sprintf("Bad status code: %d", newresp.StatusCode))
+		return environments, errors.New(fmt.Sprintf("Bad status code from backend: %d", newresp.StatusCode))
 	}
 
 	err = json.Unmarshal(body, &workflowExecution)

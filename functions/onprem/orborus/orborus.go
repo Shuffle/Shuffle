@@ -195,10 +195,10 @@ func getThisContainerId() {
 	if containerId == "" {
 		if containerName != "" {
 			containerId = containerName
-			log.Printf("[INFO] Falling back to CONTAINER_NAME as container ID")
+			log.Printf("[INFO] Falling back to ORBORUS_CONTAINER_NAME as container ID")
 		} else {
 			containerId = "shuffle-orborus"
-			log.Printf(`[WARNING] CONTAINER_NAME is not set. Falling back to default name "%s" as container ID`, containerId)
+			log.Printf(`[WARNING] ORBORUS_CONTAINER_NAME env is not set. Falling back to default name "%s" as container ID. This may cause issues on the same server`, containerId)
 		}
 	}
 
