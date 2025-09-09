@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"log"
 	"math"
 	"net"
@@ -342,7 +343,10 @@ func deployServiceWorkers(image string) {
 	if len(dockerSwarmBridgeMTU) == 0 {
 		mtu, err = strconv.Atoi(dockerSwarmBridgeMTU) // by default
 		if err != nil {
-			log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
+			if debug { 
+				log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
+			}
+
 			mtu = 1500
 		}
 	}
@@ -1700,17 +1704,45 @@ func checkSwarmService(ctx context.Context) {
 		return
 	}
 
+	listenAddr := "0.0.0.0"
 	req := swarm.InitRequest{
-		ListenAddr:    "0.0.0.0:2377",
+		ListenAddr:    fmt.Sprintf("%s:2377", listenAddr),
 		AdvertiseAddr: fmt.Sprintf("%s:2377", ip),
 	}
 
-	ret, err := dockercli.SwarmInit(ctx, req)
+	id, err := dockercli.SwarmInit(ctx, req)
 	if err != nil {
-		log.Printf("[WARNING] Swarm init: %s", err)
+		log.Printf("[ERROR] Swarm init issue: %s. Retrying with a failover IP address from interface.", err)
+
+		// Dummy message used for testing
+		//err = errors.New("Error response from daemon: could not choose an IP address to advertise since this system has multiple addresses on different interfaces (10.52.208.221 on eno1 and 192.168.122.1 on virbr0) - specify one with --advertise-addr")
+
+		msg := err.Error()
+
+		// Extract all IPv4 addresses from the error message
+		var ipv4Re = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
+		candidates := ipv4Re.FindAllString(msg, -1)
+		if len(candidates) > 0 {
+			// Pick the first valid candidate (or implement your own heuristic)
+
+			for cnt, candidate := range candidates {
+				if cnt > 5 {
+					break
+				}
+
+				req.AdvertiseAddr = fmt.Sprintf("%s:2377", candidate)
+				_, err = dockercli.SwarmInit(context.Background(), req)
+				if err != nil {
+					continue
+				}
+
+				break
+			}
+
+		}
 	}
 
-	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
+	log.Printf("[INFO] Swarm init ID: '%s'. If this is empty, there is most likely an error.", id)
 }
 
 func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
