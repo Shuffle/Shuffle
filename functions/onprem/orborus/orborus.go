@@ -225,7 +225,6 @@ func cleanupExistingNodes(ctx context.Context) error {
 		return nil
 	}
 
-
 	if isKubernetes == "true" {
 		// Cleanup all workers created by orborus and all apps created by workers.
 
