@@ -1,0 +1,28 @@
+{
+  "name": "Shuffle_webhook",
+  "version": "1.0",
+  "author": "@azgaviperr",
+  "url": "https://github.com/frikky/shuffle",
+  "license": "AGPL-V3",
+  "description": "Execute a webhook in Shuffle",
+  "dataTypeList": ["thehive:case", "thehive:alert", "thehive:case_artifact"],
+  "command": "Shuffle_Webhook/shuffle_webhook.py",
+  "baseConfig": "Shuffle_Webhook",
+  "configurationItems": [
+    {
+      "name": "webhook_url",
+      "description": "The URL to your shuffle instance",
+      "type": "string",
+      "multi": false,
+      "required": true
+    },
+		{
+      "name": "verifyssl",
+      "description": "Verify SSL certificate",
+      "type": "boolean",
+      "multi": false,
+      "required": true,
+      "defaultValue": true
+    }
+  ]
+}
