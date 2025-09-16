@@ -1058,6 +1058,13 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_REGISTRY=%s", os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")))
 	}
 
+	if len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", os.Getenv("SHUFFLE_BASE_IMAGE_NAME")))
+	} else {
+		log.Printf("[INFO] SHUFFLE_BASE_IMAGE_NAME is not set. Defaulting to %s", baseimagename)
+		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseimagename))
+	}
+
 	if len(os.Getenv("REGISTRY_URL")) > 0 {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
@@ -1204,10 +1211,13 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 	}
 
+	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
+		log.Printf("[INFO] Setting image pull policy to Always as private registry is used.")
+		containerAttachment.ImagePullPolicy = corev1.PullAlways
+	}
+
 	podname := shuffle.GetPodName()
-
 	ctx := context.Background()
-
 	if len(podname) > 0 {
 		_, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
 		if err != nil {
@@ -3974,10 +3984,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 	identifier := "shuffle-workers"
 	if isKubernetes == "true" {
-		if shuffle.IsRunningInCluster() {
-			log.Printf("[INFO] Running in Kubernetes cluster")
-			// try getting the k8s worker server url
-		}
+		// FIXME: Do we need this to map the cluster?
+		//if shuffle.IsRunningInCluster() {
+		//log.Printf("[INFO] Running in Kubernetes cluster")
+		// try getting the k8s worker server url
+		//}
 	}
 
 	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "127.0.0.1") || strings.Contains(streamUrl, "shuffle-backend") {

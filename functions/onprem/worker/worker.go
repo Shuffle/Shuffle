@@ -662,6 +662,14 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		},
 	}
 
+	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
+		log.Printf("[INFO] Setting image pull policy to Always as private registry is used.")
+		//containerAttachment.ImagePullPolicy = corev1.PullAlways
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
+	} else {
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
+	}
+
 	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed creating deployment: %v", err)
