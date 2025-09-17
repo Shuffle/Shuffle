@@ -2183,7 +2183,6 @@ func main() {
 		fullUrl += "?amount=50"
 	}
 
-
 	if isKubernetes == "true" {
 		log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
 	} else {
@@ -2532,6 +2531,8 @@ func main() {
 				executionRequests.Data = executionRequests.Data[0:allowed]
 			}
 		} else if swarmControlMode && (swarmConfig == "run" || swarmConfig == "swarm") {
+			// any reason it is not maxConcurrency instead of 
+			// hardcoded 50?
 			if len(executionRequests.Data) > 50 {
 				executionRequests.Data = executionRequests.Data[0:50]
 			}
@@ -4060,6 +4061,10 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	return nil
 }
 
+// 0x0elliot:
+// let's never increase worker replicas.
+// in our tests, workers replicas mattered a lot less.
+// edge-case: subflows are helped with when worker replicas are higher.
 func AutoScale(ctx context.Context) {
 	if os.Getenv("SHUFFLE_SCALE_REPLICAS") != "" {
 		return

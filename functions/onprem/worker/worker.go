@@ -4806,6 +4806,12 @@ func runWebserver(listener net.Listener) {
 	}
 }
 
+// 0x0elliot:
+// IF we had to rewrite this, we will focus on ONLY auto scale for apps.
+// i recommend we target executions/minute (?) as a metric.
+// edge-case: subflows are helped with when worker replicas are higher.
+// i kind of never want to scale down. at least, not now.
+// also, algorithm is very broken. executions/worker
 func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutionsPerMinute int) {
 	ticker := time.NewTicker(1 * time.Second)
 
