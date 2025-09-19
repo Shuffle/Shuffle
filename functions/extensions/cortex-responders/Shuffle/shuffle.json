@@ -1,0 +1,43 @@
+{
+  "name": "Shuffle",
+  "version": "1.0",
+  "author": "@frikkylikeme",
+  "url": "https://github.com/frikky/shuffle",
+  "license": "AGPL-V3",
+  "description": "Execute a workflow in Shuffle",
+  "dataTypeList": ["thehive:case", "thehive:alert", "thehive:case_artifact"],
+  "command": "Shuffle/shuffle.py",
+  "baseConfig": "Shuffle",
+  "configurationItems": [
+    {
+      "name": "url",
+      "description": "The URL to your shuffle instance",
+      "type": "string",
+      "multi": false,
+      "required": true,
+      "defaultValue": "https://shuffler.io"
+    },
+		{
+      "name": "api_key",
+      "description": "The API key to your Shuffle user",
+      "type": "string",
+      "multi": false,
+      "required": true
+    },
+    {
+      "name": "verifyssl",
+      "description": "Verify SSL certificate",
+      "type": "boolean",
+      "multi": false,
+      "required": true,
+      "defaultValue": true
+    },
+    {
+      "name": "workflow_id",
+      "description": "The ID of the workflow to execute",
+      "type": "string",
+      "multi": false,
+      "required": true
+    }
+  ]
+}

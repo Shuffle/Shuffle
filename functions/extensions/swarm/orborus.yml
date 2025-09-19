@@ -1,0 +1,39 @@
+version: '3.4'
+services:
+  orborus:
+      image: ghcr.io/frikky/shuffle-orborus:nightly
+      #hostname: shuffle-orborus 
+      environment:
+        #SHUFFLE_WORKER_VERSION: nightly
+        SHUFFLE_APP_SDK_VERSION: 0.8.97
+        SHUFFLE_WORKER_VERSION: nightly
+        BASE_URL: http://<BACKEND>:5001
+        #BASE_URL: http://192.168.86.37:5001
+        CLEANUP: 'true'
+        DOCKER_API_VERSION: '1.40'
+        ENVIRONMENT_NAME: Shuffle
+        HTTPS_PROXY: ''
+        HTTP_PROXY: ''
+        ORG_ID: Shuffle
+        SHUFFLE_BASE_IMAGE_NAME: frikky
+        SHUFFLE_BASE_IMAGE_REGISTRY: ghcr.io
+        SHUFFLE_BASE_IMAGE_TAG_SUFFIX: -0.8.80
+        SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: '50'
+        SHUFFLE_ORBORUS_EXECUTION_TIMEOUT: '800'
+        SHUFFLE_PASS_APP_PROXY: 'FALSE'
+        SHUFFLE_PASS_WORKER_PROXY: 'TRUE'
+        SHUFFLE_SCALE_REPLICAS: 5
+        SHUFFLE_SWARM_NETWORK_NAME: shuffle_prod
+        SHUFFLE_SWARM_CONFIG: "run"
+      volumes:
+       - /var/run/docker.sock:/var/run/docker.sock
+      networks:
+       - shuffle_prod
+       #- reverseproxy
+      logging:
+        driver: json-file
+
+networks:
+  shuffle_prod:
+    driver: overlay
+    external: true
