@@ -5,6 +5,8 @@ import (
 	"github.com/shuffle/shuffle-shared"
 	"github.com/shuffle/singul/pkg"
 
+	"net/http/pprof"
+
 	"archive/zip"
 	"bufio"
 	"bytes"
@@ -5505,6 +5507,14 @@ func initHandlers() {
 	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
+
+	if (strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true") {
+		r.HandleFunc("/debug/pprof/", pprof.Index)
+		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
 
 	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)
