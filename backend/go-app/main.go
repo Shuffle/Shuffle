@@ -2063,7 +2063,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(hook.Workflows) == 1 {
-		workflow, err := shuffle.GetWorkflow(ctx, hook.Workflows[0])
+		workflow, err := shuffle.GetWorkflow(ctx, hook.Workflows[0], true)
 		if err == nil {
 			for _, branch := range workflow.Branches {
 				if branch.SourceID == hook.Id {
@@ -5509,11 +5509,14 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
 	if (strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true") {
+		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
 		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
 		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	} else {
+		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
 	}
 
 	r.Use(shuffle.RequestMiddleware)
