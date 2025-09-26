@@ -26,23 +26,23 @@ data:
   {{- end }}
 
   # Shuffle worker resources
-  {{- $workerResources := (.Values.worker.resources | default (include "common.resources.preset" (dict "type" .Values.worker.resourcesPreset)) | fromYaml) -}}
-  {{- if $workerResources.requests.cpu }}
+  {{- $workerResources := (.Values.worker.resources | default (include "common.resources.preset" (dict "type" .Values.worker.resourcesPreset) | fromYaml)) -}}
+  {{- if and $workerResources.requests $workerResources.requests.cpu }}
   SHUFFLE_WORKER_CPU_REQUEST: {{ $workerResources.requests.cpu | quote }}
   {{- end }}
-  {{- if $workerResources.requests.memory}}
+  {{- if and $workerResources.requests $workerResources.requests.memory}}
   SHUFFLE_WORKER_MEMORY_REQUEST: {{ $workerResources.requests.memory | quote }}
   {{- end }}
-  {{- if (index $workerResources.requests "ephemeral-storage") }}
+  {{- if and $workerResources.requests (index $workerResources.requests "ephemeral-storage") }}
   SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST: {{ (index $workerResources.requests "ephemeral-storage") | quote }}
   {{- end }}
-  {{- if $workerResources.limits.cpu }}
+  {{- if and $workerResources.limits $workerResources.limits.cpu }}
   SHUFFLE_WORKER_CPU_LIMIT: {{ $workerResources.limits.cpu | quote }}
   {{- end }}
-  {{- if $workerResources.limits.memory}}
+  {{- if and $workerResources.limits $workerResources.limits.memory}}
   SHUFFLE_WORKER_MEMORY_LIMIT: {{ $workerResources.limits.memory | quote }}
   {{- end }}
-  {{- if (index $workerResources.limits "ephemeral-storage") }}
+  {{- if and $workerResources.limits (index $workerResources.limits "ephemeral-storage") }}
   SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT: {{ (index $workerResources.limits "ephemeral-storage") | quote }}
   {{- end }}
 
@@ -57,22 +57,22 @@ data:
   {{- end }}
 
   # Shuffle app resources
-  {{- $appResources := (.Values.app.resources | default (include "common.resources.preset" (dict "type" .Values.app.resourcesPreset)) | fromYaml) -}}
-  {{- if $appResources.requests.cpu }}
+  {{- $appResources := (.Values.app.resources | default (include "common.resources.preset" (dict "type" .Values.app.resourcesPreset) | fromYaml)) -}}
+  {{- if and $appResources.requests $appResources.requests.cpu }}
   SHUFFLE_APP_CPU_REQUEST: {{ $appResources.requests.cpu | quote }}
   {{- end }}
-  {{- if $appResources.requests.memory}}
+  {{- if and $appResources.requests $appResources.requests.memory }}
   SHUFFLE_APP_MEMORY_REQUEST: {{ $appResources.requests.memory | quote }}
   {{- end }}
-  {{- if (index $appResources.requests "ephemeral-storage") }}
+  {{- if and $appResources.requests (index $appResources.requests "ephemeral-storage") }}
   SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST: {{ (index $appResources.requests "ephemeral-storage") | quote }}
   {{- end }}
-  {{- if $appResources.limits.cpu }}
+  {{- if and $appResources.limits $appResources.limits.cpu }}
   SHUFFLE_APP_CPU_LIMIT: {{ $appResources.limits.cpu | quote }}
   {{- end }}
-  {{- if $appResources.limits.memory}}
+  {{- if and $appResources.limits $appResources.limits.memory }}
   SHUFFLE_APP_MEMORY_LIMIT: {{ $appResources.limits.memory | quote }}
   {{- end }}
-  {{- if (index $appResources.limits "ephemeral-storage") }}
+  {{- if and $appResources.limits (index $appResources.limits "ephemeral-storage") }}
   SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT: {{ (index $appResources.limits "ephemeral-storage") | quote }}
   {{- end }}
