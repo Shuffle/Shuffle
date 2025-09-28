@@ -662,6 +662,14 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		},
 	}
 
+	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
+		log.Printf("[INFO] Setting image pull policy to Always as private registry is used.")
+		//containerAttachment.ImagePullPolicy = corev1.PullAlways
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
+	} else {
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
+	}
+
 	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed creating deployment: %v", err)
@@ -1302,8 +1310,7 @@ func getWorkerURLs() ([]string, error) {
 		// 		}
 		// 	}
 		// }
-
-		log.Printf("[DEBUG] Worker URLs for k8s: %#v", workerUrls)
+		//log.Printf("[DEBUG] Worker URLs for k8s: %#v", workerUrls)
 
 		return workerUrls, nil
 	}
@@ -3219,10 +3226,8 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	// Apps used a lot should have 2 replicas (default)
-	replicas := uint64(1)
-	//if (strings.Contains(strings.ToLower(name), "shuffle") && strings.Contains(strings.ToLower(name), "tools")) || strings.Contains(strings.ToLower(name), "http") {
-	//	replicas = 2
-	//}
+	// New default to 3 (as the chance of queues piling up is lower)
+	replicas := uint64(3)
 
 	// Sent from Orborus
 	// Should be equal to
@@ -3239,23 +3244,27 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	// Max scale as well
+	nodeCount := uint64(1)
 	if inputReplicas > 0 && inputReplicas < 100 { 
 		if replicas != uint64(inputReplicas) {
 			log.Printf("[DEBUG] Overwriting replicas to %d/node as inputReplicas is set to %d", inputReplicas, inputReplicas)
 		}
 
 		replicas = uint64(inputReplicas)
+	} else {
+		cnt, err := findActiveSwarmNodes(dockercli)
+		if err != nil {
+			log.Printf("[ERROR] Unable to find active swarm nodes: %s", err)
+		}
+
+		if cnt > 0 {
+			nodeCount = uint64(cnt)
+		}
+
+		// FIXME: From September 2025 - This is set back to 1, as this doesn't really reflect how scale works at all. It is just confusing, and makes number larger/smaller "arbitrarily" instead of using default docker scale
+		nodeCount = 1
 	}
 
-	cnt, err := findActiveSwarmNodes(dockercli)
-	if err != nil {
-		log.Printf("[ERROR] Unable to find active swarm nodes: %s", err)
-	}
-
-	nodeCount := uint64(1)
-	if cnt > 0 {
-		nodeCount = uint64(cnt)
-	}
 
 	replicatedJobs := uint64(replicas * nodeCount)
 	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
@@ -3615,7 +3624,10 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 
 	for _, deployment := range deployments.Items {
 		if deployment.Name == name {
-			log.Printf("[INFO] Found deployment %s - no need to deploy another", name)
+			if debug { 
+				log.Printf("[DEBUG] Found deployment %s - no need to deploy another", name)
+			}
+
 			return nil
 		}
 	}
@@ -4025,7 +4037,7 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 	if newresp.StatusCode != 200 {
 		log.Printf("[ERROR] StatusCode (1): %d - %s", newresp.StatusCode, string(body))
 		time.Sleep(time.Duration(sleepTime) * time.Second)
-		return environments, errors.New(fmt.Sprintf("Bad status code: %d", newresp.StatusCode))
+		return environments, errors.New(fmt.Sprintf("Bad status code from backend: %d", newresp.StatusCode))
 	}
 
 	err = json.Unmarshal(body, &workflowExecution)

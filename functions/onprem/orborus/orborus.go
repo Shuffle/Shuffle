@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"log"
 	"math"
 	"net"
@@ -195,10 +196,10 @@ func getThisContainerId() {
 	if containerId == "" {
 		if containerName != "" {
 			containerId = containerName
-			log.Printf("[INFO] Falling back to CONTAINER_NAME as container ID")
+			log.Printf("[INFO] Falling back to ORBORUS_CONTAINER_NAME as container ID")
 		} else {
 			containerId = "shuffle-orborus"
-			log.Printf(`[WARNING] CONTAINER_NAME is not set. Falling back to default name "%s" as container ID`, containerId)
+			log.Printf(`[WARNING] ORBORUS_CONTAINER_NAME env is not set. Falling back to default name "%s" as container ID. This may cause issues on the same server`, containerId)
 		}
 	}
 
@@ -219,8 +220,8 @@ func skipCheckInCleanup(name string) bool {
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
-	if cleanupEnv == "false" {
-		log.Printf("[INFO] Skipping cleanup of existing workers as CLEANUP is set to false. This should be auto-discovered during executions then instead.")
+	if cleanupEnv != "true" {
+		log.Printf("[INFO] Skipping cleanup of existing workers as CLEANUP is NOT set to true. Swarm actions are being auto-discovered during executions then instead.")
 		return nil
 	}
 
@@ -342,7 +343,10 @@ func deployServiceWorkers(image string) {
 	if len(dockerSwarmBridgeMTU) == 0 {
 		mtu, err = strconv.Atoi(dockerSwarmBridgeMTU) // by default
 		if err != nil {
-			log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
+			if debug { 
+				log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
+			}
+
 			mtu = 1500
 		}
 	}
@@ -526,6 +530,7 @@ func deployServiceWorkers(image string) {
 		nodeCount = uint64(cnt)
 	}
 
+
 	appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
 	appReplicaCnt := 2
 	if len(appReplicas) > 0 {
@@ -538,6 +543,9 @@ func deployServiceWorkers(image string) {
 	}
 
 	log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
+
+	// FIXME: From September 2025 - This is set back to 1, as this doesn't really reflect how scale works at all. It is just confusing, and makes number larger/smaller "arbitrarily" instead of using default docker scale
+	nodeCount = 1
 	replicatedJobs := uint64(replicas * nodeCount)
 
 	log.Printf("[DEBUG] Deploying %d container(s) for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
@@ -1050,6 +1058,13 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_REGISTRY=%s", os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")))
 	}
 
+	if len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", os.Getenv("SHUFFLE_BASE_IMAGE_NAME")))
+	} else {
+		log.Printf("[INFO] SHUFFLE_BASE_IMAGE_NAME is not set. Defaulting to %s", baseimagename)
+		env = append(env, fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseimagename))
+	}
+
 	if len(os.Getenv("REGISTRY_URL")) > 0 {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
@@ -1196,10 +1211,13 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 	}
 
+	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
+		log.Printf("[INFO] Setting image pull policy to Always as private registry is used.")
+		containerAttachment.ImagePullPolicy = corev1.PullAlways
+	}
+
 	podname := shuffle.GetPodName()
-
 	ctx := context.Background()
-
 	if len(podname) > 0 {
 		_, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
 		if err != nil {
@@ -1700,17 +1718,45 @@ func checkSwarmService(ctx context.Context) {
 		return
 	}
 
+	listenAddr := "0.0.0.0"
 	req := swarm.InitRequest{
-		ListenAddr:    "0.0.0.0:2377",
+		ListenAddr:    fmt.Sprintf("%s:2377", listenAddr),
 		AdvertiseAddr: fmt.Sprintf("%s:2377", ip),
 	}
 
-	ret, err := dockercli.SwarmInit(ctx, req)
+	id, err := dockercli.SwarmInit(ctx, req)
 	if err != nil {
-		log.Printf("[WARNING] Swarm init: %s", err)
+		log.Printf("[ERROR] Swarm init issue: %s. Retrying with a failover IP address from interface.", err)
+
+		// Dummy message used for testing
+		//err = errors.New("Error response from daemon: could not choose an IP address to advertise since this system has multiple addresses on different interfaces (10.52.208.221 on eno1 and 192.168.122.1 on virbr0) - specify one with --advertise-addr")
+
+		msg := err.Error()
+
+		// Extract all IPv4 addresses from the error message
+		var ipv4Re = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
+		candidates := ipv4Re.FindAllString(msg, -1)
+		if len(candidates) > 0 {
+			// Pick the first valid candidate (or implement your own heuristic)
+
+			for cnt, candidate := range candidates {
+				if cnt > 5 {
+					break
+				}
+
+				req.AdvertiseAddr = fmt.Sprintf("%s:2377", candidate)
+				_, err = dockercli.SwarmInit(context.Background(), req)
+				if err != nil {
+					continue
+				}
+
+				break
+			}
+
+		}
 	}
 
-	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
+	log.Printf("[INFO] Swarm init ID: '%s'. If this is empty, there is most likely an error.", id)
 }
 
 func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
@@ -3939,10 +3985,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 	identifier := "shuffle-workers"
 	if isKubernetes == "true" {
-		if shuffle.IsRunningInCluster() {
-			log.Printf("[INFO] Running in Kubernetes cluster")
-			// try getting the k8s worker server url
-		}
+		// FIXME: Do we need this to map the cluster?
+		//if shuffle.IsRunningInCluster() {
+		//log.Printf("[INFO] Running in Kubernetes cluster")
+		// try getting the k8s worker server url
+		//}
 	}
 
 	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "127.0.0.1") || strings.Contains(streamUrl, "shuffle-backend") {

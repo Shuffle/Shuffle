@@ -90,7 +90,7 @@ data:
   IS_KUBERNETES: "true"
   REGISTRY_URL: "docker-registry:5000"
   REGISTRY_AUTH: "false"
-  SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
+  SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:latest"
 kind: ConfigMap
 
 ---
@@ -702,7 +702,7 @@ spec:
                 configMapKeyRef:
                   key: REGISTRY_AUTH
                   name: env
-          image: ghcr.io/shuffle/shuffle-backend:nightly
+          image: ghcr.io/shuffle/shuffle-backend:latest
           imagePullPolicy: Always
           name: shuffle-backend
           ports:
@@ -769,7 +769,7 @@ spec:
     spec:
       containers:
         - name: shuffle-frontend
-          image: ghcr.io/shuffle/shuffle-frontend:nightly
+          image: ghcr.io/shuffle/shuffle-frontend:latest
           env:
             - name: BACKEND_HOSTNAME
               valueFrom:
@@ -853,13 +853,13 @@ spec:
             - name: ORG_ID
               value: Shuffle
             - name: SHUFFLE_APP_SDK_VERSION
-              value: nightly
+              value: latest 
             - name: SHUFFLE_SCALE_REPLICAS
               value: "5"
             - name: SHUFFLE_SWARM_CONFIG
               value: run
             - name: SHUFFLE_WORKER_VERSION
-              value: nightly
+              value: latest
             - name: IS_KUBERNETES
               valueFrom:
                 configMapKeyRef:
@@ -885,7 +885,7 @@ spec:
                 configMapKeyRef:
                   key: SHUFFLE_MEMCACHED
                   name: env
-          image: ghcr.io/shuffle/shuffle-orborus:nightly
+          image: ghcr.io/shuffle/shuffle-orborus:latest
           #imagePullPolicy: Never
           name: shuffle-orborus
           resources: {}

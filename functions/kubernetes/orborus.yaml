@@ -72,7 +72,7 @@ spec:
             - name: AUTH 
               value: "3663a270-bb3a-4678-a365-d879601a1a0c"
 
-          image: ghcr.io/shuffle/shuffle-orborus:nightly
+          image: ghcr.io/shuffle/shuffle-orborus:latest
           #imagePullPolicy: Never
           name: shuffle-orborus
           resources: {}

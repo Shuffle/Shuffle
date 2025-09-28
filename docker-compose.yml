@@ -55,6 +55,7 @@ services:
       - SHUFFLE_STATS_DISABLED=true
       - SHUFFLE_LOGS_DISABLED=true
       - SHUFFLE_SWARM_CONFIG=run
+      - CLEANUP=false
       - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:latest
     env_file: .env
     restart: unless-stopped
@@ -65,7 +66,7 @@ services:
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms4096m -Xmx4096m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms3072m -Xmx3072m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - bootstrap.memory_lock=true
       - DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI=true
       - cluster.initial_master_nodes=shuffle-opensearch
@@ -94,12 +95,16 @@ services:
   #  image: memcached:latest
   #  container_name: shuffle-cache
   #  hostname: shuffle-cache
-  #  mem_limit: 1024m
+  #  command: memcached -m 2048 -c 2500
   #  environment:
-  #    - MEMCACHED_MEMORY=1024
+  #    - MEMCACHED_MEMORY=2048
   #    - MEMCACHED_MAX_CONNECTIONS=2500
   #  ports:
   #    - 11211:11211
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        memory: 2048M
   
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
