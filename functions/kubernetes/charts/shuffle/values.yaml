@@ -885,6 +885,16 @@ frontend:
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
     ##
     labels: {}
+    type: NodePort
+    ports:
+      - name: http
+        port: 80
+        targetPort: 3001
+        nodePort: 30080
+      - name: https
+        port: 443
+        targetPort: 3443
+        nodePort: 30443
 
   ## ServiceAccount configuration
   ##
