@@ -1888,6 +1888,15 @@ volumePermissions:
 ##
 opensearch:
   enabled: true
+  
+  image:
+    registry: docker.io
+    repository: opensearchproject/opensearch
+    tag: "3.2.0"
+    digest: ""
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  
   master:
     replicaCount: 1
   data:
