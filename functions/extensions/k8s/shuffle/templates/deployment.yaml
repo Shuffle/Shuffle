@@ -1,0 +1,253 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}frontend
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: shuffle
+      app: shuffle-frontend
+  template:
+    metadata:
+      labels:
+        service: shuffle
+        app: shuffle-frontend
+    spec:
+      containers:
+        - name: shuffle-frontend
+          image: ghcr.io/frikky/shuffle-frontend:nightly
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: BACKEND_HOSTNAME
+              value: backend-service
+            - name: TZ
+              value: Asia/Shanghai
+          ports:
+            - name: http
+              containerPort: 80
+              hostPort: 3001
+            - name: https
+              containerPort: 443
+      hostname: shuffle-frontend
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}backend
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: shuffle
+      app: shuffle-backend
+  template:
+    metadata:
+      labels:
+        service: shuffle
+        app: shuffle-backend
+    spec:
+      containers:
+        - name: shuffle-backend
+          image: ghcr.io/frikky/shuffle-backend:nightly
+          env:
+            - name: BACKEND_HOSTNAME
+              value: "backend-service"
+            - name: BACKEND_PORT
+              value: "5001"
+            - name: ENVIRONMENT_NAME
+              value: "Shuffle"
+            - name: HTTPS_PROXY
+            - name: HTTP_PROXY
+            - name: ORG_ID
+              value: "Shuffle"
+            - name: OUTER_HOSTNAME
+              value: "backend-service"
+            - name: SHUFFLE_APP_FORCE_UPDATE
+              value: "false"
+            - name: SHUFFLE_APP_HOTLOAD_FOLDER
+              value: "/shuffle-apps"
+            - name: SHUFFLE_APP_HOTLOAD_LOCATION
+              value: "/shuffle-apps"
+            - name: SHUFFLE_CONTAINER_AUTO_CLEANUP
+              value: "false"
+            - name: SHUFFLE_DEFAULT_APIKEY
+            - name: SHUFFLE_DEFAULT_PASSWORD
+            - name: SHUFFLE_DEFAULT_USERNAME
+            - name: SHUFFLE_DOWNLOAD_AUTH_BRANCH
+            - name: SHUFFLE_DOWNLOAD_AUTH_PASSWORD
+            - name: SHUFFLE_DOWNLOAD_AUTH_USERNAME
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME
+            - name: SHUFFLE_ELASTIC
+              value: "true"
+            - name: SHUFFLE_OPENSEARCH_APIKEY
+            - name: SHUFFLE_OPENSEARCH_CERTIFICATE_FILE
+            - name: SHUFFLE_OPENSEARCH_CLOUDID
+            - name: SHUFFLE_OPENSEARCH_PASSWORD
+            - name: SHUFFLE_OPENSEARCH_PROXY
+            - name: SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY
+              value: "true"
+            - name: SHUFFLE_OPENSEARCH_URL
+              value: http://opensearch-service:9200
+            - name: SHUFFLE_OPENSEARCH_USERNAME
+              value: ""
+            - name: SHUFFLE_PASS_APP_PROXY
+              value: "FALSE"
+            - name: SHUFFLE_PASS_WORKER_PROXY
+              value: "FALSE"
+          volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-sock
+            - mountPath: /shuffle-apps
+              name: shuffle-app-hotload-location
+            - mountPath: /shuffle-files
+              name: shuffle-file-location
+      hostname: shuffle-backend
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+        - name: shuffle-app-hotload-location
+          hostPath:
+            path: /data/kubernetes/shuffle-apps
+            type: DirectoryOrCreate
+        - name: shuffle-file-location
+          hostPath:
+            path: /data/kubernetes/shuffle-files
+            type: DirectoryOrCreate
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}orborus
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: shuffle
+      app: shuffle-orborus
+  template:
+    metadata:
+      labels:
+        service: shuffle
+        app: shuffle-orborus
+    spec:
+      containers:
+        - name: shuffle-orborus
+          image: ghcr.io/frikky/shuffle-orborus:nightly
+          env:
+            - name: RUNNING_MODE
+              value: kubernetes
+            - name: BASE_URL
+              value: http://backend-service:5001
+            - name: CLEANUP
+              value: "false"
+            - name: DOCKER_API_VERSION
+              value: "1.40"
+            - name: ENVIRONMENT_NAME
+              value: Shuffle
+            - name: HTTPS_PROXY
+            - name: HTTP_PROXY
+            - name: ORG_ID
+              value: Shuffle
+            - name: SHUFFLE_APP_SDK_VERSION
+              value: 0.8.97
+            - name: SHUFFLE_BASE_IMAGE_NAME
+              value: frikky
+            - name: SHUFFLE_BASE_IMAGE_REGISTRY
+              value: ghcr.io
+            - name: SHUFFLE_BASE_IMAGE_TAG_SUFFIX
+              value: "-0.8.80"
+            - name: SHUFFLE_ORBORUS_EXECUTION_TIMEOUT
+              value: "600"
+            - name: SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY
+              value: "50"
+            - name: SHUFFLE_PASS_WORKER_PROXY
+              value: "TRUE"
+            - name: SHUFFLE_WORKER_VERSION
+              value: nightly
+            - name: TZ
+              value: Asia/Shanghai
+          volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-sock
+      hostname: shuffle-orborus
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+#---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: {{ .Values.name }}opensearch
+#  namespace: {{ .Values.namespace | quote }}
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      service: shuffle
+#      app: shuffle-opensearch
+#  template:
+#    metadata:
+#      labels:
+#        service: shuffle
+#        app: shuffle-opensearch
+#    spec:
+#      nodeSelector:
+#        node.bdlab-venus.com/opensearch: available
+#      initContainers:
+#        - name: permissions-fix
+#          image: frikky/busybox
+#          #volumeMounts:
+#          #  - name: opensearch-claim0
+#          #    mountPath: /usr/share/elasticsearch/data
+#          command: [ 'chown' ]
+#          args: [ '1000:1000', '/usr/share/elasticsearch/data' ]
+#      containers:
+#        - name: shuffle-opensearch
+#          image: opensearchproject/opensearch:1.0.1
+#          env:
+#            - name: TZ
+#              value: Asia/Shanghai
+#            - name: bootstrap.memory_lock
+#              value: "false"
+#            - name: OPENSEARCH_JAVA_OPTS
+#              value: "-Xms1024m -Xmx1024m"
+#            - name: opendistro_security.disabled
+#              value: "true"
+#            - name: cluster.routing.allocation.disk.threshold_enabled
+#              value: "false"
+#            - name: cluster.name
+#              value: shuffle-cluster
+#            - name: node.name
+#              value: opensearch-service
+#            - name: discovery.seed_hosts
+#              value: opensearch-service
+#            - name: cluster.initial_master_nodes
+#              value: opensearch-service
+      #    volumeMounts:
+      #      - mountPath: /usr/share/opensearch/data
+      #        name: opensearch-claim0
+      #volumes:
+      #  - name: opensearch-claim0
+      #    persistentVolumeClaim:
+      #      claimName: opensearch-claim0
+#          volumeMounts:
+#            - mountPath: /usr/share/opensearch/data
+#              readOnly: true
+#              name: db-location
+#      volumes:
+#        - name: db-location
+#          hostPath:
+#            path: /data/kubernetes/shuffle-opensearch
+#            type: DirectoryOrCreate

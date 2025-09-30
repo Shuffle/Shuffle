@@ -1,0 +1,131 @@
+version: '3.4'
+services:
+  backend:
+    image: ghcr.io/frikky/shuffle-backend:nightly
+    #hostname: shuffle-backend
+    environment:
+      BACKEND_HOSTNAME: backend
+      OUTER_HOSTNAME: backend
+      BACKEND_PORT: '5001'
+      HTTPS_PROXY: ''
+      HTTP_PROXY: ''
+      SHUFFLE_APP_DOWNLOAD_LOCATION: https://github.com/frikky/shuffle-apps
+      SHUFFLE_APP_FORCE_UPDATE: 'false'
+      SHUFFLE_APP_HOTLOAD_FOLDER: /shuffle-apps
+      SHUFFLE_APP_HOTLOAD_LOCATION: ./shuffle-apps
+      DATASTORE_EMULATOR_HOST: "shuffle-database:8000"
+      DOCKER_API_VERSION: '1.40'
+      SHUFFLE_BASE_IMAGE_NAME: frikky
+      SHUFFLE_BASE_IMAGE_REGISTRY: ghcr.io
+      SHUFFLE_BASE_IMAGE_TAG_SUFFIX: '-0.9.30'
+      SHUFFLE_CONTAINER_AUTO_CLEANUP: 'true'
+      SHUFFLE_DEFAULT_APIKEY: ''
+      SHUFFLE_FILE_LOCATION: /shuffle-files
+      SHUFFLE_OPENSEARCH_APIKEY: ''
+      SHUFFLE_OPENSEARCH_CERTIFICATE_FILE: ''
+      SHUFFLE_OPENSEARCH_CLOUDID: ''
+      SHUFFLE_OPENSEARCH_PROXY: ''
+      SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: 'true'
+      SHUFFLE_OPENSEARCH_URL: http://opensearch:9200
+      SHUFFLE_PASS_APP_PROXY: 'FALSE'
+      SHUFFLE_PASS_WORKER_PROXY: 'TRUE'
+      SHUFFLE_ELASTIC: 'true'
+      #SHUFFLE_ENCRYPTION_MODIFIER:
+    ports:
+      - "5001:5001"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - ./shuffle-apps:/shuffle-apps
+     - ./shuffle-files:/shuffle-files
+    networks:
+     - shuffle_prod
+     #- reverseproxy
+    depends_on:
+     - opensearch 
+    logging:
+      driver: json-file
+  frontend:
+    image: ghcr.io/frikky/shuffle-frontend:nightly
+    healthcheck:
+      test: curl -fs http://localhost:80 || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "3001:80"
+      - "3443:443"
+    networks:
+      - shuffle_prod
+      #- reverseproxy
+    environment:
+      - "BACKEND_HOSTNAME=backend"
+    depends_on:
+      - backend
+    deploy:
+      update_config:
+        order: start-first           
+  opensearch:
+    image: opensearchproject/opensearch:1.1.0
+    healthcheck:
+      test: curl -fs http://localhost:9200/_cat/health || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment:
+      - bootstrap.memory_lock=false
+      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - plugins.security.disabled=true
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - cluster.name=shuffle-cluster
+      - node.name=opensearch
+      - discovery.seed_hosts=opensearch
+      - cluster.initial_master_nodes=opensearch
+      - node.store.allow_mmap=false
+    volumes:
+     - ./shuffle-database:/usr/share/opensearch/data:rw
+    networks:
+     - shuffle_prod
+     #- reverseproxy
+    logging:
+      driver: json-file
+      
+  orborus:
+    image: ghcr.io/frikky/shuffle-orborus:nightly
+    #hostname: shuffle-orborus 
+    environment:
+      #SHUFFLE_WORKER_VERSION: nightly
+      SHUFFLE_APP_SDK_VERSION: 0.8.97
+      SHUFFLE_WORKER_VERSION: nightly
+      BASE_URL: http://backend:5001
+      #BASE_URL: http://192.168.86.37:5001
+      CLEANUP: 'true'
+      DOCKER_API_VERSION: '1.40'
+      ENVIRONMENT_NAME: Shuffle
+      HTTPS_PROXY: ''
+      HTTP_PROXY: ''
+      ORG_ID: Shuffle
+      SHUFFLE_BASE_IMAGE_NAME: frikky
+      SHUFFLE_BASE_IMAGE_REGISTRY: ghcr.io
+      SHUFFLE_BASE_IMAGE_TAG_SUFFIX: -0.8.80
+      SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: '50'
+      SHUFFLE_ORBORUS_EXECUTION_TIMEOUT: '800'
+      SHUFFLE_PASS_APP_PROXY: 'FALSE'
+      SHUFFLE_PASS_WORKER_PROXY: 'TRUE'
+      SHUFFLE_SCALE_REPLICAS: 5
+      SHUFFLE_SWARM_NETWORK_NAME: shuffle_prod
+      SHUFFLE_SWARM_CONFIG: "run"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+     - shuffle_prod
+     #- reverseproxy
+    logging:
+      driver: json-file
+
+networks:
+  shuffle_prod:
+    driver: overlay
+    external: true
+  #reverseproxy:
+  #  driver: overlay
+  #  #external: true

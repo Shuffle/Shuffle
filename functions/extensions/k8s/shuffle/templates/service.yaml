@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  ports:
+    - name: "5001"
+      port: 5001
+      targetPort: 5001
+  selector:
+    app: shuffle-backend
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  ports:
+    - name: "3001"
+      port: 3001
+      nodePort: 3001
+      targetPort: 80
+    - name: "3443"
+      port: 3443
+      nodePort: 3443 
+      targetPort: 443
+      protocol: TCP
+  selector:
+    app: shuffle-frontend
+
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: opensearch-service
+#  namespace: {{ .Values.namespace | quote }}
+#spec:
+#  type: NodePort
+#  externalTrafficPolicy: Local
+#  ports:
+#    - name: "9200"
+#      port: 9200
+#      targetPort: 9200
+#      nodePort: 9200
+#      protocol: TCP
+#  selector:
+#    app: shuffle-opensearch

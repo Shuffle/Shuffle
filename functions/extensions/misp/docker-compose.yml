@@ -1,0 +1,9 @@
+version: '3'
+services:
+  zmq:
+    image: ghcr.io/frikky/shuffle-zmq:latest
+    environment:
+      - ZMQ_HOSTNAME=localhost
+      - ZMQ_PORT=50000
+      - ZMQ_FORWARD_URL=https://shuffler.io/api/v1/hooks/webhook_e09bea36-9976-1421-82bc-b8764ca83c1e
+    restart: unless-stopped
