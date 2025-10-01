@@ -3818,9 +3818,10 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success bool                   `json:"success"`
-		Reason  string                 `json:"reason"`
-		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
+		Success      bool                   `json:"success"`
+		Reason       string                 `json:"reason"`
+		Jobs         []shuffle.CloudSyncJob `json:"jobs"`
+		SyncFeatures shuffle.SyncFeatures   `json:"sync_features"`
 	}
 
 	responseData := retStruct{}
@@ -3885,6 +3886,14 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if len(responseData.Jobs) > 0 {
 		//log.Printf("[INFO] Remote JOB ret: %s", string(body))
 		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
+	}
+
+	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+	featuresBytes, err := json.Marshal(responseData.SyncFeatures)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 30)
 	}
 
 	for _, job := range responseData.Jobs {
