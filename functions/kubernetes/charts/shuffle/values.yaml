@@ -19,8 +19,6 @@ global:
   defaultStorageClass: ""
   ## Compatibility adaptations for Kubernetes platforms
   ##
-  security:
-    allowInsecureImages: true
   compatibility:
     ## Compatibility adaptations for Openshift
     ##
