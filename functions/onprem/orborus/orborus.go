@@ -1586,7 +1586,7 @@ func initializeImages() {
 		if len(os.Getenv("REGISTRY_URL")) > 0 {
 			baseimageregistry = os.Getenv("REGISTRY_URL")
 		} else {
-			os.Setenv("REGISTRY_URL", baseimageregistry)
+			// os.Setenv("REGISTRY_URL", baseimageregistry)
 		}
 
 		os.Setenv("SHUFFLE_BASE_IMAGE_REGISTRY", baseimageregistry)
