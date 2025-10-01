@@ -19,6 +19,8 @@ global:
   defaultStorageClass: ""
   ## Compatibility adaptations for Kubernetes platforms
   ##
+  security:
+    allowInsecureImages: true
   compatibility:
     ## Compatibility adaptations for Openshift
     ##
@@ -1197,7 +1199,19 @@ orborus:
   ##   - name: FOO
   ##     value: "bar"
   ##
-  extraEnvVars: []
+  extraEnvVars:
+    - name: SHUFFLE_APP_SDK_TIMEOUT
+      value: "300"
+    - name: SHUFFLE_ORBORUS_EXCUTION_CONCURRENCY
+      value: "7"
+    - name: ENVIRONMENT_NAME
+      value: "Shuffle"
+    - name: BASE_URL
+      value: "http://shuffle-backend:5001"
+    - name: SHUFFLE_STATS_DISABLED
+      value: "true"
+    - name: CLEANUP
+      value: "false"
   ## @param orborus.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for orborus containers
   ##
   extraEnvVarsCM: ""
@@ -1841,7 +1855,7 @@ volumePermissions:
   ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/os-shell
     tag: 12-debian-12-r30
     pullPolicy: IfNotPresent
@@ -1898,17 +1912,31 @@ volumePermissions:
 ##
 opensearch:
   enabled: true
-  
+
+  sysctlImage:
+    enabled: false
+
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/opensearch
+    tag: "3.2.0"
+
   master:
     replicaCount: 1
+    extraEnvVars:
+      - { name: OPENSEARCH_JAVA_OPTS, value: "-Xms1g -Xmx1g" }
+      - { name: DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI, value: "true" }
+      - { name: node.store.allow_mmap, value: "false" }
+      - { name: cluster.routing.allocation.disk.threshold_enabled, value: "false" }
+
   data:
-    replicaCount: 1
+    replicaCount: 0
   coordinating:
-    replicaCount: 1
+    replicaCount: 0
   ingest:
-    replicaCount: 1
+    replicaCount: 0
   dashboards:
-    enabled: true
+    enabled: false
 
 ## @section Vault Parameters
 ##
