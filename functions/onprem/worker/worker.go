@@ -3893,7 +3893,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		if attempts < 2 {
 			// Check the service and fix it. 
 			if isKubernetes == "true" {
-				log.Printf("[WARNING] App Redeployment in K8s isn't fully supported yet, but should be done for app %s with image %s.", appName, image) 
+				log.Printf("[WARNING] App Redeployment in K8s isn't fully supported yet, but should be done for app %s with image %s.", appName, image)
 			} else {
 				_, err = findAppInfo(image, appName, true)
 				if err != nil {
