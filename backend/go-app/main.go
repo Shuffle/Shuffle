@@ -935,6 +935,45 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Failed to get org during getinfo: %s", err)
 	}
 
+	childOrgs := []shuffle.Org{}
+	if len(org.CreatorOrg) > 0 {
+		childOrgs, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get child orgs during getinfo: %s", err)
+			childOrgs = []shuffle.Org{}
+		}
+	}
+	// Change this deadline date as release date while pushing to production
+	deadline := time.Date(2025, 10, 5, 0, 0, 0, 0, time.UTC).Unix()
+	if len(org.CreatorOrg) > 0 && len(childOrgs) > 3 && org.Created >= deadline {
+		parentOrg, err := shuffle.GetOrg(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
+		} else {
+			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
+			parentOrg := &parent
+			if !parentOrg.SyncFeatures.MultiTenant.Active {
+				userInfo.ActiveOrg = shuffle.OrgMini{
+					Id:       parentOrg.Id,
+					Name:     parentOrg.Name,
+					Role:     userInfo.Role,
+					Branding: parentOrg.Branding,
+					Image:    parentOrg.Image,
+				}
+				log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username, parentOrg.Name)
+
+				err = shuffle.SetUser(ctx, &userInfo, false)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting user to parent org: %s", err)
+				}
+				
+				resp.WriteHeader(200)
+				resp.Write([]byte(`{"success": true, "reason": "Parent org has more than 3 child orgs and is not licensed. Moving to parent org. Contact support@shuffler.io for more information", "switch_parent": true}`))
+				return
+			}
+		}
+	}
+
 	//if err == nil {
 	if len(org.Id) > 0 {
 		if userInfo.Role == "" {
@@ -3893,7 +3932,7 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
 	} else {
-		shuffle.SetCache(ctx, cacheKey, featuresBytes, 30)
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
