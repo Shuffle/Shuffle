@@ -3874,6 +3874,12 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 
 	// Checking as LATE as possible, ensuring we don't rerun what's already ran
 	// ctx = context.Background()
+
+	// Sleep between 0 and 250 ms for randomness so no same worker check at same time (same as cloud)
+	rand.Seed(time.Now().UnixNano())
+	randMs := rand.Intn(250)
+	time.Sleep(time.Duration(randMs) * time.Millisecond)
+
 	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
 	_, err = shuffle.GetCache(ctx, newExecId)
 	if err == nil {
