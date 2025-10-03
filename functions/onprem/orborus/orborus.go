@@ -1571,12 +1571,12 @@ func initializeImages() {
 
 	if appSdkVersion == "" {
 		appSdkVersion = "latest"
-		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %#v", appSdkVersion)
+		log.Printf("[INFO] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %#v", appSdkVersion)
 	}
 
 	if workerVersion == "" {
 		workerVersion = "latest"
-		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %#v", workerVersion)
+		log.Printf("[INFO] SHUFFLE_WORKER_VERSION not defined. Defaulting to %#v", workerVersion)
 	}
 
 	if baseimageregistry == "" {
@@ -1591,7 +1591,7 @@ func initializeImages() {
 
 		os.Setenv("SHUFFLE_BASE_IMAGE_REGISTRY", baseimageregistry)
 
-		log.Printf("[WARNING] Setting baseimageregistry to %#v", baseimageregistry)
+		log.Printf("[INFO] Setting baseimageregistry to %#v", baseimageregistry)
 	}
 
 	if baseimagename == "" {
@@ -1600,7 +1600,7 @@ func initializeImages() {
 		baseimagename = "frikky/shuffle" // Dockerhub
 
 		os.Setenv("SHUFFLE_BASE_IMAGE_NAME", baseimagename)
-		log.Printf("[WARNING] Setting baseimagename to %#v", baseimagename)
+		log.Printf("[INFO] Setting baseimagename to %#v", baseimagename)
 	}
 
 	// Old sane default overrides:
@@ -2860,14 +2860,19 @@ func deployTenzirNode() error {
 
 	ctx := context.Background()
 	cacheKey := "tenzir-key"
-
-	imageName := "frikky/shuffle:tenzir"
-	containerName := "tenzir-node"
-	containerStartOptions := container.StartOptions{}
 	_, err = shuffle.GetCache(ctx, cacheKey)
 	if err == nil {
 		return nil
 	}
+
+	imageName := "frikky/shuffle:tenzir"
+	if os.Getenv("TENZIR_IMAGE_NAME") != "" {
+		imageName = os.Getenv("TENZIR_IMAGE_NAME")
+		log.Printf("[INFO] Using custom Tenzir image name: %s", imageName)
+	}
+
+	containerName := "tenzir-node"
+	containerStartOptions := container.StartOptions{}
 
 	containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
 	if err != nil {
@@ -2909,7 +2914,7 @@ func deployTenzirNode() error {
 		}
 	} else {
 		if !containerInfo.State.Running {
-			log.Printf("[DEBUG] Tenzir Node exists but is not running. Restarting it.")
+			log.Printf("[DEBUG] Tenzir Node exists, but is not running. Restarting it.")
 			err := dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 			if err != nil {
 				log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
@@ -3144,7 +3149,7 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 }
 
 func checkTenzirNode() error {
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" {
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "false" {
 		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 	}
 
@@ -3480,7 +3485,14 @@ func handleFileCategoryChange() error {
 	}
 
 	if len(pipelineApikey) == 0 {
-		return errors.New("Shuffle API-key not set for Pipelines: SHUFFLE_PIPELINE_AUTH=<apikey>")
+		//var auth = os.Getenv("AUTH")
+		//var org = os.Getenv("ORG")
+
+		if len(auth) > 0 && len(org) > 0 {
+			pipelineApikey = auth
+		} else {
+			return errors.New("Shuffle API-key not set for Pipelines: SHUFFLE_PIPELINE_AUTH=<apikey>")
+		}
 	}
 
 	req.Header.Add("Authorization", "Bearer "+pipelineApikey)

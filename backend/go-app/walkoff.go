@@ -1847,13 +1847,12 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	newapps := workflowapps
-
 	if len(user.PrivateApps) > 0 {
 		found := false
 		for _, item := range user.PrivateApps {
