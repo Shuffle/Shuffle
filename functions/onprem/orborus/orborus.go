@@ -2121,6 +2121,12 @@ func main() {
 		}
 	}
 
+	// Auto enables pipelines IF they are not mentioned
+	if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
+		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
+	}
+
 	log.Println("[INFO] Setting up execution environment")
 
 	// //FIXME
@@ -2490,8 +2496,7 @@ func main() {
 
 				// Looking for specific jobs
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
-
-					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 					tenzirDisabled = false
 
 					// Running NEW or editing pipelines
@@ -2558,7 +2563,7 @@ func main() {
 					log.Printf("[INFO] Got job to start tenzir")
 
 					// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
-					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 					tenzirDisabled = false
 
 					// Removed either way
@@ -2568,7 +2573,7 @@ func main() {
 					if err != nil {
 						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
 							// Disabling until UI is updated
-							os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
+							//os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
 							tenzirDisabled = true
 
 							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
@@ -3284,8 +3289,9 @@ func createPipeline(command, identifier string) (string, error) {
 		"definition": command,
 		"name":       identifier,
 		"hidden":     false,
+		"retry_delay": "500.0ms",
 		"autostart": map[string]bool{
-			"created":   true,
+			//"created":   true,
 			"completed": false,
 			"failed":    false,
 		},
@@ -3294,7 +3300,6 @@ func createPipeline(command, identifier string) (string, error) {
 			"failed":    false,
 			"stopped":   false,
 		},
-		"retry_delay": "500.0ms",
 	}
 
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -3304,18 +3309,18 @@ func createPipeline(command, identifier string) (string, error) {
 	}
 
 	forwardData := bytes.NewBuffer(requestBodyJSON)
-
 	req, err := http.NewRequest(
 		forwardMethod,
 		url,
 		forwardData,
 	)
+
 	if err != nil {
 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
 		return "", err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -3700,6 +3705,7 @@ func removeFileCategory() error {
 	return nil
 }
 
+// curl https://get.tenzir.app | sh
 func removeFile(fileName string) error {
 	containerName := "tenzir-node"
 	srcPath := fmt.Sprintf("/var/lib/tenzir/sigma_rules/%s", fileName)
