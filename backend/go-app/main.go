@@ -935,6 +935,58 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Failed to get org during getinfo: %s", err)
 	}
 
+	childOrgs := []shuffle.Org{}
+	if len(org.CreatorOrg) > 0 {
+		childOrgs, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get child orgs during getinfo: %s", err)
+			childOrgs = []shuffle.Org{}
+		}
+	}
+
+	failToLoadOrgs := []string{}
+	sort.Slice(childOrgs, func(i, j int) bool {
+		return childOrgs[i].Created < childOrgs[j].Created
+	})
+
+	for index, org := range childOrgs {
+
+		if index < 3 {
+			continue
+		}
+
+		failToLoadOrgs = append(failToLoadOrgs, org.Id)
+	}
+
+	if len(org.CreatorOrg) > 0 && len(childOrgs) > 3 && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
+		parentOrg, err := shuffle.GetOrg(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
+		} else {
+			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
+			parentOrg := &parent
+			if !parentOrg.SyncFeatures.MultiTenant.Active {
+				userInfo.ActiveOrg = shuffle.OrgMini{
+					Id:       parentOrg.Id,
+					Name:     parentOrg.Name,
+					Role:     userInfo.Role,
+					Branding: parentOrg.Branding,
+					Image:    parentOrg.Image,
+				}
+				log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username, parentOrg.Name)
+
+				err = shuffle.SetUser(ctx, &userInfo, false)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting user to parent org: %s", err)
+				}
+				
+				resp.WriteHeader(200)
+				resp.Write([]byte(`{"success": true, "reason": "Parent org has more than 3 child orgs and is not licensed. Moving to parent org. Contact support@shuffler.io for more information", "switch_parent": true}`))
+				return
+			}
+		}
+	}
+
 	//if err == nil {
 	if len(org.Id) > 0 {
 		if userInfo.Role == "" {
@@ -3818,9 +3870,10 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success bool                   `json:"success"`
-		Reason  string                 `json:"reason"`
-		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
+		Success      bool                   `json:"success"`
+		Reason       string                 `json:"reason"`
+		Jobs         []shuffle.CloudSyncJob `json:"jobs"`
+		SyncFeatures shuffle.SyncFeatures   `json:"sync_features"`
 	}
 
 	responseData := retStruct{}
@@ -3885,6 +3938,14 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if len(responseData.Jobs) > 0 {
 		//log.Printf("[INFO] Remote JOB ret: %s", string(body))
 		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
+	}
+
+	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+	featuresBytes, err := json.Marshal(responseData.SyncFeatures)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
@@ -4892,7 +4953,15 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// 2. Add iterative sync schedule for interval seconds
 	// 3. Add another environment for the org's users
 	org.CloudSync = true
-	org.SyncFeatures = responseData.SyncFeatures
+
+	// set cache here for 30 min
+	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+	featuresBytes, err := json.Marshal(responseData.SyncFeatures)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
+	}
 
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
