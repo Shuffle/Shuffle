@@ -3903,7 +3903,7 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal Subscriptions for cache: %s", err)
 	} else {
-		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 30)
+		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
