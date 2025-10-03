@@ -943,9 +943,22 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			childOrgs = []shuffle.Org{}
 		}
 	}
-	// Change this deadline date as release date while pushing to production
-	deadline := time.Date(2025, 10, 5, 0, 0, 0, 0, time.UTC).Unix()
-	if len(org.CreatorOrg) > 0 && len(childOrgs) > 3 && org.Created >= deadline {
+
+	failToLoadOrgs := []string{}
+	sort.Slice(childOrgs, func(i, j int) bool {
+		return childOrgs[i].Created < childOrgs[j].Created
+	})
+
+	for index, org := range childOrgs {
+
+		if index < 3 {
+			continue
+		}
+
+		failToLoadOrgs = append(failToLoadOrgs, org.Id)
+	}
+
+	if len(org.CreatorOrg) > 0 && len(childOrgs) > 3 && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
 		parentOrg, err := shuffle.GetOrg(ctx, org.CreatorOrg)
 		if err != nil {
 			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
