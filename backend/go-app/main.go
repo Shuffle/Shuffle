@@ -69,11 +69,12 @@ var debug = false
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
-	Success         bool                 `json:"success"`
-	SyncFeatures    shuffle.SyncFeatures `json:"sync_features"`
-	SessionKey      string               `json:"session_key"`
-	IntervalSeconds int64                `json:"interval_seconds"`
-	Reason          string               `json:"reason"`
+	Success         bool                          `json:"success"`
+	SyncFeatures    shuffle.SyncFeatures          `json:"sync_features"`
+	SessionKey      string                        `json:"session_key"`
+	IntervalSeconds int64                         `json:"interval_seconds"`
+	Reason          string                        `json:"reason"`
+	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
 }
 
 type Contact struct {
@@ -3821,6 +3822,8 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		Success bool                   `json:"success"`
 		Reason  string                 `json:"reason"`
 		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
+		SyncFeatures shuffle.SyncFeatures   `json:"sync_features"`
+		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
 	}
 
 	responseData := retStruct{}
@@ -3885,6 +3888,22 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if len(responseData.Jobs) > 0 {
 		//log.Printf("[INFO] Remote JOB ret: %s", string(body))
 		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
+	}
+
+	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+	featuresBytes, err := json.Marshal(responseData.SyncFeatures)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 30)
+	}
+
+	subscriptionCacheKey := fmt.Sprintf("org_subscriptions_%s", org.Id)
+	subscriptionsBytes, err := json.Marshal(responseData.Subscriptions)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Subscriptions for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 30)
 	}
 
 	for _, job := range responseData.Jobs {
@@ -4650,6 +4669,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 	org.CloudSync = false
 	org.SyncFeatures = shuffle.SyncFeatures{}
 	org.SyncConfig = shuffle.SyncConfig{}
+	org.Subscriptions = []shuffle.PaymentSubscription{}
 
 	err = shuffle.SetOrg(ctx, org, org.Id)
 	if err != nil {
@@ -4865,8 +4885,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
-
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -4893,7 +4911,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// 3. Add another environment for the org's users
 	org.CloudSync = true
 	org.SyncFeatures = responseData.SyncFeatures
-
+	org.Subscriptions = responseData.Subscriptions
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
