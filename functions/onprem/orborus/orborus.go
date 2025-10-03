@@ -52,6 +52,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -799,6 +800,48 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
+func buildResourcesFromEnv() corev1.ResourceRequirements {
+	requests := corev1.ResourceList{}
+	limits := corev1.ResourceList{}
+
+	type item struct {
+		env          string
+		resourceName corev1.ResourceName
+		resourceList corev1.ResourceList
+	}
+
+	items := []item{
+		// kubernetes requests
+		{env: "SHUFFLE_WORKER_CPU_REQUEST", resourceName: corev1.ResourceCPU, resourceList: requests},
+		{env: "SHUFFLE_WORKER_MEMORY_REQUEST", resourceName: corev1.ResourceMemory, resourceList: requests},
+		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST", resourceName: corev1.ResourceEphemeralStorage, resourceList: requests},
+		// kubernetes limits
+		{env: "SHUFFLE_WORKER_CPU_LIMIT", resourceName: corev1.ResourceCPU, resourceList: limits},
+		{env: "SHUFFLE_WORKER_MEMORY_LIMIT", resourceName: corev1.ResourceMemory, resourceList: limits},
+		{env: "SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT", resourceName: corev1.ResourceEphemeralStorage, resourceList: limits},
+	}
+
+	for _, it := range items {
+		if value := strings.TrimSpace(os.Getenv(it.env)); value != "" {
+			if quantity, err := resource.ParseQuantity(value); err == nil {
+				it.resourceList[it.resourceName] = quantity
+			} else {
+				log.Printf("[WARNING] Cannot parse %s=%q as resource quantity: %v", it.env, value, err)
+			}
+		}
+	}
+
+	rr := corev1.ResourceRequirements{}
+	if len(requests) > 0 {
+		rr.Requests = requests
+	}
+	if len(limits) > 0 {
+		rr.Limits = limits
+	}
+
+	return rr
+}
+
 func handleBackendImageDownload(ctx context.Context, images string) error {
 
 	// Replicate images with lowercase, as the name may be wrong
@@ -1042,6 +1085,20 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
 
+	// app resource env
+	for _, k := range []string{
+		"SHUFFLE_APP_CPU_REQUEST",
+		"SHUFFLE_APP_MEMORY_REQUEST",
+		"SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST",
+		"SHUFFLE_APP_CPU_LIMIT",
+		"SHUFFLE_APP_MEMORY_LIMIT",
+		"SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT",
+	} {
+		if v := os.Getenv(k); v != "" {
+			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
 	if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
 		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
 	}
@@ -1206,6 +1263,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		Image:           kubernetesImage,
 		Env:             buildEnvVars(envMap),
 		SecurityContext: containerSecurityContext,
+		Resources:       buildResourcesFromEnv(),
 
 		//ImagePullPolicy: "Never",
 		ImagePullPolicy: corev1.PullIfNotPresent,
