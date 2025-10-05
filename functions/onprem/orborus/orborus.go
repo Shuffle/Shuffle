@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"regexp"
 	"log"
 	"math"
 	"net"
@@ -20,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -90,6 +90,7 @@ var debug = os.Getenv("DEBUG") == "true"
 // var baseimagename = "shuffle/shuffle"
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+
 //var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
 // Used for cloud with auth. Onprem in certain cases too.
@@ -344,7 +345,7 @@ func deployServiceWorkers(image string) {
 	if len(dockerSwarmBridgeMTU) == 0 {
 		mtu, err = strconv.Atoi(dockerSwarmBridgeMTU) // by default
 		if err != nil {
-			if debug { 
+			if debug {
 				log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
 			}
 
@@ -530,7 +531,6 @@ func deployServiceWorkers(image string) {
 	if cnt > 0 {
 		nodeCount = uint64(cnt)
 	}
-
 
 	appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
 	appReplicaCnt := 2
@@ -2496,6 +2496,8 @@ func main() {
 
 				// Looking for specific jobs
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
+					log.Printf("[INFO] Handling pipeline request from backend: '%s' with argument '%s'", incRequest.Type, incRequest.ExecutionArgument)
+
 					//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 					tenzirDisabled = false
 
@@ -2640,7 +2642,7 @@ func main() {
 				executionRequests.Data = executionRequests.Data[0:allowed]
 			}
 		} else if swarmControlMode && (swarmConfig == "run" || swarmConfig == "swarm") {
-			// any reason it is not maxConcurrency instead of 
+			// any reason it is not maxConcurrency instead of
 			// hardcoded 50?
 			if len(executionRequests.Data) > 50 {
 				executionRequests.Data = executionRequests.Data[0:50]
@@ -2842,19 +2844,16 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			return err
 		}
 	} else if incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_STOP" {
-		{
-			log.Printf("[INFO] Should delete pipeline %#v", identifier)
-			pipelineId, err := searchPipeline(identifier)
-			if err != nil {
-				log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
-				return err
-			}
+		pipelineId := incRequest.ExecutionId
+		log.Printf("[INFO] Should delete pipeline %#v. PipelineID: %s", identifier, pipelineId)
+		//pipelineId, err := searchPipeline(identifier)
+		//if err != nil {
+		//}
 
-			err = deletePipeline(pipelineId)
-			if err != nil {
-				log.Printf("[ERROR] Failed Deleting Pipeline %s", err)
-				return err
-			}
+		err = deletePipeline(pipelineId)
+		if err != nil {
+			log.Printf("[ERROR] Failed Deleting Pipeline %s", err)
+			return err
 		}
 
 		/*
@@ -2888,6 +2887,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
+
 		_, err = updatePipelineState(command, pipelineId, "start")
 		if err != nil {
 			log.Printf("[ERROR] Failed to start Pipeline: %s reason:%s ", pipelineId, err)
@@ -3027,7 +3027,9 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		ExposedPorts: nat.PortSet{
 			"5160/tcp": struct{}{},
 			"514/udp":  struct{}{},
+			"1514/udp":  struct{}{},
 			"514/tcp":  struct{}{},
+			"1514/tcp":  struct{}{},
 		},
 		Entrypoint: []string{containerName},
 		Env:        []string{},
@@ -3075,6 +3077,8 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		PortBindings: nat.PortMap{
 			"514/tcp":  []nat.PortBinding{{HostPort: "514"}},
 			"514/udp":  []nat.PortBinding{{HostPort: "514"}},
+			"1514/tcp":  []nat.PortBinding{{HostPort: "1514"}},
+			"1514/udp":  []nat.PortBinding{{HostPort: "1514"}},
 			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
 		},
 		Mounts: []mount.Mount{
@@ -3286,9 +3290,9 @@ func createPipeline(command, identifier string) (string, error) {
 	//command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | import"
 
 	requestBody := map[string]interface{}{
-		"definition": command,
-		"name":       identifier,
-		"hidden":     false,
+		"definition":  command,
+		"name":        identifier,
+		"hidden":      false,
 		"retry_delay": "500.0ms",
 		"autostart": map[string]bool{
 			//"created":   true,
@@ -4072,7 +4076,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 		// Specific to debugging
 		if len(workerServerUrl) == 0 {
-			if debug { 
+			if debug {
 				log.Printf("[INFO] Using default worker server url as previous is invalid: %s. Swapping to shuffle-workers:33333", streamUrl)
 			}
 		}
