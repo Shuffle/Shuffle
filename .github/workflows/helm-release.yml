@@ -24,13 +24,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install apt dependencies
-        run: |
-          sudo apt-get install apt-transport-https -y --no-install-recommends
-          curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-          sudo apt-get update
-          sudo apt-get install helm -y --no-install-recommends
+      - name: Setup Helm
+        uses: azure/setup-helm@4
+        with:
+          version: v3.18.4 # I run it locally so I know it works :b
+
+      - name: Verify Helm
+        run: helm version
 
       - name: Set versions
         run: |
