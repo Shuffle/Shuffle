@@ -3038,9 +3038,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Healthcheck: healthconfig,
 		ExposedPorts: nat.PortSet{
 			"5160/tcp": struct{}{},
-			"514/udp":  struct{}{},
 			"1514/udp":  struct{}{},
-			"514/tcp":  struct{}{},
 			"1514/tcp":  struct{}{},
 		},
 		Entrypoint: []string{containerName},
@@ -3087,8 +3085,6 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
-			"514/tcp":  []nat.PortBinding{{HostPort: "514"}},
-			"514/udp":  []nat.PortBinding{{HostPort: "514"}},
 			"1514/tcp":  []nat.PortBinding{{HostPort: "1514"}},
 			"1514/udp":  []nat.PortBinding{{HostPort: "1514"}},
 			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
@@ -3186,12 +3182,19 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		return err
 	}
 
-	log.Printf("[INFO] Successfully deployed Tenzir Node! Setting up default syslog listener on UDP 514")
+	log.Printf("[INFO] Successfully deployed Tenzir Node! Setting up default syslog listener on TCP/1514 AND UDP/1514")
 
-	command := "from udp://0.0.0.0:514 read syslog | import"
-	_, err = createPipeline(command, "default-syslog-514")
+	command := `from "tcp://0.0.0.0:1514" { read_syslog } | import`
+	_, err = createPipeline(command, "default-syslog-tcp-514")
 	if err != nil {
-		log.Printf("[ERROR] Failed to create default syslog pipeline: %s", err)
+		log.Printf("[ERROR] Failed to create tcp syslog pipeline: %s", err)
+		return nil
+	}
+
+	command = `load_udp "0.0.0.0:1514", insert_newlines=true | read_syslog | import`
+	_, err = createPipeline(command, "default-syslog-udp-514")
+	if err != nil {
+		log.Printf("[ERROR] Failed to create udp syslog pipeline: %s", err)
 		return nil
 	}
 
@@ -3645,12 +3648,12 @@ func extractZIP(zipFile, destDir string) error {
 	}
 
 	log.Printf("[DEBUG] Total size of the ZIP file: %d bytes", totalSize)
-
 	defer r.Close()
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
 
+	log.Printf("[DEBUG] Total files to extract: %d", len(r.File))
 	for _, f := range r.File {
 		// Fix path traversal
 		if strings.Contains(f.Name, "..") {
@@ -3671,16 +3674,15 @@ func extractFile(f *zip.File, destDir string) error {
 	if err != nil {
 		return err
 	}
+
 	defer rc.Close()
-
 	path := filepath.Join(destDir, f.Name)
-
 	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 	if err != nil {
 		return err
 	}
-	defer out.Close()
 
+	defer out.Close()
 	_, err = io.Copy(out, rc)
 	return err
 }
