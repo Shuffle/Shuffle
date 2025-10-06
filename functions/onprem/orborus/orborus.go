@@ -2947,13 +2947,19 @@ func deployTenzirNode() error {
 		if dockerclient.IsErrNotFound(err) {
 			// Create network if it doesn't exist
 			networkName := "tenzir-network"
-			networkSubnet := "192.168.1.0/24"
-			networkGateway := "192.168.1.1"
+			networkSubnet := "192.168.102.0/24"
+			networkGateway := "192.168.102.1"
 
 			err = createNetworkIfNotExists(ctx, networkName, networkSubnet, networkGateway)
 			if err != nil {
-				log.Printf("[ERROR] Failed to create network: %s", err)
-				return err
+				log.Printf("[ERROR] Failed to create network %s: %s", networkName, err)
+				//return err
+			}
+
+			// Trying to connect orborus to the tenzir network as well
+			err = dockercli.NetworkConnect(ctx, networkName, containerId, nil)
+			if err != nil {
+				log.Printf("[ERROR] Error connecting tenzir container to network: %s", err)
 			}
 
 			// Check if image exists
@@ -3008,6 +3014,7 @@ func deployTenzirNode() error {
 	if err != nil {
 		log.Printf("[WARNING] Failed marshalling execution: %s", err)
 	}
+
 	err = shuffle.SetCache(ctx, cacheKey, cacheData, 1)
 	if err != nil {
 		log.Printf("[WARNING] Failed updating cache for tenzir: %s", err)
@@ -3125,7 +3132,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		EndpointsConfig: map[string]*network.EndpointSettings{
 			"tenzir-network": {
 				IPAMConfig: &network.EndpointIPAMConfig{
-					IPv4Address: "192.168.1.100",
+					IPv4Address: "192.168.102.100",
 				},
 			},
 		},
