@@ -69,11 +69,12 @@ var debug = false
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
-	Success         bool                 `json:"success"`
-	SyncFeatures    shuffle.SyncFeatures `json:"sync_features"`
-	SessionKey      string               `json:"session_key"`
-	IntervalSeconds int64                `json:"interval_seconds"`
-	Reason          string               `json:"reason"`
+	Success         bool                          `json:"success"`
+	SyncFeatures    shuffle.SyncFeatures          `json:"sync_features"`
+	SessionKey      string                        `json:"session_key"`
+	IntervalSeconds int64                         `json:"interval_seconds"`
+	Reason          string                        `json:"reason"`
+	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
 }
 
 type Contact struct {
@@ -3870,10 +3871,11 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success      bool                   `json:"success"`
-		Reason       string                 `json:"reason"`
-		Jobs         []shuffle.CloudSyncJob `json:"jobs"`
+		Success bool                   `json:"success"`
+		Reason  string                 `json:"reason"`
+		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
 		SyncFeatures shuffle.SyncFeatures   `json:"sync_features"`
+		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
 	}
 
 	responseData := retStruct{}
@@ -4711,6 +4713,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 	org.CloudSync = false
 	org.SyncFeatures = shuffle.SyncFeatures{}
 	org.SyncConfig = shuffle.SyncConfig{}
+	org.Subscriptions = []shuffle.PaymentSubscription{}
 
 	err = shuffle.SetOrg(ctx, org, org.Id)
 	if err != nil {
@@ -4925,8 +4928,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse sync data. Contact support."}`)))
 		return
 	}
-
-	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
 
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)

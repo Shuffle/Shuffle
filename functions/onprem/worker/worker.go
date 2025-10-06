@@ -43,6 +43,7 @@ import (
 	//k8s deps
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -652,6 +653,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 								},
 							},
 							SecurityContext: containerSecurityContext,
+							Resources:       buildResourcesFromEnv(),
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
@@ -2436,6 +2438,49 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	}
 	return envVars
 }
+
+func buildResourcesFromEnv() corev1.ResourceRequirements {
+	requests := corev1.ResourceList{}
+	limits := corev1.ResourceList{}
+
+	type item struct {
+		env          string
+		resourceName corev1.ResourceName
+		resourceList corev1.ResourceList
+	}
+
+	items := []item{
+		// kubernetes requests
+		{env: "SHUFFLE_APP_CPU_REQUEST", resourceName: corev1.ResourceCPU, resourceList: requests},
+		{env: "SHUFFLE_APP_MEMORY_REQUEST", resourceName: corev1.ResourceMemory, resourceList: requests},
+		{env: "SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST", resourceName: corev1.ResourceEphemeralStorage, resourceList: requests},
+		// kubernetes limits
+		{env: "SHUFFLE_APP_CPU_LIMIT", resourceName: corev1.ResourceCPU, resourceList: limits},
+		{env: "SHUFFLE_APP_MEMORY_LIMIT", resourceName: corev1.ResourceMemory, resourceList: limits},
+		{env: "SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT", resourceName: corev1.ResourceEphemeralStorage, resourceList: limits},
+	}
+
+	for _, it := range items {
+		if value := strings.TrimSpace(os.Getenv(it.env)); value != "" {
+			if quantity, err := resource.ParseQuantity(value); err == nil {
+				it.resourceList[it.resourceName] = quantity
+			} else {
+				log.Printf("[WARNING] Cannot parse %s=%q as resource quantity: %v", it.env, value, err)
+			}
+		}
+	}
+
+	rr := corev1.ResourceRequirements{}
+	if len(requests) > 0 {
+		rr.Requests = requests
+	}
+	if len(limits) > 0 {
+		rr.Limits = limits
+	}
+
+	return rr
+}
+
 func getWorkerBackendExecution(auth string, executionId string) (*shuffle.WorkflowExecution, error) {
 	backendUrl := os.Getenv("BASE_URL")
 	if len(backendUrl) == 0 {
@@ -2446,9 +2491,9 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", backendUrl)
 	topClient := shuffle.GetExternalClient(backendUrl)
-	requestData := shuffle.ActionResult {
+	requestData := shuffle.ActionResult{
 		Authorization: auth,
-		ExecutionId: executionId,
+		ExecutionId:   executionId,
 	}
 
 	data, err := json.Marshal(requestData)
@@ -2708,7 +2753,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		}
 
@@ -2726,7 +2771,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				if debug { 
+				if debug {
 					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
 				}
 
@@ -3893,7 +3938,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		if attempts < 2 {
 			// Check the service and fix it. 
 			if isKubernetes == "true" {
-				log.Printf("[WARNING] App Redeployment in K8s isn't fully supported yet, but should be done for app %s with image %s.", appName, image) 
+				log.Printf("[WARNING] App Redeployment in K8s isn't fully supported yet, but should be done for app %s with image %s.", appName, image)
 			} else {
 				_, err = findAppInfo(image, appName, true)
 				if err != nil {
@@ -3926,7 +3971,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
 		}
 	}
