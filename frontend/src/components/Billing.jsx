@@ -87,6 +87,8 @@ const Billing = memo((props) => {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [deleteAlertIndex, setDeleteAlertIndex] = useState(-1);
 	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
+	const [supportAppRunLimit, setSupportAppRunLimit] = useState(selectedOrganization?.billing?.internal_app_runs_hard_limit || '');
+	const [supportLimitDialogOpen, setSupportLimitDialogOpen] = useState(false);
 	const [isScale, setIsScale] = useState(false);
 	const [currentTab, setCurrentTab] = useState(0)
 	const [allChildOrgs, setAllChildOrgs] = useState([])
@@ -145,6 +147,9 @@ const Billing = memo((props) => {
 
 		const findCurrentIndex = sortedAlertThresholds.some(threshold => threshold.Email_send === false);
 		setCurrentIndex(findCurrentIndex ? sortedAlertThresholds.findIndex(threshold => threshold.Email_send === false) : - 1);
+		if (selectedOrganization?.Billing?.internal_app_runs_hard_limit !== undefined && selectedOrganization?.Billing?.internal_app_runs_hard_limit !== null && selectedOrganization?.Billing?.internal_app_runs_hard_limit > 0) {
+			setSupportAppRunLimit(selectedOrganization?.Billing?.internal_app_runs_hard_limit)
+		}
 
 	}, [selectedOrganization]);
 
@@ -1903,6 +1908,52 @@ const Billing = memo((props) => {
 		setAlertThresholds([...alertThresholds, { percentage: '', count: '', Email_send: false }]);
 	};
 
+
+	const handleUpdateSupportAppRunLimit = () => {
+		if (!supportAppRunLimit || isNaN(supportAppRunLimit) || supportAppRunLimit < 0) {
+			toast.error("Please enter a valid app run limit");
+			return;
+		}
+
+		toast("Updating app run limit. Please wait...");
+
+		const data = {
+			org_id: selectedOrganization.id,
+			editing: "internal_appruns_hard_limit",
+			billing: {
+				internal_app_runs_hard_limit: parseInt(supportAppRunLimit) || 0,
+			}
+		};
+
+		const url = globalUrl + "/api/v1/orgs/" + selectedOrganization.id;
+		fetch(url, {
+			mode: "cors",
+			method: "POST",
+			body: JSON.stringify(data),
+			credentials: "include",
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				"Content-Type": "application/json; charset=utf-8",
+			},
+		})
+			.then((response) => {
+				if (response.status === 200) {
+					toast.success("Successfully updated app run limit");
+					setSupportLimitDialogOpen(false);
+					if (handleGetOrg !== undefined) {
+						handleGetOrg(selectedOrganization.id);
+					}
+				} else {
+					toast.error("Failed to update app run limit. Please try again.");
+				}
+			})
+			.catch((error) => {
+				console.log("Error updating app run limit:", error);
+				toast.error("Failed to update app run limit. Please try again.");
+			});
+	};
+
 	const updateAlertThreshold = (index, field, value) => {
 
 		const totalValue = userdata.app_execution_limit;
@@ -2025,6 +2076,13 @@ const Billing = memo((props) => {
 		}
 	}, [isChildOrg, currentTab]);
 
+	// Update supportAppRunLimit when selectedOrganization changes
+	useEffect(() => {
+		if (selectedOrganization?.billing?.internal_app_runs_hard_limit !== undefined) {
+			setSupportAppRunLimit(selectedOrganization.billing.internal_app_runs_hard_limit);
+		}
+	}, [selectedOrganization?.billing?.internal_app_runs_hard_limit]);
+
 	return (
 		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
 			<div style={{ height: "100%", width: "100%"}}>
@@ -2118,6 +2176,8 @@ const Billing = memo((props) => {
 					globalUrl={globalUrl}
 					selectedOrganization={selectedOrganization}
 					billingInfo={billingInfo}
+					monthlyAppRunsParent={monthlyAppRunsParent}
+					monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
 					isCloud={isCloud}
 					userdata={userdata}
 					stripeKey={stripeKey}
@@ -2154,6 +2214,8 @@ const Billing = memo((props) => {
 								isLoggedIn={isLoggedIn}
 								globalUrl={globalUrl}
 								selectedOrganization={selectedOrganization}
+								monthlyAppRunsParent={monthlyAppRunsParent}
+								monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
 								billingInfo={billingInfo}
 								isCloud={isCloud}
 								userdata={userdata}
@@ -2638,6 +2700,122 @@ const Billing = memo((props) => {
 				>
 					Save
 				</Button>
+
+				{userdata.support === true && (
+					<div style={{ 
+						marginTop: 50, 
+						padding: 20, 
+						border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 193, 7, 0.4)'}`, 
+						borderRadius: 8, 
+						backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.02)' : 'rgba(255, 193, 7, 0.03)'
+					}}>
+						<Typography color="textPrimary" style={{ 
+							fontSize: 18, 
+							fontWeight: '600', 
+							marginBottom: 10
+						}}>
+							⚠️ Support Only - App Run Limit Control
+						</Typography>
+						<Typography color="textSecondary" style={{ fontSize: 16, marginBottom: 15 }}>
+							<strong>Note:</strong> Setting an app run hard limit below current usage will immediately stop all workflow executions for this organization.
+						</Typography>
+						<Typography color="textSecondary" style={{ fontSize: 14, marginBottom: 20 }}>
+							Current app runs this month: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> / <strong>{userdata.app_execution_limit}</strong>
+						</Typography>
+						
+						<Button
+							variant="outlined"
+							color="primary"
+							sx={{
+								textTransform: 'none',
+								fontWeight: '500',
+								borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.5)' : 'rgba(255, 152, 0, 0.6)',
+								color: theme.palette.mode === 'dark' ? '#fff' : 'rgba(255, 152, 0, 0.9)',
+								'&:hover': {
+									color: theme.palette.mode === 'dark' ? '#fff' : 'rgba(255, 152, 0, 1)',
+									backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.08)' : 'rgba(255, 152, 0, 0.04)',
+								}
+							}}
+							onClick={() => setSupportLimitDialogOpen(true)}
+						>
+							Set App Run Limit
+						</Button>
+
+						{/* Support Limit Dialog */}
+						<Dialog
+							open={supportLimitDialogOpen}
+							onClose={() => setSupportLimitDialogOpen(false)}
+							maxWidth="sm"
+							fullWidth
+							PaperProps={{
+							sx: {
+							borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+							border: theme?.palette?.DialogStyle?.border,
+							minWidth: '440px',
+							fontFamily: theme?.typography?.fontFamily,
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							zIndex: 1000,
+							'& .MuiDialogContent-root': {
+								backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+							'& .MuiDialogTitle-root': {
+								backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+							'& .MuiDialogActions-root': {
+								backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							}
+							}
+						}}
+						>
+							<DialogTitle color={theme.palette.text.primary}>
+								⚠️ Set App Run Limit
+							</DialogTitle>
+							<DialogContent>
+								<DialogContentText style={{ marginBottom: 20 }}>
+									<strong>Note:</strong> This will set a hard limit on app executions. If the organization reaches this limit, all workflow executions will be stopped.
+								</DialogContentText>
+								<DialogContentText style={{ marginBottom: 20 }}>
+									Current usage: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs this month
+								</DialogContentText>
+								<DialogContentText style={{ marginBottom: 20 }}>
+									Current hard limit: <strong>{selectedOrganization?.billing?.internal_app_runs_hard_limit || 'Not set'}</strong>
+								</DialogContentText>
+								<TextField
+									autoFocus
+									margin="dense"
+									label="App Run Limit"
+									type="number"
+									fullWidth
+									variant="outlined"
+									value={supportAppRunLimit}
+									onChange={(e) => setSupportAppRunLimit(e.target.value)}
+									inputProps={{ min: 0 }}
+									style={{ marginTop: 10 }}
+									helperText="Set to 0 to completely disable app run hard limit"
+								/>
+							</DialogContent>
+							<DialogActions>
+								<Button 
+									onClick={() => setSupportLimitDialogOpen(false)}
+									style={{ textTransform: 'none' }}
+								>
+									Cancel
+								</Button>
+								<Button 
+									onClick={handleUpdateSupportAppRunLimit}
+									variant="contained"
+									color="primary"
+									style={{ 
+										textTransform: 'none', 
+										fontWeight: '500',
+									}}
+								>
+									Apply Limit
+								</Button>
+							</DialogActions>
+						</Dialog>
+					</div>
+				)}
 
 			</div>
 			): null}
