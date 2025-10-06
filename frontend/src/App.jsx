@@ -180,6 +180,13 @@ const App = (message, props) => {
         var userInfo = {};
         if (responseJson.success === true) {
           //console.log("USER: ", responseJson);
+		  if (responseJson?.switch_parent === true) {
+			toast.info(responseJson.reason)
+			setTimeout(() => {
+				window.location.reload();
+			}, 3000);
+			return
+		  }
 
           userInfo = responseJson;
           setIsLoggedIn(true);
