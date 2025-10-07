@@ -48,6 +48,7 @@ import (
 	newscheduler "github.com/carlescere/scheduler"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
+	"sort"
 
 	// Web
 	"github.com/gorilla/mux"
@@ -3948,6 +3949,14 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
 	} else {
 		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
+	}
+
+	subscriptionCacheKey := fmt.Sprintf("org_subscriptions_%s", org.Id)
+	subscriptionsBytes, err := json.Marshal(responseData.Subscriptions)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Subscriptions for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
