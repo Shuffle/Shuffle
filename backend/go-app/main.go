@@ -1138,7 +1138,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		// Check for licensing/branding of parent and override
 		parentOrg, err := shuffle.GetOrg(ctx, parentOrgId)
 		if err == nil {
-			if parentOrg.LeadInfo.IntegrationPartner {
+			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
+			if parentOrg.LeadInfo.IntegrationPartner || parent.SyncFeatures.Branding.Active {
 				parsedStatus = append(parsedStatus, "integration_partner")
 
 				// except theme take from parent org
@@ -1180,7 +1181,9 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	} else {
 		// for parent org branding
-		if org.LeadInfo.IntegrationPartner {
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *org)
+		org = &licenseOrg
+		if org.LeadInfo.IntegrationPartner || org.SyncFeatures.Branding.Active {
 			userInfo.ActiveOrg.Branding.Theme = org.Branding.Theme
 			userInfo.ActiveOrg.Branding.DocumentationLink = org.Defaults.DocumentationReference
 			userInfo.ActiveOrg.Branding.SupportEmail = org.Branding.SupportEmail
