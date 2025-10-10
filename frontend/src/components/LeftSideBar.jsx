@@ -955,7 +955,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         if (!fetched && org) {
           setActiveOrgData(org);
           if (!isCloud) {
-              if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+              if (org?.cloud_sync && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
               } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);

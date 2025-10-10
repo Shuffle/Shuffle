@@ -1287,7 +1287,7 @@ const LicencePopup = (props) => {
               </div>
             </div>
 
-            { (!isCloud && selectedOrganization.cloud_sync) || isCloud && (
+            { ((!isCloud && selectedOrganization.cloud_sync) || isCloud) && (
               <div
               style={{
                 display: "flex",
