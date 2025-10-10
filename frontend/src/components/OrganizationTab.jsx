@@ -7,7 +7,8 @@ import EditOrgTab from '../components/EditOrgTab.jsx';
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
 import   SSOTab from "../components/ssoTab.jsx"
 import { ToastContainer, toast } from "react-toastify";
-import { Button, Tooltip } from '@mui/material';
+import { Button, Tooltip, Typography } from '@mui/material';
+import { CheckCircle as CheckCircleIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { getTheme } from '../theme.jsx';
 import { Context } from '../context/ContextApi.jsx';
 const OrganizationTab = (props) => {
@@ -36,7 +37,7 @@ const OrganizationTab = (props) => {
     const [billingInfo, setBillingInfo] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [curIndex, setCurIndex] = React.useState(0);
-    const items = ['Org Configuration', "SSO", "Notifications", 'Billing & Stats'];
+    const items = ['Org Configuration', 'Production Status', "SSO", "Notifications", 'Billing & Stats'];
     const [visibleTabs, setVisibleTabs] = useState(items);
     const [unreadNotifications, setUnreadNotifications] = React.useState(
         notifications?.filter((notification) => notification.read === false)?.length
@@ -56,7 +57,11 @@ const OrganizationTab = (props) => {
                 setVisibleTabs(items.filter((item) => item !== 'SSO'));
             }
         }
-    },[isIntegrationPartner, isChildOrg, isGlobalUser, userdata]);
+
+        if (isCloud) {
+            setVisibleTabs(items.filter((item) => item !== 'Production Status'));
+        }
+    },[isIntegrationPartner, isChildOrg, isGlobalUser, userdata, isCloud]);
 
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
@@ -66,30 +71,32 @@ const OrganizationTab = (props) => {
             setSelectedTab(decodedTabName);
             if (decodedTabName === 'org_config') {
                 setCurIndex(0);
+            } else if (decodedTabName === 'prodstatus' || decodedTabName === 'productionstatus' && !isCloud) {
+                setCurIndex(1);
             } else if(decodedTabName === 'sso'){
-                setCurIndex(1)
+                setCurIndex(isCloud ? 1 : 2)
             }else if (decodedTabName === 'notifications' || decodedTabName === 'priorities') {
                 if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
-                    setCurIndex(1);
+                    setCurIndex(isCloud ? 1 : 2);
                 }else {
                     if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
-                        setCurIndex(2);
+                        setCurIndex(isCloud ? 2 : 3);
                     }else {
-                        setCurIndex(1);
+                        setCurIndex(isCloud ? 1 : 2);
                     }
                 }
             } else if (decodedTabName === 'billingstats' || decodedTabName === 'billing') {
                 if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
-                    setCurIndex(2);
+                    setCurIndex(isCloud ? 2 : 3);
                 } else {
                     if (userdata && userdata?.active_org && userdata?.active_org?.role === 'admin') {
-                        setCurIndex(3);
+                        setCurIndex(isCloud ? 3 : 4);
                     } else {
-                        setCurIndex(2);
+                        setCurIndex(isCloud ? 2 : 3);
                     }
                 }
             } else if (decodedTabName === 'branding') {
-                setCurIndex(4);
+                setCurIndex(isCloud ? 4 : 5);
             }
             //  else if (decodedTabName === 'analytics') {
             //     setCurIndex(5);
@@ -120,6 +127,9 @@ const OrganizationTab = (props) => {
         switch (selectedTab) {
             case 'org_config':
                 return <EditOrgTab isCloud={isCloud} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} />;
+            case 'prodstatus':
+            case 'productionstatus':
+                return isCloud ? null : <ProductionStatus selectedOrganization={selectedOrganization} userdata={userdata} isCloud={isCloud} theme={theme} />;
             case 'sso': 
                 return <SSOTab isEditOrgTab={true} globalUrl={globalUrl} isCloud={isCloud} userdata={userdata} handleEditOrg={handleEditOrg} selectedOrganization={selectedOrganization}/>
             case `notifications`:
@@ -248,7 +258,7 @@ const OrganizationTab = (props) => {
                     </Tooltip>
                 ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', width: "100%", height: "100%", boxSizing:'border-box'}}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', width: "100%", height: "100%", boxSizing:'border-box'}}>
                 {renderContent()}
             </div>
         </div>
@@ -256,3 +266,47 @@ const OrganizationTab = (props) => {
 };
 
 export default OrganizationTab;
+
+
+const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) => {
+    var isProdStatusOn;
+    if (selectedOrganization !== undefined && selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions[0] !== undefined) {
+        isProdStatusOn = selectedOrganization?.subscriptions[0]?.name?.toLowerCase()?.includes("enterprise") && selectedOrganization?.subscriptions[0]?.active;
+    } else {
+        isProdStatusOn = false;
+    }
+    const rows = [
+        { label: 'Licensed', ok: isProdStatusOn },
+        { label: 'High Scale', ok: isProdStatusOn },
+        { label: 'High Availability', ok: isProdStatusOn },
+        { label: 'Stable Configuration', ok: isProdStatusOn },
+        { label: 'Robust Infrastructure', ok: isProdStatusOn },
+    ];
+
+    return (
+        <div style={{ width: '100%', maxWidth: 800, padding: '24px 24px 24px 34px', height: 445 , display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+                <Typography variant="h5" style={{ fontWeight: 600, fontFamily: theme.typography.fontFamily }}>Production Status</Typography>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 16, background: isProdStatusOn ? 'rgba(43,192,126,0.1)' : 'rgba(253,76,98,0.1)' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: isProdStatusOn ? '#2BC07E' : '#FD4C62' }} />
+                    <Typography variant="caption" style={{ color: isProdStatusOn ? '#2BC07E' : '#FD4C62', fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{isProdStatusOn ? "ON" : "OFF"}</Typography>
+                </div>
+            </div>
+            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 18, fontFamily: theme.typography.fontFamily }}>
+                Monitor your production status to stay informed about available features.
+            </Typography>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {rows.map((row) => (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: theme.typography.fontFamily }}>
+                        {row.ok ? (
+                            <CheckCircleIcon style={{ color: '#2BC07E' }} />
+                        ) : (
+                            <CancelIcon style={{ color: '#FD4C62' }} />
+                        )}
+                        <Typography variant="body1" style={{ fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{row.label}</Typography>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};

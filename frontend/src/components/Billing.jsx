@@ -2099,13 +2099,13 @@ const Billing = memo((props) => {
 				<Typography variant="body2" color="textSecondary" style={{ fontSize: 16 }}>{isCloud ?
 					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
-					"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
+					!(selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions.length > 0 && selectedOrganization?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && selectedOrganization?.subscriptions[0]?.active) ? "Shuffle is an Enterprise automation platform, and a license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
 				}</Typography> :
 				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10, fontSize: 16 }}>
 					{isCloud ?
 						"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 						:
-						"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
+						!(selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions.length > 0 && selectedOrganization?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && selectedOrganization?.subscriptions[0]?.active) ? "Shuffle is an Enterprise automation platform, and a license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
 					}
 				</Typography>}
 			</>  }
@@ -2924,6 +2924,7 @@ const Billing = memo((props) => {
 									userdata={userdata}
 									currentTab={currentTab}
 									syncStats={true}
+									statistics={statistics}
 								/>
 						}
 					</div>
