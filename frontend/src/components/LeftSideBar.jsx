@@ -92,6 +92,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       region_url: org.region_url,
     })) || []
   );
+  const [activeOrgData, setActiveOrgData] = useState(null);
+  const [isProdStatusOn, setIsProdStatusOn] = useState(false);
   const userOrgs = React.useMemo(() => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
@@ -682,7 +684,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
           Version: <a href="https://github.com/Shuffle/Shuffle/releases" style={{ color: theme.palette.text.primary, textDecoration: "underline" }} target="_blank" rel="noreferrer"> 
-	  		2.1.0
+	  		2.1.1
 	  		</a>
         </Typography>
       </Menu>
@@ -936,6 +938,40 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   const showPartnerLogo = userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.image !== undefined && userdata?.active_org?.image !== null && userdata?.active_org?.image.length > 0 
 
+  useEffect(() => {
+    const orgId = userdata?.active_org?.id;
+    if (!orgId) {
+      return;
+    }
+
+    let fetched = false;
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((org) => {
+        if (!fetched && org) {
+          setActiveOrgData(org);
+          if (!isCloud) {
+              if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                setIsProdStatusOn(true);
+              } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                setIsProdStatusOn(true);
+              } else {
+                setIsProdStatusOn(false);
+              }
+            }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      fetched = true;
+    };
+  }, [userdata?.active_org?.id, globalUrl]);
+
   return (
     <div
       style={{
@@ -975,6 +1011,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           }
         }}
       >  
+        <Box  sx={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+          }}
+        >
         <Tooltip 
           title="Go to Home" 
           placement="top"
@@ -1005,7 +1049,15 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               style={{ width: showPartnerLogo ? 30 : 24, height: showPartnerLogo ? 30 : 24 }}
             />
           </Link>
-        </Tooltip>
+          </Tooltip>
+          {
+            !isCloud && expandLeftNav && (
+              <Typography variant="body2" style={{fontSize: 16, color: themeMode === "dark" ? lightText : darkText, transition: "opacity 0.3s ease", fontWeight: 600, marginTop: -5, marginLeft: 3}}>
+                 {isProdStatusOn ? "Enterprise" : "Open Source"}
+              </Typography>
+            )
+          }
+          </Box>
         <Box
           sx={{
             display: "flex",
@@ -1871,6 +1923,48 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         }}
       >
 	  	
+      {!isCloud ? (
+          <div
+           style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 20,
+                      padding: "4px 10px",
+                      marginLeft: "5px",
+                      marginRight: "5px",
+                      borderRadius: 20,
+                      marginBottom: "14px",
+                      background: isProdStatusOn
+                        ? "rgba(43, 192, 126, 0.1)"
+                        : "rgba(255, 82, 82, 0.1)",
+                        cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      navigate("/admin?admin_tab=prodstatus")
+            }}
+          >
+            <span
+              style={{
+                  width: 8,
+                  height: 8,
+                  marginLeft: 10,
+                  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+                  borderRadius: 999,
+                  display: expandLeftNav ? "inline" : "none",
+              }}
+            />
+              <Typography
+                style={{
+                  fontFamily: "12px",
+                  opacity: 0.9,
+                  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+                 }}
+              >
+                {expandLeftNav ? isProdStatusOn ? "Prod. Status ON" : "Prod. Status OFF" : isProdStatusOn ? "ON" : "OFF"}
+              </Typography>
+          </div>
+      ) : null}
+      
 	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav &&
       <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
       <Button
