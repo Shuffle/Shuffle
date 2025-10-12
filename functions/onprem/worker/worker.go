@@ -610,9 +610,9 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	// use deployment instead of pod
 	// then expose a service similarly.
-	// number of replicas can be set to os.Getenv("SHUFFLE_SCALE_REPLICAS")
+	// number of replicas can be set to os.Getenv("SHUFFLE_APP_REPLICAS")
 	replicaNumber := 1
-	replicaNumberStr := os.Getenv("SHUFFLE_SCALE_REPLICAS")
+	replicaNumberStr := os.Getenv("SHUFFLE_APP_REPLICAS")
 	if len(replicaNumberStr) > 0 {
 		tmpInt, err := strconv.Atoi(replicaNumberStr)
 		if err != nil {
