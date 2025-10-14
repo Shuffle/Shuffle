@@ -18,12 +18,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/shuffle/shuffle-shared"
@@ -2092,6 +2094,66 @@ func cleanup() {
 	os.Exit(0)
 }
 
+func StartAgent() {
+	log.Printf("[INFO] Starting Orborus agent mode")
+	
+	auditLogEnabled := os.Getenv("SHUFFLE_AUDIT_LOG_ENABLED") == "true"
+	
+	if auditLogEnabled {
+		log.Printf("[INFO] Audit log monitoring is enabled")
+		
+		// Initialize telemetry configuration
+		telemetryConfig := shuffle.TelemetryConfig{
+			Enabled:       true,
+			Modes:         []string{"audit_log"},
+			BufferSize:    1000,
+			FlushInterval: 10 * time.Second,
+		}
+
+		if excludePatterns := os.Getenv("SHUFFLE_AUDIT_LOG_EXCLUDE"); excludePatterns != "" {
+			patterns := strings.Split(excludePatterns, ",")
+			telemetryConfig.Filters = append(telemetryConfig.Filters, shuffle.TelemetryFilter{
+				Type:    "message",
+				Exclude: patterns,
+			})
+		}
+		
+		if includePatterns := os.Getenv("SHUFFLE_AUDIT_LOG_INCLUDE"); includePatterns != "" {
+			patterns := strings.Split(includePatterns, ",")
+			telemetryConfig.Filters = append(telemetryConfig.Filters, shuffle.TelemetryFilter{
+				Type:    "message",
+				Include: patterns,
+			})
+		}
+
+		collector, err := shuffle.NewAuditLogCollector(telemetryConfig)
+		if err != nil {
+			log.Printf("[ERROR] Failed to create audit log collector: %v", err)
+		} else {
+			ctx := context.Background()
+			if err := collector.LogCollectorStart(ctx); err != nil {
+				log.Printf("[ERROR] Failed to start audit log collector: %v", err)
+			} else {
+				log.Printf("[INFO] Audit log collector started successfully")
+
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+				
+				go func() {
+					<-sigChan
+					log.Printf("[INFO] Received shutdown signal, stopping audit log collector...")
+					collector.Stop()
+
+					os.Exit(0)
+				}()
+			}
+		}
+	} else {
+		log.Printf("[INFO] Audit log monitoring is disabled")
+	}
+	select {}
+}
+
 // Initial loop etc
 func main() {
 	// Get arch. amd64 or arm64
@@ -2099,6 +2161,13 @@ func main() {
 	//sigCh := make(chan os.Signal, 1)
 	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	//defer cleanup()
+
+	agentMode := os.Getenv("SHUFFLE_AGENT_MODE")
+	if agentMode == "true" {
+		log.Printf("[INFO] Running in agent mode. Starting the agent.")
+		StartAgent()
+		return
+	}
 
 	// Block until a signal is received
 	if shuffle.IsRunningInCluster() {
