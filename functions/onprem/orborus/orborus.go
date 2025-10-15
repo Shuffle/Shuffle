@@ -2129,7 +2129,7 @@ func main() {
 	if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
 		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
-	} 
+	}
 
 	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") != "false" {
 		// Run in 15 seconds in a goroutine
@@ -3053,8 +3053,8 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Healthcheck: healthconfig,
 		ExposedPorts: nat.PortSet{
 			"5160/tcp": struct{}{},
-			"1514/udp":  struct{}{},
-			"1514/tcp":  struct{}{},
+			"1514/udp": struct{}{},
+			"1514/tcp": struct{}{},
 		},
 		Entrypoint: []string{containerName},
 		Env:        []string{},
@@ -3100,8 +3100,8 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
-			"1514/tcp":  []nat.PortBinding{{HostPort: "1514"}},
-			"1514/udp":  []nat.PortBinding{{HostPort: "1514"}},
+			"1514/tcp": []nat.PortBinding{{HostPort: "1514"}},
+			"1514/udp": []nat.PortBinding{{HostPort: "1514"}},
 			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
 		},
 		Mounts: []mount.Mount{
@@ -3111,16 +3111,16 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 				Target: "/tmp",
 			},
 			/*
-			{
-				Type:   "bind",
-				Source: tenzirStorageFolder,
-				Target: "/var/log/tenzir/",
-			},
-			{
-				Type:   "bind",
-				Source: tenzirStorageFolder,
-				Target: "/var/cache/tenzir/",
-			},
+				{
+					Type:   "bind",
+					Source: tenzirStorageFolder,
+					Target: "/var/log/tenzir/",
+				},
+				{
+					Type:   "bind",
+					Source: tenzirStorageFolder,
+					Target: "/var/cache/tenzir/",
+				},
 			*/
 		},
 		VolumeDriver: "local",
@@ -3338,7 +3338,7 @@ func createPipeline(command, identifier string) (string, error) {
 		"name":        identifier,
 		"hidden":      false,
 		"retry_delay": "500.0ms",
-		"unstoppable":  true,
+		"unstoppable": true,
 	}
 
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -3410,20 +3410,20 @@ func updatePipelineState(command, pipelineId, action string) (string, error) {
 	url := fmt.Sprintf("%s/api/v0/pipeline/update", pipelineUrl)
 	forwardMethod := "POST"
 	requestBody := map[string]interface{}{
-		"id":         pipelineId,
-		"action":     action,
+		"id":     pipelineId,
+		"action": action,
 
 		/*
-		"autostart": map[string]bool{
-			"created":   true,
-			"completed": false,
-			"failed":    false,
-		},
-		"autodelete": map[string]bool{
-			"completed": false,
-			"failed":    false,
-			"stopped":   false,
-		},
+			"autostart": map[string]bool{
+				"created":   true,
+				"completed": false,
+				"failed":    false,
+			},
+			"autodelete": map[string]bool{
+				"completed": false,
+				"failed":    false,
+				"stopped":   false,
+			},
 		*/
 	}
 
