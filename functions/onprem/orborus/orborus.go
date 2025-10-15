@@ -1395,6 +1395,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		return err
 	}
 
+	svcAppProtocol := "http"
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   identifier,
@@ -1404,9 +1405,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
-					Protocol:   "TCP",
-					Port:       33333,
-					TargetPort: intstr.FromInt(33333),
+					Protocol:    "TCP",
+					AppProtocol: &svcAppProtocol,
+					Port:        33333,
+					TargetPort:  intstr.FromInt(33333),
 				},
 			},
 			Type: corev1.ServiceTypeClusterIP,
