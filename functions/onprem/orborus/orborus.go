@@ -1146,6 +1146,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT=%s", appContainerSecurityContext))
 	}
 
+	if len(os.Getenv("SHUFFLE_APP_MOUNT_TMP_VOLUME")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_MOUNT_TMP_VOLUME=%s", os.Getenv("SHUFFLE_APP_MOUNT_TMP_VOLUME")))
+	}
+
 	if len(os.Getenv("SHUFFLE_LOGS_DISABLED")) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")))
 	}
