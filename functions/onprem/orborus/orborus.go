@@ -2125,14 +2125,25 @@ func main() {
 	if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
 		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
+	} 
+
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") != "false" {
+		// Run in 15 seconds in a goroutine
+		go func() {
+			time.Sleep(15 * time.Second)
+			log.Printf("[INFO] Auto-downloading Sigma rules during startup")
+			ruleType := "sigma"
+			err := handleFileCategoryChange(ruleType)
+			if err != nil {
+				log.Printf("[WARNING] Failed downloading %s rules: %s", ruleType, err)
+			}
+		}()
 	}
 
-	log.Println("[INFO] Setting up execution environment")
-
+	log.Println("[INFO] Setting up execution environment for env '%s'", environment)
 	// //FIXME
 	if baseUrl == "" {
 		baseUrl = "https://shuffler.io"
-		//baseUrl = "http://localhost:5001"
 	}
 
 	if len(orborusUuid) == 0 {
@@ -2523,7 +2534,7 @@ func main() {
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 
 					tenzirDisabled = false
-					err = handleFileCategoryChange()
+					err = handleFileCategoryChange("sigma")
 					if err != nil {
 						log.Printf("[ERROR] Failed to download the file category: %s", err)
 					}
@@ -2533,7 +2544,7 @@ func main() {
 				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
 					log.Printf("[INFO] Got job to disable sigma rules")
 
-					err = removeFileCategory()
+					err = removeFileCategory("sigma")
 					if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
 					}
@@ -3568,8 +3579,8 @@ func searchPipeline(identifier string) (string, error) {
 	return "", errors.New("no existing pipeline found with name")
 }
 
-func handleFileCategoryChange() error {
-	apiEndpoint := baseUrl + "/api/v1/files/namespaces/sigma"
+func handleFileCategoryChange(ruleType string) error {
+	apiEndpoint := fmt.Sprintf("%s/api/v1/files/namespaces/%s", baseUrl, ruleType)
 	req, err := http.NewRequest("GET", apiEndpoint, nil)
 	if err != nil {
 		return err
@@ -3616,14 +3627,13 @@ func handleFileCategoryChange() error {
 	}
 
 	//log.Println("[DEBUG] ZIP file downloaded successfully.")
-
 	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
 	if len(tenzirStorageFolder) == 0 {
 		tenzirStorageFolder = "/tmp/"
 	}
 
 	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
-	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
+	sigmaPath := fmt.Sprintf("%s/%s_rules", tenzirStorageFolder, ruleType)
 	err = extractZIP("files.zip", sigmaPath)
 	if err != nil {
 		log.Printf("[ERROR] Failed to extract ZIP file: %s", err)
@@ -3711,7 +3721,7 @@ func copyToTenzir(srcPath, destPath string) error {
 	return nil
 }
 
-func removeFileCategory() error {
+func removeFileCategory(ruleType string) error {
 	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
 	if len(tenzirStorageFolder) == 0 {
 		tenzirStorageFolder = "/tmp/"
@@ -3720,14 +3730,14 @@ func removeFileCategory() error {
 	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
 
 	//sigmaPath := "/var/lib/tenzir/sigma_rules/*"
-	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
+	rulePath := fmt.Sprintf("%s/%s_rules", tenzirStorageFolder, ruleType)
 
-	err := os.RemoveAll(sigmaPath)
+	err := os.RemoveAll(rulePath)
 	if err != nil {
-		return fmt.Errorf("Error removing category files in %s: %v", sigmaPath, err)
+		return fmt.Errorf("Error removing category files in %s: %v", rulePath, err)
 	}
 
-	log.Printf("[INFO] Removed all local category data in %s", sigmaPath)
+	log.Printf("[INFO] Removed all local category data in %s", rulePath)
 
 	return nil
 }
