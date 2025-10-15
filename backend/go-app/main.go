@@ -76,6 +76,7 @@ type retStruct struct {
 	IntervalSeconds int64                         `json:"interval_seconds"`
 	Reason          string                        `json:"reason"`
 	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
+	Licensed        bool                          `json:"licensed"`
 }
 
 type Contact struct {
@@ -951,42 +952,62 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		return childOrgs[i].Created < childOrgs[j].Created
 	})
 
+	parentOrg := &shuffle.Org{}
+	if len(org.CreatorOrg) > 0 {
+		parentOrg, err = shuffle.GetOrg(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
+			parentOrg = &shuffle.Org{}
+		}
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *parentOrg)
+		parentOrg = &licenseOrg
+	}
+
+	limit := 3
+
+	if parentOrg.Licensed && parentOrg.SyncFeatures.MultiTenant.Active {
+		limit = int(parentOrg.SyncFeatures.MultiTenant.Limit)
+	}
+
 	for index, org := range childOrgs {
 
-		if index < 3 {
+		if index < limit {
 			continue
 		}
 
 		failToLoadOrgs = append(failToLoadOrgs, org.Id)
 	}
 
-	if len(org.CreatorOrg) > 0 && len(childOrgs) > 3 && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
-		parentOrg, err := shuffle.GetOrg(ctx, org.CreatorOrg)
-		if err != nil {
-			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
-		} else {
-			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
-			parentOrg := &parent
-			if !parentOrg.SyncFeatures.MultiTenant.Active {
-				userInfo.ActiveOrg = shuffle.OrgMini{
-					Id:       parentOrg.Id,
-					Name:     parentOrg.Name,
-					Role:     userInfo.Role,
-					Branding: parentOrg.Branding,
-					Image:    parentOrg.Image,
-				}
-				log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username, parentOrg.Name)
+	if len(org.CreatorOrg) > 0 && len(childOrgs) > limit && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
 
-				err = shuffle.SetUser(ctx, &userInfo, false)
-				if err != nil {
-					log.Printf("[WARNING] Failed setting user to parent org: %s", err)
-				}
-				
-				resp.WriteHeader(200)
-				resp.Write([]byte(`{"success": true, "reason": "Parent org has more than 3 child orgs and is not licensed. Moving to parent org. Contact support@shuffler.io for more information", "switch_parent": true}`))
-				return
-			}
+		userInfo.ActiveOrg = shuffle.OrgMini{
+			Id:       parentOrg.Id,
+			Name:     parentOrg.Name,
+			Role:     userInfo.Role,
+			Branding: parentOrg.Branding,
+			Image:    parentOrg.Image,
 		}
+
+		if parentOrg.Licensed {
+			log.Printf("[INFO] Parent org %s is licensed. But Multi-tenant feature is not active. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username)
+		} else {
+			log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username)
+		}
+
+		err = shuffle.SetUser(ctx, &userInfo, false)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting user to parent org: %s", err)
+		}
+
+		reason := "Parent org has more than 3 child orgs and is not licensed. Moving user to parent org. Contact support@shuffler.io for more information"
+
+		if parentOrg.Licensed {
+			reason = fmt.Sprintf("Parent organization is licensed, but the maximum number of sub-organizations (%d) has been reached. You have been moved to the parent organization. Please contact support@shuffler.io for further assistance.", parentOrg.SyncFeatures.MultiTenant.Limit)
+		}
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(`{"success": true, "reason": "` + reason + `", "switch_parent": true}`))
+		return
 	}
 
 	//if err == nil {
@@ -1139,7 +1160,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		parentOrg, err := shuffle.GetOrg(ctx, parentOrgId)
 		if err == nil {
 			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
-			if parentOrg.LeadInfo.IntegrationPartner || parent.SyncFeatures.Branding.Active {
+			if parent.SyncFeatures.Branding.Active {
 				parsedStatus = append(parsedStatus, "integration_partner")
 
 				// except theme take from parent org
@@ -1177,13 +1198,15 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 						break
 					}
 				}
+			} else {
+				userInfo.ActiveOrg.Branding = shuffle.OrgBranding{}
 			}
 		}
 	} else {
 		// for parent org branding
 		licenseOrg := shuffle.HandleCheckLicense(ctx, *org)
 		org = &licenseOrg
-		if org.LeadInfo.IntegrationPartner || org.SyncFeatures.Branding.Active {
+		if org.SyncFeatures.Branding.Active {
 			userInfo.ActiveOrg.Branding.Theme = org.Branding.Theme
 			userInfo.ActiveOrg.Branding.DocumentationLink = org.Defaults.DocumentationReference
 			userInfo.ActiveOrg.Branding.SupportEmail = org.Branding.SupportEmail
@@ -1192,6 +1215,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			userInfo.ActiveOrg.Branding.BrandName = org.Branding.BrandName
 
 			parsedStatus = append(parsedStatus, "integration_partner")
+		} else {
+			userInfo.ActiveOrg.Branding = shuffle.OrgBranding{}
 		}
 	}
 
@@ -3875,11 +3900,12 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success bool                   `json:"success"`
-		Reason  string                 `json:"reason"`
-		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
-		SyncFeatures shuffle.SyncFeatures   `json:"sync_features"`
+		Success       bool                          `json:"success"`
+		Reason        string                        `json:"reason"`
+		Jobs          []shuffle.CloudSyncJob        `json:"jobs"`
+		SyncFeatures  shuffle.SyncFeatures          `json:"sync_features"`
 		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
+		Licensed      bool                          `json:"licensed"`
 	}
 
 	responseData := retStruct{}
@@ -3960,6 +3986,15 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		log.Printf("[ERROR] Failed to marshal Subscriptions for cache: %s", err)
 	} else {
 		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 1800)
+	}
+
+	licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
+	licensedBytes, err := json.Marshal(responseData.Licensed)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Licensed for cache: %s", err)
+	} else {
+
+		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
