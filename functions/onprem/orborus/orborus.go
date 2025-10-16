@@ -1154,6 +1154,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")))
 	}
 
+	if len(os.Getenv("SHUFFLE_APP_REPLICAS")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_REPLICAS=%s", os.Getenv("SHUFFLE_APP_REPLICAS")))
+	}
+
 	clientset, _, err := shuffle.GetKubernetesClient()
 	if err != nil {
 		log.Printf("[ERROR] Error getting kubernetes client:", err)
