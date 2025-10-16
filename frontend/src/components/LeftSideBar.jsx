@@ -1965,7 +1965,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           </div>
       ) : null}
       
-	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav &&
+	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav && !isProdStatusOn &&
       <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
       <Button
 	  		variant="outlined"
