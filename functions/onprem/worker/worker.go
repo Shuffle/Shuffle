@@ -699,6 +699,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		return err
 	}
 
+	svcAppProtocol := "http"
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -708,9 +709,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
-					Protocol:   "TCP",
-					Port:       80,
-					TargetPort: intstr.FromInt(deployport),
+					Protocol:    "TCP",
+					AppProtocol: &svcAppProtocol,
+					Port:        80,
+					TargetPort:  intstr.FromInt(deployport),
 				},
 			},
 			Type: corev1.ServiceTypeClusterIP,
