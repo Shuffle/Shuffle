@@ -374,9 +374,71 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 		*/
 
-		if len(executionRequests.Data) > 50 {
+		orgId := env.OrgId
+		org, err := shuffle.GetOrg(ctx, orgId)
+		if err != nil {
+			log.Printf("[WARNING] Failed getting org %s for queue: %s", orgId, err)
+		}
+
+		parentOrg := org
+		if len(org.CreatorOrg) > 0 {
+			parentOrg, err = shuffle.GetOrg(ctx, org.CreatorOrg)
+			if err != nil {
+				log.Printf("[WARNING] Failed getting parent org %s for queue: %s", org.CreatorOrg, err)
+			}
+		}
+
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *parentOrg)
+		stats, err := shuffle.GetOrgStatistics(ctx, parentOrg.Id)
+		if err != nil {
+			log.Printf("[WARNING] Failed getting statistics for org %s: %s", parentOrg.Id, err)
+		}
+
+		limit := licenseOrg.SyncFeatures.WorkflowExecutions.Limit
+		totalWorkflowExecutions := stats.MonthlyWorkflowExecutions + stats.MonthlyChildWorkflowExecutions
+		if totalWorkflowExecutions > limit {
+
+			cacheKey := fmt.Sprintf("org-%s-last-queue-send", orgId)
+			currentTime := time.Now().Unix()
+			lastSendCache, err := shuffle.GetCache(ctx, cacheKey)
+			if err == nil {
+				var lastSendTime int64
+				if timeBytes, ok := lastSendCache.([]byte); ok {
+					if unmarshallErr := json.Unmarshal(timeBytes, &lastSendTime); unmarshallErr == nil {
+						timeSinceLastSend := currentTime - lastSendTime
+
+						if timeSinceLastSend < 60 {
+							log.Printf("[INFO] Rate limiting: Org %s exceeded the 10K usage quota for non-licensed users (current queued: %d, current month usage: %d). To increase scale, upgrade to an Enterprise license.", orgId, len(executionRequests.Data), totalWorkflowExecutions)
+							executionRequests.Data = []shuffle.ExecutionRequest{}
+						} else {
+							if len(executionRequests.Data) > 1 {
+								log.Printf("[INFO] Rate limiting: Org %s exceeded the 10K usage quota for non-licensed users (current queued: %d, current month usage: %d). To increase scale, upgrade to an Enterprise license.", orgId, len(executionRequests.Data), totalWorkflowExecutions)
+								executionRequests.Data = executionRequests.Data[0:1]
+							}
+
+							timeBytes, _ := json.Marshal(currentTime)
+							if cacheErr := shuffle.SetCache(ctx, cacheKey, timeBytes, 1); cacheErr != nil {
+								log.Printf("[WARNING] Failed to set rate limiting cache for org %s: %s", orgId, cacheErr)
+							}
+						}
+					}
+				}
+			} else {
+
+				if len(executionRequests.Data) > 1 {
+					log.Printf("[INFO] Rate limiting: Org %s exceeded the 10K usage quota for non-licensed users (current queued: %d, current month usage: %d). To increase scale, upgrade to an Enterprise license.", orgId, len(executionRequests.Data), totalWorkflowExecutions)
+					executionRequests.Data = executionRequests.Data[0:1]
+				}
+
+				timeBytes, _ := json.Marshal(currentTime)
+				if cacheErr := shuffle.SetCache(ctx, cacheKey, timeBytes, 1); cacheErr != nil {
+					log.Printf("[WARNING] Failed to set initial rate limiting cache for org %s: %s", orgId, cacheErr)
+				}
+			}
+		} else if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]
 		}
+
 	}
 
 	newjson, err := json.Marshal(executionRequests)
