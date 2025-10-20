@@ -1518,6 +1518,7 @@ print('"' + encoded + '"')
 							/>
 							:
 							<TextField
+								disabled={workflows === undefined || workflows === null || workflows.length === 0}
 								required
 								InputProps={{
 									style: {

@@ -6,7 +6,10 @@ import {
   Stack,
   styled,
 } from "@mui/material";
+
 import theme from "../theme.jsx";
+import { toast } from "react-toastify";
+import { useNavigate } from 'react-router-dom';
 
 // Simple icon placeholders; replace with proper assets if desired
 const StepIcon = styled("div")(({ completed }) => ({
@@ -127,6 +130,9 @@ const DashboardOnboarding = ({
   footer,
   globalUrl,
   onExplore,
+  setOnboardingOpen,
+  isProdStatusOn,
+  isCloud,
 }) => {
   // Internal completion state only; handlers are defined separately
   const [completed, setCompleted] = React.useState({
@@ -140,6 +146,7 @@ const DashboardOnboarding = ({
   const [checkingWait, setCheckingWait] = React.useState(false);
   const [flashKeys, setFlashKeys] = React.useState([]);
   const [waitProgress, setWaitProgress] = React.useState(0);
+  const navigate = useNavigate();
 
   // Load persisted completion state
   React.useEffect(() => {
@@ -294,7 +301,7 @@ const DashboardOnboarding = ({
     {
       index: 5,
       key: 'invite',
-      title: 'Invite more team members (optional)',
+      title: 'Invite your team members',
       description: 'Add teammates to collaborate in your org.',
       primaryCta: { label: 'Open users page', onClick: handleOpenUsers },
       completed: completed.invite,
@@ -320,7 +327,7 @@ const DashboardOnboarding = ({
   if (!open) return null;
 
   return (
-    <Box sx={{ position: "fixed", inset: 0, zIndex: 2000 }}>
+    <Box sx={{ position: "fixed", inset: 0, zIndex: 2000, }}>
       {/* Blur overlay with visible background */}
       <Box
         onClick={onClose}
@@ -354,6 +361,8 @@ const DashboardOnboarding = ({
             border: "1px solid rgba(255,255,255,0.08)",
             p: 3,
             boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+
+		  	position: "relative", 
           }}
         >
           {/* Header */}
@@ -382,7 +391,54 @@ const DashboardOnboarding = ({
               </Typography>
             </Box>
 
+			{!isCloud ? (
+			  <div
+			   	style={{
+				  display: "flex",
+				  alignItems: "center",
+				  gap: 20,
+				  padding: "4px 10px",
+				  marginLeft: "5px",
+				  marginRight: "5px",
+				  borderRadius: 20,
+				  marginBottom: "14px",
+				  background: isProdStatusOn
+					? "rgba(43, 192, 126, 0.1)"
+					: "rgba(255, 82, 82, 0.1)",
+					cursor: "pointer",
+
+				  position: "absolute",
+				  top: 20,
+				  right: 20, 
+				}}
+				onClick={() => {
+					navigate("/admin?admin_tab=billingstats")
+				}}
+			  >
+				<span
+				  style={{
+					  width: 8,
+					  height: 8,
+					  marginLeft: 10,
+					  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+					  borderRadius: 999,
+					  display: "inline", 
+				  }}
+				/>
+				  <Typography
+					style={{
+					  fontFamily: "12px",
+					  opacity: 0.9,
+					  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+					 }}
+				  >
+					{isProdStatusOn ? "Production" : "NOT Production"} 
+				  </Typography>
+			  </div>
+		  ) : null}
+
           </Box>
+
 
           {/* Steps list with a single continuous rail */}
           <Box sx={{ position: "relative", display: "flex", flexDirection: "column", gap: 3, marginLeft: -1.5, marginTop: 4 }}>
@@ -427,12 +483,25 @@ const DashboardOnboarding = ({
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 1.5 }}>
             {footer}
             <Button variant="contained" color="primary"  onClick={handleFinalDone}
-            sx={{
-                fontSize: 14,
-                padding: "8px 60px",
-            }}
-            >
-            Explore Now
+				sx={{
+					fontSize: 14,
+					padding: "8px 60px",
+				}}
+				>
+				Explore 
+            </Button>
+
+            <Button variant="text" color="secondary"  onClick={() => {
+        		setOnboardingOpen(false)
+
+				toast.warn("The dashboard is not fully set up yet. You can complete the steps later from the onboarding section.", { timeout: 10000 })
+			}}
+				sx={{
+					fontSize: 14,
+					padding: "8px 60px",
+				}}
+				>
+	  			Skip for now
             </Button>
           </Box>
         </Box>

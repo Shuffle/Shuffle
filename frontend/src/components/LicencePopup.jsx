@@ -1507,14 +1507,14 @@ const LicencePopup = (props) => {
               {!isPaidPlan && (
                 <Button
                   fullWidth
-                  variant="outlined"
+                  variant="contained"
                   color="primary"
                   style={{ textTransform: "none" }}
                   onClick={() => {
                     if(isCloud) {
-                      navigate("/pricing");
+                      navigate("/pricing?ref=cloud_billing");
                     }else {
-                      window.open("https://shuffler.io/pricing?env=Self-Hosted", "_blank")
+                      window.open("https://shuffler.io/pricing?env=Self-Hosted&ref=onprem_billing", "_blank")
                     }
                   }}
                 >
@@ -1526,10 +1526,10 @@ const LicencePopup = (props) => {
                 variant="outlined"
                 color="primary"
                 onClick={() => {
-                  if(isCloud) {
-                      navigate("/contact?category=contact")
-                  }else {
-                      window.open("https://shuffler.io/contact?category=contact", "_blank")
+                  if (isCloud) {
+                      navigate("/contact?category=contact&ref=cloud_billing")
+                  } else {
+                      window.open("https://shuffler.io/contact?category=contact&ref=onprem_billing", "_blank")
                   }
                 }}
                 style={{ textTransform: "none" }}

@@ -818,6 +818,7 @@ const Workflows2 = (props) => {
     const [highlightIds, setHighlightIds] = React.useState([])
 
     const [apps, setApps] = React.useState([]);
+	const [isProdStatusOn, setIsProdStatusOn] = React.useState(false);
 
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
@@ -838,6 +839,39 @@ const Workflows2 = (props) => {
 			}
         }
     }, [location.search]);
+
+    useEffect(() => {
+      const orgId = userdata?.active_org?.id;
+      if (!orgId) {
+        return;
+      }
+
+      let fetched = false;
+      fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((org) => {
+          if (!fetched && org) {
+            if (!isCloud) {
+                if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                  setIsProdStatusOn(true);
+                } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                  setIsProdStatusOn(true);
+                } else {
+                  setIsProdStatusOn(false);
+                }
+              }
+          }
+        })
+        .catch(() => {});
+
+      return () => {
+        fetched = true;
+      };
+    }, [userdata?.active_org?.id, globalUrl]);
 
     const handleTabChange = (event, newValue) => {
         setCurrTab(newValue);
@@ -3043,12 +3077,34 @@ const Workflows2 = (props) => {
             }
         }
 
+		const isPublicWorkflow = data?.objectId === undefined || data?.objectId === null
+		const foundImage = !isPublicWorkflow ? "" : data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
+
 		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
         return (
             <div 
 				id={`workflowbox-${data.id}`}
-				style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily }}>
+				style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily, overflow: "hidden", }}
+			>
 
+				{isPublicWorkflow && foundImage?.length > 0 ? 
+					<img src={foundImage} alt="image" style={{
+						maxHeight: 250,
+						minHeight: 250,
+						minWidth: 100,
+						marginLeft: 12, 
+						cursor: "pointer", 
+					}} 
+					onClick={() => {
+						if (isCloud) {
+							navigate(`/workflows/${data.objectID}`)
+						} else {
+							window.open(`https://shuffler.io/workflows/${data.objectID}`, "_blank")
+						}
+					}}
+					/>
+					: null}
+						
                 <Paper square style={paperAppStyle}>
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -4934,7 +4990,7 @@ const Workflows2 = (props) => {
                                     }}
                                 />
                                 <Tab
-                                    label="Discover Workflows"
+                                    label="Community Workflows"
                                     style={{
                                         ...tabStyle,
                                         marginRight: 0,
@@ -5313,12 +5369,58 @@ const Workflows2 = (props) => {
                         	</div>
 						}
 						
+						{!isCloud ? (
+						  <div
+						   	style={{
+							  display: "flex",
+							  alignItems: "center",
+							  gap: 20,
+							  padding: "4px 10px",
+							  marginLeft: "5px",
+							  marginRight: "5px",
+							  borderRadius: 20,
+							  marginBottom: "14px",
+							  background: isProdStatusOn
+								? "rgba(43, 192, 126, 0.1)"
+								: "rgba(255, 82, 82, 0.1)",
+								cursor: "pointer",
+							  position: "absolute",
+							  top: 20,
+							  right: 20,
+							}}
+							onClick={() => {
+							  navigate("/admin?admin_tab=billingstats")
+							}}
+						  >
+							<span
+							  style={{
+								  width: 8,
+								  height: 8,
+								  marginLeft: 10,
+								  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+								  borderRadius: 999,
+								  display: "inline", 
+							  }}
+							/>
+							  <Typography
+								style={{
+								  fontFamily: "12px",
+								  opacity: 0.9,
+								  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+								 }}
+							  >
+								{isProdStatusOn ? "Production" : "NOT Production"} 
+							  </Typography>
+						  </div>
+					  ) : null}
 
                         <div style={{
                             width: "100%",
                             position: "relative",
                             zIndex: 1
                         }}>
+
+
                             {
                                 (isLoadingWorkflow && currTab !== 2) ? (
                                     <LoadingWorkflowGrid />

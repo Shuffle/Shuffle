@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { Link, useNavigate, useLocation } from "react-router-dom";
+
 import Billing from "../components/Billing.jsx";
 import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
@@ -7,10 +8,20 @@ import EditOrgTab from '../components/EditOrgTab.jsx';
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
 import   SSOTab from "../components/ssoTab.jsx"
 import { ToastContainer, toast } from "react-toastify";
-import { Button, Tooltip, Typography } from '@mui/material';
-import { CheckCircle as CheckCircleIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import { 
+	Button, 
+	Tooltip, 
+	Typography, 
+	Divider, 
+} from '@mui/material';
+
+import { 
+	CheckCircle as CheckCircleIcon, 
+	Cancel as CancelIcon,
+} from '@mui/icons-material';
 import { getTheme } from '../theme.jsx';
 import { Context } from '../context/ContextApi.jsx';
+
 const OrganizationTab = (props) => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -37,7 +48,7 @@ const OrganizationTab = (props) => {
     const [billingInfo, setBillingInfo] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [curIndex, setCurIndex] = React.useState(0);
-    const items = ['Org Configuration', 'Production Status', "SSO", "Notifications", 'Billing & Stats'];
+    const items = ['Org Configuration', "SSO", "Notifications", 'Billing & Stats'];
     const [visibleTabs, setVisibleTabs] = useState(items);
     const [unreadNotifications, setUnreadNotifications] = React.useState(
         notifications?.filter((notification) => notification.read === false)?.length
@@ -127,12 +138,10 @@ const OrganizationTab = (props) => {
         switch (selectedTab) {
             case 'org_config':
                 return <EditOrgTab isCloud={isCloud} selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} />;
-            case 'prodstatus':
-            case 'productionstatus':
-                return isCloud ? null : <ProductionStatus selectedOrganization={selectedOrganization} userdata={userdata} isCloud={isCloud} theme={theme} />;
             case 'sso': 
                 return <SSOTab isEditOrgTab={true} globalUrl={globalUrl} isCloud={isCloud} userdata={userdata} handleEditOrg={handleEditOrg} selectedOrganization={selectedOrganization}/>
             case `notifications`:
+            case `errors`:
             case `priorities`:
                 return (
                     <Priorities
@@ -267,46 +276,3 @@ const OrganizationTab = (props) => {
 
 export default OrganizationTab;
 
-
-const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) => {
-    var isProdStatusOn;
-    if (selectedOrganization !== undefined && selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions[0] !== undefined) {
-        isProdStatusOn = selectedOrganization?.subscriptions[0]?.name?.toLowerCase()?.includes("enterprise") && selectedOrganization?.subscriptions[0]?.active;
-    } else {
-        isProdStatusOn = false;
-    }
-    const rows = [
-        { label: 'Licensed', ok: isProdStatusOn },
-        { label: 'High Scale', ok: isProdStatusOn },
-        { label: 'High Availability', ok: isProdStatusOn },
-        { label: 'Stable Configuration', ok: isProdStatusOn },
-        { label: 'Robust Infrastructure', ok: isProdStatusOn },
-    ];
-
-    return (
-        <div style={{ width: '100%', maxWidth: 800, padding: '24px 24px 24px 34px', height: 445 , display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
-                <Typography variant="h5" style={{ fontWeight: 600, fontFamily: theme.typography.fontFamily }}>Production Status</Typography>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 16, background: isProdStatusOn ? 'rgba(43,192,126,0.1)' : 'rgba(253,76,98,0.1)' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 999, background: isProdStatusOn ? '#2BC07E' : '#FD4C62' }} />
-                    <Typography variant="caption" style={{ color: isProdStatusOn ? '#2BC07E' : '#FD4C62', fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{isProdStatusOn ? "ON" : "OFF"}</Typography>
-                </div>
-            </div>
-            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 18, fontFamily: theme.typography.fontFamily }}>
-                Monitor your production status to stay informed about available features.
-            </Typography>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {rows.map((row) => (
-                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: theme.typography.fontFamily }}>
-                        {row.ok ? (
-                            <CheckCircleIcon style={{ color: '#2BC07E' }} />
-                        ) : (
-                            <CancelIcon style={{ color: '#FD4C62' }} />
-                        )}
-                        <Typography variant="body1" style={{ fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{row.label}</Typography>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};

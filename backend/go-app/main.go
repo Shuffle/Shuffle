@@ -1282,7 +1282,6 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	count := len(users)
-
 	if count == 0 {
 		log.Printf("[WARNING] No users - redirecting for management user")
 		resp.WriteHeader(200)
@@ -4662,6 +4661,45 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	// Self-cleaning
+	go func() { 
+		cursor := ""
+		cnt := 0 
+		newCtx := context.Background()
+		for _, org := range activeOrgs {
+			if len(org.Id) == 0 {
+				log.Printf("[DEBUG] No ID found for org with name '%s'. Why was it made?", org.Name)
+				continue
+			}
+
+			log.Printf("[INFO] Starting self-cleanup of cache keys for org %s", org.Id)
+
+			for { 
+				keys, newCursor, err := shuffle.GetAllCacheKeys(newCtx, org.Id, "", 1000, cursor)
+				if err != nil {
+					//log.Printf("[ERROR] Failed getting all cache keys for cleanup: %s", err)
+					break
+				}
+
+				if newCursor == cursor || len(newCursor) == 0 {
+					break
+				}
+
+				if len(keys) == 0 {
+					break
+				}
+
+				cursor = newCursor
+				cnt += 1
+				if cnt > 10 {
+					break
+				}
+			}
+
+			log.Printf("[INFO] Finished self-cleanup of cache keys for org %s", org.Id)
+		}
+	}()
+
 	log.Printf("[INFO] Finished INIT (ES)")
 }
 
@@ -5481,6 +5519,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate/llm", shuffle.HandleWorkflowGenerationResponse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/edit/llm", shuffle.HandleEditWorkflowWithLLM).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore", shuffle.HandleSetDatastoreKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/automate", shuffle.HandleDatastoreCategoryConfig).Methods("POST", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
@@ -5574,6 +5617,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")

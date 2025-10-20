@@ -307,6 +307,7 @@ const SuccessFailedRunsWidget = (props) => {
         setSeriesFail(failSeries);
         return;
       }
+
       const successKey =
         mode === "workflows"
           ? "workflow_executions_finished"
@@ -383,7 +384,7 @@ const SuccessFailedRunsWidget = (props) => {
       return;
     }
     fetchSeries();
-  }, [days, globalUrl, mode]);
+  }, [dummyMode, days, globalUrl, mode]);
 
   // Apply external days override (e.g. after onboarding completes)
   useEffect(() => {
@@ -885,7 +886,7 @@ const SuccessFailedRunsWidget = (props) => {
             }}
           >
           <Typography sx={{ fontSize: 18, fontWeight: 500, fontFamily: theme.typography.fontFamily}}>
-            {mode === "workflows" ? "Workflows" : "Apps"} Success Rates
+            {mode === "workflows" ? "Workflow" : "App"} Success Rates
           </Typography>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", height: "100%", gap: 15, marginTop: -5, marginLeft: -2 }}>
             {(() => {

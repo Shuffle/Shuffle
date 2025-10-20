@@ -10,22 +10,31 @@ import {
   Divider,
   Select,
   MenuItem,   
+  Tooltip, 
+  CircularProgress, 
 } from '@mui/material';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import { toast } from "react-toastify";
+
+
+import {
+	TrendingFlat as TrendingFlatIcon,
+	TrendingUp as TrendingUpIcon,
+	TrendingDown as TrendingDownIcon,
+	TaskAlt as TaskAltIcon,
+	SuccessFailed as SuccessFailedIcon,
+	RunsOverTime as RunsOverTimeIcon,
+	ErrorOutline as ErrorOutlineIcon,
+} from '@mui/icons-material';
+
 import SuccessFailedRunsWidget from '../components/SuccessFailedRunsWidget.jsx';
 import RunsOverTimeWidget from '../components/RunsOverTimeWidget.jsx';
-import { Context } from '../context/ContextApi.jsx';
-import CircularProgress from '@mui/material/CircularProgress';
-import { useNavigate } from 'react-router-dom';
 import DashboardOnboarding from '../components/DashboardOnboarding.jsx';
+import { Context } from '../context/ContextApi.jsx';
+import { useNavigate } from 'react-router-dom';
 
 const NewDashboard = (props) => {
-  const { globalUrl, userdata } = props;
+  const { globalUrl, serverside, userdata } = props;
 
-  // const [workflows, setWorkflows] = useState([]);
   const { leftSideBarOpenByClick } = useContext(Context);
   const [sfwControls, setSfwControls] = useState(null);
   const [loadingSfw, setLoadingSfw] = useState(true);
@@ -40,9 +49,18 @@ const NewDashboard = (props) => {
     } catch {
       return true;
     }
-  });
+
+  })
   const [overrideDays, setOverrideDays] = useState(undefined);
   const [rotMonthOverride, setRotMonthOverride] = useState(undefined);
+  const [isProdStatusOn, setIsProdStatusOn] = useState(false)
+
+  const isCloud =
+    serverside === true || typeof window === "undefined"
+      ? true
+      : window.location.host === "localhost:3002" ||
+        window.location.host === "shuffler.io" ||
+        window.location.host === "localhost:5002";
   
   const navigate = useNavigate();
   const handleSfwControls = useCallback((node) => {
@@ -71,8 +89,6 @@ const NewDashboard = (props) => {
   };
 
   const timeFmt = formatTimeDisplay(totals.timeSavedMinutes);
-  const STATIC_TIME_PERCENT = '62%';
-  const STATIC_MONEY_PERCENT = '46%';
 
   const unreadCount = notifications.filter(n => n && n.read === false).length;
   const readCount = notifications.filter(n => n && n.read === true).length;
@@ -81,9 +97,11 @@ const NewDashboard = (props) => {
   // 1 Workflow run = 15 minutes
   // 1 Workflow run = $25
 
+  const STATIC_TIME_PERCENT = 'TBD'
+  const STATIC_MONEY_PERCENT = 'TBD'
   const kpis = [
-    { value: timeFmt.display, title: timeFmt.title, label: 'Time saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_TIME_PERCENT, color: '#5cc879' },
-    { value: formatCurrencyCompact(totals.moneySavedDollars), label: 'Money saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_MONEY_PERCENT, color: '#5cc879' },
+    { value: timeFmt.display, title: timeFmt.title, label: 'Time saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_TIME_PERCENT, color: '#5cc879', disabled: true},
+    { value: formatCurrencyCompact(totals.moneySavedDollars), label: 'Money saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_MONEY_PERCENT, color: '#5cc879', disabled: true, },
     { value: String(unreadCount), label: 'Total errors', icon: <ErrorOutlineIcon sx={{ color: '#f87171', fontSize: 34, opacity: 0.9 }} />, percentage: "", color: '#f87171' },
     { value: String(readCount), label: 'Errors resolved', icon: <TaskAltIcon sx={{ color: '#5cc879', fontSize: 34, opacity: 0.9 }} />, percentage: "", color: '#5cc879' },
   ];
@@ -177,13 +195,51 @@ const NewDashboard = (props) => {
 
   //   loadWorkflows();
   // }, [globalUrl]);
+    
+  useEffect(() => {
+	const orgId = userdata?.active_org?.id;
+    if (!orgId) {
+      return;
+    }
+
+    let fetched = false;
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((org) => {
+        if (!fetched && org) {
+          if (!isCloud) {
+              if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                setIsProdStatusOn(true);
+              } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                setIsProdStatusOn(true);
+              } else {
+                setIsProdStatusOn(false);
+              }
+            }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      fetched = true;
+    };
+  }, [userdata?.active_org?.id, globalUrl]);
 
   return (
     <div style={{ maxWidth: 1366, margin: '0 auto', padding: 16, paddingTop: 50, paddingBottom: 30, paddingLeft: leftSideBarOpenByClick ? 270 : 80, transition: 'padding-left 0.3s ease', position: 'relative' }}>
       <DashboardOnboarding
         open={onboardingOpen}
         globalUrl={globalUrl}
-        onClose={() => setOnboardingOpen(false)}
+        onClose={() => {
+			setOnboardingOpen(false)
+		}}
+        setOnboardingOpen={setOnboardingOpen}
+	  	isProdStatusOn={isProdStatusOn}
+	    isCloud={isCloud}
         onExplore={() => {
           // Ensure overrides are set before closing modal
           setOverrideDays(5);
@@ -215,28 +271,31 @@ const NewDashboard = (props) => {
       <Grid container spacing={2}>
         {kpis.map((kpi) => (
           <Grid item xs={12} sm={6} md={3} key={kpi.label}>
-            <Paper style={{ padding: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12
-              ,cursor: kpi.label.toLowerCase().includes('total errors') ? 'pointer' : 'default'
-             }}
-             onClick={() => {
-              if (kpi.label.toLowerCase().includes('total errors')) {
-                // navigate to notifications page
-                navigate('/admin?admin_tab=notifications');
-              }
-             }}
-             
-             >
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Stack sx={{py:2, paddingLeft: 1}}>
-                  <Typography variant="h4" title={kpi.title || ''}>{kpi.value}</Typography>
-                  <Typography sx={{fontSize: 13}} color="textSecondary">{kpi.label}</Typography>
-                </Stack>
-                <Stack sx={{py: 2, paddingRight: 1, marginTop: kpi.label.toLowerCase().includes('errors') ? -1 : 0}}>
-                  {kpi.icon}
-                  <Typography variant="body2" color={kpi.color}>{kpi.percentage}</Typography>
-                </Stack>
-              </Stack>
-            </Paper>
+			<Tooltip title={kpi.disabled ? "This metric is coming soon!" : ""} arrow>
+				<Paper style={{ padding: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12
+				  , cursor: kpi.label.toLowerCase().includes('total errors') ? 'pointer' : 'default',
+					transparency: kpi.disabled ? 0.5 : 1
+				 }}
+				 onClick={() => {
+				  if (kpi.label.toLowerCase().includes('total errors')) {
+					// navigate to notifications page
+					navigate('/admin?admin_tab=notifications');
+				  }
+				 }}
+				 
+				 >
+				  <Stack direction="row" alignItems="center" justifyContent="space-between">
+					<Stack sx={{py:2, paddingLeft: 1}}>
+					  <Typography variant="h4" title={kpi.title || ''}>{kpi.value}</Typography>
+					  <Typography sx={{fontSize: 13}} color="textSecondary">{kpi.label}</Typography>
+					</Stack>
+					<Stack sx={{py: 2, paddingRight: 1, marginTop: kpi.label.toLowerCase().includes('errors') ? -1 : 0}}>
+					  {kpi.icon}
+					  <Typography variant="body2" color={kpi.color}>{kpi.percentage}</Typography>
+					</Stack>
+				  </Stack>
+				</Paper>
+			</Tooltip>
           </Grid>
         ))}
       </Grid>

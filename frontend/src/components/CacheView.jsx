@@ -575,7 +575,10 @@ const CacheView = memo((props) => {
             .then((responseJson) => {
                 setAddCache(responseJson);
                 toast.success("Edit saved");
-                listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+				setTimeout(() => {
+                	listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+				}, 7500);
+
                 setModalOpen(false);
             })
             .catch((error) => {
@@ -613,7 +616,10 @@ const CacheView = memo((props) => {
             .then((responseJson) => {
                 setAddCache(responseJson);
                 toast.success("New key added!");
-                listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+
+				setTimeout(() => {
+                	listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+				}, 5000);
                 setModalOpen(false);
             })
             .catch((error) => {

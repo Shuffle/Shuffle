@@ -1226,7 +1226,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
             <Button
               component={Link}
-              to={userdata?.support ? "/new-dashboard" : "/usecases"}
+              to={"/new-dashboard"}
               onClick={(event) => {
                 setOpenautomateTab(true);
                 setOpenSecurityTab(false);
@@ -1925,6 +1925,25 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         }}
       >
 	  	
+      
+	  {userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav && !isProdStatusOn &&
+		  <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
+			  <Button
+					variant="outlined"
+					style={{marginBottom: 15, borderWidth: 2, }}
+					onClick={() => {
+						if (isCloud) { 
+							window.open("https://shuffler.io/contact?category=book_a_demo&ref=cloud", "_blank")
+						} else {
+							window.open("https://shuffler.io/contact?category=book_a_demo&ref=onprem", "_blank")
+						}
+					}}
+				>
+					Book a Demo
+			  </Button>
+		  </div>
+	  }
+
       {!isCloud ? (
           <div
            style={{
@@ -1942,7 +1961,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                         cursor: "pointer",
                     }}
                     onClick={() => {
-                      navigate("/admin?admin_tab=prodstatus")
+                      navigate("/admin?admin_tab=billingstats")
             }}
           >
             <span
@@ -1962,24 +1981,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                   color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
                  }}
               >
-                {expandLeftNav ? isProdStatusOn ? "Prod. Status ON" : "Prod. Status OFF" : isProdStatusOn ? "ON" : "OFF"}
+                {expandLeftNav ? isProdStatusOn ? "Production" : "NOT production" : isProdStatusOn ? "ON" : "OFF"}
               </Typography>
           </div>
       ) : null}
-      
-	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav && !isProdStatusOn &&
-      <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
-      <Button
-	  		variant="outlined"
-	  		style={{marginBottom: 15, borderWidth: 2, }}
-	  		onClick={() => {
-				window.open("https://shuffler.io/contact?category=book_a_demo", "_blank")
-			}}
-	  	>
-	  		Book a Demo
-      </Button>
-      </div>
-		}
+
         <Box ref={autocompleteRef}>
           <Autocomplete
             disablePortal
