@@ -18,7 +18,7 @@ The Docker setup is the default setup, and is ran with docker compose. This is [
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
-1. Make sure you have [Docker](https://docs.docker.com/get-docker/) installed, and that you have a minimum of **4Gb of RAM** available.
+1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [git](https://git-scm.com/downloads)(for downloading) installed, and that you have a minimum of **4Gb of RAM** available. More RAM = better.
 2. Download Shuffle
 ```bash
 git clone https://github.com/Shuffle/Shuffle
