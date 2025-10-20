@@ -25,7 +25,7 @@ git clone https://github.com/Shuffle/Shuffle
 cd Shuffle
 ```
 
-3. Fix prerequisites for the Opensearch database (Elasticsearch): 
+3. Fix prerequisites for the Opensearch database (Elasticsearch also works). This requires the `shuffle-database` folder to exist.
 ```bash
 sudo chown -R 1000:1000 shuffle-database  # IF you get an error using 'chown', add the user first with 'sudo useradd opensearch'
 
