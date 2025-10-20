@@ -16,7 +16,7 @@ import {
     ListItemText,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
-import useDebouncedCallback from '../utils/useDebouncedCallback.js';
+import useDebouncedCallback from '../utils/useDebouncedCallback.jsx';
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "1e5f29b1550939855de5915eac3bf5f7");

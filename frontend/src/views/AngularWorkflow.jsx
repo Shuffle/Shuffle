@@ -22,7 +22,7 @@ import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
-import useDebouncedCallback from "../utils/useDebouncedCallback.js";
+import useDebouncedCallback from "../utils/useDebouncedCallback.jsx";
 import {
   Zoom,
   Fade,
