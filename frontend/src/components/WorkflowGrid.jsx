@@ -20,6 +20,7 @@ import {
 	Zoom,
 	Chip,
 } from '@mui/material';
+import { useDebouncedCallback } from "../utils/useDebouncedCallback";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"
@@ -172,6 +173,7 @@ const AppGrid = props => {
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
 		var defaultSearch = ""
+		const [inputValue, setInputValue] = useState("")
 		useEffect(() => {
 			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
 				const urlSearchParams = new URLSearchParams(window.location.search)
@@ -184,6 +186,12 @@ const AppGrid = props => {
 				}
 			}
 		}, [])
+
+		useEffect(() => {
+			setInputValue(currentRefinement || defaultSearch || "")
+		}, [currentRefinement])
+
+		const debouncedRefine = useDebouncedCallback((value) => refine(value), 300)
 
 		if (localMessage !== inputsearch && inputsearch !== undefined && inputsearch !== null && inputsearch.length > 0) { 
 			//setLocalMessage(inputsearch)
@@ -217,12 +225,14 @@ const AppGrid = props => {
 					autoComplete='off'
 					type="search"
 					color="primary"
-					value={currentRefinement}
+					value={inputValue}
 					placeholder="Find Workflows..."
 					id="shuffle_search_field"
 					onChange={(event) => {
 						removeQuery("q")
-						refine(event.currentTarget.value)
+						const value = event.currentTarget.value
+						setInputValue(value)
+						debouncedRefine(value)
 					}}
 					onKeyDown={(event) => {
 						if(event.key === "Enter") {

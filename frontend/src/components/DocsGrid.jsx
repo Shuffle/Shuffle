@@ -26,6 +26,7 @@ import {
 	ListItemAvatar,
 	ListItemText,
 } from '@mui/material';
+import { useDebouncedCallback } from "../utils/useDebouncedCallback";
 
 	
 
@@ -97,6 +98,8 @@ const DocsGrid = props => {
 			}
 		}
 
+		const debouncedRefine = useDebouncedCallback((value) => refine(value), 300)
+
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
@@ -122,7 +125,7 @@ const DocsGrid = props => {
 					id="shuffle_search_field"
 					onChange={(event) => {
 						removeQuery("q")
-						refine(event.currentTarget.value)
+						debouncedRefine(event.currentTarget.value)
 					}}
 					onKeyDown={(event) => {
 						if(event.key === "Enter") {

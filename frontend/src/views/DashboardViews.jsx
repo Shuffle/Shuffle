@@ -8,7 +8,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 
 import { ToastContainer, toast } from "react-toastify" 
 import Draggable from "react-draggable";
-import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
+import { LoadStats } from '../components/LineChartWrapper.jsx';
 
 import {
 	Autocomplete, 
@@ -828,9 +828,14 @@ const Dashboard = (props) => {
 						}
 					</div>
 
-					<DashboardBarchart 
-						timelineData={data}
-						height={50}
+					<LineChartWrapper 
+						inputname={"heyo"}
+						keys={data} 
+						height={100}
+						width={100}
+						border={false}
+
+						color={"#808080"}
 					/>
 
 				</Paper>

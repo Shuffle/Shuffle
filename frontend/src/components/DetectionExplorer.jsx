@@ -16,11 +16,14 @@ import {
 import {
 	OpenInNew as OpenInNewIcon,
   	FmdGood as FmdGoodIcon,
+	Check as CheckIcon,
 } from "@mui/icons-material"
 
 import { toast } from "react-toastify";
+import RunDetectionTest from '../components/RunDetectionTest.jsx';
 import theme from '../theme.jsx';
 import DetectionRuleCard from "../components/DetectionRuleCard.jsx";
+import CollectIngestModal from "../components/CollectIngestModal.jsx";
 import {
 	green, 
 	red, 
@@ -30,13 +33,12 @@ import {
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 
 const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl, isDetectionActive) => {
-  if (!isDetectionActive) {
-    toast.warn("Connect to siem first for global enable/disable to work");
-    return;
-  }
+  //if (!isDetectionActive) {
+  //  toast.warn("Connect first for global enable/disable to work");
+  //  return;
+  //}
 
   const action = folderDisabled ? "enable_folder" : "disable_folder";
-  //const url = `${globalUrl}/api/v1/detections/${detectionType}/selected_rules/${action}`;
   const url = `${globalUrl}/api/v1/detections/sigma/selected_rules/${action}`;
 
   fetch(url, {
@@ -68,10 +70,117 @@ const DetectionExplorer = (props)  => {
   const [loading, setLoading] = useState(false);
 
   const [workflow, setWorkflow] = useState({})
-  const [detectionWorkflowId, setDetectionWorkflowId] = useState("")
-  const [isDetectionValid, setIsDetectionValid] = useState(false)
   const [availableDetection, setAvailableDetection] = React.useState([]);
   const [environmentList, setEnvironmentList] = React.useState([])
+  const [showCollectIngestMenu, setShowCollectIngestMenu] = useState(false);
+  const [workflows, setWorkflows] = React.useState([])
+  const [apps, setApps] = React.useState([])
+  const [pipelines, setPipelines] = React.useState([])
+
+  const [ticketWebhook, setTicketWebhook] = React.useState("");
+  const [detectionWorkflowId, setDetectionWorkflowId] = React.useState("");
+
+  const handleGetAllTriggers = () => {
+    fetch(globalUrl + "/api/v1/triggers", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for getting all triggers");
+        }
+  
+        return response.json();
+      })
+      .then((responseJson) => {
+        //setWebHooks(responseJson.webhooks || []);
+        //setAllSchedules(responseJson.schedules || []);
+        setPipelines(responseJson.pipelines || []);
+        //setShowLoader(false);
+      })
+      .catch((error) => {
+        // toast(error.toString());
+      });
+  };
+
+  const getWorkflows = () => {
+		const url = `${globalUrl}/api/v1/workflows`
+		fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!");
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success !== false) {
+				setWorkflows(responseJson || []);
+
+				for (var i = 0; i < responseJson?.length; i++) {
+					if (responseJson[i].background_processing === true && responseJson[i].name.toLowerCase().includes("ingest tickets") && responseJson[i].triggers !== undefined) {
+
+						for (var triggerkey in responseJson[i].triggers) {
+							if (responseJson[i].triggers[triggerkey].trigger_type === "WEBHOOK") { 
+								setDetectionWorkflowId(responseJson[i].id)
+								setTicketWebhook(`${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+								//setNewPipelineValue(`export | sigma /tmp/sigma_rules | to ${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+								break;
+							}
+						}
+					}
+				}
+
+			} else {
+				toast.warn("Failed to load workflows. Please try again or contact support@shuffler if this persists.")
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		});
+	}
+
+	const getApps = () => {
+		const url = `${globalUrl}/api/v1/apps`
+		fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!");
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success === false) {
+				toast.warn("Failed to load apps. Please try again or contact support@shuffler if this persists.")
+			} else {
+				setApps(responseJson)
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		});
+	}
 
   const loadUsecases = () => {
 	  const url = `${globalUrl}/api/v1/workflows/usecases`
@@ -133,6 +242,11 @@ const DetectionExplorer = (props)  => {
   }
 
   const handleConnectClick = () => {
+
+	// NEW way to handle it
+	setShowCollectIngestMenu(true)
+	return
+
 	if (detectionWorkflowId !== "") { 
 		console.log("Already have a workflow ID for this detection")
 		//toast.info(`Already have a detection workflow for ${detectionInfo?.category}`)
@@ -179,7 +293,7 @@ const DetectionExplorer = (props)  => {
 		  }
 
 		  if (responseJson.workflow_valid !== undefined && responseJson.workflow_valid !== null) {
-		  	setIsDetectionValid(responseJson.workflow_valid)
+		  	//setIsDetectionValid(responseJson.workflow_valid)
 		  }
 		} else {
 		  if (responseJson.reason !== undefined && responseJson.reason !== null) {
@@ -238,8 +352,12 @@ const DetectionExplorer = (props)  => {
   }
 
   useEffect(() => {
+	getApps()
+	getWorkflows()
   	loadUsecases() 
 	loadEnvironments()
+  
+	handleGetAllTriggers() 
   }, [])
 
   useEffect(() => {
@@ -251,18 +369,87 @@ const DetectionExplorer = (props)  => {
 		  return
 	  }
 
-	  handleConnectClick()
+	  console.log("Detection info: ", detectionInfo)
+	  //handleConnectClick()
   }, [detectionInfo])
 
   const filteredRules = ruleInfo === "default" ? [] : ruleInfo?.filter((rule) =>
-    rule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rule.description.toLowerCase().includes(searchQuery.toLowerCase())
+    rule?.file_name?.replaceAll(" ", "_")?.toLowerCase().includes(searchQuery) ||
+    rule?.title?.replaceAll(" ", "_")?.toLowerCase().includes(searchQuery) ||
+    rule?.description?.replaceAll(" ", "_")?.toLowerCase().includes(searchQuery)
   )
 
   const lakeNodes = environmentList !== undefined && environmentList !== null ? environmentList.filter((env) => env?.archived === false && env?.data_lake?.enabled === true).length : 0
 
+  const submitPipeline = (pipeline, environment) => {
+	var pipelineConfig = {
+	  command: pipeline,
+	  name: pipeline,
+	  type: "create",
+	  environment: "",
+
+	  workflow_id: "",
+	  trigger_id: "",
+	  start_node: "",
+	}
+
+	if (environment !== undefined && environment !== "") {
+		pipelineConfig.environment = environment
+	}
+
+    const url = `${globalUrl}/api/v1/triggers/pipeline`;
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(pipelineConfig),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for stream results :O!");
+        }
+  
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (!responseJson.success && pipelineConfig.type !== "delete") {
+          toast.error("Failed to set pipeline: " + responseJson.reason);
+        } else {
+          if (pipelineConfig.type === "create") {
+            toast.success("Pipeline will be created: " + responseJson.reason)
+            //setPipelineModalOpen(false)
+
+          } else if (pipelineConfig.type === "stop") {
+             toast.success("Pipeline will be stopped: " + responseJson.reason)
+             //setPipelineModalOpen(false)
+
+          } else {
+			  toast.info("Unknown pipeline type: " + pipelineConfig.type)
+          }
+		}
+      })
+      .catch((error) => {
+        console.log("Get pipeline error: ", error.toString());
+      });
+  }
+
   return (
     <Container>
+
+	  <CollectIngestModal 
+	  	globalUrl={globalUrl}
+	  	open={showCollectIngestMenu}
+	  	setOpen={setShowCollectIngestMenu}
+
+	  	workflows={workflows}
+	  	getWorkflows={getWorkflows}
+
+	  	apps={apps}
+	  />
+
       <Paper
 	    style={{
 		  marginTop: 50, 
@@ -316,8 +503,21 @@ const DetectionExplorer = (props)  => {
 			  </div>
 
 		  : */} 
+	  		  <div style={{marginRight: 20, }}>
+				  <RunDetectionTest 
+					globalUrl={globalUrl}
+					pipelines={pipelines}
+					workflows={workflows}
+					ticketWebhook={ticketWebhook}
+					detectionWorkflowId={detectionWorkflowId}
+
+					changePipelineState={undefined}
+					submitPipelineWrapper={submitPipeline}
+			  	/> 
+	  		  </div>
+
 			  <Button
-				  variant="contained"
+				  variant={detectionWorkflowId === "" ? "contained" : "outlined"}
 				  onClick={() => {
 					  handleConnectClick()
 				  }}
@@ -326,18 +526,26 @@ const DetectionExplorer = (props)  => {
 					  // Red = workflow exists, validation is false
 					  // Green = workflow exists, validation is true
 					  // Grey = workflow does not exist
-					  backgroundColor: detectionWorkflowId === "" ? grey : isDetectionValid ? green : red,
 				  }}
 			  >
-				{loading ? <CircularProgress size={24} /> : 
-					detectionWorkflowId === "" ? `Connect to ${detectionInfo?.category}` :
-					isDetectionValid ? `Connected to ${detectionInfo?.category}` : `Fix ${detectionInfo?.category} connection`}
+				{loading ? 
+					<CircularProgress size={24} /> 
+					: 
+					detectionWorkflowId !== "" ? 
+						<span>
+							<CheckIcon style={{color: green, marginRight: 10, top: 5, }} />
+							Connected
+						</span>
+					:
+					`Connect to ${detectionInfo?.category}` 
+				}
 			  </Button>
+
 	  	  {/**/}
 
 	      {detectionInfo?.category === "SIGMA" || detectionInfo?.category === "SIEM" ?
 			  <Tooltip title={`You have ${lakeNodes} available Data Lake node(s)`}>
-				<a href="/admin?tab=Locations" style={{textDecoration: "none", color: "inherit", }} target="_blank" rel="noreferrer">
+				<a href="/admin?tab=locations" style={{textDecoration: "none", color: "inherit", }} target="_blank" rel="noreferrer">
                 	<FmdGoodIcon style={{marginLeft: 15, marginTop: 5, color: lakeNodes > 0 ? green : red}} />
 				</a>
 			  </Tooltip>
@@ -345,7 +553,7 @@ const DetectionExplorer = (props)  => {
 	  	  </div>
 	  	
         </Box>
-        {filteredRules?.length > 0 ?
+        {ruleInfo?.length > 0 ?
         <Box
           sx={{
             display: "flex",
@@ -367,7 +575,9 @@ const DetectionExplorer = (props)  => {
 			  size="small"
 			  sx={{ mr: 2 }}
 			  value={searchQuery}
-			  onChange={(e) => setSearchQuery(e.target.value)}
+			  onChange={(e) => {
+				  setSearchQuery(e?.target?.value?.replaceAll(" ", "_")?.toLowerCase())
+			  }}
 			/>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -386,7 +596,7 @@ const DetectionExplorer = (props)  => {
 	  	<Divider />
         <Box
           sx={{
-            height: "500px",
+            minHeight: 500,
             width: "100%",
             overflowY: "auto",
             p: 1,
@@ -410,6 +620,7 @@ const DetectionExplorer = (props)  => {
 							folderDisabled={folderDisabled}
 							isDetectionActive={isDetectionActive}
 
+							ruleDetails={rule}
 							ruleMapping={ruleMapping}
 							setRuleMapping={setRuleMapping}
 

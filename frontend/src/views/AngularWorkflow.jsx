@@ -22,6 +22,7 @@ import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
+import useDebouncedCallback from "../utils/useDebouncedCallback.js";
 import {
   Zoom,
   Fade,
@@ -275,7 +276,7 @@ export const triggers = [
       {
           "name": "alertinfo",
           "example": "",
-          "value": "Do you want to continue the workflow? Start parameters: $exec",
+          "value": "## Stop or continue?\n\nDetails: $exec",
       },
       {
           "name": "options",
@@ -1259,6 +1260,24 @@ const AngularWorkflow = (defaultprops) => {
         "multiline": true,
       }]
     },
+	/*
+	// An attempt at handling APIs directly. This ~kind of works
+	{
+      "name": "API",
+      "description": "Attempts to take your fields and run an API call with them, whatever they are",
+      "label": "Custom Action",
+	  "example": "{\"source_data\": \"{\\\"event\\\": \\\"login\\\", \\\"user\\\": \\\"john_doe\\\", \\\"timestamp\\\": \\\"2023-10-01T12:00:00Z\\\"}\", \"standard\": \"OCSF\"}",
+      "parameters": [
+		  {
+			"name": "fields",
+			"value": "",
+			"description": "A JSON object with the fields to send to the API. Example: {\"url\": \"hello\", \"key2\": \"value2\"}",
+			"required": true,
+			"multiline": true,
+      	  }
+	  ]
+    },
+	*/
     {
       "name": "Translate standard",
       "description": "Translates your JSON data into a standard formats, then stores it in the Shuffle Datastore",
@@ -11589,10 +11608,16 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const handleDragStop = (e, app) => {
+	if (cy === undefined || cy == null) {
+		console.log("Cytoscape not initialized")
+		return
+	}
+
     var currentnode = cy.getElementById(newNodeId);
 
     if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
-      return;
+		console.log("No current node found")
+      	return
     }
 
     if (parsedApp === undefined || parsedApp === null || parsedApp.data === undefined || parsedApp.data === null) {
@@ -12411,11 +12436,20 @@ const AngularWorkflow = (defaultprops) => {
     };
 
     const SearchBox = ({ currentRefinement, refine, isSearchStalled, }) => {
+      const debouncedRefine = useDebouncedCallback(refine, 500)
+      const lastRefinedRef = useRef(currentRefinement)
+
+      const safeRefine = (value) => {
+        if (value === lastRefinedRef.current) return
+        lastRefinedRef.current = value
+        debouncedRefine(value)
+      }
+
       if (document !== undefined) {
         const appsearchValue = document.getElementById("appsearch")
         if (appsearchValue !== undefined && appsearchValue !== null) {
           if (appsearchValue.value !== undefined && appsearchValue.value !== null && appsearchValue.value.length > 0) {
-            refine(appsearchValue.value)
+            safeRefine(appsearchValue.value)
           }
         }
       }
@@ -12448,8 +12482,7 @@ const AngularWorkflow = (defaultprops) => {
               //if (event.currentTarget.value.length > 0 && !searchOpen) {
               //	setSearchOpen(true)
               //}
-
-              refine(event.currentTarget.value)
+              safeRefine(event.currentTarget.value)
             }}
             limit={5}
           />
@@ -14725,7 +14758,7 @@ const AngularWorkflow = (defaultprops) => {
           zIndex: 10000,
         }}
       >
-        Conditions can't be used for loops [ .# ]{" "}
+        <b>PS: Conditions can't be used for loops [ .# ]. Use the filters list action.{" "}</b>
         <a
           rel="noopener noreferrer"
           target="_blank"
@@ -20236,17 +20269,23 @@ const AngularWorkflow = (defaultprops) => {
 
   const shownErrors = !isMobile && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 && showErrors && (!workflow.public || userdata.support === true) ?
     <div
-      style={{
-        border: theme.palette.DialogStyle.border,
-        position: "absolute",
-        bottom: 100,
-        left: leftSideBarOpenByClick ? leftBarSize + 270 : leftBarSize + 115,
+    style={{
+      border: theme.palette.DialogStyle.border,
+      position: "absolute",
+      bottom: 100,
+      left: leftSideBarOpenByClick ? leftBarSize + 270 : leftBarSize + 115,
+      width: "fit-content",
+      maxWidth: "45vw",
+      minWidth: 300,
 
         color: theme.palette.DialogStyle.color,
         padding: 10,
         borderRadius: theme.palette?.borderRadius,
         transition: "left 0.3s ease, top 0.3s ease",
-      }}
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+    }}
     >
 
       <Tooltip
@@ -22726,12 +22765,12 @@ const AngularWorkflow = (defaultprops) => {
                     style={{ float: "right", marginTop: 20, }}
 
                     // Max 5 days in the past
-                    disabled={userdata.region_url !== "https://shuffler.io" || executionData.started_at < (Math.floor(Date.now() / 1000) - 432000)}
+                    disabled={executionData.started_at < (Math.floor(Date.now() / 1000) - 432000)}
                     onClick={() => {
                       toast("Opening logs in a new tab")
 
                       setTimeout(() => {
-                        window.open(`/api/v1/workflows/search/${executionData.execution_id}`, "_blank")
+                        window.open(`${globalUrl}/api/v1/workflows/search/${executionData.execution_id}`, "_blank")
                       }, 250)
                     }}
                   >

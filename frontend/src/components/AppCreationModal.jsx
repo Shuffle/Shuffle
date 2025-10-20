@@ -21,8 +21,9 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CreateIcon from '@mui/icons-material/Create'
 import { toast } from 'react-toastify'
 import YAML from "yaml";
+import Dropzone from "./Dropzone.jsx";
 
-const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
+const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud, startOpenApi = false, prefillOpenApiData = "" }) => {
     const [openApiModal, setOpenApiModal] = useState(false)
     const [generateAppModal, setGenerateAppModal] = useState(false)
     const [openApi, setOpenApi] = useState("")
@@ -34,6 +35,16 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
 
     const navigate = useNavigate()
     const upload = useRef()
+
+    useEffect(() => {
+        if (open && (startOpenApi || (prefillOpenApiData && prefillOpenApiData.length > 0))) {
+            if (prefillOpenApiData && prefillOpenApiData.length > 0) {
+                setOpenApiData(prefillOpenApiData)
+                setIsDropzone(true)
+            }
+            setOpenApiModal(true)
+        }
+    }, [open, startOpenApi, prefillOpenApiData])
 
     // Style for the create options
     const AppCreateButton = ({ text, func, icon }) => {
@@ -467,6 +478,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                     }
                 }}
             >
+            <Dropzone onDrop={uploadFile} style={{ width: '100%' }}>
                 <DialogTitle sx={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -504,12 +516,15 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         <Typography sx={{ color: theme.palette.text.primary, fontSize: '16px' }}>
                             Paste in the URI for the OpenAPI or find out
                         </Typography>
-                        <Link style={{
+                        <Link 
+                        to="https://shuffler.io/docs/apps#getting-started"
+                        style={{
                             color: '#ff8544',
                             textDecoration: 'none',
                             textDecoration: 'underline',
                             fontSize: '16px',
-                            fontFamily: theme?.typography?.fontFamily
+                            fontFamily: theme?.typography?.fontFamily,
+                            textUnderlineOffset: "3px",
                         }}>
                             How to find URI for openAPI?
                         </Link>
@@ -568,31 +583,54 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         Must point to a version 2 or 3 OpenAPI specification.
                     </Typography>
 
-                    <Typography sx={{ mb: 2, color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontFamily: theme?.typography?.fontFamily }}>
+                    <Typography sx={{ mb: 1.5, mt: 2, color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontFamily: theme?.typography?.fontFamily }}>
                         Or upload a YAML or JSON specification
                     </Typography>
-
-                    <Button
-                        variant="outlined"
+                    <div style={{
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        border: '1px dashed rgba(255,255,255,0.35)',
+                        borderRadius: 4,
+                        padding: 20,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: '#1a1a1a',
+                        marginTop: '12px',
+                        cursor: 'pointer'
+                    }}
                         onClick={() => upload.current.click()}
-                        sx={{
-                            color: '#FF8544',
-                            borderColor: '#FF8544',
-                            px: 5,
-                            py: 1,
-                            '&:hover': {
-                                borderColor: '#FF8544',
-                                color: '#FF8544',
-                                bgcolor: 'rgba(255,133,68,0.1)'
-                            },
-                            textTransform: 'none',
-                            fontSize: '14px',
-                            fontFamily: theme?.typography?.fontFamily,
-                            height: '40px'
-                        }}
                     >
-                        Upload
-                    </Button>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '15px', fontFamily: theme?.typography?.fontFamily }}>
+                                Drag & drop your OpenAPI (YAML/JSON) anywhere
+                            </Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', mt: 0.5, fontFamily: theme?.typography?.fontFamily }}>
+                                or click to browse files
+                            </Typography>
+                        </div>
+                        <Button
+                            variant="outlined"
+                            onClick={(e) => { e.stopPropagation(); upload.current.click(); }}
+                            sx={{
+                                color: '#FF8544',
+                                borderColor: '#FF8544',
+                                px: 3,
+                                py: 0.75,
+                                '&:hover': {
+                                    borderColor: '#FF8544',
+                                    color: '#FF8544',
+                                    bgcolor: 'rgba(255,133,68,0.1)'
+                                },
+                                textTransform: 'none',
+                                fontSize: '14px',
+                                fontFamily: theme?.typography?.fontFamily,
+                                height: '36px'
+                            }}
+                        >
+                            Upload
+                        </Button>
+                    </div>
 
                     <input
                         hidden
@@ -638,6 +676,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud }) => {
                         Continue
                     </Button>
                 </DialogActions>
+            </Dropzone>
             </Dialog>
 
             {/* Generate App Modal */}

@@ -751,6 +751,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     localStorage.setItem("getting_started_sidebar", "open");
     localStorage.removeItem("workflows");
     localStorage.removeItem("apps");
+    localStorage.removeItem("dashboard_onboarding_complete")
+    localStorage.removeItem("dashboard_onboarding_completed")
 
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
       mode: "cors",
@@ -955,7 +957,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         if (!fetched && org) {
           setActiveOrgData(org);
           if (!isCloud) {
-              if (org?.cloud_sync && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+              if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
               } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
@@ -1224,7 +1226,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
             <Button
               component={Link}
-              to="/usecases"
+              to={userdata?.support ? "/new-dashboard" : "/usecases"}
               onClick={(event) => {
                 setOpenautomateTab(true);
                 setOpenSecurityTab(false);

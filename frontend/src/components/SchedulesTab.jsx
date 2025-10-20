@@ -7,6 +7,7 @@ import {
 	ListItem, 
 	ListItemText, 
 	Button, 
+	ButtonGroup, 
 	Tooltip, 
 	IconButton,
 	Dialog,
@@ -14,15 +15,21 @@ import {
 	DialogContent,
 	DialogActions,
 	TextField,
+    Chip,
+	CircularProgress,
 } from '@mui/material';
 
 import {
-  FileCopy as FileCopyIcon,
-  OpenInNew as OpenInNewIcon,
-  Padding,
+  	FileCopy as FileCopyIcon,
+  	OpenInNew as OpenInNewIcon,
+  	Refresh as RefreshIcon,
+	Delete as DeleteIcon,
+	Check as CheckIcon,
 } from "@mui/icons-material"
+import { green, yellow, red } from '../views/AngularWorkflow.jsx'
 import { Box, Skeleton, Typography } from '@mui/material';
 import { Context } from '../context/ContextApi.jsx';
+import RunDetectionTest from '../components/RunDetectionTest.jsx';
 
 const SchedulesTab = memo((props) => {
   const {globalUrl, users, } = props;
@@ -30,13 +37,58 @@ const SchedulesTab = memo((props) => {
   const [allSchedules, setAllSchedules] = React.useState([]);
   const [pipelines, setPipelines] = React.useState([]);
   const [showLoader, setShowLoader] = React.useState(true);
+  const [workflows, setWorkflows] = React.useState([]);
   const [pipelineModalOpen, setPipelineModalOpen] = React.useState(false);
-  const [newPipelineValue, setNewPipelineValue] = React.useState("export | sigma /tmp/sigma_rules | to SHUFFLE_WEBHOOK");
+  const [newPipelineValue, setNewPipelineValue] = React.useState(`export | sigma "/tmp/sigma_rules" | to "SHUFFLE_WEBHOOK"`);
+
+  const [ticketWebhook, setTicketWebhook] = React.useState("");
+  const [detectionWorkflowId, setDetectionWorkflowId] = React.useState("");
 
   const { themeMode, brandColor } = useContext(Context);
   const theme = getTheme(themeMode, brandColor);
 
+  const handleGetWorkflows = () => {
+	  const url = `${globalUrl}/api/v1/workflows`;
+	  fetch(url, {
+		method: "GET",
+		headers: {
+		  "Content-Type": "application/json",
+		  Accept: "application/json",
+		},
+		  credentials: "include",
+	  }).then((response) => {
+		if (response.status !== 200) {
+		  console.log("Status not 200 for getting all workflows");
+		}
+
+		return response.json();
+	  })
+	  .then((responseJson) => {
+		if (responseJson.success !== false) {
+			setWorkflows(responseJson || []);
+
+			for (var i = 0; i < responseJson?.length; i++) {
+				if (responseJson[i].background_processing === true && responseJson[i].name.toLowerCase().includes("ingest tickets") && responseJson[i].triggers !== undefined) {
+
+					for (var triggerkey in responseJson[i].triggers) {
+						if (responseJson[i].triggers[triggerkey].trigger_type === "WEBHOOK") { 
+  							setDetectionWorkflowId(responseJson[i].id)
+							setTicketWebhook(`${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+							setNewPipelineValue(`export | sigma /tmp/sigma_rules | to ${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+							break;
+						}
+					}
+				}
+			}
+		}
+	  })
+	  .catch((error) => {
+		toast(error.toString());
+	  })
+  }
+
   useEffect(() => {
+  	handleGetWorkflows() 
     if (allSchedules.length === 0 && webHooks.length === 0 && pipelines.length === 0) {
       handleGetAllTriggers()
     }
@@ -58,8 +110,11 @@ const SchedulesTab = memo((props) => {
       environment: pipeline.environment,
     };
   
-    if (state === "start") toast("starting the pipeline");
-    else toast.info("Stopping the pipeline. This may take a few minutes to propagate.")
+    if (state === "start") {
+		toast("starting the pipeline")
+	} else {
+    	toast.info("Stopping a pipeline. This may take a few minutes to propagate.")
+	}
   
     const url = `${globalUrl}/api/v1/triggers/pipeline`;
     fetch(url, {
@@ -144,16 +199,65 @@ const SchedulesTab = memo((props) => {
               },
           }}
         >
-            <DialogTitle>
+            <DialogTitle style={{padding: "50px 50px 25px 50px", }}>
                 <Typography variant='h5' color="textPrimary" >
 					Run a Tenzir pipeline
 				</Typography>
 				<Typography variant="body2" color="textSecondary" style={{marginTop: 10, }}>
-					Alpha feature. Deploys to the first available Orborus location. <a href="https://docs.tenzir.com/pipelines" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.primary.main }}>Explore Tenzir Pipelines</a>. The example below exports everything in the Tenzir database, runs Sigma rules on it, and forwards the results to a Shuffle webhook.
+					Alpha feature. Deploys to the first available Orborus location. <a href="https://docs.tenzir.com/explanations/architecture/pipeline/" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.primary.main }}>Explore Tenzir Pipelines</a>. The example below exports everything in the Tenzir database, runs Sigma rules on it, and forwards the results to a Shuffle webhook.
 				</Typography>
             </DialogTitle>
-            <DialogContent>
-                <div>
+            <DialogContent style={{padding: "0px 50px 50px 50px", }}>
+                <div style={{marginTop: 10, }}>
+
+                	<Chip 
+						onClick={() => {
+							setNewPipelineValue(`load_tcp "0.0.0.0:1514" { read_syslog } | import`)
+						}}
+						label={"Syslog Listener (TCP)"}
+						variant="outlined"
+						color="secondary"
+						style={{
+							marginRight: 10, 
+						}}
+					/>
+
+                	<Chip 
+						onClick={() => {
+							setNewPipelineValue(`load_udp "0.0.0.0:1514", insert_newlines=true | read_syslog | import`)
+						}}
+						label={"Syslog Listener (UDP)"}
+						variant="outlined"
+						color="secondary"
+						style={{
+							marginRight: 10, 
+						}}
+					/>
+
+                	<Chip 
+						onClick={() => {
+							setNewPipelineValue(`export live=true | sigma "/tmp/sigma_rules" | to "${ticketWebhook !== "" ? ticketWebhook : "SHUFFLE_WEBHOOK"}"`)
+						}}
+					  	label={"Sigma Rules"}
+					  	variant="outlined"
+					  	color="secondary"
+						style={{
+							marginRight: 10, 
+						}}
+					/>
+
+                	<Chip 
+						onClick={() => {
+							setNewPipelineValue(`export live=true | to_opensearch "localhost:9200", action="create", index="shuffle_logs", user="admin", passwd="PASSWORD"`)
+						}}
+					  	label={"Opensearch Ingest"}
+					  	variant="outlined"
+					  	color="secondary"
+						style={{
+							marginRight: 10, 
+						}}
+					/>
+
                     <TextField
                         color="primary"
                         style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor,}}
@@ -163,8 +267,9 @@ const SchedulesTab = memo((props) => {
 						minRows={4}
                         required
                         fullWidth={true}
-						defaultValue="export | sigma /tmp/sigma_rules | to SHUFFLE_WEBHOOK"
-                        placeholder="export | sigma /tmp/sigma_rules | to SHUFFLE_WEBHOOK"
+						defaultValue={`export | sigma /tmp/sigma_rules | to ${ticketWebhook !== "" ? ticketWebhook : "SHUFFLE_WEBHOOK"}`}
+						value={newPipelineValue}
+                        placeholder={`export | sigma /tmp/sigma_rules | to ${ticketWebhook !== "" ? ticketWebhook : "SHUFFLE_WEBHOOK"}`}
                         id="environment_name"
                         margin="normal"
                         variant="outlined"
@@ -174,7 +279,7 @@ const SchedulesTab = memo((props) => {
                     />
                 </div>
             </DialogContent>
-            <DialogActions>
+            <DialogActions style={{padding: "0px 50px 50px 50px", }}>
                 <Button
                     style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: theme.palette.primary.main }}
                     onClick={() => {
@@ -191,7 +296,7 @@ const SchedulesTab = memo((props) => {
                     }}
                     color="primary"
                 >
-                    Submit
+                   	Create Pipeline 
                 </Button>
             </DialogActions>
         </Dialog>
@@ -232,18 +337,18 @@ const SchedulesTab = memo((props) => {
       })
       .then((responseJson) => {
         if (!responseJson.success && pipelineConfig.type !== "delete") {
-          toast("Failed to set pipeline: " + responseJson.reason);
+          toast.error("Failed to set pipeline: " + responseJson.reason);
         } else {
           if (pipelineConfig.type === "create") {
-            toast("Pipeline will be created: " + responseJson.reason)
+            toast.success("Pipeline will be created. Page will autorefresh in a bit: " + responseJson.reason)
             setPipelineModalOpen(false)
 
           } else if (pipelineConfig.type === "stop") {
-             toast("Pipeline will be stopped: " + responseJson.reason)
+             toast.success("Pipeline will be stopped: " + responseJson.reason)
              setPipelineModalOpen(false)
 
           } else {
-			  toast("Unknown pipeline type: " + pipelineConfig.type)
+			  toast.info("Unknown pipeline type: " + pipelineConfig.type)
           }
 		}
 
@@ -274,12 +379,7 @@ const SchedulesTab = memo((props) => {
 
     
     // Just use this one?
-    const url =
-      globalUrl +
-      "/api/v1/workflows/" +
-      data["workflow_id"] +
-      "/schedule/" +
-      data.id;
+    const url = `${globalUrl}/api/v1/workflows/${data?.workflow_id}/schedule/${data.id}`;
     fetch(url, {
       method: "DELETE",
       credentials: "include",
@@ -414,7 +514,7 @@ const SchedulesTab = memo((props) => {
         //toast(error.toString());
         console.log("Get schedule error: ", error.toString());
       });
-  };
+  } 
   
   const startWebHook = (trigger) => {
     const hookname = trigger.info.name;
@@ -490,8 +590,197 @@ const SchedulesTab = memo((props) => {
 	  	Triggers are Automatic Workflow starters. <b>Status: Schedules ({allSchedules.length}), Webhooks ({webHooks.length}), Pipelines ({pipelines.length})</b>
 	  </Typography>
 
+	  <div style={{ marginTop: 50, marginBottom: 20 }}>
+          <Typography variant='h6' color="textPrimary" >Pipelines</Typography>
+
+          <Typography variant='body2' color="textSecondary" >
+            Controls Pipelines on your Orborus Runners, e.g. for Log Ingestion, MQ subscriptions or Sigma Detections.{" "}
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href="/docs/triggers#pipelines"
+              style={{ color: theme.palette.primary.main }}
+            >
+              Learn more
+            </a>
+          </Typography>
+
+	  	  <div style={{marginBottom: 10, marginTop: 10,  }}/>
+
+		  <Button
+		  	style={{}}
+		  	variant="contained"
+		  	color="primary"
+		  	onClick={() => setPipelineModalOpen(true)}
+		  >
+		  	Deploy New Pipeline 
+		  </Button>
+		  <Button
+		  	style={{marginLeft: 10, }}
+		  	variant="outlined"
+		  	color="primary"
+		  	onClick={() => {
+  				handleGetAllTriggers() 
+			}}
+		  >
+	  		<RefreshIcon style={{}}/>
+		  </Button>
+        </div> 
+        <div
+              style={{
+              borderRadius: 4,
+              marginTop: 24,
+              border: theme.palette.defaultBorder,
+              width: "100%",
+              overflowX: pipelines?.length === 0 ? "hidden" : "auto", 
+              paddingBottom: 0,
+              }}
+            >
+          <List 
+              style={{
+                borderRadius: 4,
+                    width: '100%', 
+                    tableLayout: "auto", 
+                    display: "table", 
+                    minWidth: pipelines?.length === 0 ? "auto" : 800,
+                    overflowX: "auto",
+                    paddingBottom: 0
+            }}>
+            <ListItem style={{width:"100%", borderBottom:theme.palette.defaultBorder, display: "table-row"}}>
+            {["Status", "Command", "Environment", "Total Runs", "Actions"].map((header, index) => (
+                    <ListItemText
+                        key={index}
+                        primary={header}
+                        style={{
+                          display: "table-cell",
+                          padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                          borderBottom: theme.palette.defaultBorder,
+                          position: "sticky",
+                        }}
+                    />
+                ))}
+          </ListItem>
+            {showLoader ? (
+              [...Array(6)].map((_, rowIndex) => {
+				  return (
+					<ListItem
+						key={rowIndex}
+						style={{
+							display: "table-row",
+							backgroundColor: theme.palette.platformColor,
+						}}
+					>
+						{Array(5)
+							.fill()
+							.map((_, colIndex) => {
+								return (
+									<ListItemText
+										key={colIndex}
+										style={{
+											display: "table-cell",
+											padding: "8px",
+										}}
+									>
+										<Skeleton
+											variant="text"
+											animation="wave"
+											sx={{
+												backgroundColor: theme.palette.loaderColor,
+												height: "20px",
+												borderRadius: "4px",
+											}}
+										/>
+									</ListItemText>
+								)
+							})}
+					</ListItem>
+					)
+			  }
+              )  
+
+            ) : (
+              pipelines?.length === 0 ? ( 
+                <div style={{width: "100%", textAlign: "center", }}>
+                  <Typography style={{color: theme.palette.text.primary, padding: 20,width: "100%", fontSize: 16, textAlign: 'center'}}>No pipelines found.</Typography>
+                </div>
+
+              ):(
+                pipelines.map((pipeline, index) => {
+                  var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
+                  if (index % 2 === 0) {
+                      bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
+                  }
+
+                  return (
+                    <ListItem key={index} style={{ backgroundColor: bgColor, borderRadius: index === pipelines.length - 1 ? 8 : 0, display: 'table-row', }} >
+                      <ListItemText
+                        style={{ minWidth: 75, maxWidth: 75, overflow: "auto", display:'table-cell', padding: "8px 8px 8px 15px" }}
+                        primary={pipeline.state}
+                      />
+                      <ListItemText
+                        style={{ maxWidth: 350, overflow: "auto", display:'table-cell', padding: "8px 8px 8px 15px" }}
+                        primary={pipeline.definition}
+                      />
+                      <ListItemText
+                        style={{ display:'table-cell', padding: 8 }}
+                        primary={pipeline.environment}
+                      />
+                      <ListItemText
+                        style={{ display:'table-cell',  }}
+                        primary={pipeline.total_runs}
+                      />
+                      <ListItemText
+                        style={{ display:'table-cell',  }}
+                        primary={(
+                          <Box display="table-cell">
+							<Tooltip title={"Copy deletion command"} style={{}} aria-label={"Go to logs"}>
+								<IconButton style={{marginRight: 10, }} onClick={() => {
+									const copyContent = `curl -XPOST http://localhost:5160/api/v0/pipeline/delete -H "Content-Type: application/json" -d '{"id":"${pipeline.id}"}' -v`
+									const copyText = navigator?.clipboard?.writeText(copyContent)
+									if (copyText) {
+									 	toast.success("Pipeline copied to clipboard")
+									} else {
+									  	toast.error("Failed to copy pipeline")
+									}
+								}}>
+									<FileCopyIcon />
+								</IconButton>
+							</Tooltip>
+							<Tooltip title={"Delete Pipeline"} style={{}} aria-label={"Go to logs"}>
+								<IconButton style={{marginRight: 10, }} onClick={() => {
+                                	changePipelineState(pipeline, "stop");
+								}}>
+									<DeleteIcon style={{color: red, }} />
+								</IconButton>
+							</Tooltip>
+                          </Box>
+                        )}
+                      />
+                    </ListItem>
+                  );
+                })
+              )
+            )}
+          </List>
+
+	  	  <div style={{margin: 25, }}>
+			  <RunDetectionTest 
+				globalUrl={globalUrl}
+				pipelines={pipelines}
+				workflows={workflows}
+				ticketWebhook={ticketWebhook}
+				detectionWorkflowId={detectionWorkflowId}
+
+				changePipelineState={changePipelineState}
+				submitPipelineWrapper={submitPipelineWrapper}
+			  /> 
+	  	  </div>
+        </div>
+
       <div>
-        <Typography variant='h6' color="textPrimary" style={{ marginBottom: 8, marginTop: 0, fontWeight: 500}}>
+        <Typography variant='h6' color="textPrimary" style={{ marginBottom: 8, marginTop: 50, fontWeight: 500}}>
 	  		Schedules
 	  	</Typography>
         <Typography variant='body2' color="textSecondary">
@@ -903,11 +1192,9 @@ const SchedulesTab = memo((props) => {
                         style={{
                           textTransform: 'none',
                           fontSize: 16,
-                          color:webhook.status === "running" ? '#1a1a1a' : null,
-                          backgroundColor: webhook.status === "running" ? '#ff8544' : null,
                           width: 150,
                         }}
-                        color={webhook.status === "running" ? "secondary" : "primary"}
+                        color={"secondary"}
                         variant={webhook.status === "running" ? "contained" : "outlined"}
                         disabled={webhook.status === "uninitialized"}
                         onClick={() => {
@@ -929,166 +1216,7 @@ const SchedulesTab = memo((props) => {
           )}
           </List>
         </div>
-        <div style={{ marginTop: 50, marginBottom: 20 }}>
-          <Typography variant='h6' color="textPrimary" >Pipelines</Typography>
-
-          <Typography variant='body2' color="textSecondary" >
-            Controls Pipelines on your Orborus Runners, e.g. for Log Ingestion, MQ subscriptions or Sigma Detections.{" "}
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="/docs/triggers#pipelines"
-              style={{ color: theme.palette.primary.main }}
-            >
-              Learn more
-            </a>
-          </Typography>
-
-	  	  <div style={{marginBottom: 10, marginTop: 10,  }}/>
-
-		  <Button
-		  	style={{ borderRadius: 4, textTransform: "capitalize", fontSize: 16,  }}
-		  	variant="contained"
-		  	color="primary"
-		  	onClick={() => setPipelineModalOpen(true)}
-		  >
-		  	Deploy New Pipeline 
-		  </Button>
-
-        </div> 
-        <div
-              style={{
-              borderRadius: 4,
-              marginTop: 24,
-              border: theme.palette.defaultBorder,
-              width: "100%",
-              overflowX: pipelines?.length === 0 ? "hidden" : "auto", 
-              paddingBottom: 0,
-              }}
-            >
-          <List 
-              style={{
-                borderRadius: 4,
-                    width: '100%', 
-                    tableLayout: "auto", 
-                    display: "table", 
-                    minWidth: pipelines?.length === 0 ? "auto" : 800,
-                    overflowX: "auto",
-                    paddingBottom: 0
-            }}>
-            <ListItem style={{width:"100%", borderBottom:theme.palette.defaultBorder, display: "table-row"}}>
-            {["Command", "Environment", "Total Runs", "Actions"].map((header, index) => (
-                    <ListItemText
-                        key={index}
-                        primary={header}
-                        style={{
-                          display: "table-cell",
-                          padding: index === 0 ? "0px 8px 8px 15px": "0px 8px 8px 8px",
-                          whiteSpace: "nowrap",
-                          textOverflow: "ellipsis",
-                          borderBottom: theme.palette.defaultBorder,
-                          position: "sticky",
-                        }}
-                    />
-                ))}
-          </ListItem>
-            {showLoader ? (
-              [...Array(6)].map((_, rowIndex) => {
-				  return (
-					<ListItem
-						key={rowIndex}
-						style={{
-							display: "table-row",
-							backgroundColor: theme.palette.platformColor,
-						}}
-					>
-						{Array(5)
-							.fill()
-							.map((_, colIndex) => {
-								return (
-									<ListItemText
-										key={colIndex}
-										style={{
-											display: "table-cell",
-											padding: "8px",
-										}}
-									>
-										<Skeleton
-											variant="text"
-											animation="wave"
-											sx={{
-												backgroundColor: theme.palette.loaderColor,
-												height: "20px",
-												borderRadius: "4px",
-											}}
-										/>
-									</ListItemText>
-								)
-							})}
-					</ListItem>
-					)
-			  }
-              )  
-
-            ): (
-              pipelines?.length === 0 ? ( 
-                <div style={{width: "100%", textAlign: "center", }}>
-                  <Typography style={{color: theme.palette.text.primary, padding: 20,width: "100%", fontSize: 16, textAlign: 'center'}}>No pipeline trigger found</Typography>
-                </div>
-
-              ):(
-                pipelines.map((pipeline, index) => {
-                  var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
-                  if (index % 2 === 0) {
-                      bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
-                  }
-
-                  return (
-                    <ListItem key={index} style={{ backgroundColor: bgColor, borderRadius: index === pipelines.length - 1 ? 8 : 0, display: 'table-row', }} >
-                      <ListItemText
-                        style={{ display:'table-cell', padding: "8px 8px 8px 15px" }}
-                        primary={pipeline.definition}
-                      />
-                      <ListItemText
-                        style={{ display:'table-cell', padding: 8 }}
-                        primary={pipeline.environment}
-                      />
-                      <ListItemText
-                        style={{ display:'table-cell',  }}
-                        primary={pipeline.total_runs}
-                      />
-                      <ListItemText
-                        style={{ display:'table-cell',  }}
-                        primary={(
-                          <Box display="table-cell">
-                            <Button
-                              style={{
-                                textTransform: 'none',
-                                fontSize: 16,
-                              }}
-                              variant={"outlined"}
-                              disabled={pipeline.status === "uninitialized"}
-                              onClick={() => {
-                                changePipelineState(pipeline, "stop");
-								/*
-                                if (pipeline.status === "running") {
-                                  changePipelineState(pipeline, "stop");
-                                } else changePipelineState(pipeline, "start");
-								*/
-                              }}
-                            >
-							  Stop Pipeline
-                            </Button>
-                          </Box>
-                        )}
-                      />
-                    </ListItem>
-                  );
-                })
-              )
-              )}
-          </List>
-          </div>
+        
       </div>
         </div>
     </div>
@@ -1096,3 +1224,4 @@ const SchedulesTab = memo((props) => {
 });
 
 export default SchedulesTab;
+

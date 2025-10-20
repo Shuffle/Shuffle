@@ -917,10 +917,10 @@ const EditWorkflow = (props) => {
 													}} 
 												/>
 												<Typography variant="h6" style={{ marginBottom: 5 }}>
-													Generate Workflow from Flowchart
+													Generate Workflow from Flowchart (beta)
 												</Typography>
 												<Typography variant="body2" color="textSecondary" style={{ marginBottom: 10 }}>
-													Click to upload your flowchart - AI will convert it to a workflow
+													Click to upload your flowchart - Your LLM will convert it to a workflow
 												</Typography>
 												<Typography variant="caption" color="textSecondary">
 													PNG, JPG, JPEG • Max 5MB

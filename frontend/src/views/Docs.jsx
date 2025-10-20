@@ -400,6 +400,10 @@ const Docs = (defaultprops) => {
 			if (propkey === "app_creation") {
 				navigate('/docs/apps#app-creation-introduction')
 			}
+
+            if (propkey === "api") {
+                navigate('/docs/API')
+            }
 		}
 
         
@@ -690,7 +694,8 @@ const Docs = (defaultprops) => {
 
     const Heading = (props) => {
         const [hover, setHover] = useState(false);
-        var id = props.children[0].toLowerCase().toString()
+
+        var id = (props.children?.[0] ?? props.children ?? '').toString().toLowerCase();
         if (props.level <= 3) {
             id = props.children[0].toLowerCase().toString().replaceAll(" ", "-");
         }
