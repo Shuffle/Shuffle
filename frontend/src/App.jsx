@@ -25,6 +25,7 @@ import AgentUI from "./views/AgentUI.jsx";
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import DashboardView from "./views/DashboardViews.jsx";
+import NewDashboard from "./views/NewDashboard.jsx";
 import AdminSetup from "./views/AdminSetup.jsx";
 import Admin from "./views/Admin.jsx";
 import Docs from "./views/Docs.jsx";
@@ -872,6 +873,21 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
+			<Route
+				exact
+				path="/new-dashboard"
+				element={
+					<NewDashboard
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						userdata={userdata}
+					/>
+				}
+			/>
+
 			<Route
 				exact
 				path="/dashboard"
