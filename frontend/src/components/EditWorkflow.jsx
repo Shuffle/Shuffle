@@ -471,7 +471,7 @@ const EditWorkflow = (props) => {
 										submitLoading === true ||
 										(uploadedImage === null && innerWorkflow?.default_return_value?.trim()?.length === 0)
 									}
-									variant="aiButton"
+									variant="aiButtonGhost"
 									onClick={async () => {
 										// Track AI Generate button click
 										if (isCloud) {

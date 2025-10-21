@@ -249,7 +249,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const UpdateTabStatus  = useCallback(() => {  
     const lastTabOpenByUser = localStorage.getItem("lastTabOpenByUser");
-    if ((lastTabOpenByUser === "automate" && currentPath.includes("/dashboards/automate")) || currentPath.includes("/dashboards/automate")) {
+    if ((lastTabOpenByUser === "automate" && currentPath.includes("/new-dashboard")) || currentPath.includes("/new-dashboard")) {
       setOpenautomateTab(true);
       setCurrentOpenTab("automate");
       setOpenSecurityTab(false);
@@ -1230,19 +1230,19 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               onClick={(event) => {
                 setOpenautomateTab(true);
                 setOpenSecurityTab(false);
-                setCurrentOpenTab("usecases");
-                localStorage.setItem("lastTabOpenByUser", "usecases");
+                setCurrentOpenTab("new-dashboard");
+                localStorage.setItem("lastTabOpenByUser", "new-dashboard");
               }}
               variant="text"
               style={{
                 ...ButtonStyle,
-                backgroundColor: ((currentOpenTab === "automate") || (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent",
+                backgroundColor: ((currentOpenTab === "new-dashboard") || (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent",
               }}
               onMouseOver={(event)=>{
                 event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate")|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent";
+                event.currentTarget.style.backgroundColor = ((currentOpenTab === "new-dashboard")|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent";
               }}
             >
                   <svg
@@ -1932,6 +1932,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 					variant="outlined"
 					style={{marginBottom: 15, borderWidth: 2, }}
 					onClick={() => {
+						navigate("/admin?admin_tab=billingstats&ref=left_sidebar_upgrade")
 						if (isCloud) { 
 							window.open("https://shuffler.io/contact?category=book_a_demo&ref=cloud", "_blank")
 						} else {

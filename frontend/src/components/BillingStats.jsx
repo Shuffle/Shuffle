@@ -589,8 +589,6 @@ const AppStats = (defaultprops) => {
 	const handleEndTimeChange = (date) => {
 		setEndTime(date)
 	}
-
-	console.log("sync stats: ", syncStats, statistics)
 	
 	const paperStyle = {
 		textAlign: "center", 

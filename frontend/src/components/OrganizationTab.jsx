@@ -61,17 +61,17 @@ const OrganizationTab = (props) => {
     useEffect(() => {
         if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
             setVisibleTabs(items.filter((item) => item !== 'Branding' && item !== 'SSO'));
-        }else {
+        } else {
             if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
                 setVisibleTabs(items);
-            }else {
+            } else {
                 setVisibleTabs(items.filter((item) => item !== 'SSO'));
             }
         }
 
-        if (isCloud) {
-            setVisibleTabs(items.filter((item) => item !== 'Production Status'));
-        }
+        //if (isCloud) {
+        //    setVisibleTabs(items.filter((item) => item !== 'Production Status'));
+        //}
     },[isIntegrationPartner, isChildOrg, isGlobalUser, userdata, isCloud]);
 
     useEffect(() => {
@@ -202,7 +202,7 @@ const OrganizationTab = (props) => {
                         key={index}
                         title={
                             ((tabName === "sso")) && !(userdata?.support || userdata?.active_org?.role === "admin")
-                            ? "Your role is not admin. Please ask the admin to change your role."
+                            ? "Your role is not admin. Please ask an admin to change your role."
                             : ""
                         }
                         placement="right"
