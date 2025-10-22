@@ -5694,7 +5694,6 @@ func initHandlers() {
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
-
 	if os.Getenv("DEBUG") == "true" {
 		debug = true
 	}
