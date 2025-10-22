@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, memo } from "react";
 import { Context } from "../context/ContextApi.jsx";
+import AuthenticationModal from "../components/AuthenticationModal.jsx";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { getTheme } from "../theme.jsx";
 import { toast } from "react-toastify"
@@ -21,12 +22,16 @@ import {
 
 import {
 	CheckCircle as CheckCircleIcon,
+	Check as CheckIcon,
 	HourglassDisabled as HourglassDisabledIcon,
 	RestartAlt as RestartAltIcon,
 	ExpandMore as ExpandMoreIcon,
 	ExpandLess as ExpandLessIcon,
 	Send as SendIcon,
 	Error as ErrorIcon,
+	Close as CloseIcon,
+	OpenInNew as OpenInNewIcon,
+	Refresh as RefreshIcon,
 } from '@mui/icons-material'
 
 import { 
@@ -43,21 +48,26 @@ const AgentUI = (props) => {
 	const [data, setData] = useState({})
 	const [openIndexes, setOpenIndexes] = useState([])
 	const [disableButtons, setDisableButtons] = useState(false)
+	const [apps, setApps] = useState([])
+	const [appAuth, setAppAuth] = useState([])
 
-	const [originalStartTime, setOriginalStartTime] = useState(0)
-	const [latestEndTime, setLatestEndTime] = useState(0)
 	const [showAgentStarter, setShowAgentStarter] = useState(false)
 	const [actionInput, setActionInput] = useState("")
+	const [questionAnswers, setQuestionAnswers] = useState({})
 
     const {themeMode} = useContext(Context)
   	const theme = getTheme(themeMode)
     const navigate = useNavigate();
+
+    document.title = "Shuffle AI Agents"
 
 	const agentWrapperStyle = {
 		width: 1000,
 		height: 1000, 
 		margin: "auto",
 		paddingTop: 100, 
+		paddingBottom: 1000, 
+		backgroundColor: theme.palette.backgroundColor,
 	}
 
 	if (data.input === undefined || data.input === null) {
@@ -75,7 +85,22 @@ const AgentUI = (props) => {
 		}
 
 		if (node_id === undefined || node_id === null || node_id === "") {
-			return
+			// Look for AI agent
+			/*
+			for (var key in execution_data.results) {
+				const item = execution_data.results[key]
+				if (item?.action?.app_name !== "AI Agent") {
+					continue
+				}
+
+				node_id = item?.action?.id
+				break
+			}
+			*/
+
+			if (node_id === undefined || node_id === null || node_id === "") {
+				return
+			}
 		}
 
 		var found = false
@@ -150,15 +175,22 @@ const AgentUI = (props) => {
 			if (responseJson.success !== false) {
 				if (responseJson.status === "EXECUTING") {
 					// Recursively looking for updates until it's not executing anymore
-            		setTimeout(() => {
-						GetExecution(execution_id, node_id, authorization)
-					}, 3000)
+            		//setTimeout(() => {
+					//	GetExecution(execution_id, node_id, authorization)
+					//}, 3000)
 				} else {
-					setDisableButtons(false)
 					setDisableButtons(false)
 				}
 
-				setExecution(responseJson)
+				try {
+					if (JSON.stringify(responseJson) !== JSON.stringify(execution)) {
+						setExecution(responseJson)
+					}
+				} catch(e) {
+					console.log("Error comparing executions: ", e)
+					setExecution(responseJson)
+				}
+
 				findNodeData(responseJson, node_id)
 			} else {
 				setDisableButtons(false)
@@ -216,9 +248,50 @@ const AgentUI = (props) => {
 			}
 
 			GetExecution(execution.execution_id, agentActionResult.action.id, execution.authorization) 
+			setTimeout(() => {
+				GetExecution(execution.execution_id, agentActionResult.action.id, execution.authorization) 
+			}, 10000)
 		})
 		.catch((error) => {
 			toast.error("Error: " + error)
+		})
+	}
+
+	const getAppAuth = () => {
+		const url = `${globalUrl}/api/v1/apps/authentication`
+		fetch(url, {
+			method: "GET",
+			credentials: "include",
+		})
+		.then((response) => {
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success !== false) {
+				setAppAuth(responseJson)
+			}
+		})
+		.catch((error) => {
+			toast.error("Error in auth load: " + error)
+		})
+	}
+
+	const getApps = () => {
+		const url = `${globalUrl}/api/v1/apps`
+		fetch(url, {
+			method: "GET",
+			credentials: "include",
+		})
+		.then((response) => {
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success !== false) {
+				setApps(responseJson)
+			}
+		})
+		.catch((error) => {
+			toast.error("Error in app load: " + error)
 		})
 	}
 
@@ -233,9 +306,15 @@ const AgentUI = (props) => {
 			setShowAgentStarter(true)
 			//toast.warn("No execution ID or node ID provided. Please provide execution_id and node_id in the URL.")
 		}
+
+		getApps()
+		getAppAuth() 
 	}, [])
 
-	const maxTimelineWidth = 150 
+	const maxTimelineWidth = 300 
+
+	var latestEndTime = 0
+	var originalStartTime = 0
 	const TimelineItem = (props) => {
 		const { item, index } = props;
 		const [hovered, setHovered] = useState(false);
@@ -258,12 +337,96 @@ const AgentUI = (props) => {
 			</Tooltip>
 
 		const categoryStyle = {
-			width: 20, 
-			height: 20, 
+			width: 25, 
+			height: 25, 
 			marginRight: 10, 
+			borderRadius: 5, 
 		}
 
-		const parsedCategory = item.category === "singul" ?
+			
+		const validate = validateJson(item.details)
+		const itemStartTime = item.start_time
+		var itemEndTime = item.end_time
+		if (item.category === "agent" && itemStartTime !== undefined && itemStartTime !== originalStartTime && (itemStartTime < originalStartTime || originalStartTime === 0)) {
+			console.log("Rerender 1: ", itemStartTime, originalStartTime)
+			originalStartTime = itemStartTime
+		}
+
+		if (itemEndTime !== undefined && itemEndTime > latestEndTime) {
+			console.log("Rerender 2")
+			latestEndTime = itemEndTime
+		}
+
+		if (itemEndTime === undefined || itemEndTime === null) {
+			// Set it to now
+			itemEndTime = latestEndTime
+		}
+
+		if (item.category == "agent" && itemEndTime === 0) {
+			// Right now -> .toLocaleString() support
+			itemEndTime = Date.now() / 1000
+
+			//<Tooltip title={`Time taken: ${currentDuration} seconds. Started: ${new Date(item.start_time * 1000).toLocaleString()}\nFinished: ${new Date(item.end_time * 1000).toLocaleString()}`} placement="right">
+
+			if (itemEndTime > latestEndTime) {
+				latestEndTime = itemEndTime
+			}
+		}
+
+		const totalDuration = latestEndTime - originalStartTime
+		var currentDuration = itemStartTime - itemEndTime
+		var timelineMarginLeft = ((itemStartTime - originalStartTime) / totalDuration) * maxTimelineWidth
+		//var timelineMarginLeft = 0
+
+		// Calculate how long the div should be 
+		var timelineWidth = ((itemEndTime - itemStartTime) / totalDuration) * maxTimelineWidth 
+
+		//console.log("CURRENT DURATION (1): ", currentDuration, itemStartTime, itemEndTime, originalStartTime, latestEndTime, totalDuration, timelineMarginLeft, timelineWidth)
+		if (totalDuration === currentDuration) {
+			timelineMarginLeft = 0
+			timelineWidth = maxTimelineWidth
+		}
+
+		// Just for simplicity's sake
+		if (currentDuration < -1000000 || currentDuration > 1000000) {
+			currentDuration = 0 
+		}
+
+		if (currentDuration < 0) {
+			currentDuration = currentDuration * -1
+		}
+
+		const defaultTopPadding = 10
+		const open = openIndexes.includes(index)
+
+		var questions = []
+		if (item?.details?.action === "finish" || item.category == "finish" || item?.details?.action == "finalise") {
+			item.type = "finalise"
+			item.category = "finalise"
+			item.label = item?.details?.reason || item.label
+
+		} else if (item?.category === "ask" || item?.details?.action === "ask") { 
+
+			item.type = "question"
+			item.category = "ask"
+			item.label = item?.details?.reason || item.label
+
+			for (var fieldKey in item?.details?.fields) {
+				const field = item?.details?.fields[fieldKey]
+				if (field?.key !== "question") {
+					continue
+				}
+
+				questions.push({
+					"question": field?.value,
+					"index": questions.length + 1,
+				})
+			}
+		} else if (item?.details?.action === "api" && item?.details?.tool?.length > 0) {
+			item.label = item?.details?.reason || item.label
+		}
+
+		var parsedCategory = item.category === "singul" ?
 			<Tooltip title="Singul" placement="top">
 				<img src="/images/logos/singul.svg" style={categoryStyle} />
 			</Tooltip>
@@ -273,37 +436,166 @@ const AgentUI = (props) => {
 			</Tooltip>
 			:
 			<div style={categoryStyle} />
-				
-		const validate = validateJson(item.details)
-		const itemStartTime = item.start_time
-		var itemEndTime = item.end_time
-		if (itemStartTime !== undefined && itemStartTime !== originalStartTime && (itemStartTime < originalStartTime || originalStartTime === 0)) {
-			console.log("Rerender 1")
-			//setOriginalStartTime(itemStartTime)
+
+		var showAuthentication = false 
+		var selectedApp = {}
+		if (item?.details?.tool !== undefined && item?.details?.tool !== null && item?.details?.tool?.length > 0 && item?.details?.tool !== "singul" && item?.details?.tool !== item?.details?.action) {
+
+			// Find the app and inject the image
+			const toolName = item.details.tool.toLowerCase().replaceAll(" ", "_").replaceAll("-", "_")
+			for (var appKey in apps) {
+				const app = apps[appKey]
+
+				const appname = app.name.toLowerCase().replaceAll(" ", "_").replaceAll("-", "_")
+				if (appname !== toolName) {
+					continue
+				}
+
+				if (app.large_image === undefined || app.large_image === null || app.large_image.length === 0) {
+					break
+				}
+
+				selectedApp = app
+
+				// Override the category
+				//item.category = app.name
+				//item.label = item?.details?.reason || item.label
+				parsedCategory =
+					<Tooltip title={app.name} placement="top">
+						<img src={app.large_image} style={categoryStyle} />
+					</Tooltip>
+
+				break
+			}
 		}
 
-		if (itemEndTime !== undefined && itemEndTime > latestEndTime) {
-			console.log("Rerender 2")
-			setLatestEndTime(itemEndTime)
+		if (!showAuthentication) {
+			if (item?.details?.run_details?.raw_response !== undefined && item?.details?.run_details?.raw_response !== null && item?.details?.run_details?.raw_response?.includes("app_authentication")) {
+				showAuthentication = true
+			}
 		}
 
-		if (itemEndTime === undefined || itemEndTime === null) {
-			// Set it to now
-			itemEndTime = latestEndTime
+		var questionSubmitDisabled = questions.length === 0 ? true : false
+		for (var qKey in questions) {
+			const q = questions[qKey]
+			if (questionAnswers[q.question] === undefined || questionAnswers[q.question] === null || questionAnswers[q.question] === "") {
+				//console.log("EMPTY QUESTION: ", q)
+				questionSubmitDisabled = true
+				break
+			} else {
+				questionSubmitDisabled = false
+			}
 		}
 
-		const totalDuration = latestEndTime - originalStartTime
-		const currentDuration = itemStartTime - itemEndTime
-		var timelineMarginLeft = ((itemStartTime - originalStartTime) / totalDuration) * maxTimelineWidth
-		var timelineWidth = ((itemEndTime - itemStartTime) / totalDuration) * maxTimelineWidth 
+		const barColor = item.status === "FINISHED" ? green : 
+			item.status === "FAILURE" || item.status == "ABORTED" ? red : 
+			item.status === "RUNNING" || item.status === "" ? theme.palette.main :
+			theme.palette.surfaceColor
 
-		if (totalDuration === currentDuration) {
-			timelineMarginLeft = 0
-			timelineWidth = maxTimelineWidth
+		const rerunAgentButton = 
+			<Tooltip title="Rerun from the start with the same input" placement="right">
+				<span>
+					<IconButton
+						style={{marginLeft: 20, }}
+						onClick={(e) => {
+							e.preventDefault()
+							e.stopPropagation()
+
+							toast.info("Attempting to rerun everything.")
+							setDisableButtons(true)
+
+							if (item?.details === undefined || item?.details === null || item?.details?.input === undefined || item?.details?.input === null) {
+								toast.error("No decision details found to rerun. Cannot proceed. Please go back to your workflow or /agents to start over.")
+							} else {
+								//console.log("DETAILS: ", item?.details)
+								for (var messagekey in item?.details?.input?.messages) {
+									const message = item?.details?.input?.messages[messagekey]
+									if (message.role === "user") {
+										setActionInput(message.content)
+										setDisableButtons(true)
+
+										submitInput(message.content)
+										//toast.info("Rerun started. Please wait a few seconds and this page should refresh automatically.")
+										break
+									}
+								}
+							}
+						}}
+					>
+						<RestartAltIcon /> 
+					</IconButton>
+				</span>
+			</Tooltip>
+
+								
+		const rerunButton = 
+			<Tooltip title="Rerun JUST this decision. This can be used if an agent decision action somehow stopped and didn't get a result." placement="right">
+				<span>
+					<IconButton
+						disabled={item.type !== "decision" || disableButtons}
+						style={{marginLeft: 20, }}
+						onClick={(e) => {
+							e.preventDefault()
+							e.stopPropagation()
+
+							//toast.info("Attempting to rerun this decision by itself.")
+							setDisableButtons(true)
+							RerunDecision(item.details)
+						}}
+					>
+						<RestartAltIcon /> 
+					</IconButton>
+				</span>
+			</Tooltip>
+
+		const submitQuestions = (decisionId, questionAnswers) => {
+			console.log("Submitting questions: ", decisionId, questionAnswers)
+			if (decisionId === undefined || decisionId === null || decisionId === "") {
+				toast.error("No decision ID provided. Cannot submit answers.")
+				return
+			}
+
+			if (Object.keys(questionAnswers).length === 0) {
+				toast.error("No answers provided. Cannot submit empty answers.")
+				return
+			}
+
+			// Loop qu
+			var newArgument = {}
+			for (var key in questionAnswers) {
+				const answer = questionAnswers[key]
+				newArgument["question_"+(answer.index)] = answer.value
+			}
+
+			const params = new URLSearchParams(window.location.search)
+			const executionId = params.get("execution_id")
+			const nodeId = params.get("node_id")
+			const authorization = params.get("authorization")
+
+			const url = `${globalUrl}/api/v1/workflows/${executionId}/run?reference_execution=${executionId}&authorization=${authorization}&answer=true&note=${encodeURIComponent(JSON.stringify(newArgument))}&agentic=true&decision_id=${decisionId}`
+			console.log("PARSED URL: ", url)
+			fetch(url, {
+				method: "GET",
+				credentials: "include",
+			})
+			.then((response) => {
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success !== false) {
+					setTimeout(() => {
+						GetExecution(execution.execution_id, agentActionResult.action.id, execution.authorization) 
+					}, 500)
+
+					toast.success("Successfully submitted answers! The agent should continue shortly.")
+				} else {
+					toast.warn("Failed to submit answers. Please try again or contact support@shuffler.io if this persists..")
+				}
+			})
+			.catch((error) => {
+				toast.error("Problem with submitting: " + error)
+			})
 		}
-
-		const defaultTopPadding = 10
-		const open = openIndexes.includes(index)
 
 		return (
 			<div 
@@ -315,7 +607,7 @@ const AgentUI = (props) => {
 				}}
 					onMouseEnter={() => {
 						if (!hovered) { 
-							console.log("HOVER")
+							//console.log("HOVER")
 							setHovered(true)
 						}
 					}}
@@ -364,41 +656,50 @@ const AgentUI = (props) => {
 					<div style={{minWidth: 50, maxWidth: 50, paddingTop: defaultTopPadding, }}>
 						{parsedCategory}
 					</div>
+					{/*
 					<div style={{minWidth: 200, maxWidth: 200, paddingTop: defaultTopPadding, }}>
-						{/* To ISO string from unix time */}
-						{new Date(item.start_time * 1000).toLocaleString()}
+						{item?.start_time !== undefined && item?.start_time !== null && item?.start_time !== 0 ?
+							new Date(item.start_time * 1000).toLocaleString()
+							: 
+							null
+						}
+					
 					</div>
+					*/}
 					<div style={{minWidth: 100, maxWidth: 100, paddingTop: defaultTopPadding-5,  }}>
 						<Chip
 							label={item.type}
 						/>
 					</div>
 					<div style={{
-						minWidth: 200, 
-						maxWidth: 200, 
+						minWidth: 300, 
+						maxWidth: 300, 
 						paddingTop: defaultTopPadding, 
 					}}>
 						{item.label}
 					</div>
 
-					<Tooltip title={`Time taken: ${currentDuration*-1} seconds. Started: ${new Date(item.start_time * 1000).toLocaleString()}\nFinished: ${new Date(item.end_time * 1000).toLocaleString()}`} placement="right">
+					<Tooltip title={`Time taken: ${currentDuration} seconds. Started: ${new Date(itemStartTime * 1000).toLocaleString()}\nFinished: ${new Date(itemEndTime * 1000).toLocaleString()}`} placement="right">
 						<div style={{
 							minWidth: maxTimelineWidth, 
 							maxWidth: maxTimelineWidth, 
-							paddingTop: defaultTopPadding*1.3, 
+							paddingTop: defaultTopPadding*1.5, 
 						}}>
-							{currentDuration !== 0 && !isNaN(timelineMarginLeft) && !isNaN(timelineWidth) && timelineWidth > 0 ?
+							{currentDuration != 0 && !isNaN(timelineMarginLeft) && !isNaN(timelineWidth) && timelineWidth > 0 ?
 								<div style={{
-									backgroundColor: item.status === "FINISHED" ? 
-										green : 	 item.status === "RUNNING" || item.status === "" ? 
-										theme.palette.main : theme.palette.surfaceColor,
-
+									backgroundColor: barColor,
 									marginLeft: timelineMarginLeft, 
 									minWidth: timelineWidth, 
 									maxWidth: timelineWidth,
-									height: 10, 
-									}} />
-							: null}
+									minHeight: 10,
+									maxHeight: 10, 
+									borderRadius: theme.palette.borderRadius,
+								}}>
+								</div>
+							: 
+								<Typography variant="body2" color="textSecondary">
+								</Typography>
+							}
 						</div>
 					</Tooltip>
 
@@ -407,24 +708,68 @@ const AgentUI = (props) => {
 						maxWidth: 100, 
 						display: "flex", 
 					}}>
-						<Tooltip title="Rerun JUST this decision. This can be used if an agent decision action somehow stopped and didn't get a result." placement="left">
-							<span>
-								<IconButton
-									disabled={item.type !== "decision" || disableButtons}
-									style={{marginLeft: 20, }}
-									onClick={(e) => {
-										e.preventDefault()
-										e.stopPropagation()
+						{item.category === "ask" ? 
+							<span style={{display: "flex", }}>
+								{rerunButton} 
+								{/*
+								<Tooltip title="Approve" placement="left">
+									<span>
+										<IconButton
+											disabled={disableButtons}
+											style={{marginLeft: 20, }}
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
 
-										toast.info("Attempting to rerun this decision by itself.")
-										setDisableButtons(true)
-										RerunDecision(item.details)
-									}}
-								>
-									<RestartAltIcon /> 
-								</IconButton>
+												toast.info("Approving this step.")
+											}}
+										>
+											<CheckIcon style={{color: green, }} />
+										</IconButton>
+									</span>
+								</Tooltip>
+								<Tooltip title="Deny" placement="left">
+									<span>
+										<IconButton
+											disabled={item.type !== "decision" || disableButtons}
+											style={{marginLeft: 0, }}
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+
+												toast.info("Stopping on this step.")
+											}}
+										>
+											<CloseIcon style={{color: red, }} />
+										</IconButton>
+									</span>
+								</Tooltip>
+								*/}
+
+								<Tooltip title="See in another window" placement="left">
+									<span>
+										<IconButton
+											style={{marginLeft: 0, }}
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+
+												//http://localhost:3002/forms/aadfe022-fe93-431c-8634-de42dd7440ac?authorization=9357f6a6-7d59-44be-ad66-be27657369ac&reference_execution=0726378d-b501-470f-b850-f7fb48cd8ca4&source_node=de446bcf-ad37-4337-9f72-e069c7425fac&backend_url=https://ec4245cd2941.ngrok-free.app
+												const newurl = `/forms/${execution?.workflow?.id}?authorization=${execution.authorization}&reference_execution=${execution.execution_id}&source_node=${agentActionResult?.action?.id}&decision_id=${item.details.run_details.id}&backend_url=${globalUrl}`
+												window.open(newurl, '_blank', 'noopener,noreferrer');
+											}}
+										>
+											<OpenInNewIcon />
+										</IconButton>
+									</span>
+								</Tooltip>
 							</span>
-						</Tooltip>
+							:
+							item.category === "agent" ? 
+								rerunAgentButton
+							:
+								rerunButton
+						}
 						<Tooltip title="Explore results" placement="right">
 							<span>
 								<IconButton
@@ -442,6 +787,69 @@ const AgentUI = (props) => {
 						</Tooltip>
 					</div>
 				</div>
+					
+				{showAuthentication && selectedApp.id !== undefined ?
+					<div style={{minWidth: 300, maxWidth: 300, margin: "auto", marginTop: 25, }}>
+						<AuthenticationModal 
+							globalUrl={globalUrl}
+							userdata={userdata}
+
+							setAppAuthentication={setAppAuth}
+							selectedAppData={selectedApp}
+						/>
+					</div>
+				: null}
+
+				{questions?.length > 0 && item?.status === "RUNNING" ? 
+					<div>
+						{questions.map((q, questionIndex) => {
+							return (
+								<div style={{marginTop: 25, }}>
+									<Typography variant="body2">
+										{`${q.question}`}
+									</Typography>
+									
+									<TextField
+										label={`Question ${q.index}`}
+										placeholder="No question found"
+										variant="outlined"
+										style={{width: 800, marginTop: 20, }}
+										multiline
+										minRows={2}
+										defaultValue={questionAnswers[q.question]?.value || ""}
+										onBlur={(e) => {
+											console.log("Change: ", e.target.value)
+											try { 
+												questionAnswers[q.question] = {
+													"index": questionIndex,
+													"value": e.target.value,
+												}
+
+												setQuestionAnswers({...questionAnswers, })
+											} catch (e) {
+												toast.warn("Something went wrong. Please contact support@shuffler.io. Details: " + e)
+											}
+										}}
+
+									/>
+								</div>
+							)
+						})}
+
+						<Button
+							variant="contained"
+							style={{marginTop: 10, }}
+							disabled={questionSubmitDisabled}
+							onClick={() => {
+								submitQuestions(item?.details?.run_details?.id, questionAnswers)
+
+							}}
+						>
+							Submit 
+						</Button>
+					</div>
+				: null}
+
 
 				{open ?
 					<div style={{marginTop: 10, marginBottom: 10, }}>
@@ -479,7 +887,12 @@ const AgentUI = (props) => {
 	const TimelineRender = (props) => {
 		const { agent_data } = props;
 
-		const actionResult = execution?.results?.length > 0 ? execution.results[0] : execution 
+		var actionResult = execution?.results?.length > 0 ? execution.results[0] : execution 
+		const validate = validateJson(actionResult?.result)
+		if (validate.valid === true) {
+			actionResult.result = validate.result
+		}
+
 		var timelineItems = [
 			{
 				"label": "AI Agent 2",
@@ -493,6 +906,27 @@ const AgentUI = (props) => {
 			},
 		]
 
+		// Setting up the initial item
+		if (agent_data?.started_at === undefined && execution?.started_at !== undefined) {
+			timelineItems[0].start_time = execution?.started_at
+		}
+
+		if (agent_data?.completed_at === undefined && execution?.completed_at !== undefined) {
+			timelineItems[0].end_time = execution?.completed_at
+		}
+
+		// Always prioritise the execution status first
+		// agent (RUNNING) = workflow (EXECUTING)
+		if (execution?.status !== undefined) {
+			timelineItems[0].status = execution?.status
+		}
+
+		if (actionResult?.result?.status !== undefined && actionResult?.result?.status !== null && actionResult?.result?.status?.length > 0) {
+			if (timelineItems[0].status !== "FINISHED" && timelineItems[0].status !== "ABORTED" && timelineItems[0].status !== "FAILURE") {
+				timelineItems[0].status = actionResult?.result?.status
+			}
+		}
+
 		// Autofixer for result lol
 		if ((agent_data?.decisions === undefined || agent_data?.decisions === null)) {
 			const verifiedInput = validateJson(actionResult?.result)
@@ -500,6 +934,7 @@ const AgentUI = (props) => {
 				agent_data.decisions = verifiedInput.result?.decisions 
 
 				setAgentActionResult(actionResult)
+
 			}
 		}
 
@@ -516,13 +951,13 @@ const AgentUI = (props) => {
 			}
 
 			var newTimelineItem = {
-				"label": item.action,
+				"label": item?.action,
 				"type": "decision",
-				"category": item.category,
+				"category": item?.category,
 
-				"status": item.run_details.status,
-				"start_time": item.run_details.started_at,
-				"end_time": item.run_details.completed_at,
+				"status": item?.run_details?.status,
+				"start_time": item?.run_details?.started_at,
+				"end_time": item?.run_details?.completed_at,
 			}
 
 			newTimelineItem.details = item
@@ -577,6 +1012,14 @@ const AgentUI = (props) => {
 		setAgentRequestLoading(true)
 		//setShowAgentStarter(false);
 		//GetExecution(execution?.execution_id, execution?.node_id, execution?.authorization);
+		//
+		setData({})
+		setExecution(null)
+		setAgentRequestLoading(true)
+		setShowAgentStarter(true)
+		setActionInput(inputText)
+
+		setAgentActionResult(null)
 
 		if (inputText === undefined || inputText === null || inputText === "") {
 			toast.error("Please provide a valid input for the AI Agent.")
@@ -606,7 +1049,7 @@ const AgentUI = (props) => {
 				},
 				{
 					"name":"action",
-					"value":"list_tickets"
+					"value":"list_tickets,API"
 				}
 		]}
 
@@ -637,18 +1080,38 @@ const AgentUI = (props) => {
 
 	}
 
+	const handleKeyDown = (e) => {
+    	const isCmdEnter = e.metaKey && e.key === "Enter"; // macOS
+    	const isCtrlEnter = e.ctrlKey && e.key === "Enter"; // Windows/Linux
+		if (isCmdEnter || isCtrlEnter) {
+		  	e.preventDefault()
+			submitInput(actionInput)
+		}
+	}
+
 	return (
 		<div style={agentWrapperStyle}>
+			<TextField
+			  id="copy_element_shuffle"
+			  style={{ display: "none" }}
+			/>
 
 			{showAgentStarter ? 
-				<Box component="form" style={{textAlign: "center", }} onSubmit={(e) => {
-					e.preventDefault();
-					submitInput(actionInput);
-				}}>
+				<Box 
+					component="form" 
+					style={{textAlign: "center", }} 
+					onKeyDown={handleKeyDown}
+					onSubmit={(e) => {
+						e.preventDefault();
+						submitInput(actionInput);
+					}}
+				>
 					<img src="/images/logos/agent.svg" style={{
 						width: 200, 
 						height: 200, 
+						borderRadius: theme.palette.borderRadius,
 					}} />
+
 					<div />
 
 					<Typography variant="h5" style={{marginTop: 30, }}>
@@ -661,7 +1124,7 @@ const AgentUI = (props) => {
 						style={{width: 450, marginRight: 20, marginTop: 30, }}
 						multiline
 						minRows={2}
-						defaultValue={execution?.execution_id || ""}
+						defaultValue={actionInput || ""}
 						onChange={(e) => {
 							setActionInput(e.target.value)
 						}}
@@ -703,6 +1166,22 @@ const AgentUI = (props) => {
 							Timeline	
 						</Button>
 					</ButtonGroup>
+
+					<Tooltip title="Reload the agent data" placement="top">
+						<span>
+							<Button 
+								disabled={execution === null || Object.keys(execution).length === 0} 
+								style={{marginLeft: 25, }}
+								variant={"outlined"}
+								color="secondary"
+								onClick={() => {
+									GetExecution(execution.execution_id, agentActionResult.action.id, execution.authorization) 
+								}}
+							>
+								<RefreshIcon />
+							</Button>
+						</span>
+					</Tooltip>
 
 					{buttonState === "timeline" ?
 						<TimelineRender agent_data={data} />

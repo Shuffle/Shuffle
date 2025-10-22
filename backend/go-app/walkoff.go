@@ -249,7 +249,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	resp.Write([]byte(`{"success": true}`))
 }
 
-// FIXME: Authenticate this one? Can org ID be auth enough?
+// FIXME: Authenticate this one. Can org ID be auth enough?
 // (especially since we have a default: shuffle)
 func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
@@ -325,7 +325,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		orgId = env.OrgId
 	}
 
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, environment, 100)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, environment, 100, *env)
 	if err != nil {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -336,47 +336,11 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-
 		// Try again? I don't think this is necessary, and shouldn't really ever occur. 
-		/*
-		if len(env.Id) == 0 && len(env.Name) == 0 {
-			timeNow := int64(time.Now().Unix())
-			foundId := ""
-			for _, requestData := range executionRequests.Data {
-				execution, err := shuffle.GetWorkflowExecution(ctx, requestData.ExecutionId)
-				if err == nil {
-					if len(execution.ExecutionOrg) > 0 {
-						foundId = execution.ExecutionOrg
-						break
-					}
-				}
-			}
-
-			if len(environment) > 0 {
-      
-				env, err := shuffle.GetEnvironment(ctx, environment, foundId)
-				if err != nil {
-					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", environment, err)
-					//resp.WriteHeader(401)
-					//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No env found matching %s"}`, id)))
-					//return
-				} else {
-					if timeNow > env.Edited+60 {
-						env.RunningIp = request.RemoteAddr
-						env.Checkin = timeNow
-						err = shuffle.SetEnvironment(ctx, env)
-						if err != nil {
-							log.Printf("[WARNING] Failed updating environment: %s", err)
-						}
-					}
-				}
-			}
-		}
-		*/
-
 		if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]
 		}
+
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -1847,13 +1811,12 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	newapps := workflowapps
-
 	if len(user.PrivateApps) > 0 {
 		found := false
 		for _, item := range user.PrivateApps {

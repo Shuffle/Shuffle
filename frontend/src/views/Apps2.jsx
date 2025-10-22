@@ -42,6 +42,7 @@ import { debounce } from "lodash";
 import AppSelection from "../components/AppSelection.jsx";
 import AppModal from "../components/AppModal.jsx";
 import AppCreationModal from "../components/AppCreationModal.jsx";
+import Dropzone from "../components/Dropzone.jsx";
 
 
 const searchClient = algoliasearch(
@@ -1136,6 +1137,7 @@ const Apps2 = (props) => {
   const [field2, setField2] = useState("");
   const [validation, setValidation] = useState(null);
   const [createAppModalOpen, setCreateAppModalOpen] = useState(false);
+  const [openApiData, setOpenApiData] = useState("");  
 
   const {themeMode, brandColor} = useContext(Context);
   const theme = getTheme(themeMode, brandColor);
@@ -1736,6 +1738,31 @@ const Apps2 = (props) => {
     // setOpenModal(true);
   };
 
+  const uploadFile = (e) => {
+    const isFromDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+    const files = isFromDropzone ? e.dataTransfer.files : e.target.files;
+
+    const reader = new FileReader();
+
+    try {
+      reader.addEventListener("load", (ev) => {
+        const content = ev.target.result;
+        setOpenApiData(content);
+        setCreateAppModalOpen(true);
+      });
+    } catch (err) {
+      console.log("Error in dropzone: ", err);
+    }
+
+    try {
+      reader.readAsText(files[0]);
+    } catch (error) {
+      toast("Failed to read file");
+    }
+  };
+
+  // Validation and redirect are handled inside AppCreationModal
+
   useEffect(() => {
     const apps = currTab === 1 ? userApps : orgApps;
     const filteredUserAppdata = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
@@ -1853,6 +1880,10 @@ const Apps2 = (props) => {
   }
 
   return (
+    <Dropzone
+      style={{ width: "100%", height: "100vh" }}
+      onDrop={uploadFile}
+    >
     <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: theme.palette.backgroundColor, fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
         <AppModal
@@ -1869,6 +1900,8 @@ const Apps2 = (props) => {
           theme={theme}
           globalUrl={globalUrl}
           isCloud={isCloud}
+          startOpenApi={openApiData?.length > 0}
+          prefillOpenApiData={openApiData}
         />
         {appsModalLoad}
         <div style={boxStyle}>
@@ -2198,6 +2231,24 @@ const Apps2 = (props) => {
                 </>
               )}
             </div>
+            <Tooltip
+              title="Create an app with different options or Just drop a YAML/JSON file here"
+              placement="top"
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    backgroundColor: "rgba(33, 33, 33, 1)",
+                    color: "rgba(241, 241, 241, 1)",
+                    fontSize: 12,
+                    width: 240,
+                    lineHeight: 1.5,
+                    border: "1px solid rgba(73, 73, 73, 1)",
+                    fontFamily: theme?.typography?.fontFamily,
+                  }
+                },
+              }}
+              arrow
+            >
             <div style={{
               width: "25%",
               minWidth: "25%",
@@ -2222,6 +2273,7 @@ const Apps2 = (props) => {
                 Create an App
               </Button>
             </div>
+            </Tooltip>
           </div>
           <div>
 
@@ -2365,6 +2417,7 @@ const Apps2 = (props) => {
         <Configure clickAnalytics />
       </InstantSearch>
     </div>
+    </Dropzone>
   );
 };
 

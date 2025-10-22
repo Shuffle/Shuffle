@@ -33,6 +33,7 @@ import {
   ClearRefinements,
   connectStateResults
 } from "react-instantsearch-dom";
+import { useDebouncedCallback } from "../utils/useDebouncedCallback";
 
 import aa from "search-insights";
 import { useLocation } from 'react-router-dom';
@@ -160,6 +161,8 @@ const AppGrid = (props) => {
       refine(searchQuery.trim());
     };
 
+    const debouncedRefine = useDebouncedCallback((value) => refine(value), 300);
+
     return (
       <form noValidate action="" role="search">
         <TextField
@@ -229,9 +232,10 @@ const AppGrid = (props) => {
           placeholder="Search more than 2500 Apps"
           id="shuffle_search_field"
           onChange={(event) => {
-            setSearchQuery(event.currentTarget.value);
+            const value = event.currentTarget.value;
+            setSearchQuery(value);
             removeQuery("q");
-            refine(event.currentTarget.value);
+            debouncedRefine(value);
           }}
           onKeyDown={(event) => {
 						if(event.key === "Enter") {

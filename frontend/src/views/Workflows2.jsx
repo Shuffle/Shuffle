@@ -4,16 +4,6 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import ReactDOM from "react-dom"
 import { getTheme } from "../theme.jsx";
 
-// Material UI Icons
-import Add from '@mui/icons-material/Add';
-import Search from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
-import QueryStatsIcon from '@mui/icons-material/QueryStats';
-import GridOnIcon from '@mui/icons-material/GridOn';
-import ListIcon from '@mui/icons-material/List';
-import PublishIcon from '@mui/icons-material/Publish';
-import GetAppIcon from '@mui/icons-material/GetApp';
-
 // Material UI & Components
 import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
@@ -67,6 +57,7 @@ import {
 
 // Material UI Icons
 import {
+  	ContentCopy as ContentCopyIcon,
     Close as CloseIcon,
     Compare as CompareIcon,
     Maximize as MaximizeIcon,
@@ -105,6 +96,12 @@ import {
 	AutoAwesome as AutoAwesomeIcon,
 	BarChart as BarChartIcon,
 	Lock as LockIcon,
+	Clear as ClearIcon,
+	QueryStats as QueryStatsIcon,
+	GridOn as GridOnIcon,
+	List as ListIcon,
+	Publish as PublishIcon,
+	GetApp as GetAppIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -209,10 +206,10 @@ export const GetIconInfo = (action) => {
             key: "compare",
             values: ["compare", "convert", "to", "filter", "translate", "parse"],
         },
-        { key: "assets", values: ["cmdb", "assets", "asset", "cmdb", "inventory", "host", "hosts", "device", "devices"] },
+        { key: "assets", values: ["cmdb", "assets", "asset", "cmdb", "inventory", "host", "hosts", "device", "devices", "app",] },
         { key: "close", values: ["close", "stop", "cancel", "block"] },
         { key: "communication", values: ["communication", "comms", "email", "mail",] },
-        { key: "eradication", values: ["eradication", "edr", "xdr"] },
+        { key: "eradication", values: ["eradication", "edr", "xdr", "sigma", "yara",] },
         { key: "iam", values: ["iam", "identity", "access", "auth", "authentication", "authorization", "oauth", "sso", "openid"] },
 		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator",] },
 		{ key: "network", values: ["network", "net", "networking", "firewall", "proxy", "vpn", "sdwan", "sd-wan"] },
@@ -235,6 +232,7 @@ export const GetIconInfo = (action) => {
 			values: [
 				"api",
 				"password",
+				"passwd",
 				"protect",
 			],
 		}
@@ -820,6 +818,7 @@ const Workflows2 = (props) => {
     const [highlightIds, setHighlightIds] = React.useState([])
 
     const [apps, setApps] = React.useState([]);
+	const [isProdStatusOn, setIsProdStatusOn] = React.useState(false);
 
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
@@ -835,9 +834,44 @@ const Workflows2 = (props) => {
                 setCurrTab(1);
             } else if (tabParam === 'all_workflows' && currTab !== 2) {
                 setCurrTab(2);
-            }
+            } else if (tabParam === 'background_processes' && currTab !== 4) {
+                setCurrTab(4);
+			}
         }
     }, [location.search]);
+
+    useEffect(() => {
+      const orgId = userdata?.active_org?.id;
+      if (!orgId) {
+        return;
+      }
+
+      let fetched = false;
+      fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((org) => {
+          if (!fetched && org) {
+            if (!isCloud) {
+                if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                  setIsProdStatusOn(true);
+                } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                  setIsProdStatusOn(true);
+                } else {
+                  setIsProdStatusOn(false);
+                }
+              }
+          }
+        })
+        .catch(() => {});
+
+      return () => {
+        fetched = true;
+      };
+    }, [userdata?.active_org?.id, globalUrl]);
 
     const handleTabChange = (event, newValue) => {
         setCurrTab(newValue);
@@ -853,10 +887,15 @@ const Workflows2 = (props) => {
             1: 'my_workflows',
             2: 'all_workflows',
             3: 'backup_apps',
+            4: 'background_processes',
         };
         const queryParams = new URLSearchParams(location.search);
         queryParams.set('tab', tabMapping[newValue]);
 
+		if (newValue === 4) {
+			setShowExecutionStats(true)
+			setView("grid")
+		}
 
         navigate(`${location.pathname}?${queryParams.toString()}`);
     };
@@ -1553,7 +1592,7 @@ const Workflows2 = (props) => {
                 sx: {
                     borderRadius: theme?.palette?.DialogStyle?.borderRadius,
                     border: theme?.palette?.DialogStyle?.border,
-                    minWidth: '440px',
+                    minWidth: 440,
                     fontFamily: theme?.typography?.fontFamily,
                     backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     zIndex: 1000,
@@ -1566,11 +1605,11 @@ const Workflows2 = (props) => {
                 }
             }}
         >
-            <DialogTitle>
+            <DialogTitle style={{padding: 50, }}>
                 <div style={{ textAlign: "center", color: theme.palette.DialogStyle?.color }}>
                     Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId)?.name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
 
-                    Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working
+                    Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working.
                 </div>
             </DialogTitle>
             <DialogContent
@@ -1819,6 +1858,7 @@ const Workflows2 = (props) => {
             credentials: "include",
         })
             .then((response) => {
+    			setIsLoadingWorkflow(false)
                 if (response.status !== 200) {
                     console.log("Status not 200 for workflows :O!: ", response.status);
 
@@ -1956,6 +1996,7 @@ const Workflows2 = (props) => {
                 }
             })
             .catch((error) => {
+    			setIsLoadingWorkflow(false)
                 toast(error.toString());
             });
     }
@@ -2949,6 +2990,8 @@ const Workflows2 = (props) => {
 				triggerfound = true
 				image = wfTriggers[0].large_image 
 
+				trigger.status = trigger?.status?.toLowerCase() 
+
 				relevantTrigger = trigger
 				if (trigger?.status === "running") {
 					imageStyle.border = `3px solid ${green}`
@@ -2961,6 +3004,8 @@ const Workflows2 = (props) => {
 			} else if (trigger?.trigger_type === "SCHEDULE") {
 				triggerfound = true
 				image = wfTriggers[1].large_image 
+
+				trigger.status = trigger?.status?.toLowerCase() 
 
 				relevantTrigger = trigger
 				if (trigger?.status === "running") {
@@ -3032,12 +3077,35 @@ const Workflows2 = (props) => {
             }
         }
 
+		const isPublicWorkflow = data?.objectId === undefined || data?.objectId === null
+		const foundImage = !isPublicWorkflow ? "" : data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
+
 		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
         return (
-            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily }}>
+            <div 
+				id={`workflowbox-${data.id}`}
+				style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily, overflow: "hidden", }}
+			>
 
+				{isPublicWorkflow && foundImage?.length > 0 ? 
+					<img src={foundImage} alt="image" style={{
+						maxHeight: 250,
+						minHeight: 250,
+						minWidth: 100,
+						marginLeft: 12, 
+						cursor: "pointer", 
+					}} 
+					onClick={() => {
+						if (isCloud) {
+							navigate(`/workflows/${data.objectID}`)
+						} else {
+							window.open(`https://shuffler.io/workflows/${data.objectID}`, "_blank")
+						}
+					}}
+					/>
+					: null}
+						
                 <Paper square style={paperAppStyle}>
-
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
                             <div
@@ -3058,7 +3126,7 @@ const Workflows2 = (props) => {
                                 }}
                             />
                         </Tooltip>
-                        : null}
+                    : null}
 
                     <Grid
                         item
@@ -3067,7 +3135,6 @@ const Workflows2 = (props) => {
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
 							{currTab === 2 ? null : 
 								<Tooltip title={`${relevantTrigger?.name}: ${relevantTrigger?.status}`} placement="bottom">
-
 									<div
 										style={{ cursor: "" }}
 										onClick={() => {
@@ -3183,6 +3250,7 @@ const Workflows2 = (props) => {
                                 </Typography>
                             </Tooltip>
                         </Grid>
+
                         <Grid item style={workflowActionStyle}>
                             {appGroup.length > 0 ?
                                 <div style={{ display: "flex", marginTop: 8, }}>
@@ -3437,7 +3505,7 @@ const Workflows2 = (props) => {
                     </Grid>
 
 					{showExecutionStats === true && foundTimeline !== undefined && foundTimeline?.timeline?.length > 0 && 
-					  <div style={{ margin: "40px 10px 0px 10px", paddingTop: 0, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+					  <div style={{ margin: "40px 10px 0px 10px", paddingTop: 0, borderTop: `1px solid ${theme.palette.text.secondary}`, zoom: 1.4 }}>
 						<LineChartWrapper 
 							inputname={""}
 							keys={foundTimeline?.timeline}
@@ -4922,7 +4990,7 @@ const Workflows2 = (props) => {
                                     }}
                                 />
                                 <Tab
-                                    label="Discover Workflows"
+                                    label="Community Workflows"
                                     style={{
                                         ...tabStyle,
                                         marginRight: 0,
@@ -4974,344 +5042,491 @@ const Workflows2 = (props) => {
                         </div>
 
 
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, paddingRight: 25, minHeight: 47 }}>
+						{currTab === 4 ? null : 
+                        	<div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, paddingRight: 25, minHeight: 47 }}>
 
-                            {currTab === 2 ? (
-                                <CustomSearchBox
-                                    searchQuery={searchQuery}
-                                    setSearchQuery={setSearchQuery}
-                                />
-                            ) : (
-                                <MuiChipsInput
-                                    style={{
-                                        width: "25%",
-                                        maxWidth: "25%",
-                                        minWidth: "25%",
-                                        height: 43,
-                                        maxHeight: "fit-content",
-                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                            zIndex: 1000,
-                                        color: theme.palette.textFieldStyle.color
-                                    }}
-                                    disabled={currTab === 2}
-                                    InputProps={{
-                                        style: {
-                                            height: "fit-content",
-                                            maxHeight: "fit-content",
-                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                            color: theme.palette.textFieldStyle.color
-                                        },
-                                        placeholder: "Filter Workflows",
-                                        // endAdornment: (
-                                        //     <InputAdornment position="end">
-                                        //         <SearchIcon style={{ color: 'white', paddingRight: 5 }} />
-                                        //     </InputAdornment>
-                                        // ),
-                                        onKeyDown: (e) => {
-                                            // Prevent default behavior for Enter and Backspace
-                                            if (e.key === 'Enter' || e.key === 'Backspace') {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                e.target.focus();
-                                            }
-                                        },
-                                    }}
-                                    clearInputOnBlur={false}
-                                    sx={{
-                                        // Container styling
-                                        '& .MuiOutlinedInput-root': {
-                                            height: "fit-content",
-                                            borderRadius: '4px',
-                                            color: theme.palette.textFieldStyle.color,
-                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                            '& fieldset': {
-                                                borderColor: 'rgba(255, 255, 255, 0.23)',
-                                            },
-                                            '&:hover fieldset': {
-                                                borderColor: 'rgba(255, 255, 255, 0.4)',
-                                            },
-                                        },
+                        	    {currTab === 2 ? (
+                        	        <CustomSearchBox
+                        	            searchQuery={searchQuery}
+                        	            setSearchQuery={setSearchQuery}
+                        	        />
+                        	    ) : 
+									(
+                        	        <MuiChipsInput
+                        	            style={{
+                        	                width: "25%",
+                        	                maxWidth: "25%",
+                        	                minWidth: "25%",
+                        	                height: 43,
+                        	                maxHeight: "fit-content",
+                        	                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        	                    zIndex: 1000,
+                        	                color: theme.palette.textFieldStyle.color
+                        	            }}
+                        	            disabled={currTab === 2}
+                        	            InputProps={{
+                        	                style: {
+                        	                    height: "fit-content",
+                        	                    maxHeight: "fit-content",
+                        	                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        	                    color: theme.palette.textFieldStyle.color
+                        	                },
+                        	                placeholder: "Filter Workflows",
+                        	                // endAdornment: (
+                        	                //     <InputAdornment position="end">
+                        	                //         <SearchIcon style={{ color: 'white', paddingRight: 5 }} />
+                        	                //     </InputAdornment>
+                        	                // ),
+                        	                onKeyDown: (e) => {
+                        	                    // Prevent default behavior for Enter and Backspace
+                        	                    if (e.key === 'Enter' || e.key === 'Backspace') {
+                        	                        e.preventDefault();
+                        	                        e.stopPropagation();
+                        	                        e.target.focus();
+                        	                    }
+                        	                },
+                        	            }}
+                        	            clearInputOnBlur={false}
+                        	            sx={{
+                        	                // Container styling
+                        	                '& .MuiOutlinedInput-root': {
+                        	                    height: "fit-content",
+                        	                    borderRadius: '4px',
+                        	                    color: theme.palette.textFieldStyle.color,
+                        	                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        	                    '& fieldset': {
+                        	                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                        	                    },
+                        	                    '&:hover fieldset': {
+                        	                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        	                    },
+                        	                },
 
-                                        // Adjust chip container to center vertically
-                                        '& .MuiInputBase-root': {
-                                            display: 'flex',
-                                            flexWrap: 'wrap',
-                                            gap: '4px',
-                                            fontSize: 18,
-                                            padding: '4px 8px',
-                                            alignItems: 'center',
-                                            height: "fit-content", // Match height
-                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                            color: theme.palette.textFieldStyle.color
-                                        },
+                        	                // Adjust chip container to center vertically
+                        	                '& .MuiInputBase-root': {
+                        	                    display: 'flex',
+                        	                    flexWrap: 'wrap',
+                        	                    gap: '4px',
+                        	                    fontSize: 18,
+                        	                    padding: '4px 8px',
+                        	                    alignItems: 'center',
+                        	                    height: "fit-content", // Match height
+                        	                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        	                    color: theme.palette.textFieldStyle.color
+                        	                },
 
-                                        // Rest of the styling remains the same...
-                                    }}
-                                    value={filters}
-                                    onChange={(chips) => {
-                                        setFilters(chips);
-                                        const remainingCategories = chips.map(chip => {
-                                            const match = chip.match(/\d+\.\s+(\w+)/i);
-                                            return match ? match[1] : chip;
-                                        }).filter(category => {
-                                            return usecases.some(usecase =>
-                                                usecase.name.toLowerCase().includes(category.toLowerCase())
-                                            );
-                                        });
+                        	                // Rest of the styling remains the same...
+                        	            }}
+                        	            value={filters}
+                        	            onChange={(chips) => {
+                        	                setFilters(chips);
+                        	                const remainingCategories = chips.map(chip => {
+                        	                    const match = chip.match(/\d+\.\s+(\w+)/i);
+                        	                    return match ? match[1] : chip;
+                        	                }).filter(category => {
+                        	                    return usecases.some(usecase =>
+                        	                        usecase.name.toLowerCase().includes(category.toLowerCase())
+                        	                    );
+                        	                });
 
-                                        setSelectedCategory(remainingCategories);
-                                        findWorkflow(chips);
+                        	                setSelectedCategory(remainingCategories);
+                        	                findWorkflow(chips);
 
-                                    }}
-                                //onAdd={(chip) => {
-                                //	console.log("ADd: ", chip);
-                                //	addFilter(chip);
-                                //}}
-                                //onDelete={(_, index) => {
-                                //	console.log("Remove: ", index);
-                                //	removeFilter(index);
-                                //}}
-                                />
-                            )}
+                        	            }}
+                        	        //onAdd={(chip) => {
+                        	        //	console.log("ADd: ", chip);
+                        	        //	addFilter(chip);
+                        	        //}}
+                        	        //onDelete={(_, index) => {
+                        	        //	console.log("Remove: ", index);
+                        	        //	removeFilter(index);
+                        	        //}}
+                        	        />
+                        	    )}
 
-                            {
-                                currTab !== 2 && (
-                                    <Select
-                                        fullWidth
-                                        variant="outlined"
-                                        value={selectedCategory}
-                                        onChange={handleCategoryChange}
-                                        displayEmpty
-                                        disabled={currTab === 2}
-                                        multiple
-                                        style={{
-                                            width: "25%",
-                                            minWidth: "25%",
-                                            maxWidth: "25%",
-                                            height: 47,
-                                            borderRadius: 4,
-                                            fontSize: 18,
-                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                            fontFamily: theme.typography?.fontFamily,
-                                        }}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': {
-                                                    borderColor: 'rgba(255, 255, 255, 0.23)',
-                                                },
-                                            },
-                                        }}
-                                        renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
-                                    >
-                                        <MenuItem disabled value="">
-                                            All Categories
-                                        </MenuItem>
-                                        {usecases.map((usecase, index) => {
-                                            if (usecase?.name === "5. Verify") {
-                                                return null;
-                                            }
+                        	    {
+                        	        currTab !== 2 && (
+                        	            <Select
+                        	                fullWidth
+                        	                variant="outlined"
+                        	                value={selectedCategory}
+                        	                onChange={handleCategoryChange}
+                        	                displayEmpty
+                        	                disabled={currTab === 2}
+                        	                multiple
+                        	                style={{
+                        	                    width: "25%",
+                        	                    minWidth: "25%",
+                        	                    maxWidth: "25%",
+                        	                    height: 47,
+                        	                    borderRadius: 4,
+                        	                    fontSize: 18,
+                        	                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        	                    fontFamily: theme.typography?.fontFamily,
+                        	                }}
+                        	                sx={{
+                        	                    '& .MuiOutlinedInput-root': {
+                        	                        '& fieldset': {
+                        	                            borderColor: 'rgba(255, 255, 255, 0.23)',
+                        	                        },
+                        	                    },
+                        	                }}
+                        	                renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+                        	            >
+                        	                <MenuItem disabled value="">
+                        	                    All Categories
+                        	                </MenuItem>
+                        	                {usecases.map((usecase, index) => {
+                        	                    if (usecase?.name === "5. Verify") {
+                        	                        return null;
+                        	                    }
 
-                                            const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length / usecase.list.length * 100) : 0
-                                            if (percentDone === 0) {
-                                                usecase = findMatches(usecase, workflows)
-                                            }
+                        	                    const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length / usecase.list.length * 100) : 0
+                        	                    if (percentDone === 0) {
+                        	                        usecase = findMatches(usecase, workflows)
+                        	                    }
 
-                                            const category = usecase?.name.split(" ")[1]
-                                            return (
-                                                <MenuItem
-                                                    value={category}
-                                                    onClick={() => {
-                                                        if (!filters.includes(usecase?.name.toLowerCase())) {
-                                                            addFilter(usecase.name)
-                                                        } else {
-                                                            removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
-                                                        }
-                                                    }}
-                                                    sx={{
-                                                        padding: "12px 16px",
-                                                        borderBottom: index === usecases.length - 2 ? "none" : "1px solid rgba(255,255,255,0.05)",
-                                                        "&:hover": {
-                                                            backgroundColor: "rgba(255,255,255,0.1)"
-                                                        },
-                                                    }}
-                                                >
-                                                    <div style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        width: "100%",
-                                                        gap: "12px"
-                                                    }}>
-                                                        <Checkbox
-                                                            checked={selectedCategory.includes(category)}
-                                                            style={{
-                                                                padding: 0,
-                                                                marginRight: 8,
-                                                                color: theme.palette.textFieldStyle.color,
-                                                            }}
-                                                        />
-                                                        <div style={{
-                                                            display: "flex",
-                                                            justifyContent: "space-between",
-                                                            alignItems: "center",
-                                                            width: "100%"
-                                                        }}>
-                                                            <Typography
-                                                                variant="body1"
-                                                                style={{
-                                                                    color: theme.palette.textFieldStyle.color,
-                                                                    fontWeight: selectedCategory.includes(category) ? 500 : 400
-                                                                }}
-                                                            >
-                                                                {category}
-                                                            </Typography>
-                                                            <Typography
-                                                                variant="body2"
-                                                                style={{
-                                                                    color: theme.palette.textFieldStyle.color,
-                                                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                                                    padding: "2px 8px",
-                                                                    borderRadius: "12px",
-                                                                    fontSize: "0.75rem"
-                                                                }}
-                                                            >
-                                                                {usecase?.matches.length}/{usecase?.list.length}
-                                                            </Typography>
-                                                        </div>
-                                                    </div>
-                                                </MenuItem>
-                                            )
-                                        })}
-                                    </Select>
-                                )
-                            }
-                            {
-                                currTab === 2 && (
-                                    <CustomCategoryDropdown attribute="usecase_ids" limit={20} />
-                                )
-                            }
+                        	                    const category = usecase?.name.split(" ")[1]
+                        	                    return (
+                        	                        <MenuItem
+                        	                            value={category}
+                        	                            onClick={() => {
+                        	                                if (!filters.includes(usecase?.name.toLowerCase())) {
+                        	                                    addFilter(usecase.name)
+                        	                                } else {
+                        	                                    removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
+                        	                                }
+                        	                            }}
+                        	                            sx={{
+                        	                                padding: "12px 16px",
+                        	                                borderBottom: index === usecases.length - 2 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                        	                                "&:hover": {
+                        	                                    backgroundColor: "rgba(255,255,255,0.1)"
+                        	                                },
+                        	                            }}
+                        	                        >
+                        	                            <div style={{
+                        	                                display: "flex",
+                        	                                alignItems: "center",
+                        	                                width: "100%",
+                        	                                gap: "12px"
+                        	                            }}>
+                        	                                <Checkbox
+                        	                                    checked={selectedCategory.includes(category)}
+                        	                                    style={{
+                        	                                        padding: 0,
+                        	                                        marginRight: 8,
+                        	                                        color: theme.palette.textFieldStyle.color,
+                        	                                    }}
+                        	                                />
+                        	                                <div style={{
+                        	                                    display: "flex",
+                        	                                    justifyContent: "space-between",
+                        	                                    alignItems: "center",
+                        	                                    width: "100%"
+                        	                                }}>
+                        	                                    <Typography
+                        	                                        variant="body1"
+                        	                                        style={{
+                        	                                            color: theme.palette.textFieldStyle.color,
+                        	                                            fontWeight: selectedCategory.includes(category) ? 500 : 400
+                        	                                        }}
+                        	                                    >
+                        	                                        {category}
+                        	                                    </Typography>
+                        	                                    <Typography
+                        	                                        variant="body2"
+                        	                                        style={{
+                        	                                            color: theme.palette.textFieldStyle.color,
+                        	                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        	                                            padding: "2px 8px",
+                        	                                            borderRadius: "12px",
+                        	                                            fontSize: "0.75rem"
+                        	                                        }}
+                        	                                    >
+                        	                                        {usecase?.matches.length}/{usecase?.list.length}
+                        	                                    </Typography>
+                        	                                </div>
+                        	                            </div>
+                        	                        </MenuItem>
+                        	                    )
+                        	                })}
+                        	            </Select>
+                        	        )
+                        	    }
+                        	    {
+                        	        currTab === 2 && (
+                        	            <CustomCategoryDropdown attribute="usecase_ids" limit={20} />
+                        	        )
+                        	    }
 
-                            <div style={{ width: "50%", minWidth: "50%", maxWidth: "50%", height: 47, display: "flex", gap: 5 }}>
-                                <div style={{
-                                    display: "flex",
-                                    height: "100%",
-                                    justifyContent: "space-around",
-                                    flex: 0.7,
-                                    paddingLeft: 1,
-                                    paddingRight: 1,
-                                    gap: 4
-                                }}>
+                        	    <div style={{ width: "50%", minWidth: "50%", maxWidth: "50%", height: 47, display: "flex", gap: 5 }}>
+                        	        <div style={{
+                        	            display: "flex",
+                        	            height: "100%",
+                        	            justifyContent: "space-around",
+                        	            flex: 0.7,
+                        	            paddingLeft: 1,
+                        	            paddingRight: 1,
+                        	            gap: 4
+                        	        }}>
 
-                                    <Tooltip title="Show/Hide Workflow Runs for top workflows" placement="top">
-                                        <IconButton
-                                            style={currTab === 2 ? iconButtonDisabledStyle : {...iconButtonStyle, color: showExecutionStats ? "#1a1a1a" : theme.palette.text.primary, background: showExecutionStats ? theme.palette.primary.main : theme.palette.platformColor}}
-                                            onClick={() => {
+                        	            <Tooltip title="Show/Hide Workflow Runs for top workflows" placement="top">
+                        	                <IconButton
+                        	                    style={currTab === 2 ? iconButtonDisabledStyle : {...iconButtonStyle, color: showExecutionStats ? "#1a1a1a" : theme.palette.text.primary, background: showExecutionStats ? theme.palette.primary.main : theme.palette.platformColor}}
+                        	                    onClick={() => {
 
-                                                const newView = !showExecutionStats
-                                                localStorage.setItem("showExecutionStats", newView)
-												setShowExecutionStats(!showExecutionStats)
-											}}
-                                            disabled={currTab === 2}
-                                        >
-                                            <BarChartIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                        	                        const newView = !showExecutionStats
+                        	                        localStorage.setItem("showExecutionStats", newView)
+													setShowExecutionStats(!showExecutionStats)
+												}}
+                        	                    disabled={currTab === 2}
+                        	                >
+                        	                    <BarChartIcon />
+                        	                </IconButton>
+                        	            </Tooltip>
 
-                                    <Tooltip title="Explore Workflow Runs (debugger)" placement="top">
-                                        <IconButton
-                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
-                                            onClick={() => navigate("/workflows/debug")}
-                                            disabled={currTab === 2}
-                                        >
-                                            <QueryStatsIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
-                                        </IconButton>
-                                    </Tooltip>
+                        	            <Tooltip title="Explore Workflow Runs (debugger)" placement="top">
+                        	                <IconButton
+                        	                    style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
+                        	                    onClick={() => navigate("/workflows/debug")}
+                        	                    disabled={currTab === 2}
+                        	                >
+                        	                    <QueryStatsIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
+                        	                </IconButton>
+                        	            </Tooltip>
 
-                                    <Tooltip title={view === "grid" ? "List view (Org Workflows only)" : "Grid view"} placement="top">
-                                        <IconButton
-                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
-                                            onClick={() => {
-                                                const newView = view === "grid" ? "list" : "grid";
-                                                localStorage.setItem("workflowView", newView);
-                                                setView(newView);
+                        	            <Tooltip title={view === "grid" ? "List view (Org Workflows only)" : "Grid view"} placement="top">
+                        	                <IconButton
+                        	                    style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
+                        	                    onClick={() => {
+                        	                        const newView = view === "grid" ? "list" : "grid";
+                        	                        localStorage.setItem("workflowView", newView);
+                        	                        setView(newView);
 
-												if (view === "grid") {
-													setCurrTab(0)
-												}
-                                            }}
-                                            disabled={currTab === 2}
-                                        >
-                                            {view === "grid" ?
-                                                <ListIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} /> :
-                                                <GridOnIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
-                                            }
-                                        </IconButton>
-                                    </Tooltip>
+													if (view === "grid") {
+														setCurrTab(0)
+													}
+                        	                    }}
+                        	                    disabled={currTab === 2}
+                        	                >
+                        	                    {view === "grid" ?
+                        	                        <ListIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} /> :
+                        	                        <GridOnIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
+                        	                    }
+                        	                </IconButton>
+                        	            </Tooltip>
 
-                                    <Tooltip title="Import workflows" placement="top">
-                                        <IconButton
-                                            style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
-                                            onClick={() => upload.click()}
-                                            disabled={currTab === 2}
-                                        >
-                                            {submitLoading ?
-                                                <CircularProgress color="secondary" /> :
-                                                <PublishIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
-                                            }
-                                        </IconButton>
-                                    </Tooltip>
+                        	            <Tooltip title="Import workflows" placement="top">
+                        	                <IconButton
+                        	                    style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
+                        	                    onClick={() => upload.click()}
+                        	                    disabled={currTab === 2}
+                        	                >
+                        	                    {submitLoading ?
+                        	                        <CircularProgress color="secondary" /> :
+                        	                        <PublishIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
+                        	                    }
+                        	                </IconButton>
+                        	            </Tooltip>
 
-                                    <input
-                                        hidden
-                                        type="file"
-                                        multiple="multiple"
-                                        ref={(ref) => (upload = ref)}
-                                        onChange={importFiles}
-                                    />
+                        	            <input
+                        	                hidden
+                        	                type="file"
+                        	                multiple="multiple"
+                        	                ref={(ref) => (upload = ref)}
+                        	                onChange={importFiles}
+                        	            />
 
-                                    <Tooltip title={`Download ALL workflows (${workflows.length})`} placement="top">
-                                        <IconButton
-                                            style={(isCloud || currTab === 2) ? iconButtonDisabledStyle : { ...iconButtonStyle, cursor: "pointer" }}
-                                            disabled={isCloud || currTab === 2}
-                                            onClick={() => exportAllWorkflows(workflows)}
-                                        >
-                                            <GetAppIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
-                                        </IconButton>
-                                    </Tooltip>
-                                </div>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={handleCreateWorkflow}
-                                    id="create_workflow_button"
-                                    style={{
-                                        borderRadius: 4,
-                                        flex: 0.8,
-                                        textTransform: 'none',
-                                        fontFamily: theme.typography?.fontFamily,
-                                        fontSize: 16,
-                                        fontWeight: 500
-                                    }}
-                                    startIcon={<Add/>}
-                                >
-                                    Create Workflow
-                                </Button>
-                            </div>
+                        	            <Tooltip title={`Download ALL workflows (${workflows.length})`} placement="top">
+                        	                <IconButton
+                        	                    style={(isCloud || currTab === 2) ? iconButtonDisabledStyle : { ...iconButtonStyle, cursor: "pointer" }}
+                        	                    disabled={isCloud || currTab === 2}
+                        	                    onClick={() => exportAllWorkflows(workflows)}
+                        	                >
+                        	                    <GetAppIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
+                        	                </IconButton>
+                        	            </Tooltip>
+                        	        </div>
+                        	        <Button
+                        	            variant="contained"
+                        	            color="primary"
+                        	            onClick={handleCreateWorkflow}
+                        	            id="create_workflow_button"
+                        	            style={{
+                        	                borderRadius: 4,
+                        	                flex: 0.8,
+                        	                textTransform: 'none',
+                        	                fontFamily: theme.typography?.fontFamily,
+                        	                fontSize: 16,
+                        	                fontWeight: 500
+                        	            }}
+                        	            startIcon={<AddIcon />}
+                        	        >
+                        	            Create Workflow
+                        	        </Button>
+                        	    </div>
+                        	</div>
+						}
+						
+						{!isCloud ? (
+						  <div
+						   	style={{
+							  display: "flex",
+							  alignItems: "center",
+							  gap: 20,
+							  padding: "4px 10px",
+							  marginLeft: "5px",
+							  marginRight: "5px",
+							  borderRadius: 20,
+							  marginBottom: "14px",
+							  background: isProdStatusOn
+								? "rgba(43, 192, 126, 0.1)"
+								: "rgba(255, 82, 82, 0.1)",
+								cursor: "pointer",
+							  position: "absolute",
+							  top: 20,
+							  right: 20,
+							}}
+							onClick={() => {
+							  navigate("/admin?admin_tab=billingstats")
+							}}
+						  >
+							<span
+							  style={{
+								  width: 8,
+								  height: 8,
+								  marginLeft: 10,
+								  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+								  borderRadius: 999,
+								  display: "inline", 
+							  }}
+							/>
+							  <Typography
+								style={{
+								  fontFamily: "12px",
+								  opacity: 0.9,
+								  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+								 }}
+							  >
+								{isProdStatusOn ? "Production" : "NOT Production"} 
+							  </Typography>
+						  </div>
+					  ) : null}
 
-
-                        </div>
                         <div style={{
                             width: "100%",
                             position: "relative",
                             zIndex: 1
                         }}>
+
+
                             {
                                 (isLoadingWorkflow && currTab !== 2) ? (
                                     <LoadingWorkflowGrid />
                                 ) : (
                                     view === "grid" && currTab !== 2 ? (
                                         <>
-                                            <div style={{
-                                                marginTop: 16,
+											{currTab === 4 && backgroundWorkflows.map((data, index) => {
+												if (data.triggers.length === 0) {
+													return null
+												}
+
+												var foundWebhook = ""
+												var foundtrigger = {}
+												for (var triggerKey in data.triggers) {
+													if (data.triggers[triggerKey].trigger_type === "WEBHOOK") {
+														foundWebhook = `${globalUrl}/api/v1/hooks/webhook_${data.triggers[triggerKey].id}`
+														foundtrigger = data.triggers[triggerKey]
+														break
+													}
+												}
+
+												if (foundWebhook === "") {
+													return null
+												}
+
+												var webhookName = ``
+												if (data?.name?.toLowerCase().includes("ingest tickets")) {
+													webhookName = "Send your Tickets, Alerts, Cases and Detections here. This will ingest them into Shuffle."
+												}
+
+												return (
+													<div style={{padding: 50, }} 
+														onMouseEnter={() => {
+															// Find the relevant workflow paper and highlight it
+															const foundElement = document.getElementById(`workflowbox-${data.id}`)
+															if (foundElement) {
+																foundElement.style.border = `3px solid ${theme.palette.primary.main}`
+															}
+														}}
+														onMouseLeave={() => {
+															const foundElement = document.getElementById(`workflowbox-${data.id}`)
+															if (foundElement) {
+																foundElement.style.border = null
+															}
+														}}
+													>
+														<Typography variant="body1" style={{ marginBottom: 10, fontFamily: theme.typography?.fontFamily, display: "flex", alignItems: "center", gap: 10 }}>
+															{webhookName} 
+														</Typography>
+
+														<TextField
+															value={foundWebhook}
+															readOnly
+															fullWidth
+															disabled
+
+															// Add start adornment with webhook icon
+															InputProps={{
+																startAdornment: (
+																	<InputAdornment position="start">
+																		<img 
+																			alt="webhook" 
+																			src={wfTriggers[0].large_image} 
+																			style={{
+																				width: 40, 
+																				height: 40,
+																				marginRight: 20,
+																				border: foundtrigger.status === "Running" || foundtrigger.status === "running" ? `2px solid ${green}` : `2px solid ${red}`,
+																				borderRadius: theme.palette.borderRadius,
+																			}}
+																		/>
+
+																		<Tooltip title={"Copy to clipboard"} placement="top">
+																			<IconButton
+																				onClick={() => {
+																					if (navigator.clipboard === undefined) {
+																						toast("Your browser doesn't support clipboard copying, please copy manually.", { type: "error" });
+																					} else {
+																						navigator.clipboard.writeText(foundWebhook);
+																					}
+																				}}
+																				style={{
+																					color: theme.palette.textFieldStyle.color,
+																					backgroundColor: theme.palette.platformColor,
+																					marginRight: 10,
+																					borderRadius: 4,
+																				}}
+																				id="copy_webhook_url_button"
+																			>
+																				<ContentCopyIcon style={{ color: theme.palette.textFieldStyle.color }} />
+																			</IconButton>
+																		</Tooltip>
+																	</InputAdornment>
+																),
+																style: {
+																	color: theme.palette.textFieldStyle.color,
+																	backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+																}
+															}}
+														/>
+													</div>
+												)
+											})}
+
+											<div style={{
+                                                marginTop: 32,
                                                 width: "100%",
                                                 display: "grid",
                                                 gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",

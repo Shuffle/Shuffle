@@ -25,6 +25,7 @@ import AgentUI from "./views/AgentUI.jsx";
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
 import DashboardView from "./views/DashboardViews.jsx";
+import NewDashboard from "./views/NewDashboard.jsx";
 import AdminSetup from "./views/AdminSetup.jsx";
 import Admin from "./views/Admin.jsx";
 import Docs from "./views/Docs.jsx";
@@ -167,6 +168,47 @@ const App = (message, props) => {
       });
   };
 
+  useEffect(() => {
+		if (userdata && 
+			userdata?.org_status?.includes("integration_partner") && 
+			userdata?.active_org?.image) { 
+
+			const existingLinks = document.querySelectorAll("link[rel*='icon']");
+			existingLinks.forEach(link => link.parentNode.removeChild(link));
+			const newLink = document.createElement('link');
+			newLink.rel = 'icon';
+			newLink.type = 'image/x-icon'; 
+			try {
+			if (typeof userdata.active_org.image === 'string') {
+				if (userdata.active_org.image.startsWith('data:')) {
+				newLink.href = userdata.active_org.image;
+				} else if (userdata.active_org.image.startsWith('/')) {
+				newLink.href = userdata.active_org.image;
+				} else {
+					let mimeType = 'image/png';
+					newLink.href = `data:${mimeType};base64,${userdata.active_org.image}`;
+				}
+			} else {
+				console.error("Image data is not in expected format:", userdata.active_org.image);
+				return;
+			}
+			
+			// Add the new favicon link to head
+			document.head.appendChild(newLink);
+			const iframe = document.createElement('iframe');
+			iframe.style.display = 'none';
+			document.body.appendChild(iframe);
+			iframe.contentDocument.write('<link rel="icon" href="' + newLink.href + '">');
+			setTimeout(() => {
+				document.body.removeChild(iframe);
+			}, 100);
+			
+			} catch (error) {
+			console.error("Error updating favicon:", error);
+			}
+		}
+		}, [userdata]);
+
   const checkLogin = () => {
     var baseurl = globalUrl;
     fetch(`${globalUrl}/api/v1/getinfo`, {
@@ -180,6 +222,13 @@ const App = (message, props) => {
         var userInfo = {};
         if (responseJson.success === true) {
           //console.log("USER: ", responseJson);
+		  if (responseJson?.switch_parent === true) {
+			toast.info(responseJson.reason)
+			setTimeout(() => {
+				window.location.reload();
+			}, 3000);
+			return
+		  }
 
           userInfo = responseJson;
           setIsLoggedIn(true);
@@ -824,6 +873,21 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
+			<Route
+				exact
+				path="/new-dashboard"
+				element={
+					<NewDashboard
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						userdata={userdata}
+					/>
+				}
+			/>
+
 			<Route
 				exact
 				path="/dashboard"

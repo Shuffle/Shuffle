@@ -143,6 +143,7 @@ const Detection = (props)  => {
               size="small"
               sx={{ mr: 2 }}
               value={searchQuery}
+	  		  disabled
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {/* <Button

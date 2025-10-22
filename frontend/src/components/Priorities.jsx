@@ -1362,10 +1362,10 @@ print('"' + encoded + '"')
 			<div style={{ maxHeight: 1700, overflowY: "auto", width: '100%', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
 				<div style={{ maxWidth: "calc(100% - 20px)" }}>
 					<Typography variant="h5" style={{ fontSize: 24, fontWeight: 500, textAlign: "left" }}>
-						Notification Workflow
+						Error Workflow
 					</Typography>
 					<Typography color="textSecondary" style={{ fontSize: 16, fontWeight: 400, marginTop: 5, }}>
-						The notification workflow triggers when an error occurs in one of your workflows. Each individual one will only start a workflow once every 2 minutes. <b>You can point child org notifications into the parent org notification by choosing it in the list.</b>
+						The error workflow triggers when an error occurs in one of your workflows. Each individual one will only start a workflow once every 2 minutes. <b>You can point child org errors to a parent org's error workflow by choosing it in the list.</b>
 					</Typography>
 
 					{modalView}
@@ -1518,6 +1518,7 @@ print('"' + encoded + '"')
 							/>
 							:
 							<TextField
+								disabled={workflows === undefined || workflows === null || workflows.length === 0}
 								required
 								InputProps={{
 									style: {
@@ -1614,12 +1615,12 @@ print('"' + encoded + '"')
 						</div>
 					}
 
-					<Typography variant="h5" style={{ marginTop: 50, fontSize: 24, display: clickedFromOrgTab ? null : "inline", marginBottom: clickedFromOrgTab ? 8 : null, }}>Notifications ({
+					<Typography variant="h5" style={{ marginTop: 50, fontSize: 24, display: clickedFromOrgTab ? null : "inline", marginBottom: clickedFromOrgTab ? 8 : null, }}>Errors ({
 						notifications?.filter((notification) => showRead === true || notification.read === false).length
 					})</Typography>
 
 					<Typography variant="body2" color="textSecondary" style={{ fontSize: 16, marginLeft: clickedFromOrgTab ? null : 25, color: clickedFromOrgTab ? "#9E9E9E" : null, }}>
-						Notifications help you find potential problems with your workflows and apps.&nbsp;
+						Error help you find potential problems with your workflows and apps.&nbsp;
 						<a
 							target="_blank"
 							rel="noopener noreferrer"

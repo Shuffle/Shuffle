@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, memo, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 
 import {getTheme} from '../theme.jsx';
 import classNames from "classnames";
@@ -73,6 +73,7 @@ const AppStats = (defaultprops) => {
   const [resultRows, setResultRows] = useState([])
   const [resultLoading, setResultLoading] = useState(true)
   const { themeMode, brandColor } = useContext(Context);
+  const [onpremAppRuns, setOnpremAppRuns] = useState(0)
   const theme = getTheme(themeMode, brandColor)
   
   const includedExecutions = selectedOrganization?.sync_features?.app_executions !== undefined ? selectedOrganization?.sync_features?.app_executions?.limit : 0 
@@ -83,11 +84,155 @@ const AppStats = (defaultprops) => {
 	  }
   }, [])
 
+  const handleDataSetting = useCallback((inputdata, grouping) => {
+		if (inputdata === undefined || inputdata === null) {
+			return 
+		}
+
+		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
+		const dailyStats = inputdata[statKey]
+		if (dailyStats === undefined || dailyStats === null) {
+			return
+		}
+
+		var appRuns = {
+			"key": "App Runs",
+			"data": []
+		}
+
+		var childorgappRuns = {
+			"key": "Child Org App Runs",
+			"data": []
+		}
+
+		var workflowRuns = {
+			"key": "Workflow Runs (includes subflows)",
+			"data": []
+		}
+
+		var subflowRuns = {
+			"key": "Subflow Runs",
+			"data": []
+		}
+
+		var appcostRuns = {
+			"key": "Cost of App Runs",
+			"data": []
+		}
+
+		for (let key in dailyStats) {
+			// Always skips first one as it has accumulated data in it
+			if (key === 0) {
+				continue
+			}
+
+			const item = dailyStats[key]
+			if (item["date"] === undefined) {
+				console.log("No date: ", item)
+				continue
+			}
+
+			// Check if app_executions key in item
+			if (item["app_executions"] !== undefined && item["app_executions"] !== null) {
+				appRuns["data"].push({
+					key: new Date(item["date"]).toISOString(), 
+					data: item["app_executions"]
+				})
+
+				// Add number 
+				appcostRuns["data"].push({
+					key: new Date(item["date"]).toISOString(),
+					data: (item["app_executions"] * invocationCost).toFixed(2)
+				})
+			} 
+
+			if (item["child_app_executions"] !== undefined && item["child_app_executions"] !== null) {
+				childorgappRuns["data"].push({
+					key: new Date(item["date"]).toISOString(),
+					data: item["child_app_executions"]
+				})
+			}
+
+			// Check if workflow_executions key in item
+			if (item["workflow_executions"] !== undefined && item["workflow_executions"] !== null) {
+				workflowRuns["data"].push({
+					key: new Date(item["date"]).toISOString(),
+					data: item["workflow_executions"]
+				})
+			}
+
+			if (item["subflow_executions"] !== undefined && item["subflow_executions"] !== null) {
+				subflowRuns["data"].push({
+					key: new Date(item["date"]).toISOString(),
+					data: item["subflow_executions"]
+				})
+			}
+		}
+
+		// Only add today's data if endTime is not set or if today falls within the selected date range
+		const today = new Date()
+		const todayStartOfDay = new Date(today)
+		todayStartOfDay.setHours(0, 0, 0, 0)
+		const shouldAddTodayData = endTime === "" || endTime === undefined || endTime === null || 
+			(new Date(endTime) >= todayStartOfDay)
+
+		if (!syncStats && shouldAddTodayData) {
+			// Adds data for today 
+			if (inputdata["daily_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
+				appRuns["data"].push({
+					key: new Date().toISOString(),
+					data: inputdata["daily_app_executions"]
+				})
+
+				appcostRuns["data"].push({
+					key: new Date().toISOString(),
+					data: (inputdata["daily_app_executions"] * invocationCost).toFixed(2)
+				})
+			}
+
+			if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
+				childorgappRuns["data"].push({
+					key: new Date().toISOString(),
+					data: inputdata["daily_child_app_executions"]
+				})
+			}
+
+			if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
+				workflowRuns["data"].push({
+					key: new Date().toISOString(),
+					data: inputdata["daily_workflow_executions"]
+				})
+			}
+
+			if (inputdata["daily_subflow_executions"] !== undefined && inputdata["daily_subflow_executions"] !== null) {
+				subflowRuns["data"].push({
+					key: new Date().toISOString(),
+					data: inputdata["daily_subflow_executions"]
+				})
+			}
+		}
+
+		// Only for parent orgs
+		if (childorgappRuns["data"].length > 0) {
+	  		setChildOrgsAppRuns(childorgappRuns)
+		}
+
+		setSubflowRuns(subflowRuns)
+		setWorkflowRuns(workflowRuns)
+		setAppruns(appRuns)
+		setApprunCosts(appcostRuns)
+	}, [syncStats, endTime, startTime])
+
   useEffect(() => {
 	if (statistics && statistics?.org_id?.length > 0) {
 		handleDataSetting(statistics, "day")
 	}
 }, [statistics])
+
+  useEffect(() => {
+	setStartTime("")
+	setEndTime("")
+  }, [currentTab])
 
   const getWorkflowStats = async (workflow, startTime, endTime) => {
 
@@ -227,7 +372,7 @@ const AppStats = (defaultprops) => {
 		}
 
 		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
-		if (statistics[statKey] === undefined || statistics[statKey] === null) {
+		if (!syncStats && (statistics[statKey] === undefined || statistics[statKey] === null)) {
 			setFilteredStatistics(statistics)
 			setMonthlyAppRunsParent(statistics["monthly_app_executions"] ?? 0)
 			return
@@ -356,16 +501,54 @@ const AppStats = (defaultprops) => {
 				workflowexecutions += item["workflow_executions"]
 				appexecutions += item["app_executions"]
 
-				if (currentTab === 0) {
+				if (currentTab === 0 || currentTab === 3) {
 					appexecutions += (item["child_app_executions"] ?? 0)
 				}
 
 				estimatedcost += (item["app_executions"] * invocationCost)
 			}
 
+			const today = new Date();
+			const isCurrentMonthSelected =
+				(startTime === "" && endTime === "") ||
+				(
+					new Date(foundstarttime).getMonth() === today.getMonth() &&
+					new Date(foundstarttime).getFullYear() === today.getFullYear() &&
+					new Date(foundendtime).getMonth() === today.getMonth() &&
+					new Date(foundendtime).getFullYear() === today.getFullYear()
+			 );
+
+			if (!syncStats && isCurrentMonthSelected) {
+				if (statistics["daily_app_executions"] !== undefined && statistics["daily_app_executions"] !== null) {
+					appexecutions += statistics["daily_app_executions"] + (statistics["daily_child_app_executions"] ?? 0)
+				}
+			}
+
 			tmpstats["monthly_workflow_executions"] = workflowexecutions
 			tmpstats["monthly_app_executions"] = appexecutions
+			if (syncStats) {
+				setOnpremAppRuns(appexecutions)
+			}
+		} else {
+			const today = new Date();
+			const isCurrentMonthSelected =
+				(startTime === "" && endTime === "") ||
+				(
+					new Date(foundstarttime).getMonth() === today.getMonth() &&
+					new Date(foundstarttime).getFullYear() === today.getFullYear() &&
+					new Date(foundendtime).getMonth() === today.getMonth() &&
+					new Date(foundendtime).getFullYear() === today.getFullYear()
+			 );
+			 
+			if (!syncStats && isCurrentMonthSelected) {
+				if (statistics["daily_app_executions"] !== undefined && statistics["daily_app_executions"] !== null) {
+					appexecutions += statistics["daily_app_executions"] + (statistics["daily_child_app_executions"] ?? 0)
+				}
+			}
+
+			tmpstats["monthly_app_executions"] = appexecutions
 		}
+
 
 		// Make estimatedcost have max 2 decimals
 		if (isCloud) {
@@ -380,11 +563,11 @@ const AppStats = (defaultprops) => {
 		handleDataSetting(tmpstats, "day")
 		// if we have done monthly reset than only show monthly app runs as current month app run
 		const currentMonth = new Date().getMonth() + 1
-		if (!monthlyAppRunsParent && statistics["monthly_app_executions"] > 0 && currentMonth === statistics["last_monthly_reset_month"]) {
+		if (!syncStats && !monthlyAppRunsParent && statistics["monthly_app_executions"] > 0 && currentMonth === statistics["last_monthly_reset_month"]) {
 			setMonthlyAppRunsParent(statistics["monthly_app_executions"])
 		}
 
-		if (!monthlyAllSuborgExecutions && statistics["monthly_child_app_executions"]> 0 && currentMonth === statistics["last_monthly_reset_month"]) {
+		if (!syncStats && !monthlyAllSuborgExecutions && statistics["monthly_child_app_executions"]> 0 && currentMonth === statistics["last_monthly_reset_month"]) {
 			setMonthlyAllSuborgExecutions(statistics["monthly_child_app_executions"])
 		}
 
@@ -397,7 +580,7 @@ const AppStats = (defaultprops) => {
 			loadWorkflowStats(foundWorkflows, startTime, endTime)
 		}
 
-	}, [statistics, startTime, endTime])
+	}, [statistics, startTime, endTime, syncStats, currentTab, handleDataSetting])
 
 	const handleStartTimeChange = (date) => {
 		setStartTime(date)
@@ -405,143 +588,6 @@ const AppStats = (defaultprops) => {
 	
 	const handleEndTimeChange = (date) => {
 		setEndTime(date)
-	}
-
-	const handleDataSetting = (inputdata, grouping) => {
-		if (inputdata === undefined || inputdata === null) {
-			return 
-		}
-
-		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
-		const dailyStats = inputdata[statKey]
-		if (dailyStats === undefined || dailyStats === null) {
-			return
-		}
-
-		var appRuns = {
-			"key": "App Runs",
-			"data": []
-		}
-
-		var childorgappRuns = {
-			"key": "Child Org App Runs",
-			"data": []
-		}
-
-		var workflowRuns = {
-			"key": "Workflow Runs (includes subflows)",
-			"data": []
-		}
-
-		var subflowRuns = {
-			"key": "Subflow Runs",
-			"data": []
-		}
-
-		var appcostRuns = {
-			"key": "Cost of App Runs",
-			"data": []
-		}
-
-		for (let key in dailyStats) {
-			// Always skips first one as it has accumulated data in it
-			if (key === 0) {
-				continue
-			}
-
-			const item = dailyStats[key]
-			if (item["date"] === undefined) {
-				console.log("No date: ", item)
-				continue
-			}
-
-			// Check if app_executions key in item
-			if (item["app_executions"] !== undefined && item["app_executions"] !== null) {
-				appRuns["data"].push({
-					key: new Date(item["date"]), 
-					data: item["app_executions"]
-				})
-
-				// Add number 
-				appcostRuns["data"].push({
-					key: new Date(item["date"]),
-					data: (item["app_executions"] * invocationCost).toFixed(2)
-				})
-			} 
-
-			if (item["child_app_executions"] !== undefined && item["child_app_executions"] !== null) {
-				childorgappRuns["data"].push({
-					key: new Date(item["date"]),
-					data: item["child_app_executions"]
-				})
-			}
-
-			// Check if workflow_executions key in item
-			if (item["workflow_executions"] !== undefined && item["workflow_executions"] !== null) {
-				workflowRuns["data"].push({
-					key: new Date(item["date"]),
-					data: item["workflow_executions"]
-				})
-			}
-
-			if (item["subflow_executions"] !== undefined && item["subflow_executions"] !== null) {
-				subflowRuns["data"].push({
-					key: new Date(item["date"]),
-					data: item["subflow_executions"]
-				})
-			}
-		}
-
-		// Only add today's data if endTime is not set or if today falls within the selected date range
-		const today = new Date()
-		const shouldAddTodayData = endTime === "" || endTime === undefined || endTime === null || 
-			(new Date(endTime) >= today.setHours(0, 0, 0, 0))
-
-		if (shouldAddTodayData) {
-			// Adds data for today 
-			if (inputdata["daily_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
-				appRuns["data"].push({
-					key: new Date(),
-					data: inputdata["daily_app_executions"]
-				})
-
-				appcostRuns["data"].push({
-					key: new Date(),
-					data: (inputdata["daily_app_executions"] * invocationCost).toFixed(2)
-				})
-			}
-
-			if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
-				childorgappRuns["data"].push({
-					key: new Date(),
-					data: inputdata["daily_child_app_executions"]
-				})
-			}
-
-			if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
-				workflowRuns["data"].push({
-					key: new Date(),
-					data: inputdata["daily_workflow_executions"]
-				})
-			}
-
-			if (inputdata["daily_subflow_executions"] !== undefined && inputdata["daily_subflow_executions"] !== null) {
-				subflowRuns["data"].push({
-					key: new Date(),
-					data: inputdata["daily_subflow_executions"]
-				})
-			}
-		}
-
-		// Only for parent orgs
-		if (childorgappRuns["data"].length > 0) {
-	  		setChildOrgsAppRuns(childorgappRuns)
-		}
-
-		setSubflowRuns(subflowRuns)
-		setWorkflowRuns(workflowRuns)
-		setAppruns(appRuns)
-		setApprunCosts(appcostRuns)
 	}
 	
 	const paperStyle = {
@@ -708,22 +754,26 @@ const AppStats = (defaultprops) => {
 						</Tooltip>
 					} */}
 
-					{syncStats === true ? null :
+					{/* {syncStats === true ? null : */}
 					<Tooltip title={
 						<Typography variant="body1" style={{padding: 10, }}>
 							App runs in the selected period
 						</Typography>
 					}>
 						<Box sx={paperStyle}>
+							{syncStats === true ? 
+							<Typography variant="h4">
+								{onpremAppRuns}
+							</Typography>: 
 							<Typography variant="h4">
 								{filteredStatistics.monthly_app_executions === null || filteredStatistics.monthly_app_executions === undefined ? 0 : filteredStatistics.monthly_app_executions}
-							</Typography>
+							</Typography>}
 							<Typography variant="h6">
 								App Runs 
 							</Typography>
 						</Box>
 					</Tooltip> 
-					}
+					{/* } */}
 
 					{syncStats === true || currentTab === 0 ? null :
 					<Tooltip title={

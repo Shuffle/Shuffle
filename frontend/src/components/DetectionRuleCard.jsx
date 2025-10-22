@@ -12,16 +12,18 @@ import {
   FormLabel,
 } from "@mui/material";
 
-import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
+import LineChartWrapper, { LoadStats } from "../components/LineChartWrapper.jsx";
 import {
 	Edit as EditIcon,
+	Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from '../theme.jsx';
 
+const RuleCard = (props) => {
+  const { ruleName, description, file_id, globalUrl, folderDisabled, isDetectionActive, availableDetection, ruleMapping, setRuleMapping, ruleDetails, key, ...otherProps } = props
 
-const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, isTenzirActive, availableDetection, ruleMapping, setRuleMapping, ...otherProps }) => {
   const [openCodeEditor, setOpenCodeEditor] = React.useState(false);
   const [fileData, setFileData] = React.useState("");
   const [isEnabled, setIsEnabled] = React.useState(otherProps.is_enabled);
@@ -30,27 +32,25 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
   const [responseValue, setResponseValue] = React.useState("No response action")
   const isCloud = ["localhost:3002", "shuffler.io"].includes(window.location.host);
 
-  console.log("Rulemapping: ", ruleMapping)
   useEffect(() => {
-
-	//const url = `${globalUrl}/api/v1/stats/app_executions_test2`
-	//const resp = LoadStats(globalUrl, ruleName)
-	//const resp = LoadStats(globalUrl, "app_executions_test2")
-	const resp = LoadStats(globalUrl, "app_executions_cloud")
-	resp.then((data) => {
-		if (data === undefined) {
-			setFilteredBarchart([])
-		} else {
-			setFilteredBarchart(data)
+		if (key < 10) {
+			console.log("RuleCard Key: ", key, ruleName, file_id, otherProps)
 		}
-	})
 
-	if (ruleMapping !== undefined && ruleMapping !== null && ruleMapping.value !== undefined && ruleMapping.value !== null) {
-		console.log("FIX MAPPING FROM ruleMapping.value: ", ruleMapping)
-	}
+		if (ruleDetails?.title === undefined || ruleDetails?.title === null || ruleDetails?.title.length === 0) {
+			//toast.error("Can't load stats for this rule. Contact support@shuffler.io if this persists.")
+			return
+		}
+
+		const resp = LoadStats(globalUrl, `detection_rule_${ruleDetails?.title.replaceAll(" ", "_").toLowerCase()}`)
+		resp.then((data) => {
+			if (data === undefined) {
+				setFilteredBarchart([])
+			} else {
+				setFilteredBarchart(data)
+			}
+		})
   }, [])
-
-  console.log("Response Value: ", responseValue)
 
   const handleSwitchChange = (event) => {
     if (folderDisabled) {
@@ -58,7 +58,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
       return;
     }
 
-    if (!isTenzirActive) {
+    if (!isDetectionActive) {
       toast.warn("Connect to the siem first to enable/disable the rule");
       return;
     }
@@ -96,6 +96,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
       });
   };
 
+  var parsedRulename = ruleName.charAt(0).toUpperCase() + ruleName.slice(1).replaceAll("_", " ")
   return (
     <Card style={{
 		borderRadius: theme.palette?.borderRadius,
@@ -116,10 +117,13 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 			color: "white",
           }}
         >
-          <Typography variant="h6">{ruleName.replaceAll("_", " ")} ({filteredBarchart === null || filteredBarchart.total === undefined ? 0 : filteredBarchart.total})</Typography>
+          <Typography variant="h6">
+	  		{parsedRulename} {/*({filteredBarchart === null || filteredBarchart.total === undefined ? 0 : filteredBarchart.total})*/}
+	  	  </Typography>
           <div style={{ display: 'flex', alignItems: 'center' }}>
 
-	  		<Select
+	  		  {/*
+	  			<Select
 				  MenuProps={{
 					disableScrollLock: true,
 				  }}
@@ -148,6 +152,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 					color: "white",
 					height: 40,
 					borderRadius: theme.palette?.borderRadius,
+					marginRight: 20, 
 				  }}
 				>
 				  <MenuItem
@@ -178,6 +183,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 						)
 				  })}
 				</Select>
+			 */}
 
 
 	  		<Tooltip title="Edit Rule" placement="top">
@@ -204,12 +210,47 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 
 			minHeight: 40,
 			maxHeight: 40,
+			display: "flex",
 		}}>
-	  		{filteredBarchart === null ? null :
-				<DashboardBarchart 
-					timelineData={filteredBarchart}
-				/>
+	  		<Tooltip title="Refresh stats" placement="top">
+				<IconButton 
+	  				onClick={() => {
+						if (ruleDetails?.title === undefined || ruleDetails?.title === null || ruleDetails?.title.length === 0) {
+							toast.error("Can't load stats for this rule. Contact support@shuffler.io if this persists.")
+							return
+						}
+
+						const resp = LoadStats(globalUrl, `detection_rule_${ruleDetails?.title.replaceAll(" ", "_").toLowerCase()}`)
+						resp.then((data) => {
+							console.log("DATA: ", data)
+							if (data === undefined) {
+								setFilteredBarchart([])
+							} else {
+								setFilteredBarchart(data)
+							}
+						})
+					}}
+	  			>
+					<RefreshIcon 
+						color="secondary"
+					/>
+				</IconButton>
+	  		</Tooltip>
+
+	  		{filteredBarchart === null ? <Typography variant="body2" color="textSecondary" style={{marginTop: 10, marginLeft: 18, }}>No stats yet</Typography> : 
+				<div style={{minWidth: "90%", }}>
+					<LineChartWrapper 
+						inputname={""}
+						keys={filteredBarchart} 
+						height={100}
+						width={"100%"}
+						border={false}
+
+						color={"#808080"}
+					/>
+				</div>
 			}
+
 	  	</div>
 
 	  	{/*

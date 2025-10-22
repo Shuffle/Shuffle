@@ -36,6 +36,7 @@ import {
 	Avatar,
   AvatarGroup,
 } from "@mui/material"
+import { useDebouncedCallback } from "../utils/useDebouncedCallback";
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const CreatorGrid = props => {
@@ -109,6 +110,8 @@ const CreatorGrid = props => {
 			}
 		}
 
+		const debouncedRefine = useDebouncedCallback((value) => refine(value), 300)
+
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
@@ -134,7 +137,7 @@ const CreatorGrid = props => {
 					id="shuffle_search_field"
 					onChange={(event) => {
 						removeQuery("q")
-						refine(event.currentTarget.value)
+						debouncedRefine(event.currentTarget.value)
 					}}
 					onKeyDown={(event) => {
 						if(event.key === "Enter") {
@@ -190,10 +193,10 @@ const CreatorGrid = props => {
 														null
 														}
 													</span>
-												</div>
-												<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
-													<b>{data.apps === undefined || data.apps === null ? 0 : data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows === null || data.workflows === undefined ? 0 : data.workflows}</b> workflows
-												</Typography> 
+											</div>
+											<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
+												<b>{data.apps === undefined || data.apps === null ? 0 : data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows === null || data.workflows === undefined ? 0 : data.workflows}</b> workflows
+											</Typography> 
 											{data.specialized_apps !== undefined && data.specialized_apps !== null && data.specialized_apps.length > 0 ? 
 												<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left", marginTop: 3,}}>
 													{data.specialized_apps.map((app, index) => {
@@ -267,7 +270,7 @@ const CreatorGrid = props => {
 							autoComplete="email"
 							margin="normal"
 							variant="outlined"
-      	 				onChange={e => setFormMail(e.target.value)}
+				  				onChange={e => setFormMail(e.target.value)}
 						/>
 						<TextField
 							required
@@ -285,7 +288,7 @@ const CreatorGrid = props => {
 							margin="normal"
 							variant="outlined"
 							autoComplete="off"
-      	 			onChange={e => setMessage(e.target.value)}
+				  			onChange={e => setMessage(e.target.value)}
 						/>
 					</div>
 					<Button

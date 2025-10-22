@@ -18,13 +18,20 @@ import {
 	Tooltip,
 	Autocomplete,
 	TextField,
+	Box,
 } from '@mui/material';
 
 import {
 	Rocket as RocketIcon,
 	FilterAlt as FilterAltIcon,
 	Add as AddIcon,
+	Check as CheckIcon,
 } from '@mui/icons-material';
+
+import { 
+	green,
+	red,
+} from '../views/AngularWorkflow.jsx'
 
 import algoliasearch from 'algoliasearch/lite';
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
@@ -97,6 +104,7 @@ const CollectIngestModal = (props) => {
 
 		const [showAppsearch, setShowAppsearch] = useState(false);
 		const [algoliaOptions, setAlgoliaOptions] = useState([]);
+		const [generating, setGenerating] = useState(false);
 
 		const appname = type
 		const ingestedAmount = 20
@@ -107,7 +115,7 @@ const CollectIngestModal = (props) => {
 		})
 
 		var foundMatchingWorkflow = null
-		if (workflows !== undefined && workflows !== null && workflows.length > 0) {
+		if (!showAppsearch && workflows !== undefined && workflows !== null && workflows.length > 0) {
 			const parsedName = type.toLowerCase().replaceAll(" ", "_");
 			const foundWorkflow = workflows.find((workflow) => {
 				return workflow?.name?.toLowerCase().replaceAll(" ", "_") === parsedName
@@ -169,12 +177,36 @@ const CollectIngestModal = (props) => {
 			}
 		}
 
+
+		const runIngestion = () => {
+			setGenerating(true)
+			setTimeout(() => {
+				setGenerating(false)
+			}, 5000)
+
+			toast.info("Starting ingest for relevant apps")
+			var newapps = ""
+			for (var key in selectedApps) {
+				const app = selectedApps[key]
+
+				if (newapps.length > 0) {
+					newapps += ","
+				}
+
+				newapps += app.name
+			}
+
+			startIngestion(appname, newapps, appCategory, index)
+			if (webhook === true) {
+				startIngestion(appname+"_webhook", newapps, appCategory, index)
+			}
+		}
+
 		return (
 			//<Grid item xs={hovering ? 12 : 5.9}
 			<Grid item xs={12}
 				style={{
 					minHeight: hovering ? 200 : 200, 
-					maxHeight: hovering ? "auto" : 140, 
 					cursor: "pointer",
 					position: "relative",
 					transition: "all 0.3s ease-in-out",
@@ -200,7 +232,7 @@ const CollectIngestModal = (props) => {
 					<div style={{flex: 1, margin: "auto", marginTop: 50, }}>
 
 						<div style={{width: 50+selectedApps?.length*50, margin: "auto", itemAlign: "center", textAlign: "center", display: "flex", }}>
-							{selectedApps.map((app, index) => {
+							{generating ? null : selectedApps.map((app, index) => {
 								// Show image of each one
 								return (
 									<div key={index} style={{display: "flex", alignItems: "center", marginLeft: 10, }}>
@@ -214,18 +246,29 @@ const CollectIngestModal = (props) => {
 								)
 							})}
 
-							<Tooltip title="Select Apps" placement="top">
-								<IconButton
-									style={{marginLeft: 10, marginRight: 50, }}
-									variant="outlined"
-									color="secondary"
-									onClick={() => {
-										setShowAppsearch(!showAppsearch)
-									}}
-								>
-									<AddIcon style={{color: theme.palette.primary.main, }} />
-								</IconButton>
-							</Tooltip>
+							{!generating && appCategory !== undefined && appCategory !== null && appCategory.length > 0 ?
+								<Tooltip title={showAppsearch ? "Done selecting apps" : "Select Apps"} placement="top">
+									<IconButton
+										style={{marginLeft: 10, marginRight: 50, }}
+										variant="outlined"
+										color="secondary"
+										onClick={() => {
+
+											if (showAppsearch === true) { 
+												runIngestion() 
+											}
+
+											setShowAppsearch(!showAppsearch)
+										}}
+									>
+										{showAppsearch ?
+											<CheckIcon style={{color: green, }} />
+											:
+											<AddIcon style={{color: theme.palette.primary.main, }} />
+										}
+									</IconButton>
+								</Tooltip>
+							: null}
 						</div>
 
 						{showAppsearch ?
@@ -237,20 +280,42 @@ const CollectIngestModal = (props) => {
 
 							  value={selectedApps}
 							  onChange={(event, value) => {
+								  console.log("New value: ", value)
+
 								  setSelectedApps(value)
 							  }}
 
 							  getOptionLabel={(option) => {
 								  const parsedname = option.name.replaceAll("_", " ")
 
-								  return (
-									<div>
-										<img src={option?.large_image} alt={option.name} style={{ width: 24, height: 24, marginRight: 10, borderRadius: 5, }} />
-										<Typography variant="body1" style={{ display: "inline-block", verticalAlign: "middle", marginTop: -12, }}>
-											{parsedname}
-										</Typography>
-									</div>
-								  )
+								  return parsedname
+								  //return (
+								  //  <div>
+								  //  	<img src={option?.large_image} alt={option.name} style={{ width: 24, height: 24, marginRight: 10, borderRadius: 5, }} />
+								  //  	<Typography variant="body1" style={{ display: "inline-block", verticalAlign: "middle", marginTop: -12, }}>
+								  //  		{parsedname}
+								  //  	</Typography>
+								  //  </div>
+								  //)
+							  }}
+							  renderOption={(props, option, state, ownerState) => {
+								    const { key, ...optionProps } = props;
+									return (
+									  <Box
+										key={key}
+										sx={{
+										  borderRadius: '8px',
+										  margin: '5px',
+										  padding: '8px',
+										}}
+										component="li"
+										{...optionProps}
+									  >
+								  		<img src={option?.large_image} alt={option.name} style={{ width: 24, height: 24, marginRight: 10, borderRadius: 5, }} />
+										{ownerState.getOptionLabel(option)}
+									  </Box>
+									);
+
 							  }}
 							  renderInput={(params) => {
 								  return ( 
@@ -267,24 +332,9 @@ const CollectIngestModal = (props) => {
 								style={{width: 250, margin: 25, }}
 								variant={foundMatchingWorkflow !== null ? "outlined" : "contained"}
 								onClick={() => {
-
-									toast.info("Starting ingest for relevant apps")
-									var newapps = ""
-									for (var key in selectedApps) {
-										const app = selectedApps[key]
-
-										if (newapps.length > 0) {
-											newapps += ","
-										}
-
-										newapps += app.name
-									}
-
-									startIngestion(appname, newapps, appCategory, index)
-									if (webhook === true) {
-										startIngestion(appname+"_webhook", newapps, appCategory, index)
-									}
+									runIngestion()
 								}}
+								disabled={generating}
 							>
 								{foundMatchingWorkflow !== null ? 
 									"Re-Create Ingestion"

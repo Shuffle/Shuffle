@@ -16,6 +16,7 @@ import {
     ListItemText,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
+import useDebouncedCallback from '../utils/useDebouncedCallback.jsx';
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "1e5f29b1550939855de5915eac3bf5f7");
@@ -69,12 +70,22 @@ const DiscordChat = props => {
 	}
 
     const SearchBox = ({ currentRefinement, refine }) => {
+        const [inputValue, setInputValue] = useState("");
+        const debouncedRefine = useDebouncedCallback((value) => refine(value), 300);
+
+        useEffect(() => {
+            setInputValue(currentRefinement || "");
+        }, [currentRefinement]);
         return (
                 <form noValidate action="" role="search">
                     <TextField
                         fullWidth
-                        value={currentRefinement}
-                        onChange={(event) => refine(event.currentTarget.value)}
+                        value={inputValue}
+                        onChange={(event) => {
+                            const value = event.currentTarget.value;
+                            setInputValue(value);
+                            debouncedRefine(value);
+                        }}
                         onKeyDown={(event) => {
                             if(event.key === "Enter") {
                                 event.preventDefault();

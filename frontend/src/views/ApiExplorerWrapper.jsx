@@ -1494,13 +1494,13 @@ const ApiExplorerWrapper = (props) => {
               />
 
         <div
-                    style={{
-                        backgroundColor: theme.palette.inputColor,
-                        padding: 15,
-                        borderRadius: theme.palette?.borderRadius,
-                        marginBottom: 30,
-                    }}
-                >
+			style={{
+				backgroundColor: theme.palette.inputColor,
+				padding: 15,
+				borderRadius: theme.palette?.borderRadius,
+				marginBottom: 30,
+			}}
+		>
           <Typography variant="h6" style={{marginBottom: 25, }}>
           There is no Shuffle-specific documentation for this app yet outside of the general description above. Documentation is written for each api, and is a community effort. We hope to see your contribution!
           </Typography>

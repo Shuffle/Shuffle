@@ -476,7 +476,7 @@ const LoginPage = props => {
 				return;
 			}
 
-			window.location.pathname = "/workflows"
+			window.location.pathname = "/new-dashboard"
 		}, 2000);
 	}
 
@@ -658,7 +658,7 @@ const LoginPage = props => {
 							}
 						}
 
-						window.location.pathname = "/workflows"
+						window.location.pathname = "/new-dashboard"
 					}, 2000);
 				}
 			})

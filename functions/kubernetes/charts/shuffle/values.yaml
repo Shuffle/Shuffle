@@ -74,7 +74,7 @@ diagnosticMode:
 shuffle:
   ## @param shuffle.baseUrl The external base URL under which Shuffle is reachable.
   ##
-  baseUrl: ""
+  #baseUrl: ""
 
   ## ref: https://shuffler.io/docs/organizations
   ## This chart only supports single-tenant deployments at the moment
@@ -525,6 +525,8 @@ backend:
     ## @param backend.openSearch.username The username that is used for authenticating with OpenSearch
     ##
     username: admin
+
+    password: StrongShufflePassword321!
     ## @param backend.openSearch.certificateFile The path to a custom OpenSearch certificate file
     ##
     certificateFile: ""
@@ -966,7 +968,7 @@ orborus:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-orborus
-    tag: ""
+    tag: "nightly"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1197,7 +1199,17 @@ orborus:
   ##   - name: FOO
   ##     value: "bar"
   ##
-  extraEnvVars: []
+  extraEnvVars:
+    - name: SHUFFLE_APP_SDK_TIMEOUT
+      value: "300"
+    - name: SHUFFLE_ORBORUS_EXCUTION_CONCURRENCY
+      value: "7"
+    - name: SHUFFLE_STATS_DISABLED
+      value: "true"
+    - name: KUBERNETES_NAMESPACE
+      value: "shuffle"
+    - name: SHUFFLE_BASE_IMAGE_NAME
+      value: "frikky/shuffle"
   ## @param orborus.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for orborus containers
   ##
   extraEnvVarsCM: ""
@@ -1842,7 +1854,7 @@ volumePermissions:
   ##
   image:
     registry: docker.io
-    repository: bitnami/os-shell
+    repository: bitnamilegacy/os-shell
     tag: 12-debian-12-r30
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
@@ -1898,17 +1910,25 @@ volumePermissions:
 ##
 opensearch:
   enabled: true
-  
+
+  sysctlImage:
+    enabled: false
+
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/opensearch
+    tag: "3.2.0"
+
   master:
     replicaCount: 1
   data:
     replicaCount: 1
   coordinating:
-    replicaCount: 1
+    replicaCount: 0
   ingest:
-    replicaCount: 1
+    replicaCount: 0
   dashboards:
-    enabled: true
+    enabled: false
 
 ## @section Vault Parameters
 ##

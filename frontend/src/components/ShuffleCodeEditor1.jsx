@@ -147,6 +147,8 @@ const CodeEditor = (props) => {
 
 	// Auto-indent JSON-like content (with safety hehe)
 	const autoIndentContent = React.useCallback((content) => {
+		return content
+
 		// Safety checks :)
 		if (!content || typeof content !== 'string' || content.trim().length === 0) {
 			return content;
@@ -172,6 +174,7 @@ const CodeEditor = (props) => {
 			return content;
 		}
 	}, []);
+
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
@@ -1832,6 +1835,7 @@ const CodeEditor = (props) => {
 								display: 'flex',
 							}}
 						>
+
 							<div style={{ display: "flex" }}>
 								<DialogTitle
 									style={{
@@ -1842,6 +1846,35 @@ const CodeEditor = (props) => {
 									File Editor ({localcodedata.length})
 								</DialogTitle>
 							</div>
+
+
+							<IconButton
+								style={{
+									position: "absolute",
+									height: 50,
+									width: 50,
+									right: 25,
+									top: 90, 
+									zIndex: 5000,
+								}}
+								disabled={localcodedata === undefined || localcodedata === null || localcodedata.length === 0}
+								onClick={() => {
+									const indentedText = IndentJsonLikeString(localcodedata, 2)
+									if (indentedText !== undefined && indentedText !== null) {
+										setlocalcodedata(indentedText)
+									} else {
+										toast.warn("Could not indent the text. Please check the input format.", { autoClose: 5000 })
+									}
+								}}
+								color="secondary"
+							>
+								<Tooltip
+									title={"Indent Text"}
+									placement="top"
+								>
+									<FormatIndentIncreaseIcon />
+								</Tooltip>
+							</IconButton>
 						</div>
 						:
 						<div
@@ -2270,7 +2303,7 @@ const CodeEditor = (props) => {
 										width: 50,
 										marginLeft: 100,
 									}}
-									disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
+									disabled={localcodedata === undefined || localcodedata === null || localcodedata.length === 0}
 									onClick={() => {
 										const indentedText = IndentJsonLikeString(localcodedata, 2)
 										if (indentedText !== undefined && indentedText !== null) {

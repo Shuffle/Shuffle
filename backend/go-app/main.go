@@ -5,6 +5,8 @@ import (
 	"github.com/shuffle/shuffle-shared"
 	"github.com/shuffle/singul/pkg"
 
+	"net/http/pprof"
+
 	"archive/zip"
 	"bufio"
 	"bytes"
@@ -46,6 +48,7 @@ import (
 	newscheduler "github.com/carlescere/scheduler"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
+	"sort"
 
 	// Web
 	"github.com/gorilla/mux"
@@ -67,11 +70,13 @@ var debug = false
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
-	Success         bool                 `json:"success"`
-	SyncFeatures    shuffle.SyncFeatures `json:"sync_features"`
-	SessionKey      string               `json:"session_key"`
-	IntervalSeconds int64                `json:"interval_seconds"`
-	Reason          string               `json:"reason"`
+	Success         bool                          `json:"success"`
+	SyncFeatures    shuffle.SyncFeatures          `json:"sync_features"`
+	SessionKey      string                        `json:"session_key"`
+	IntervalSeconds int64                         `json:"interval_seconds"`
+	Reason          string                        `json:"reason"`
+	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
+	Licensed        bool                          `json:"licensed"`
 }
 
 type Contact struct {
@@ -933,6 +938,78 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Failed to get org during getinfo: %s", err)
 	}
 
+	childOrgs := []shuffle.Org{}
+	if len(org.CreatorOrg) > 0 {
+		childOrgs, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get child orgs during getinfo: %s", err)
+			childOrgs = []shuffle.Org{}
+		}
+	}
+
+	failToLoadOrgs := []string{}
+	sort.Slice(childOrgs, func(i, j int) bool {
+		return childOrgs[i].Created < childOrgs[j].Created
+	})
+
+	parentOrg := &shuffle.Org{}
+	if len(org.CreatorOrg) > 0 {
+		parentOrg, err = shuffle.GetOrg(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
+			parentOrg = &shuffle.Org{}
+		}
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *parentOrg)
+		parentOrg = &licenseOrg
+	}
+
+	limit := 3
+
+	if parentOrg.Licensed && parentOrg.SyncFeatures.MultiTenant.Active {
+		limit = int(parentOrg.SyncFeatures.MultiTenant.Limit)
+	}
+
+	for index, org := range childOrgs {
+
+		if index < limit {
+			continue
+		}
+
+		failToLoadOrgs = append(failToLoadOrgs, org.Id)
+	}
+
+	if len(org.CreatorOrg) > 0 && len(childOrgs) > limit && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
+
+		userInfo.ActiveOrg = shuffle.OrgMini{
+			Id:       parentOrg.Id,
+			Name:     parentOrg.Name,
+			Role:     userInfo.Role,
+			Branding: parentOrg.Branding,
+			Image:    parentOrg.Image,
+		}
+
+		if parentOrg.Licensed {
+			log.Printf("[INFO] Parent org %s is licensed. But Multi-tenant feature is not active. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username)
+		} else {
+			log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username)
+		}
+
+		err = shuffle.SetUser(ctx, &userInfo, false)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting user to parent org: %s", err)
+		}
+
+		reason := "Parent org has more than 3 child orgs and is not licensed. Moving user to parent org. Contact support@shuffler.io for more information"
+
+		if parentOrg.Licensed {
+			reason = fmt.Sprintf("Parent organization is licensed, but the maximum number of sub-organizations (%d) has been reached. You have been moved to the parent organization. Please contact support@shuffler.io for further assistance.", parentOrg.SyncFeatures.MultiTenant.Limit)
+		}
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(`{"success": true, "reason": "` + reason + `", "switch_parent": true}`))
+		return
+	}
+
 	//if err == nil {
 	if len(org.Id) > 0 {
 		if userInfo.Role == "" {
@@ -1082,7 +1159,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		// Check for licensing/branding of parent and override
 		parentOrg, err := shuffle.GetOrg(ctx, parentOrgId)
 		if err == nil {
-			if parentOrg.LeadInfo.IntegrationPartner {
+			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
+			if parent.SyncFeatures.Branding.Active {
 				parsedStatus = append(parsedStatus, "integration_partner")
 
 				// except theme take from parent org
@@ -1120,11 +1198,15 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 						break
 					}
 				}
+			} else {
+				userInfo.ActiveOrg.Branding = shuffle.OrgBranding{}
 			}
 		}
 	} else {
 		// for parent org branding
-		if org.LeadInfo.IntegrationPartner {
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *org)
+		org = &licenseOrg
+		if org.SyncFeatures.Branding.Active {
 			userInfo.ActiveOrg.Branding.Theme = org.Branding.Theme
 			userInfo.ActiveOrg.Branding.DocumentationLink = org.Defaults.DocumentationReference
 			userInfo.ActiveOrg.Branding.SupportEmail = org.Branding.SupportEmail
@@ -1133,6 +1215,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			userInfo.ActiveOrg.Branding.BrandName = org.Branding.BrandName
 
 			parsedStatus = append(parsedStatus, "integration_partner")
+		} else {
+			userInfo.ActiveOrg.Branding = shuffle.OrgBranding{}
 		}
 	}
 
@@ -1198,7 +1282,6 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	count := len(users)
-
 	if count == 0 {
 		log.Printf("[WARNING] No users - redirecting for management user")
 		resp.WriteHeader(200)
@@ -2061,7 +2144,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(hook.Workflows) == 1 {
-		workflow, err := shuffle.GetWorkflow(ctx, hook.Workflows[0])
+		workflow, err := shuffle.GetWorkflow(ctx, hook.Workflows[0], true)
 		if err == nil {
 			for _, branch := range workflow.Branches {
 				if branch.SourceID == hook.Id {
@@ -3816,9 +3899,12 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success bool                   `json:"success"`
-		Reason  string                 `json:"reason"`
-		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
+		Success       bool                          `json:"success"`
+		Reason        string                        `json:"reason"`
+		Jobs          []shuffle.CloudSyncJob        `json:"jobs"`
+		SyncFeatures  shuffle.SyncFeatures          `json:"sync_features"`
+		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
+		Licensed      bool                          `json:"licensed"`
 	}
 
 	responseData := retStruct{}
@@ -3883,6 +3969,31 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if len(responseData.Jobs) > 0 {
 		//log.Printf("[INFO] Remote JOB ret: %s", string(body))
 		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
+	}
+
+	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+	featuresBytes, err := json.Marshal(responseData.SyncFeatures)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
+	}
+
+	subscriptionCacheKey := fmt.Sprintf("org_subscriptions_%s", org.Id)
+	subscriptionsBytes, err := json.Marshal(responseData.Subscriptions)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Subscriptions for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 1800)
+	}
+
+	licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
+	licensedBytes, err := json.Marshal(responseData.Licensed)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Licensed for cache: %s", err)
+	} else {
+
+		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
@@ -4550,6 +4661,45 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	// Self-cleaning
+	go func() { 
+		cursor := ""
+		cnt := 0 
+		newCtx := context.Background()
+		for _, org := range activeOrgs {
+			if len(org.Id) == 0 {
+				log.Printf("[DEBUG] No ID found for org with name '%s'. Why was it made?", org.Name)
+				continue
+			}
+
+			log.Printf("[INFO] Starting self-cleanup of cache keys for org %s", org.Id)
+
+			for { 
+				keys, newCursor, err := shuffle.GetAllCacheKeys(newCtx, org.Id, "", 1000, cursor)
+				if err != nil {
+					//log.Printf("[ERROR] Failed getting all cache keys for cleanup: %s", err)
+					break
+				}
+
+				if newCursor == cursor || len(newCursor) == 0 {
+					break
+				}
+
+				if len(keys) == 0 {
+					break
+				}
+
+				cursor = newCursor
+				cnt += 1
+				if cnt > 10 {
+					break
+				}
+			}
+
+			log.Printf("[INFO] Finished self-cleanup of cache keys for org %s", org.Id)
+		}
+	}()
+
 	log.Printf("[INFO] Finished INIT (ES)")
 }
 
@@ -4648,6 +4798,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 	org.CloudSync = false
 	org.SyncFeatures = shuffle.SyncFeatures{}
 	org.SyncConfig = shuffle.SyncConfig{}
+	org.Subscriptions = []shuffle.PaymentSubscription{}
 
 	err = shuffle.SetOrg(ctx, org, org.Id)
 	if err != nil {
@@ -4863,8 +5014,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
-
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -4890,7 +5039,15 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// 2. Add iterative sync schedule for interval seconds
 	// 3. Add another environment for the org's users
 	org.CloudSync = true
-	org.SyncFeatures = responseData.SyncFeatures
+
+	// set cache here for 30 min
+	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+	featuresBytes, err := json.Marshal(responseData.SyncFeatures)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
+	}
 
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
@@ -5362,6 +5519,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate/llm", shuffle.HandleWorkflowGenerationResponse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/edit/llm", shuffle.HandleEditWorkflowWithLLM).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore", shuffle.HandleSetDatastoreKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/automate", shuffle.HandleDatastoreCategoryConfig).Methods("POST", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
@@ -5456,6 +5618,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 
+	r.HandleFunc("/api/v1/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
+
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
@@ -5510,6 +5676,17 @@ func initHandlers() {
 	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
+
+	if (strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true") {
+		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
+		r.HandleFunc("/debug/pprof/", pprof.Index)
+		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	} else {
+		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
+	}
 
 	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)

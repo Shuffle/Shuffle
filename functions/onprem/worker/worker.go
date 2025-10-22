@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/shuffle/shuffle-shared"
-	"github.com/shuffle/singul/pkg"
+	singul "github.com/shuffle/singul/pkg"
 
 	"bytes"
 	"context"
@@ -43,6 +43,7 @@ import (
 	//k8s deps
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -610,9 +611,9 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	// use deployment instead of pod
 	// then expose a service similarly.
-	// number of replicas can be set to os.Getenv("SHUFFLE_SCALE_REPLICAS")
+	// number of replicas can be set to os.Getenv("SHUFFLE_APP_REPLICAS")
 	replicaNumber := 1
-	replicaNumberStr := os.Getenv("SHUFFLE_SCALE_REPLICAS")
+	replicaNumberStr := os.Getenv("SHUFFLE_APP_REPLICAS")
 	if len(replicaNumberStr) > 0 {
 		tmpInt, err := strconv.Atoi(replicaNumberStr)
 		if err != nil {
@@ -652,6 +653,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 								},
 							},
 							SecurityContext: containerSecurityContext,
+							Resources:       buildResourcesFromEnv(),
 						},
 					},
 					DNSPolicy:          corev1.DNSClusterFirst,
@@ -660,6 +662,27 @@ func deployk8sApp(image string, identifier string, env []string) error {
 				},
 			},
 		},
+	}
+
+	if os.Getenv("SHUFFLE_APP_MOUNT_TMP_VOLUME") == "true" {
+		deployment.Spec.Template.Spec.Volumes = append(
+			deployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: "tmp",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		)
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/tmp",
+			},
+		)
 	}
 
 	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
@@ -676,6 +699,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		return err
 	}
 
+	svcAppProtocol := "http"
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -685,9 +709,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
-					Protocol:   "TCP",
-					Port:       80,
-					TargetPort: intstr.FromInt(deployport),
+					Protocol:    "TCP",
+					AppProtocol: &svcAppProtocol,
+					Port:        80,
+					TargetPort:  intstr.FromInt(deployport),
 				},
 			},
 			Type: corev1.ServiceTypeClusterIP,
@@ -2436,6 +2461,49 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	}
 	return envVars
 }
+
+func buildResourcesFromEnv() corev1.ResourceRequirements {
+	requests := corev1.ResourceList{}
+	limits := corev1.ResourceList{}
+
+	type item struct {
+		env          string
+		resourceName corev1.ResourceName
+		resourceList corev1.ResourceList
+	}
+
+	items := []item{
+		// kubernetes requests
+		{env: "SHUFFLE_APP_CPU_REQUEST", resourceName: corev1.ResourceCPU, resourceList: requests},
+		{env: "SHUFFLE_APP_MEMORY_REQUEST", resourceName: corev1.ResourceMemory, resourceList: requests},
+		{env: "SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST", resourceName: corev1.ResourceEphemeralStorage, resourceList: requests},
+		// kubernetes limits
+		{env: "SHUFFLE_APP_CPU_LIMIT", resourceName: corev1.ResourceCPU, resourceList: limits},
+		{env: "SHUFFLE_APP_MEMORY_LIMIT", resourceName: corev1.ResourceMemory, resourceList: limits},
+		{env: "SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT", resourceName: corev1.ResourceEphemeralStorage, resourceList: limits},
+	}
+
+	for _, it := range items {
+		if value := strings.TrimSpace(os.Getenv(it.env)); value != "" {
+			if quantity, err := resource.ParseQuantity(value); err == nil {
+				it.resourceList[it.resourceName] = quantity
+			} else {
+				log.Printf("[WARNING] Cannot parse %s=%q as resource quantity: %v", it.env, value, err)
+			}
+		}
+	}
+
+	rr := corev1.ResourceRequirements{}
+	if len(requests) > 0 {
+		rr.Requests = requests
+	}
+	if len(limits) > 0 {
+		rr.Limits = limits
+	}
+
+	return rr
+}
+
 func getWorkerBackendExecution(auth string, executionId string) (*shuffle.WorkflowExecution, error) {
 	backendUrl := os.Getenv("BASE_URL")
 	if len(backendUrl) == 0 {
@@ -2446,9 +2514,9 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", backendUrl)
 	topClient := shuffle.GetExternalClient(backendUrl)
-	requestData := shuffle.ActionResult {
+	requestData := shuffle.ActionResult{
 		Authorization: auth,
-		ExecutionId: executionId,
+		ExecutionId:   executionId,
 	}
 
 	data, err := json.Marshal(requestData)
@@ -2708,7 +2776,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		}
 
@@ -2726,7 +2794,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
 			if !finished {
-				if debug { 
+				if debug {
 					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
 				}
 
@@ -3188,8 +3256,6 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	log.Printf("[DEBUG] Deploying service for %s to swarm on port %d", name, deployport)
 	//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
 
-
-
 	// Check if the image exists or not - just in case
 	_, _, err := dockercli.ImageInspectWithRaw(context.Background(), image)
 	if err != nil {
@@ -3202,8 +3268,8 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		}
 
 		_, err := dockercli.ImagePull(
-			context.Background(), 
-			image, 
+			context.Background(),
+			image,
 			dockerimage.PullOptions{},
 		)
 		if err != nil {
@@ -3211,7 +3277,6 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 			return err
 		}
 	}
-
 
 	if len(baseimagename) == 0 || baseimagename == "/" {
 		baseimagename = "frikky/shuffle"
@@ -3245,7 +3310,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 
 	// Max scale as well
 	nodeCount := uint64(1)
-	if inputReplicas > 0 && inputReplicas < 100 { 
+	if inputReplicas > 0 && inputReplicas < 100 {
 		if replicas != uint64(inputReplicas) {
 			log.Printf("[DEBUG] Overwriting replicas to %d/node as inputReplicas is set to %d", inputReplicas, inputReplicas)
 		}
@@ -3264,7 +3329,6 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		// FIXME: From September 2025 - This is set back to 1, as this doesn't really reflect how scale works at all. It is just confusing, and makes number larger/smaller "arbitrarily" instead of using default docker scale
 		nodeCount = 1
 	}
-
 
 	replicatedJobs := uint64(replicas * nodeCount)
 	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
@@ -3395,12 +3459,12 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 			}
 
 			// Retry deploying the service (once)
-			if !retry { 
+			if !retry {
 				return deploySwarmService(dockercli, name, image, deployport, -1, true)
 			}
 		}
 
-		// For port mapping. 
+		// For port mapping.
 		if strings.Contains(fmt.Sprintf("%s", err), "InvalidArgument") && strings.Contains(fmt.Sprintf("%s", err), "is already in use") {
 			//log.Printf("\n\n[WARNING] Port %d is already allocated. Trying to deploy on next port.\n\n", deployport)
 
@@ -3426,7 +3490,6 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 	// Sleep between 0 and 1.5 second - ensures deployments have a higher
 	// chance of being successful
 	time.Sleep(time.Duration(rand.Intn(1500)) * time.Millisecond)
-
 
 	highest := baseport
 	exposedPort := -1
@@ -3531,10 +3594,10 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 						time.Sleep(time.Duration(rand.Intn(4)+8) * time.Second)
 						replicas := service.Spec.Mode.Replicated.Replicas
 						err = deploySwarmService(
-							dockercli, 
-							name, 
-							image, 
-							exposedPort, 
+							dockercli,
+							name,
+							image,
+							exposedPort,
 							int64(*replicas),
 							false,
 						)
@@ -3624,7 +3687,7 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 
 	for _, deployment := range deployments.Items {
 		if deployment.Name == name {
-			if debug { 
+			if debug {
 				log.Printf("[DEBUG] Found deployment %s - no need to deploy another", name)
 			}
 
@@ -3649,7 +3712,6 @@ func initSwarmNetwork() error {
 	options := make(map[string]string)
 	mtu := 1500
 	options["com.docker.network.driver.mtu"] = fmt.Sprintf("%d", mtu)
-
 
 	ingressOptions := network.CreateOptions{
 		Driver:     "overlay",
@@ -3734,10 +3796,8 @@ func initSwarmNetwork() error {
 		log.Printf("[WARNING] Swarm Executions network may already exist: %s", err)
 	}
 
-	return nil 
+	return nil
 }
-
-
 
 /*** ENDREMOVE ***/
 
@@ -3829,6 +3889,12 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 
 	// Checking as LATE as possible, ensuring we don't rerun what's already ran
 	// ctx = context.Background()
+
+	// Sleep between 0 and 250 ms for randomness so no same worker check at same time (same as cloud)
+	rand.Seed(time.Now().UnixNano())
+	randMs := rand.Intn(250)
+	time.Sleep(time.Duration(randMs) * time.Millisecond)
+
 	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
 	_, err = shuffle.GetCache(ctx, newExecId)
 	if err == nil {
@@ -3889,18 +3955,18 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		}
 
 		// Try redeployment
-		attempts += 1 
+		attempts += 1
 		if attempts < 2 {
-			// Check the service and fix it. 
+			// Check the service and fix it.
 			if isKubernetes == "true" {
-				log.Printf("[WARNING] App Redeployment in K8s isn't fully supported yet, but should be done for app %s with image %s.", appName, image) 
+				log.Printf("[WARNING] App Redeployment in K8s isn't fully supported yet, but should be done for app %s with image %s.", appName, image)
 			} else {
 				_, err = findAppInfo(image, appName, true)
 				if err != nil {
 					log.Printf("[ERROR][%s] Error re-deploying app %s: %s", workflowExecution.ExecutionId, appName, err)
 				}
 
-				return sendAppRequest(ctx, incomingUrl, appName, port, action, workflowExecution, image, attempts) 
+				return sendAppRequest(ctx, incomingUrl, appName, port, action, workflowExecution, image, attempts)
 			}
 		}
 
@@ -3926,7 +3992,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
-		if debug { 
+		if debug {
 			log.Printf("[DEBUG][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
 		}
 	}
@@ -4326,7 +4392,7 @@ func checkStandaloneRun() {
 
 // Initial loop etc
 func main() {
-	// Testing swarm auto-replacements. This also tests ports 
+	// Testing swarm auto-replacements. This also tests ports
 	// in rapid succession
 
 	checkStandaloneRun()
@@ -4334,7 +4400,7 @@ func main() {
 		debug = true
 
 		log.Printf("[INFO] Disabled cleanup due to debug mode (DEBUG=true)")
-		cleanupEnv = "false" 
+		cleanupEnv = "false"
 	}
 
 	/*** STARTREMOVE ***/
@@ -4784,7 +4850,7 @@ func runWebserver(listener net.Listener) {
 	if strings.ToLower(os.Getenv("SHUFFLE_SWARM_CONFIG")) == "run" || strings.ToLower(os.Getenv("SHUFFLE_APP_REPLICAS")) == "" {
 		// go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
 	}
-	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
+	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
 		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -4818,6 +4884,12 @@ func runWebserver(listener net.Listener) {
 	}
 }
 
+// 0x0elliot:
+// IF we had to rewrite this, we will focus on ONLY auto scale for apps.
+// i recommend we target executions/minute (?) as a metric.
+// edge-case: subflows are helped with when worker replicas are higher.
+// i kind of never want to scale down. at least, not now.
+// also, algorithm is very broken. executions/worker
 func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutionsPerMinute int) {
 	ticker := time.NewTicker(1 * time.Second)
 

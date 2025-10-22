@@ -35,6 +35,7 @@ import {
     Help as HelpIcon,
     ExpandLess as ExpandLessIcon,
     ExpandMore as ExpandMoreIcon,
+	Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
@@ -53,7 +54,7 @@ const EnvironmentTab = memo((props) => {
         pipelines: false,
         proxies: false,
     })
-    const [installationTab, setInstallationTab] = React.useState(0);
+    const [installationTab, setInstallationTab] = React.useState(1);
     const [isExpanded, setIsExpanded] = React.useState(false);
     const [listItemExpanded, setListItemExpanded] = React.useState(-1);
     const [, setUpdate] = React.useState(0);
@@ -61,6 +62,7 @@ const EnvironmentTab = memo((props) => {
     const [selectedEnvironment, setSelectedEnvironment] = React.useState(null);
     const [selectedSubOrg, setSelectedSubOrg] = React.useState([]);
 	const [showLocationActionModal, setShowLocationActionModal] = React.useState(undefined)
+	const [currentEnvQueue, setCurrentEnvQueue] = React.useState([])
 
   const {  themeMode, supportEmail, brandColor } = useContext(Context);
   const theme = getTheme(themeMode, brandColor);
@@ -408,6 +410,11 @@ const EnvironmentTab = memo((props) => {
             skipPipeline = true
         }
 
+		var showDetection = false
+        if (commandController.detection === true) {
+            showDetection = true
+        }
+
         var addProxy = false
         if (commandController.proxies === true) {
             addProxy = true
@@ -422,12 +429,11 @@ const EnvironmentTab = memo((props) => {
         -e AUTH="${auth}" \\
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${environment.org_id}" \\
-        -e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:latest" \\
         -e SHUFFLE_SWARM_CONFIG=run \\
-        -e SHUFFLE_LOGS_DISABLED=true \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
-      -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
-      -e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
+        -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
+        -e SHUFFLE_SKIP_PIPELINES=true \\` : ""}${showDetection ? `
+        -v /tmp:/tmp \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest
             `)
         } else if (installationTab === 2) {
@@ -676,6 +682,76 @@ const EnvironmentTab = memo((props) => {
 		)
 	}
 
+
+	const removeEnvQueueItem = (environment, queueItem) => {
+		const url = `${globalUrl}/api/v1/workflows/queue/confirm`
+
+		const headers = {
+			"Org-Id": environment.Name,
+			"Org": environment.org_id,
+			"Authorization": environment.auth,
+		}
+
+		const items = {
+			"data": [queueItem],
+		}
+
+		fetch(url, {
+			method: "POST",
+			headers: headers,
+			body: JSON.stringify(items),
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!");
+				toast("Failed removing queue item")
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success !== false) {
+				toast("Successfully removed queue item")
+				getEnvQueue(environment)
+			} else {
+				toast("Failed removing queue item")
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		})
+	}
+
+	const getEnvQueue = (environment) => {
+		const url = `${globalUrl}/api/v1/workflows/queue`
+		const headers = {
+			"Org-Id": environment.Name,
+			"Org": environment.org_id,
+			"Authorization": environment.auth,
+		}
+
+		fetch(url, {
+			method: "POST",
+			headers: headers,
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson?.success !== false && responseJson?.data?.length > 0) {
+				setCurrentEnvQueue(responseJson.data)
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		})
+	}
+
     const editEnvironmentConfig = (id, selectedSubOrg, cacheKey) => {
                     const data = {
                         action: "suborg_distribute",
@@ -881,14 +957,14 @@ const EnvironmentTab = memo((props) => {
                 <ListItem 
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 350px 150px", 
+                    gridTemplateColumns: "80px 80px 80px 150px 100px 80px 400px 100px", 
                     width: "100%",
                     minWidth: 800,
                     paddingBottom: 0,
                     borderBottom: theme.palette.defaultBorder,    
                   }}
               >
-                    {["Type", "Status", "Scale", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => {
+                    {["Type", "Status", "Pipeline", "Name", "Type", "Queue", "Actions", "Distribution"].map((header, index) => {
 
 						return (
 							<ListItemText
@@ -912,7 +988,6 @@ const EnvironmentTab = memo((props) => {
         key={rowIndex}
         style={{
           display: "grid",
-          gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 350px 150px",
           backgroundColor: theme.palette.platformColor,
           height: 40,
           width: "100%",
@@ -1014,12 +1089,17 @@ const EnvironmentTab = memo((props) => {
             key={index}
             style={{ cursor: "pointer", backgroundColor: bgColor, marginLeft: 0, borderBottomLeftRadius: environments?.length - 1 === index ? 8 : 0, borderBottomRightRadius: environments?.length - 1 === index ? 8 : 0, display: 'grid', gridTemplateColumns: "80px 80px 80px 120px 120px 120px 120px 405px 125px", }}
             onClick={() => {
-            if (environment.Type === "cloud") {
-              toast("Cloud environments are not configurable. To see what is possible, create a new environment.")
-              return
-            }
-  
-            setListItemExpanded(listItemExpanded === index ? -1 : index)
+				if (environment.Type === "cloud") {
+				  toast("Cloud environments are not configurable. To see what is possible, create a new environment.")
+				  return
+				}
+	  
+				setListItemExpanded(listItemExpanded === index ? -1 : index)
+
+				if (listItemExpanded !== index) {
+					getEnvQueue(environment)
+					setCurrentEnvQueue([])
+				}
             }}
           >
             <ListItemText
@@ -1100,7 +1180,7 @@ const EnvironmentTab = memo((props) => {
 						<br />
 						<br />
 
-						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"} {environment?.Type === "cloud" ? "" : "Timeout: 180 seconds"}
+						Last checkin: {environment?.checkin !== undefined && environment.checkin !== null && environment?.checkin > 0 ? new Date(environment?.checkin * 1000).toLocaleString() : "Never"}. {environment?.Type === "cloud" ? "" : "Timeout: 180 seconds"}
 						</Typography>
 					} placement="top">
 					  <Typography
@@ -1182,42 +1262,14 @@ const EnvironmentTab = memo((props) => {
 				  }
 				/>
 
-            <ListItemText
-            primary={
-        	  selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ? 
-				"N/A"
-				:
-              environment.licensed ? (
-              <Tooltip title="Scale configured (auto on cloud)" placement="top">
-							<CheckCircleIcon style={{ color: "#4caf50" }} />
-						  </Tooltip>
-						) : (
-						  <Tooltip
-							title="In Verbose mode. Set SHUFFLE_SWARM_CONFIG=run to Scale. This will not be as verbose. Details: https://shuffler.io/docs/configuration#scaling-shuffle"
-							placement="top"
-						  >
-							<a
-							  href="/docs/configuration#scaling-shuffle"
-							  target="_blank"
-							  rel="noopener noreferrer"
-							>
-							  <CancelIcon style={{ color: "#f85a3e" }} />
-							</a>
-						  </Tooltip>
-						)
-					  }
-					  style={{
-						minWidth: 60,
-						marginLeft: 20, 
-						overflow: "hidden",
-						whiteSpace: "normal", 
-						wordWrap: "break-word",
-						padding: 8,
-						display: "table-cell",
-					  }}
-					/>
-
               		<ListItemText
+					    style={{
+					      marginLeft: 30, 
+					      overflow: "hidden",
+					      whiteSpace: "normal", 
+					      wordWrap: "break-word",
+					      display: "table-cell",
+					    }}
                     	primary={
                 			environment.Type === "cloud" ? 
                               <Tooltip title={`Make a new environment to set up a Datalake node. Please contact ${supportEmail} if this is something you want to see on Cloud directly.`} placement="top">
@@ -1231,40 +1283,32 @@ const EnvironmentTab = memo((props) => {
                                   rel="noopener noreferrer"
                                 >
 
-                  		<Tooltip title={"Data Lake node enabled. Check /detections/Sigma to learn more"} placement="top">
-                    		<CheckCircleIcon style={{ color: "#4caf50" }} />
-                  		</Tooltip>
-                  	</a>
-                	) : (
-					  <Tooltip
-						title="Data Lake node disabled. Click to enable."
-                        placement="top"
-						  onClick={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-		  
-							window.open("/detections/Sigma", "_blank")
-                  		}}
-                              >
-                                <a
-                                  href="/detections/Sigma"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <CancelIcon style={{ color: "#f85a3e" }} />
-                                </a>
-                              </Tooltip>
-                            )
-                          }
-                          style={{
-                            minWidth: 60,
-							marginLeft: 40, 
-                            overflow: "hidden",
-                            whiteSpace: "normal", 
-                            wordWrap: "break-word",
-                            display: "table-cell",
-                          }}
-                        />
+								<Tooltip title={"Data Lake node enabled. Check /detections/Sigma to learn more"} placement="top">
+									<CheckCircleIcon style={{ color: "#4caf50" }} />
+								</Tooltip>
+							</a>
+							) : (
+							  <Tooltip
+								title="Data Lake node disabled. Click to enable."
+								placement="top"
+								  onClick={(e) => {
+									e.preventDefault()
+									e.stopPropagation()
+				  
+									window.open("/detections/Sigma", "_blank")
+								}}
+							  >
+									<a
+									  href="/detections/Sigma"
+									  target="_blank"
+									  rel="noopener noreferrer"
+									>
+									  <CancelIcon style={{ color: "#f85a3e" }} />
+									</a>
+								</Tooltip>
+							  )
+						}
+					/>
 
                         <ListItemText
                           primary={(
@@ -1274,12 +1318,12 @@ const EnvironmentTab = memo((props) => {
                           )}
                           primaryTypographyProps={{
                             style:{
-                              maxWidth: 150,
                               whiteSpace: 'nowrap',
                               overflow: "hidden",
                               textOverflow: 'ellipsis',
                               wordWrap: "break-word",
                               transition: "all 0.3s ease",
+							  textAlign: "center", 
                             }}}
                             style={{
                               minWidth: 120,
@@ -1292,7 +1336,7 @@ const EnvironmentTab = memo((props) => {
                           primary={environment.Type}
                           primaryTypographyProps={{
                             style:{
-                              minWidth:  70,
+                              minWidth:  50,
                               overflow: "hidden",
                               whiteSpace: 'nowrap',
                               textOverflow: 'ellipsis',
@@ -1302,6 +1346,7 @@ const EnvironmentTab = memo((props) => {
                             }}}
                             style={{display: "table-cell",}}
                         />
+
                         <ListItemText
                           primaryTypographyProps={{
                             style:{
@@ -1344,7 +1389,7 @@ const EnvironmentTab = memo((props) => {
 								  }}
                                   color="primary"
                                 >
-                                  Make Default
+                                  Default
                                 </Button>
                                 <Button
                                   variant={environment.archived ? "contained" : "outlined"}
@@ -1418,34 +1463,38 @@ const EnvironmentTab = memo((props) => {
 
                               </ButtonGroup>
 
+							  {/*
                               <IconButton disabled={environment.Type === "cloud"} onClick={()=> {setIsExpanded(prev => !prev)}}>
                                 {listItemExpanded === index ? <ExpandLessIcon sx={{color: theme.palette.text.primary}} /> : <ExpandMoreIcon sx={{color: theme.palette.text.primary}}/>}
                               </IconButton>
+							  */}
                             </div>
                           </ListItemText>
+
                           {selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ?
-                                <ListItemText
-                                  primary={
-                                      <Tooltip
+                            <ListItemText
+                                primary={
+                                    <Tooltip
                                     title="Parent organization controlled environments. You can use, but not modify this environments. Contact an admin of your parent organization if you need changes to this."
                                     placement="top"
-                                >
-                                    <Chip
-                                        label={"Parent"}
-                                        variant="contained"
-                                        color="secondary"
-                                    />
-                                </Tooltip>
-                                  }
-                                  style={{ textAlign: 'center', verticalAlign: 'middle', }}
-                                  />
-                                :
-                                <Tooltip
-                                    title={environment.Name === "Cloud" ? "Cloud environments cannot be distributed" : "Distributed to sub-organizations. This means the sub organizations can use this environment, but can not modify it."}
-                                    placement="top"
-                                >
-                                    <IconButton
-                                      sx={{":hover": {backgroundColor: "transparent"}}}
+									>
+										<Chip
+							  		  		style={{marginLeft: 200, }}
+											label={"Parent"}
+											variant="contained"
+											color="secondary"
+										/>
+									</Tooltip>
+									  }
+									  style={{ textAlign: 'center', verticalAlign: 'middle', }}
+									  />
+									:
+									<Tooltip
+										title={environment.Name === "Cloud" ? "Cloud environments cannot be distributed" : "Distributed to sub-organizations. This means the sub organizations can use this environment, but can not modify it."}
+										placement="top"
+									>
+									<IconButton
+							  		  style={{marginLeft: 200, }}
                                       disabled={ environment.Name === "Cloud" || userdata?.active_org?.role !== "admin" || (selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" )? true : false}
                                       onClick={(e) => {
                                         e.stopPropagation()
@@ -1489,35 +1538,41 @@ const EnvironmentTab = memo((props) => {
                           aria-label="disabled tabs example"
                           variant="scrollable"
                           scrollButtons="auto"
-                            style={{textAlign: "center", marginTop: 25, }}
+                          style={{
+							textAlign: "center", 
+							marginTop: 25, 
+							marginBottom: 25, 
+							borderBottom: "1px solid rgba(255,255,255,0.3)",
+						  }}
                         >
                           <Tab
-                            value={0}
-                          label=<span style={{color: theme.palette.text.secondary, }}>
-                            <img
-                            src="/icons/docker.svg"
-                            style={{ width: 20, height: 20, marginRight: 10, }}
-                            /> Verbose (default)
-                          </span>
-                          />
-                          <Tab
                             value={1}
-                          label=<span style={{color: theme.palette.text.secondary, }}>
-                            <img
-                            src="/icons/docker.svg"
-                            style={{ width: 20, height: 20, marginRight: 10,}}
-                            /> Scale
-                          </span>
+                          	label=<span style={{color: theme.palette.text.secondary, textTransform: "none", }}>
+								<img
+								src="/icons/docker.svg"
+								style={{ width: 20, height: 20, marginRight: 10,}}
+								/> Docker (default)
+							  </span>
                           />
                           <Tab
                             value={2}
-                          label=<span style={{color: theme.palette.text.secondary, }}>
+                          label=<span style={{color: theme.palette.text.secondary, textTransform: "none", }}>
                             <img
                             src="/icons/k8s.svg"
                             style={{ width: 20, height: 20, marginRight: 10 }}
-                            /> k8s 
+                            /> Kubernetes
+
                           </span>
                           />
+
+                          <Tab
+                            value={0}
+							style={{marginLeft: 300, }}
+                          	label=<span style={{color: theme.palette.text.secondary, textTransform: "none", }}>
+								Verbose Mode
+							  </span>
+                          />
+
                           </Tabs>
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
                             {installationTab === 2 ?
@@ -1563,6 +1618,7 @@ const EnvironmentTab = memo((props) => {
                                   fontFamily: "monospace",
                                   fontSize: 18,
                                   border: themeMode === "dark" ? "1px solid #555" : "1px solid #ddd",
+								  minHeight: 325, 
                                 }}
                               >
                                 {getOrborusCommand(environment)}
@@ -1588,49 +1644,114 @@ const EnvironmentTab = memo((props) => {
         
                             <Divider style={{marginTop: 25, marginBottom: 10, }}/>
                             <div style={{display: 'flex', alignItems: 'center', }}>
-                            <Typography variant='body2' color="textSecondary">Configure HTTP Proxies:</Typography> <Checkbox 
-                              id="shuffle_skip_proxies"
-                              onClick={() => {
-                                if (commandController.proxies === undefined) { 
-                                  commandController.proxies = true 
-                                } else {
-                                  commandController.proxies = !commandController.proxies
-                                }
-        
-                                setCommandController(commandController)
-                                setUpdate(Math.random())
-                              }}
-                            />
+								<Checkbox 
+								  id="shuffle_skip_proxies"
+								  onClick={() => {
+									if (commandController.proxies === undefined) { 
+									  commandController.proxies = true 
+									} else {
+									  commandController.proxies = !commandController.proxies
+									}
+			
+									setCommandController(commandController)
+									setUpdate(Math.random())
+								  }}
+								/>
+								<Typography variant='body2' color="textSecondary">Configure HTTP Proxies</Typography> 
                             </div>
                             <div />
                             <div style={{display: 'flex', alignItems: 'center', }}>
-                            <Typography variant='body2' color="textSecondary">Disable Pipelines & Data Lake:</Typography> <Checkbox 
-                              id="shuffle_skip_pipelines"
-                              onClick={() => {
-                                if (commandController.pipelines === undefined) { 
-                                  commandController.pipelines = true 
-                                } else {
-                                  commandController.pipelines = !commandController.pipelines
-                                }
-                                setCommandController(commandController)
-                                        setUpdate(Math.random())
-                              }}
-                            />
+								<Checkbox 
+								  id="shuffle_enable_detection"
+								  onClick={() => {
+									if (commandController.detection === undefined) { 
+									  commandController.detection = true 
+									} else {
+									  commandController.detection = !commandController.detection
+									}
+
+									setCommandController(commandController)
+									setUpdate(Math.random())
+								  }}
+								/>
+								<Typography variant='body2' color="textSecondary">Enable Detection Controller</Typography>	 
                             </div>
+
+							{/*
+                            <div style={{display: 'flex', alignItems: 'center', }}>
+								<Checkbox 
+								  id="shuffle_skip_pipelines"
+								  onClick={() => {
+									if (commandController.pipelines === undefined) { 
+									  commandController.pipelines = true 
+									} else {
+									  commandController.pipelines = !commandController.pipelines
+									}
+
+									setCommandController(commandController)
+									setUpdate(Math.random())
+								  }}
+								/>
+								<Typography variant='body2' color="textSecondary">Disable Pipelines & Data Lake</Typography> 
+                            </div>
+							*/}
                           </div>
         
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
                             {installationTab === 2 ? null : 
                             <span>
-                                3. Verify if the node is running. Try to refresh the page a little while after running the command.
+                                3. Verify if the Runtime Location is running. Refresh the page 2 minutes after running the command.
                             </span>
                             }
                           </Typography>
                         </div>
                       </div>
-                      </Grid>
-                      </Grid>
-                    </Collapse>
+
+					  {currentEnvQueue.length === 0 ? null : 
+						  <List style={{ minWidth: 700, maxWidth: 700, maxHeight: 300, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin', }}>
+						  	{currentEnvQueue.map((queueItem, queueIndex) => {
+								return ( 
+									<ListItem
+										style={{ 
+											backgroundColor: theme.palette.surfaceColor, 
+											borderBottom: theme.palette.defaultBorder, 
+											maxHeight: 50, 
+										}}
+									>	
+										<ListItemText style={{minWidth: 50, maxWidth: 50, }}>
+											{queueItem.priority}
+										</ListItemText>
+										<ListItemText style={{minWidth: 125, maxWidth: 150, marginLeft: 25, }}>
+											{queueItem.type}
+										</ListItemText>
+										<ListItemText style={{minWidth: 325, maxWidth: 350, marginLeft: 25, overflow: "auto", }}>
+											{queueItem.execution_argument}
+										</ListItemText>
+										<ListItemText style={{minWidth: 50, maxWidth: 50, marginLeft: 25, overflow: "auto", }}>
+											<Tooltip title="Remove job from queue">
+												<IconButton 
+													onClick={()=>{
+														removeEnvQueueItem(
+															environment,
+															queueItem,
+														)
+													}}
+												>
+													<DeleteIcon style={{
+														color: red, 
+													}} />
+												</IconButton>
+											</Tooltip>
+										</ListItemText>
+									</ListItem>
+								)
+							})}
+						  </List>
+					  }
+
+				  </Grid>
+				  </Grid>
+				</Collapse>
         
                             {showCPUAlert === false ? null : (
                               <ListItem

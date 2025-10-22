@@ -437,7 +437,8 @@ const ParsedAction = (props) => {
 	];
 
 	const getApp = (appId, setApp) => {
-		fetch(globalUrl + "/api/v1/apps/" + appId + "/config?openapi=false", {
+		const url = `${globalUrl}/api/v1/apps/${appId}/config?openapi=false`;
+		fetch(url, {
 			headers: {
 				Accept: "application/json",
 			},
@@ -447,7 +448,7 @@ const ParsedAction = (props) => {
 				if (response.status === 200) {
 					//toast("Successfully GOT app "+appId)
 				} else {
-					toast("Failed getting app");
+					toast.error("Failed getting app. Please try again or contact support@shuffler.io");
 				}
 
 				return response.json();
@@ -1711,6 +1712,7 @@ const ParsedAction = (props) => {
 	}
 
 	const sortByCategoryLabel = (a, b) => {
+
 		const aHasCategoryLabel = a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0
 		const bHasCategoryLabel = b.category_label !== undefined && b.category_label !== null && b.category_label.length > 0
 
@@ -1739,11 +1741,12 @@ const ParsedAction = (props) => {
 		})
 	}
 
+
 	// Gets the most important actions first
 	const renderedActionOptions = deduplicateByName((
-		selectedApp.actions === undefined || selectedApp.actions === null ? [] :
-			selectedApp.actions.filter((a) =>
-				a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
+		selectedApp.actions === undefined || selectedApp.actions === null ? [] : 
+			isIntegration ? selectedApp.actions : 
+				selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
 	).sort(sortByCategoryLabel))
 
 
@@ -2981,7 +2984,6 @@ const ParsedAction = (props) => {
 										dataLPIgnore="true"
 										autoComplete="off"
 
-										
 										id="checkbox-search"
 										style={{
 											...theme.palette.textFieldStyle,

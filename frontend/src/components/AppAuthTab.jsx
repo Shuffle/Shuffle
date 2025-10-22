@@ -992,16 +992,16 @@ const AppAuthTab = memo((props) => {
                   <Typography variant='h5' style={{ marginBottom: 8, marginTop: 0, }}>App Authentication</Typography>
               <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', }}>
                     <Typography variant='body2' color="textSecondary">
-                      Control the authentication options for individual apps.
+                      Control the authentication options for individual apps. These keys are write-only, and cannot be viewed after creation. If you want editable secrets (e.g. for use in code), use <a href="admin?tab=datastore&category=protected" style={{ color: theme.palette.linkColor }}>Protected Keys</a>.
                       </Typography>
                       &nbsp;
                       <a
                           target="_blank"
                           rel="noopener noreferrer"
                           href="/docs/organizations#app_authentication"
-                          style={{ color: theme.palette.linkColor }}
+                          style={{ minWidth: 200, marginleft: 25, color: theme.palette.linkColor }}
                       >
-                          Learn more about App Authentication
+                          Learn more 
                       </a>
                    </div>
                 </div>
@@ -1787,7 +1787,7 @@ const Hits = ({
 
     if (selectedAppData.authentication === undefined || selectedAppData.authentication === null) {
       setAuthenticationType({
-      type: "",
+		  type: "",
       })
 
       selectedAppData.authentication = {
@@ -1955,6 +1955,7 @@ const Hits = ({
     if (data === undefined || data === null) {
       return;
     }
+
     const filteredData = data.filter((appAuth) => appAuth?.app?.id === appid);
     if (filteredData.length === 0) {
       setAppAuthentication([]);
@@ -1965,7 +1966,7 @@ const Hits = ({
     }
   };
 
-  const HandleAppAuthentication = ()=>{
+  const HandleAppAuthentication = () => {
 
     const url = `${globalUrl}/api/v1/apps/authentication`;
 

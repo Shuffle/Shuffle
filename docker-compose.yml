@@ -91,6 +91,27 @@ services:
       - shuffle
     restart: unless-stopped
 
+  # OPTIONAL: advanced monitoring with cAdvisor
+  # If you have a seperate orborus config YAML on another server,
+  # Please add it there as well if you want to monitor that server too.
+  # FYI: both servers will show up on different dashboards.
+  # cadvisor:
+  #   image: gcr.io/cadvisor/cadvisor:latest
+  #   volumes:
+  #     - /:/rootfs:ro
+  #     - /var/run:/var/run:ro
+  #     - /sys:/sys:ro
+  #     - /var/lib/docker/:/var/lib/docker:ro
+  #     - /dev/disk/:/dev/disk:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   ports:
+  #     - "8080:8080"
+  #   privileged: true
+  #   devices:
+  #     - /dev/kmsg:/dev/kmsg
+  #   networks:
+  #     - shuffle
+
   #memcached:
   #  image: memcached:latest
   #  container_name: shuffle-cache

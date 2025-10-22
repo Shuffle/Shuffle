@@ -477,7 +477,7 @@ export const HandleJsonCopy = (base, copy, base_node_name) => {
     //var newitem = JSON.parse(base);
     var newitem = validateJson(base).result
 
-    var to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
+    var to_be_copied = "$" + base_node_name?.toLowerCase()?.replaceAll(" ", "_");
     for (let copykey in copy.namespace) {
       if (copy.namespace[copykey].includes("Results for")) {
         continue;
@@ -742,7 +742,7 @@ const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
 
-  document.title = "Shuffle - Workflows";
+  document.title = "Workflows - Shuffle";
   let navigate = useNavigate();
 
   const classes = useStyles(theme)
