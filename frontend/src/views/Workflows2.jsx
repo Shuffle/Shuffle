@@ -2173,8 +2173,11 @@ const Workflows2 = (props) => {
         display: "flex",
         width: 160,
         height: 44,
+		marginTop: 5, 
         justifyContent: "space-between",
         fontFamily: theme.typography?.fontFamily,
+		textAlign: "center", 
+		margin: "auto", 
     };
 
     const exportAllWorkflows = (allWorkflows) => {
@@ -3077,8 +3080,8 @@ const Workflows2 = (props) => {
             }
         }
 
-		const isPublicWorkflow = data?.objectId === undefined || data?.objectId === null
-		const foundImage = !isPublicWorkflow ? "" : data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
+		//const isPublicWorkflow = data?.objectID === undefined || data?.objectID === null
+		const foundImage = data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
 
 		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
         return (
@@ -3087,7 +3090,7 @@ const Workflows2 = (props) => {
 				style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily, overflow: "hidden", }}
 			>
 
-				{isPublicWorkflow && foundImage?.length > 0 ? 
+				{foundImage?.length > 0 ? 
 					<img src={foundImage} alt="image" style={{
 						maxHeight: 250,
 						minHeight: 250,
@@ -3096,10 +3099,14 @@ const Workflows2 = (props) => {
 						cursor: "pointer", 
 					}} 
 					onClick={() => {
-						if (isCloud) {
-							navigate(`/workflows/${data.objectID}`)
+						if (data?.objectID === undefined || data?.objectID === null) {
+							navigate(`/workflows/${data.id}`)
 						} else {
-							window.open(`https://shuffler.io/workflows/${data.objectID}`, "_blank")
+							if (isCloud) {
+								navigate(`/workflows/${data.objectID}`)
+							} else {
+								window.open(`https://shuffler.io/workflows/${data.objectID}`, "_blank")
+							}
 						}
 					}}
 					/>
@@ -3221,13 +3228,19 @@ const Workflows2 = (props) => {
 
                                 <Typography
                                     style={{
+										textAlign: "center",
                                         marginBottom: 0,
                                         paddingBottom: 0,
-                                        fontSize: 18,
+                                        fontSize: 22,
                                         maxHeight: 30,
                                         flex: 10,
+
                                         fontFamily: theme.typography?.fontFamily,
                                         fontWeight: 500,
+										minWidth: 375, 
+										maxWidth: 375, 
+										margin: "auto", 
+										overflow: "hidden", 
                                     }}
                                 >
                                     <Link
@@ -3412,14 +3425,20 @@ const Workflows2 = (props) => {
                                 </span>
                             </Tooltip>
                         </Grid>
+
                         <Grid
                             item
                             style={{
                                 justifyContent: "left",
                                 overflow: "hidden",
-                                marginTop: 8,
+                                marginTop: 13,
                                 maxHeight: 35,
                                 fontFamily: theme.typography?.fontFamily,
+
+								textAlign: "center", 
+								minWidth: 200, 
+								maxWidth: 200,
+								margin: "auto", 
                             }}
                         >
                             {data.tags !== undefined && data.tags !== null
