@@ -2075,7 +2075,10 @@ func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequest
 
 	resultResp, err := client.Do(result)
 	if err != nil {
-		log.Printf("[ERROR] Failed making confirm request: %s", err)
+		if !strings.Contains(fmt.Sprintf("%s", err), "timeout") {
+			log.Printf("[ERROR] Failed making confirm request: %s", err)
+		}
+
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 		return err
 	}
@@ -4167,7 +4170,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Connection refused?
-		log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
+		if !strings.Contains(fmt.Sprintf("%s", err), "timeout") {
+			log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
+		}
 
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("ghcr.io/shuffle/shuffle-worker:%s", workerVersion)
