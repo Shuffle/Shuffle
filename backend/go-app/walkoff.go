@@ -20,21 +20,21 @@ import (
 	"strings"
 	"time"
 
-	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/api/types/image"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/h2non/filetype"
 	uuid "github.com/satori/go.uuid"
 
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/go-co-op/gocron"
 	"github.com/frikky/kin-openapi/openapi3"
+	gyaml "github.com/ghodss/yaml"
+	"github.com/go-co-op/gocron"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/go-git/go-git/v5/plumbing"
 	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
-	gyaml "github.com/ghodss/yaml"
+	"github.com/go-git/go-git/v5/storage/memory"
 )
 
 var localBase = "http://localhost:5001"
@@ -257,7 +257,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// This is really the environment's name - NOT OrgId 
+	// This is really the environment's name - NOT OrgId
 	environment := request.Header.Get("Org-Id")
 	if len(environment) == 0 {
 		log.Printf("[AUDIT] No org-id header set")
@@ -276,7 +276,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			return
 		*/
 	}
-	
+
 	// This section is cloud custom for now
 	auth := request.Header.Get("Authorization")
 	if len(auth) == 0 {
@@ -305,7 +305,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Only works onprem - shared queues across tenants
-	// without tenancy  
+	// without tenancy
 	if !found {
 		env, err = shuffle.GetEnvironment(ctx, environment, "")
 		if err != nil {
@@ -336,7 +336,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-		// Try again? I don't think this is necessary, and shouldn't really ever occur. 
+		// Try again? I don't think this is necessary, and shouldn't really ever occur.
 		if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]
 		}
@@ -457,16 +457,16 @@ func handleGetWorkflowExecutionResult(resp http.ResponseWriter, request *http.Re
 
 	if workflowExecution.Workflow.Sharing == "form" {
 		newWorkflow := shuffle.Workflow{
-			Name:           workflowExecution.Workflow.Name,
-			ID:			 	workflowExecution.Workflow.ID,
-			Owner:          workflowExecution.Workflow.Owner,
-			OrgId:          workflowExecution.Workflow.OrgId,
+			Name:  workflowExecution.Workflow.Name,
+			ID:    workflowExecution.Workflow.ID,
+			Owner: workflowExecution.Workflow.Owner,
+			OrgId: workflowExecution.Workflow.OrgId,
 
-			Sharing: 		workflowExecution.Workflow.Sharing,
+			Sharing:        workflowExecution.Workflow.Sharing,
 			Description:    workflowExecution.Workflow.Description,
 			InputQuestions: workflowExecution.Workflow.InputQuestions,
 
-			FormControl:	workflowExecution.Workflow.FormControl,
+			FormControl: workflowExecution.Workflow.FormControl,
 		}
 
 		workflowExecution.Results = []shuffle.ActionResult{}
@@ -765,7 +765,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
-		if workflow.OrgId == user.ActiveOrg.Id  {
+		if workflow.OrgId == user.ActiveOrg.Id {
 			log.Printf("[INFO] User %s is deleting workflow %s as admin. Owner: %s", user.Username, workflow.ID, workflow.Owner)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for workflow %s (delete workflow)", user.Username, workflow.ID)
@@ -782,7 +782,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		childWorkflows, err := shuffle.ListChildWorkflows(ctx, workflow.ID)
 		if err != nil {
 			log.Printf("[ERROR] Failed to list child workflows: %s", err)
-		} else { 
+		} else {
 			//log.Printf("\n\n[DEBUG] Found %d child workflows for workflow %s\n\n", len(childWorkflows), workflow.ID)
 
 			// Find cookies and append them to request.Header to replicate current request as closely as possible
@@ -898,10 +898,10 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 	/*
-	if !workflow.IsValid {
-		log.Printf("[ERROR] Stopped execution as workflow %s is not valid.", workflow.ID)
-		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
-	}
+		if !workflow.IsValid {
+			log.Printf("[ERROR] Stopped execution as workflow %s is not valid.", workflow.ID)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
+		}
 	*/
 
 	maxExecutionDepth := 10
@@ -914,7 +914,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
 	if workflowExecErr != nil {
-		if len(workflowExecution.Workflow.Actions) > 0 && len(workflowExecution.Results) > 0 && len(workflowExecution.ExecutionId) > 0 { 
+		if len(workflowExecution.Workflow.Actions) > 0 && len(workflowExecution.Results) > 0 && len(workflowExecution.ExecutionId) > 0 {
 			err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 			if err != nil {
 				log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
@@ -928,7 +928,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			return shuffle.WorkflowExecution{}, "", nil
 		} else {
 			log.Printf("[ERROR] Failed in prepareExecution: '%s'", workflowExecErr)
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", workflowExecErr), workflowExecErr 
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", workflowExecErr), workflowExecErr
 		}
 	}
 
@@ -1337,7 +1337,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
-		if workflow.OrgId == user.ActiveOrg.Id  {
+		if workflow.OrgId == user.ActiveOrg.Id {
 			log.Printf("[AUDIT] User %s is accessing workflow %s as admin (stop schedule)", user.Username, workflow.ID)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
@@ -1582,7 +1582,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
-		if workflow.OrgId == user.ActiveOrg.Id  {
+		if workflow.OrgId == user.ActiveOrg.Id {
 			log.Printf("[INFO] User %s is deleting workflow %s as admin. Owner: %s", user.Username, workflow.ID, workflow.Owner)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for workflow %s (schedule start). Owner: %s", user.Username, workflow.ID, workflow.Owner)
@@ -2022,7 +2022,7 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
-        cloneOptions = checkGitProxy(cloneOptions)
+		cloneOptions = checkGitProxy(cloneOptions)
 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
@@ -2877,7 +2877,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
 
 	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, appId, body, runValidationAction, decisionId)
-	if appId == "agent_starter" { 
+	if appId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
@@ -2905,7 +2905,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflowExecution.ProjectId = "" 
+	workflowExecution.ProjectId = ""
 	workflowExecution.Locations = []string{""}
 
 	foundEnv := ""
@@ -2923,7 +2923,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
 	executionRequest := shuffle.ExecutionRequest{
-		Priority: 15, 
+		Priority:      15,
 		ExecutionId:   workflowExecution.ExecutionId,
 		WorkflowId:    workflowExecution.Workflow.ID,
 		Authorization: workflowExecution.Authorization,
@@ -2998,7 +2998,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 			continue
 		}
 
-		//duringStartup 
+		//duringStartup
 		if duringStartup {
 			// Look for names: shuffle tools, http, email, shuffle ai
 			if shuffle.ArrayContains(startupNames, strings.ToLower(file.Name())) {
@@ -3366,7 +3366,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 
 			if len(item.Tags) > 0 && shuffle.ArrayContains(handledImages, item.Tags[0]) {
 				continue
-			} 
+			}
 
 			handledImages = append(handledImages, item.Tags[0])
 			err = buildImageMemory(fs, item.Tags, item.Extra, true)
@@ -3402,7 +3402,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 			for _, item := range buildLaterList {
 				if len(item.Tags) > 0 && shuffle.ArrayContains(handledImages, item.Tags[0]) {
 					continue
-				} 
+				}
 
 				handledImages = append(handledImages, item.Tags[0])
 
@@ -3493,7 +3493,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-        cloneOptions = checkGitProxy(cloneOptions)
+		cloneOptions = checkGitProxy(cloneOptions)
 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)

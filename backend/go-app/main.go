@@ -14,18 +14,18 @@ import (
 	"crypto/md5"
 	"strconv"
 
-	"os"
-	"io"
-	"log"
-	"fmt"
-	"errors"
-	"net/url"
-	"os/exec"
-	"net/http"
-	"io/ioutil"
-	"math/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
 
 	"net/http/httptest"
 	"strings"
@@ -67,6 +67,7 @@ var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
 var debug = false
+
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
@@ -3416,7 +3417,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	// Read and copy the baseline Dockerfile
 	dockerfileContent, err := ioutil.ReadFile(dockerfileSource)
 	if err != nil {
-		foundDockerfile := shuffle.GetBaseDockerfile() 
+		foundDockerfile := shuffle.GetBaseDockerfile()
 		if len(foundDockerfile) > 0 {
 			dockerfileContent = foundDockerfile
 		} else {
@@ -4033,7 +4034,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	}
 
 	// Just to prevent it from spamming large outbound requests
-	if shouldBackupData { 
+	if shouldBackupData {
 		if org.SyncConfig.WorkflowBackup {
 			workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
 			if err != nil {
@@ -4067,7 +4068,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 
 		// Send stats once every 10 times or so..?
-		// For now, just send every time 
+		// For now, just send every time
 		info, err := shuffle.GetOrgStatistics(ctx, org.Id)
 		if err != nil {
 			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
@@ -4401,7 +4402,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		//interval := int(org.SyncConfig.Interval)
-		interval := 30 
+		interval := 30
 		if interval == 0 {
 			log.Printf("[WARNING] Skipping org %s because sync isn't set (0).", org.Id)
 			continue
@@ -4503,7 +4504,6 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-
 					respBody, err := ioutil.ReadAll(newresp.Body)
 					if err != nil {
 						log.Printf("[ERROR] Failed setting respbody %s for execution stop. Status: %d", err, newresp.StatusCode)
@@ -4574,7 +4574,7 @@ func runInitEs(ctx context.Context) {
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
 			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/shuffle/python-apps")
-			
+
 			url = "https://github.com/shuffle/python-apps"
 			//url = ""
 			//return
@@ -4660,9 +4660,9 @@ func runInitEs(ctx context.Context) {
 	}
 
 	// Self-cleaning
-	go func() { 
+	go func() {
 		cursor := ""
-		cnt := 0 
+		cnt := 0
 		newCtx := context.Background()
 		for _, org := range activeOrgs {
 			if len(org.Id) == 0 {
@@ -4672,7 +4672,7 @@ func runInitEs(ctx context.Context) {
 
 			log.Printf("[INFO] Starting self-cleanup of cache keys for org %s", org.Id)
 
-			for { 
+			for {
 				keys, newCursor, err := shuffle.GetAllCacheKeys(newCtx, org.Id, "", 1000, cursor)
 				if err != nil {
 					//log.Printf("[ERROR] Failed getting all cache keys for cleanup: %s", err)
@@ -5052,7 +5052,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		Interval: responseData.IntervalSeconds,
 
 		WorkflowBackup: true,
-		AppBackup: true, 
+		AppBackup:      true,
 	}
 
 	interval := int(responseData.IntervalSeconds)
@@ -5675,7 +5675,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
-	if (strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true") {
+	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
 		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
