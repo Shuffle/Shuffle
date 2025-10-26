@@ -4,11 +4,11 @@ go 1.24.0
 
 toolchain go1.24.3
 
-//replace github.com/shuffle/opensearch-go => ../../../opensearch-go
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+replace github.com/shuffle/opensearch-go => ../../../opensearch-go
+
+replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 //replace github.com/frikky/schemaless => ../../../schemaless
-
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 
 require (
@@ -115,8 +115,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/opensearch-project/opensearch-go v1.1.0 // indirect
-	github.com/opensearch-project/opensearch-go/v2 v2.3.0 // indirect
 	github.com/osteele/liquid v1.7.0 // indirect
 	github.com/osteele/tuesday v1.0.3 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -128,6 +126,7 @@ require (
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/sendgrid/sendgrid-go v3.16.1+incompatible // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
+	github.com/shuffle/opensearch-go/v4 v4.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
