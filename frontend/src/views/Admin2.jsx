@@ -5,14 +5,14 @@ import { Context } from '../context/ContextApi.jsx';
 
 const Admin2 = (props) => {
     // Destructure props if needed
-    const { userdata, globalUrl, serverside, checkLogin, notifications, setNotifications, stripeKey, isLoaded, isLoggedIn} = props;
+    const { userdata, globalUrl, serverside, checkLogin, notifications, setNotifications, stripeKey, isLoaded, } = props;
     const [selectedTab, setSelectedTab] = useState('editdetails');
     const [selectedStatus, setSelectedStatus] = React.useState([]);
     const [selectedOrganization, setSelectedOrganization] = useState({});
     const [organizationFeatures, setOrganizationFeatures] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [isOrgLoaded, setIsOrgLoaded] = React.useState(false);
-    const {brandName}  = useContext(Context)
+    const {brandName, updateOrg, setUpdateOrg}  = useContext(Context)
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 	if (document !== undefined) {
@@ -47,6 +47,8 @@ const Admin2 = (props) => {
                         window.location.href = "/workflows";
                     }, 3000);
                 } else {
+
+                    setUpdateOrg(false);
                     if (
                         responseJson.sync_features === undefined ||
                         responseJson.sync_features === null
@@ -163,6 +165,13 @@ const Admin2 = (props) => {
             });
     };
 
+    useEffect(() => {
+        if (updateOrg && userdata?.active_org?.id !== undefined && userdata?.active_org?.id !== null && userdata?.active_org?.id.length > 0) {
+            handleGetOrg(userdata.active_org.id);
+            setUpdateOrg(false);
+        }
+        
+    }, [updateOrg]);
     
     useEffect(() => {
         const urlSearchParams = new URLSearchParams(window.location.search);

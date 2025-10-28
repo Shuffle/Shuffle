@@ -64,7 +64,7 @@ const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
-  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
+  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, updateOrg, setUpdateOrg, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
     userdata?.active_org?.name || "Select Organziation"
@@ -956,6 +956,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       .then((org) => {
         if (!fetched && org) {
           setActiveOrgData(org);
+          setUpdateOrg(false);
           if (!isCloud) {
               if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
@@ -972,7 +973,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     return () => {
       fetched = true;
     };
-  }, [userdata?.active_org?.id, globalUrl]);
+  }, [userdata?.active_org?.id, globalUrl, updateOrg]);
 
   return (
     <div

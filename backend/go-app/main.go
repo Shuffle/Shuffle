@@ -4956,6 +4956,17 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 			resp.Write(b)
 		} else {
+
+			// Delete cache for the sync features
+			cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
+			shuffle.DeleteCache(ctx, cacheKey)
+
+			subscriptionCacheKey := fmt.Sprintf("org_subscriptions_%s", org.Id)
+			shuffle.DeleteCache(ctx, subscriptionCacheKey)
+
+			licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
+			shuffle.DeleteCache(ctx, licenseCacheKey)
+
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
 		}
@@ -5045,6 +5056,23 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[ERROR] Failed to marshal SyncFeatures for cache: %s", err)
 	} else {
 		shuffle.SetCache(ctx, cacheKey, featuresBytes, 1800)
+	}
+
+	subscriptionCacheKey := fmt.Sprintf("org_subscriptions_%s", org.Id)
+	subscriptionsBytes, err := json.Marshal(responseData.Subscriptions)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Subscriptions for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 1800)
+	}
+
+	licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
+	licensedBytes, err := json.Marshal(responseData.Licensed)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Licensed for cache: %s", err)
+	} else {
+
+		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
 	}
 
 	org.SyncConfig = shuffle.SyncConfig{

@@ -49,7 +49,7 @@ const CloudSyncTab = (props) => {
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
 
-    const { themeMode, brandColor } = useContext(Context);
+    const { themeMode, brandColor, setUpdateOrg } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
 
     useEffect(() => { getSettings(); }, []);
@@ -457,6 +457,8 @@ const CloudSyncTab = (props) => {
                 setLoading(false);
                 if (response.status === 200) {
                     console.log("Cloud sync success?");
+                    handleGetOrg(userdata.active_org.id);
+                    setUpdateOrg(true);
                 } else {
                     console.log("Cloud sync fail?");
                 }
