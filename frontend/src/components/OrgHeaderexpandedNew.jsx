@@ -499,7 +499,7 @@ const OrgHeaderexpandedNew = (props) => {
 									</div>
 									{userdata?.support ? (
 										<div style={{ alignItems: 'center' }}>
-											<div style={{ marginRight: '12px', color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}>Status</div>
+											<div style={{ marginRight: '12px', color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily, marginTop: 2.5 }}>Status</div>
 											<FormControl style={{ width: 220, height: 35 }}>
 												<Select
 													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
@@ -711,11 +711,12 @@ const OrgHeaderexpandedNew = (props) => {
 						/>
 					</span>
 				</Grid>
+				{!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org || null || selectedOrganization?.creator_org?.length > 0 ? null :
 				<CloudSyncTab
 					globalUrl={globalUrl}
 					userdata={userdata}
 					serverside={false}
-				/>
+				/>}
 				<Grid item xs={12} style={{ marginTop: 20, }}>
 					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Workflow Backup Repository</Typography>
 					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400 }}>

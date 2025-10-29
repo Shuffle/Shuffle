@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { Link, useNavigate, useLocation } from "react-router-dom";
+
 import Billing from "../components/Billing.jsx";
 import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
@@ -7,9 +8,20 @@ import EditOrgTab from '../components/EditOrgTab.jsx';
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
 import   SSOTab from "../components/ssoTab.jsx"
 import { ToastContainer, toast } from "react-toastify";
-import { Button, Tooltip } from '@mui/material';
+import { 
+	Button, 
+	Tooltip, 
+	Typography, 
+	Divider, 
+} from '@mui/material';
+
+import { 
+	CheckCircle as CheckCircleIcon, 
+	Cancel as CancelIcon,
+} from '@mui/icons-material';
 import { getTheme } from '../theme.jsx';
 import { Context } from '../context/ContextApi.jsx';
+
 const OrganizationTab = (props) => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -49,14 +61,18 @@ const OrganizationTab = (props) => {
     useEffect(() => {
         if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
             setVisibleTabs(items.filter((item) => item !== 'Branding' && item !== 'SSO'));
-        }else {
+        } else {
             if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
                 setVisibleTabs(items);
-            }else {
+            } else {
                 setVisibleTabs(items.filter((item) => item !== 'SSO'));
             }
         }
-    },[isIntegrationPartner, isChildOrg, isGlobalUser, userdata]);
+
+        //if (isCloud) {
+        //    setVisibleTabs(items.filter((item) => item !== 'Production Status'));
+        //}
+    },[isIntegrationPartner, isChildOrg, isGlobalUser, userdata, isCloud]);
 
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
@@ -66,30 +82,32 @@ const OrganizationTab = (props) => {
             setSelectedTab(decodedTabName);
             if (decodedTabName === 'org_config') {
                 setCurIndex(0);
+            } else if (decodedTabName === 'prodstatus' || decodedTabName === 'productionstatus' && !isCloud) {
+                setCurIndex(1);
             } else if(decodedTabName === 'sso'){
-                setCurIndex(1)
+                setCurIndex(isCloud ? 1 : 2)
             }else if (decodedTabName === 'notifications' || decodedTabName === 'priorities') {
                 if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
-                    setCurIndex(1);
+                    setCurIndex(isCloud ? 1 : 2);
                 }else {
                     if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
-                        setCurIndex(2);
+                        setCurIndex(isCloud ? 2 : 3);
                     }else {
-                        setCurIndex(1);
+                        setCurIndex(isCloud ? 1 : 2);
                     }
                 }
             } else if (decodedTabName === 'billingstats' || decodedTabName === 'billing') {
                 if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
-                    setCurIndex(2);
+                    setCurIndex(isCloud ? 2 : 3);
                 } else {
                     if (userdata && userdata?.active_org && userdata?.active_org?.role === 'admin') {
-                        setCurIndex(3);
+                        setCurIndex(isCloud ? 3 : 4);
                     } else {
-                        setCurIndex(2);
+                        setCurIndex(isCloud ? 2 : 3);
                     }
                 }
             } else if (decodedTabName === 'branding') {
-                setCurIndex(4);
+                setCurIndex(isCloud ? 4 : 5);
             }
             //  else if (decodedTabName === 'analytics') {
             //     setCurIndex(5);
@@ -123,6 +141,7 @@ const OrganizationTab = (props) => {
             case 'sso': 
                 return <SSOTab isEditOrgTab={true} globalUrl={globalUrl} isCloud={isCloud} userdata={userdata} handleEditOrg={handleEditOrg} selectedOrganization={selectedOrganization}/>
             case `notifications`:
+            case `errors`:
             case `priorities`:
                 return (
                     <Priorities
@@ -183,7 +202,7 @@ const OrganizationTab = (props) => {
                         key={index}
                         title={
                             ((tabName === "sso")) && !(userdata?.support || userdata?.active_org?.role === "admin")
-                            ? "Your role is not admin. Please ask the admin to change your role."
+                            ? "Your role is not admin. Please ask an admin to change your role."
                             : ""
                         }
                         placement="right"
@@ -248,7 +267,7 @@ const OrganizationTab = (props) => {
                     </Tooltip>
                 ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', width: "100%", height: "100%", boxSizing:'border-box'}}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', width: "100%", height: "100%", boxSizing:'border-box'}}>
                 {renderContent()}
             </div>
         </div>
@@ -256,3 +275,4 @@ const OrganizationTab = (props) => {
 };
 
 export default OrganizationTab;
+

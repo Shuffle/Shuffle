@@ -47,7 +47,9 @@ import {
 	CheckCircle,
 	Padding,
 	Edit,
-	Search as SearchIcon
+	Search as SearchIcon,
+	CheckCircle as CheckCircleIcon, 
+	Cancel as CancelIcon,
 } from "@mui/icons-material";
 
 //import { useAlert 
@@ -60,6 +62,62 @@ import { Context } from "../context/ContextApi.jsx";
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid } from "@mui/x-data-grid";
+
+const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) => {
+    var isProdStatusOn;
+    if (selectedOrganization !== undefined && selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions[0] !== undefined) {
+        isProdStatusOn = selectedOrganization?.subscriptions[0]?.name?.toLowerCase()?.includes("enterprise") && selectedOrganization?.subscriptions[0]?.active;
+    } else {
+        isProdStatusOn = false;
+    }
+    const rows = [
+        { label: 'Licensed', ok: isProdStatusOn },
+        { label: 'Multi-Tenant', ok: isProdStatusOn },
+        { label: 'High Availability', ok: isProdStatusOn },
+        { label: 'Robust Infrastructure', ok: isProdStatusOn },
+    ];
+
+    return (
+        <div style={{ width: '100%', maxWidth: 800, padding: '0px 24px 24px 0px', height: 445 , display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+                <Typography variant="h5" style={{ fontWeight: 600, fontFamily: theme.typography.fontFamily }}>Production Status</Typography>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 16, background: isProdStatusOn ? 'rgba(43,192,126,0.1)' : 'rgba(253,76,98,0.1)' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: isProdStatusOn ? '#2BC07E' : '#FD4C62' }} />
+                    <Typography variant="caption" style={{ color: isProdStatusOn ? '#2BC07E' : '#FD4C62', fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{isProdStatusOn ? "ON" : "OFF"}</Typography>
+                </div>
+            </div>
+            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 18, fontFamily: theme.typography.fontFamily }}>
+                Monitor your production status to stay informed about available features.
+            </Typography>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {rows.map((row) => (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: theme.typography.fontFamily }}>
+                        {row.ok ? (
+                            <CheckCircleIcon style={{ color: '#2BC07E' }} />
+                        ) : (
+                            <CancelIcon style={{ color: '#FD4C62' }} />
+                        )}
+                        <Typography variant="body1" style={{ fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{row.label}</Typography>
+                    </div>
+                ))}
+            </div>
+
+			<Divider style={{
+				width: '100%',
+				marginTop: 32,
+				marginBottom: 16,
+				borderColor: theme.palette.defaultBorder,
+			 
+			}} /> 
+			<Typography variant="body1" color="textPrimary" style={{ marginTop: 24, fontFamily: theme.typography.fontFamily }}>
+				Shuffle Enterprise is designed for organizations that require scalability, high availability, dedicated support and more to run mission-critical workflows in production environments.
+			</Typography>
+			<Typography variant="body1" color="textSecondary" style={{ marginTop: 24, fontFamily: theme.typography.fontFamily }}>
+				More about upgrading below. If you want to know more, please contact <a href="mailto:support@shuffler.io?subject=Tell%20me%20about%20Production%20readiness" style={{ color: '#f85a3e', textDecoration: 'none' }}>support@shuffler.io</a> directly.
+			</Typography>
+        </div>
+    );
+};
 
 const Billing = memo((props) => {
 	const { globalUrl, userdata, serverside, billingInfo, stripeKey,isLoaded, selectedOrganization, handleGetOrg, clickedFromOrgTab, removeCookie} = props;
@@ -2085,27 +2143,32 @@ const Billing = memo((props) => {
 
 	return (
 		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
-			<div style={{ height: "100%", width: "100%"}}>
-				<div style={{ width: "100%",}}>
+			<div style={{  width: "100%", padding: 24, }}>
+				<div style={{ width: "100%", maxWidth: 800, }}>
+
+				{isCloud ? null : <ProductionStatus selectedOrganization={selectedOrganization} userdata={userdata} isCloud={isCloud} theme={theme} />}
+
 				{addDealModal}
-			{clickedFromOrgTab ?
-				<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, marginTop: 0, }}>Billing & Licensing</Typography> :
-				<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
-					Billing	& Licensing
-				</Typography>}
+				{clickedFromOrgTab ?
+					<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, marginTop: 24, }}>Billing & Licensing</Typography> 
+						:
+						<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
+						Billing	& Licensing
+					</Typography>
+				}
 			{userdata?.org_status?.includes("integration_partner") && userdata?.org_status?.includes("sub_org") ? null : 
 			<>
 				{clickedFromOrgTab ?
 				<Typography variant="body2" color="textSecondary" style={{ fontSize: 16 }}>{isCloud ?
 					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
-					"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
+					!(selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions.length > 0 && selectedOrganization?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && selectedOrganization?.subscriptions[0]?.active) ? "Shuffle is an Enterprise automation platform, and a license is required at scale. We offer a license with HA guarantees, higher limits, along along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
 				}</Typography> :
 				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10, fontSize: 16 }}>
 					{isCloud ?
 						"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 						:
-						"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
+						!(selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions.length > 0 && selectedOrganization?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && selectedOrganization?.subscriptions[0]?.active) ? "Shuffle is an Enterprise automation platform, and a license is required at scale. We offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
 					}
 				</Typography>}
 			</>  }
@@ -2924,6 +2987,7 @@ const Billing = memo((props) => {
 									userdata={userdata}
 									currentTab={currentTab}
 									syncStats={true}
+									statistics={statistics}
 								/>
 						}
 					</div>
@@ -3453,7 +3517,7 @@ const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
 	  height: '100%',
 	  boxSizing: 'border-box',
 	  overflow: 'hidden',
-		maxHeight: "1700px",
+		maxHeight: 3000,
 		overflowY: "auto",
 		scrollbarColor: theme.palette.scrollbarColorTransparent,
 		scrollbarWidth: 'thin'

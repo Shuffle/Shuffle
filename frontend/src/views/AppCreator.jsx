@@ -8,6 +8,7 @@ import {
   Typography,
   FormControlLabel,
   Button,
+  ButtonGroup,
   Divider,
   Select,
   MenuItem,
@@ -2680,11 +2681,11 @@ const AppCreator = (defaultprops) => {
             setErrorCode(responseJson.reason);
 
 			if (responseJson?.details !== undefined && responseJson?.details !== null) {
-				toast.error("Failed to build - contact support@shuffler.io: " + responseJson.details, {
+				toast.error("Failed to build - contact support@shuffler.io:\n\n" + responseJson.details, {
 					autoClose: 60000 
 				})
 			} else {
-				toast.error("Failed to build: " + responseJson.reason, {
+				toast.error("Failed to build: \n\n" + responseJson?.reason, {
 					autoClose: 10000
 				})
 			}
@@ -2930,7 +2931,7 @@ const AppCreator = (defaultprops) => {
                 Query
               </MenuItem>
             </Select>
-            <div style={{ display: "flex", width: 100 }}>
+            <ButtonGroup style={{ display: "flex", width: 100 }}>
               {index === extraAuth.length - 1 ? (
                 <Button
                   color="primary"
@@ -2963,7 +2964,7 @@ const AppCreator = (defaultprops) => {
               >
                 <RemoveIcon style={{}} />
               </Button>
-            </div>
+            </ButtonGroup>
           </span>
         );
       })}
@@ -3431,13 +3432,13 @@ const AppCreator = (defaultprops) => {
 	const ActionPaper = (props) => {
 		const { data, index } = props
 
-  	const [updater, setUpdater] = useState("tmp");
-  	const [actionsModalOpen, setActionsModalOpen] = useState(false);
-  	const [urlPath, setUrlPath] = useState("");
-  	const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
-  	const [currentActionMethod, setCurrentActionMethod] = useState(actionNonBodyRequest[0])
-  	const [extraBodyFields, setExtraBodyFields] = useState([]);
-  	const [urlPathQueries, setUrlPathQueries] = useState([]);
+		const [updater, setUpdater] = useState("tmp");
+		const [actionsModalOpen, setActionsModalOpen] = useState(false);
+		const [urlPath, setUrlPath] = useState("");
+		const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
+		const [currentActionMethod, setCurrentActionMethod] = useState(actionNonBodyRequest[0])
+		const [extraBodyFields, setExtraBodyFields] = useState([]);
+		const [urlPathQueries, setUrlPathQueries] = useState([]);
 		const [currentAction, setCurrentAction] = useState({
 			name: "",
 			file_field: "",
@@ -3454,6 +3455,10 @@ const AppCreator = (defaultprops) => {
 			required_bodyfields: [],
 		});
 
+		useEffect(() => {
+			console.log("Queries: ", urlPathQueries)
+		}, [urlPathQueries])
+
 		const findBodyParams = (body) => {
 			const regex = /\${(\w+)}/g;
 			const found = body.match(regex);
@@ -3462,7 +3467,7 @@ const AppCreator = (defaultprops) => {
 			} else {
 				setExtraBodyFields(found);
 			}
-  	};
+		};
 
 		const UrlPathParameters = () => {
 			const values = getCurrentPaths(urlPath);
@@ -3495,28 +3500,27 @@ const AppCreator = (defaultprops) => {
 			) : null;
 		};
 
-
 		const HandleIndividualChip = (props) => {
-    		const { chipData, index } = props;
-    		const [chipRequired, setChipRequired] = useState(currentAction.required_bodyfields !== undefined ? currentAction.required_bodyfields.includes(chipData) : false);
+			const { chipData, index } = props;
+			const [chipRequired, setChipRequired] = useState(currentAction.required_bodyfields !== undefined ? currentAction.required_bodyfields.includes(chipData) : false);
 
 				const parsedChip = chipData.startsWith("${") && chipData.endsWith("}") ? chipData.substring(2, chipData.length - 1) : chipData
 
-    		return (
-    		  <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
-    		    <Chip
-    		      style={{
-    		        backgroundColor: chipRequired ? "#f86a3e" : theme.palette.chipStyle.backgroundColor,
-    		        height: 30,
-    		        margin: 3,
-    		        paddingLeft: 5,
-    		        paddingRight: 5,
-    		        cursor: "pointer",
-    		        borderColor: theme.palette.chipStyle.borderColor,
-    		        color: theme.palette.chipStyle.color,
-    		      }}
-    		      label={parsedChip}
-    		      onClick={() => {
+			return (
+			  <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
+				<Chip
+				  style={{
+					backgroundColor: chipRequired ? "#f86a3e" : theme.palette.chipStyle.backgroundColor,
+					height: 30,
+					margin: 3,
+					paddingLeft: 5,
+					paddingRight: 5,
+					cursor: "pointer",
+					borderColor: theme.palette.chipStyle.borderColor,
+					color: theme.palette.chipStyle.color,
+				  }}
+				  label={parsedChip}
+				  onClick={() => {
 						if (chipRequired) {
 							currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
 						} else {
@@ -3524,27 +3528,28 @@ const AppCreator = (defaultprops) => {
 						}
 
 					setCurrentAction(currentAction);
-    		        setChipRequired(!chipRequired);
-    		      }}
-    		    />
-    		  </Tooltip>
-    		);
-  	};
-
-		const setActionField = (field, value) => {
-			currentAction[field] = value
-			setCurrentAction(currentAction)
-
-			//setUrlPathQueries(currentAction.queries)
+					setChipRequired(!chipRequired);
+				  }}
+				/>
+			  </Tooltip>
+			);
 		};
 
-		const addPathQuery = () => {
+	const setActionField = (field, value) => {
+		currentAction[field] = value
+		setCurrentAction(currentAction)
+
+		//setUrlPathQueries(currentAction.queries)
+	};
+
+	const addPathQuery = () => {
   	  urlPathQueries.push({ name: "", required: true, example: "", });
   	  if (updater === "addupdater") {
   	    setUpdater("updater");
   	  } else {
   	    setUpdater("addupdater");
   	  }
+
   	  setUrlPathQueries(urlPathQueries);
   	};
 
@@ -3555,6 +3560,7 @@ const AppCreator = (defaultprops) => {
   	  } else {
   	    setUpdater("flipupdater");
   	  }
+
   	  setUrlPathQueries(urlPathQueries);
   	};
 
@@ -3573,7 +3579,7 @@ const AppCreator = (defaultprops) => {
   	  }
   	};
 
-		const loopQueries = urlPathQueries.length === 0 ? null : (
+	const loopQueries = urlPathQueries.length === 0 ? null : (
       <div>
         <Divider
           style={{
@@ -3591,51 +3597,42 @@ const AppCreator = (defaultprops) => {
           return (
             <Paper key={queryIndex} style={actionListStyle}>
               <div style={{ marginLeft: "5px", width: "100%" }}>
-								<div style={{display: "flex"}}>
-									<TextField
-										required
-										fullWidth={true}
-										defaultValue={query.name}
-										placeholder={"Query name (key)"}
-										label={"Query Key"}
-										helperText={
-											<span style={{ color: theme.palette.text.primary, marginBottom: "2px" }}>
-												Click required to flip 
-											</span>
-										}
-										onBlur={(e) => {
-											console.log("IN BLUR: ", e.target.value);
-											urlPathQueries[queryIndex].name = e.target.value.replaceAll("=", "");
-											setUrlPathQueries(urlPathQueries);
-										}}
-										style={{flex: 3}}
-										InputProps={{
-											style: {
-												color: theme.palette.text.primary,
-											},
-										}}
-									/>
-									<TextField
-										fullWidth={true}
-										defaultValue={query.example}
-										placeholder={"Default value"}
-										label={"Example"}
-										onBlur={(e) => {
-											urlPathQueries[queryIndex].example = e.target.value.replaceAll(
-												"=",
-												""
-											)
-
-											setUrlPathQueries(urlPathQueries)
-										}}
-										style={{flex: 2}}
-										InputProps={{
-											style: {
-												color: theme.palette.text.primary,
-											},
-										}}
-									/>
-								</div>
+					<div style={{display: "flex"}}>
+						<TextField
+							required
+							fullWidth={true}
+							defaultValue={query.name}
+							placeholder={"Query name (key)"}
+							label={"Query Key"}
+							onBlur={(e) => {
+								urlPathQueries[queryIndex].name = e.target.value.replaceAll("=", "")
+								setUrlPathQueries(urlPathQueries)
+							}}
+							style={{flex: 3}}
+							InputProps={{
+								style: {
+									color: theme.palette.text.primary,
+								},
+							}}
+						/>
+						<TextField
+							fullWidth={true}
+							defaultValue={query.example}
+							placeholder={"Default value"}
+							label={"Example"}
+							onBlur={(e) => {
+								// E.g. for Jira -> JQL -> requires = in param
+								urlPathQueries[queryIndex].example = e.target.value.replaceAll("=","=")
+								setUrlPathQueries(urlPathQueries)
+							}}
+							style={{flex: 2}}
+							InputProps={{
+								style: {
+									color: theme.palette.text.primary,
+								},
+							}}
+						/>
+					</div>
                 <div
                   style={{ cursor: "pointer" }}
                   onClick={() => {
@@ -3654,7 +3651,7 @@ const AppCreator = (defaultprops) => {
                   deletePathQuery(queryIndex);
                 }}
               >
-  							<DeleteIcon />
+  				<DeleteIcon />
               </div>
             </Paper>
           );
@@ -4106,22 +4103,22 @@ const AppCreator = (defaultprops) => {
     		              if (request.header !== undefined && request.header !== null) {
     		                var headers = [];
     		                for (let [key, value] of Object.entries(request.header)) {
-													if (value === undefined) {
-														if (key.includes(":")) {
-															const keysplit = key.split(":")
-															key = keysplit[0].trim()
-															value = keysplit[1].trim()
+								if (value === undefined) {
+									if (key.includes(":")) {
+										const keysplit = key.split(":")
+										key = keysplit[0].trim()
+										value = keysplit[1].trim()
 
-														} else if (key.includes("=")) {
-															const keysplit = key.split("=")
-															key = keysplit[0].trim()
-															value = keysplit[1].trim()
+									} else if (key.includes("=")) {
+										const keysplit = key.split("=")
+										key = keysplit[0].trim()
+										value = keysplit[1].trim()
 
-														} else {
-															toast("Removed key: ", key)
-															continue
-														}
-													}
+									} else {
+										toast("Removed key: ", key)
+										continue
+									}
+								}
 
     		                  if (
     		                    parameterName !== undefined &&
@@ -4392,9 +4389,8 @@ const AppCreator = (defaultprops) => {
     		        variant={urlPath.length > 0 ? "contained" : "outlined"}
     		        style={{ }}
     		        onClick={() => {
-    		          //console.log(urlPathQueries)
-    		          //console.log(urlPath)
     		          console.log(currentAction);
+
     		          const errors = getActionErrors();
     		          addActionToView(errors);
     		          setActionsModalOpen(false);
@@ -4460,7 +4456,7 @@ const AppCreator = (defaultprops) => {
 				
 		return (
 			<Paper key={index} style={actionListStyle}>
-        {newActionModal}
+        		{newActionModal}
 
 				{error}
 				<Tooltip title="Edit action" placement="bottom">

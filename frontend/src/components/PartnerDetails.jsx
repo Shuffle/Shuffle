@@ -223,7 +223,7 @@ const PartnerDetails = (props) => {
                   <div style={{ display: "flex" }}>
                     <div style={{ width: "100%", maxWidth: 434, marginRight: 10 }}>
                       <Typography variant="text" style={{ color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
-                        Name
+                        Company Name
                       </Typography>
                       <Skeleton 
                         variant="rounded" 
@@ -267,7 +267,7 @@ const PartnerDetails = (props) => {
                       />
                     </div> */}
                     <div style={{ alignItems: "center" }}>
-                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily }}>
+                      <div style={{ marginRight: "12px", color: theme?.palette?.text?.primary, fontFamily: theme?.typography?.fontFamily, marginTop: 2.5}}>
                         Solutions
                       </div>
                       <Skeleton 
@@ -399,7 +399,7 @@ const PartnerDetails = (props) => {
                       variant="text"
                       style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily }}
                     >
-                      Name
+                      Company Name
                     </Typography>
                     <TextField
                       required
@@ -419,7 +419,7 @@ const PartnerDetails = (props) => {
                         cursor: isDisabled ? "not-allowed" : "pointer",
                       }}
                       fullWidth={true}
-                      placeholder="Name"
+                      placeholder="Company Name"
                       type="name"
                       id="standard-required"
                       margin="normal"
@@ -544,7 +544,8 @@ const PartnerDetails = (props) => {
                         style={{
                           marginRight: "12px",
                           color: theme.palette.text.primary,
-                          fontFamily: theme?.typography?.fontFamily
+                          fontFamily: theme?.typography?.fontFamily,
+                          marginTop: 2.5,
                         }}
                       >
                         Solutions
@@ -895,7 +896,7 @@ const PartnerDetails = (props) => {
                         cursor: isDisabled ? "not-allowed" : "pointer",
                       }}
                       fullWidth={true}
-                      placeholder="support@shuffler.io"
+                      placeholder="example@company.com"
                       type="name"
                       id="standard-required"
                       margin="normal"

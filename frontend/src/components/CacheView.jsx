@@ -147,6 +147,20 @@ const CacheView = memo((props) => {
 	const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 	const [showCollectIngestMenu, setShowCollectIngestMenu] = useState(false);
 
+	useEffect(() => {
+		if (selectedCategory === "" || selectedCategory === null || selectedCategory === undefined || selectedCategory === "default") {
+			return
+		}
+
+		if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length === 0) {
+			return
+		}
+
+		if (!datastoreCategories.includes(selectedCategory)) {
+			setDatastoreCategories([...datastoreCategories, selectedCategory])
+		}
+	}, [datastoreCategories, selectedCategory])
+
     var to_be_copied = "";
 	const defaultAutomation = [
 		{
@@ -299,7 +313,16 @@ const CacheView = memo((props) => {
     useEffect(() => {
 		getWorkflows()
 		getApps() 
-        listOrgCache(orgId, selectedCategory, 0, pageSize, page)
+
+		var chosenCategory = selectedCategory 
+		const urlParams = new URLSearchParams(window.location.search)
+		const categoryParam = urlParams.get("category")
+		if (categoryParam && categoryParam !== undefined && categoryParam !== "default" && categoryParam !== "") {
+			chosenCategory = categoryParam
+			setSelectedCategory(categoryParam)
+		}
+
+        listOrgCache(orgId, chosenCategory, 0, pageSize, page)
     }, [])
 
 
@@ -423,7 +446,6 @@ const CacheView = memo((props) => {
 					setDatastoreCategories(newcategories)
 				}
 
-
 				if (responseJson?.category_config !== undefined && responseJson?.category_config !== null) {
 
 					if (responseJson?.category_config?.id !== undefined && responseJson?.category_config?.id !== null && responseJson?.category_config?.id !== "") {
@@ -458,7 +480,12 @@ const CacheView = memo((props) => {
 					}
 				} 
 			} else {
-				toast.warn("Failed to load keys. Please try again or contact support@shuffler if this persists.")
+				//toast.warn("Failed to load keys. Please try again or contact support@shuffler if this persists.")
+				
+				if (category !== undefined && category !== null && category !== "" && category !== "default") {
+					toast.info(`No keys to load in category ${category}`)
+					setSelectedCategory(category)
+				}
 			}
 		})
 		.catch((error) => {
@@ -513,8 +540,8 @@ const CacheView = memo((props) => {
 			category: selectedCategory,
 		}
 
-		if (dataValue?.category !== "" && dataValue?.category !== "default") {
-			entry.category = dataValue.category.replaceAll(" ", "_");
+		if (dataValue?.category !== undefined && dataValue?.category !== "" && dataValue?.category !== "default") {
+			entry.category = dataValue?.category?.replaceAll(" ", "_");
 
 		}
 
@@ -548,7 +575,10 @@ const CacheView = memo((props) => {
             .then((responseJson) => {
                 setAddCache(responseJson);
                 toast.success("Edit saved");
-                listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+				setTimeout(() => {
+                	listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+				}, 7500);
+
                 setModalOpen(false);
             })
             .catch((error) => {
@@ -586,7 +616,10 @@ const CacheView = memo((props) => {
             .then((responseJson) => {
                 setAddCache(responseJson);
                 toast.success("New key added!");
-                listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+
+				setTimeout(() => {
+                	listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+				}, 5000);
                 setModalOpen(false);
             })
             .catch((error) => {
@@ -1513,7 +1546,7 @@ const CacheView = memo((props) => {
 							name={null}
 							/>
 					:
-					<Typography variant="body2" style={{maxHeight: 200, overflow: "hidden", }}>
+					<Typography variant="body2" style={{maxWidth: 500, maxHeight: 200, overflow: "auto", }}>
 						{data.value}
 					</Typography>
 					}
@@ -1712,7 +1745,7 @@ const CacheView = memo((props) => {
 							<span>
 								<IconButton
 									style={{ padding: "6px" }}
-									disabled={data.public_authorization === undefined || data.public_authorization === null || data.public_authorization === "" || data.org_id !== selectedOrganization.id ? true : false}
+									disabled={data.public_authorization === undefined || data.public_authorization === null || data.public_authorization === "" || data.org_id !== selectedOrganization.id ? true : false || data.category === "protected"}
 									onClick={(e) => {
 										e.preventDefault()
 										e.stopPropagation()
@@ -1911,7 +1944,7 @@ const CacheView = memo((props) => {
 
 					{selectedCategory === "protected" ?
 						<div style={{ color: red, }}>
-							Protected keys are encrypted, only available to admins, and will be masked when used in workflows. This is a basic protection, and is NOT bulletproof.
+							Protected keys are encrypted, only available to admins, and will be masked when used in workflows. If you want unreadable secrets, use <a href="/admin?tab=app_auth" style={{ color: theme.palette.linkColor }}>App Auth</a>.
 						</div>
 					: null}
 
@@ -2051,7 +2084,7 @@ const CacheView = memo((props) => {
 							</Button>
 						</Tooltip>
 						:
-						<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
+						<Tooltip title={"Add or find category"} style={{}} aria-label={""}>
 							<Button
 								style={{ 
 									whiteSpace: "nowrap", 
@@ -2077,8 +2110,14 @@ const CacheView = memo((props) => {
 					{renderTextBox && <TextField
 						onKeyPress={(event)=>{
 							handleKeyDown(event);
-							if(event.key === 'Enter' && selectedFileId.length > 0){
+
+							// Check value of the field
+							const foundValue = event.target.value.trim();
+							if(event.key === 'Enter' && foundValue?.length > 0){
 								setUpdateToThisCategory(event.target.value)
+    
+    							listOrgCache(orgId, event.target.value, 0, pageSize, 0)
+								setPage(0)
 							}
 								
 						}}
@@ -2096,6 +2135,7 @@ const CacheView = memo((props) => {
 								paddingTop: 0,
 							},
 						}}
+						id=""
 						color="primary"
 						placeholder="Category name"
 						required
@@ -2416,7 +2456,7 @@ const CacheView = memo((props) => {
 					</Typography>
 					
 					<Pagination
-					  count={Number.parseInt(totalAmount/pageSize*100/2)}
+					  count={Number.parseInt(totalAmount/pageSize)}
 					  page={page+1}
 					  renderItem={(item) => {
 						  var disabled = false

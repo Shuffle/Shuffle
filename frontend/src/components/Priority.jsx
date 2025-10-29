@@ -46,8 +46,6 @@ const Priority = (props) => {
 			if (item !== null) {
 				descsplit[1] = item.large_image
 
-				console.log("DESCSPLIT name: ", descsplit[0])
-
 				if (descsplit[0].includes(":default")) {
 					realignedSrc = true 
 				}

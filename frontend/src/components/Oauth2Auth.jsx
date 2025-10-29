@@ -688,51 +688,51 @@ const AuthenticationOauth2 = (props) => {
 
 	const autoAuthButton = 
 		<Button
-				fullWidth
-				variant="contained"
-				style={{
-					marginBottom: 20, 
-					marginTop: 20, 
-					flex: 1,
-					textTransform: "none",
-					textAlign: "left",
-					justifyContent: "flex-start",
-					backgroundColor: "#ffffff",
-					color: "#2f2f2f",
-					borderRadius: theme.palette?.borderRadius,
-					minWidth:  300, 
-					maxWidth: 300,
-					maxHeight: 50,
-					overflow: "hidden",
-					border: `1px solid ${theme.palette.inputColor}`,
-				}}
-				color="primary"
-				disabled={
-					clientSecret.length > 0 || clientId.length > 0
-				}
-				fullWidth
-				onClick={() => {
-					// Hardcode some stuff?
-					// This could prolly be added to the app itself with a "default" client ID 
-					startOauth2Request()
-				}}
-				color="primary"
-			>
-				{buttonClicked ? (
-					<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
-				) : (
-					<span style={{display: "flex"}}>
-						<img
-							alt={selectedAction.app_name}
-							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
-							src={selectedAction.large_image}
-						/>
-						<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5, color: "#2f2f2f",}} variant="body1">
-							One-click Login
-						</Typography>
-					</span>
-				)}
-			</Button>
+			fullWidth
+			variant="contained"
+			style={{
+				marginBottom: 20, 
+				marginTop: 20, 
+				flex: 1,
+				textTransform: "none",
+				textAlign: "left",
+				justifyContent: "flex-start",
+				backgroundColor: "#ffffff",
+				color: "#2f2f2f",
+				borderRadius: theme.palette?.borderRadius,
+				minWidth:  275, 
+				maxWidth: 275,
+				maxHeight: 50,
+				overflow: "hidden",
+				border: `1px solid ${theme.palette.inputColor}`,
+			}}
+			color="primary"
+			disabled={
+				clientSecret.length > 0 || clientId.length > 0
+			}
+			fullWidth
+			onClick={() => {
+				// Hardcode some stuff?
+				// This could prolly be added to the app itself with a "default" client ID 
+				startOauth2Request()
+			}}
+			color="primary"
+		>
+			{buttonClicked ? (
+				<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
+			) : (
+				<span style={{display: "flex"}}>
+					<img
+						alt={selectedAction.app_name}
+						style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
+						src={selectedAction.large_image}
+					/>
+					<Typography style={{ margin: 0, marginLeft: 10, marginTop: 8, color: "#2f2f2f",}} variant="body1">
+						One-click Login
+					</Typography>
+				</span>
+			)}
+		</Button>
 
 	if (authButtonOnly === true && (authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null && authenticationType.redirect_uri.length > 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
 		return autoAuthButton
@@ -747,7 +747,8 @@ const AuthenticationOauth2 = (props) => {
       </DialogTitle>
       <DialogContent>
         <span style={{}}>
-            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. <span>Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;</span>
+            Oauth2 requires a Client ID and Client Secret to authenticate, defined in your apps' remote website. <span>Your redirect URL: <br/><b>{window.location.origin}/set_authentication</b><br/>
+	  	</span>
           <a
             target="_blank"
             rel="norefferer"
@@ -760,51 +761,52 @@ const AuthenticationOauth2 = (props) => {
           <div />
         </span>
 
-				{isCloud && registeredApps?.includes(selectedApp?.name?.replaceAll(" ", "_").toLowerCase()) ? 
-					<span>
-						<span style={{display: "flex"}}>
-							{autoAuthButton}
-							
-							{buttonClicked ? 
-								null
-							:
-								<Tooltip
-									color="primary"
-									title={"Force Admin Consent"}
-									placement="top"
-								>
-									<Button
-										fullWidth
-										variant="outlined"
-										style={{
-											maxWidth: 50,
-											marginBottom: 20, 
-											marginTop: 20, 
-											maxHeight: 50, 
-										}}
-										color="primary"
-										disabled={
-											clientSecret.length > 0 || clientId.length > 0
-										}
-										fullWidth
-										onClick={() => {
-											// Hardcode some stuff?
-											// This could prolly be added to the app itself with a "default" client ID 
-											//startOauth2Request(true)
-											startOauth2Request()
-										}}
-										color="primary"
-									>
-										<SupervisorAccountIcon />
-									</Button>
-								</Tooltip>
-							}
-						</span>
-						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 0, }}>
-							OR
-						</Typography>
-					</span>
-				: null}
+		{isCloud && registeredApps?.includes(selectedApp?.name?.replaceAll(" ", "_").toLowerCase()) ? 
+			<span>
+				<span style={{display: "flex"}}>
+					{autoAuthButton}
+					
+					{buttonClicked ? 
+						null
+					:
+						<Tooltip
+							color="primary"
+							title={"Force Admin Consent"}
+							placement="top"
+						>
+							<Button
+								fullWidth
+								variant="outlined"
+								style={{
+									maxWidth: 40,
+									marginBottom: 20, 
+									marginTop: 20, 
+									maxHeight: 50, 
+									marginLeft: 10, 
+								}}
+								color="secondary"
+								disabled={
+									clientSecret.length > 0 || clientId.length > 0
+								}
+								fullWidth
+								onClick={() => {
+									// Hardcode some stuff?
+									// This could prolly be added to the app itself with a "default" client ID 
+									//startOauth2Request(true)
+									startOauth2Request()
+								}}
+								color="primary"
+							>
+								<SupervisorAccountIcon />
+							</Button>
+						</Tooltip>
+					}
+				</span>
+				<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 0, }}>
+					OR
+				</Typography>
+			</span>
+		: null}
         {/*<TextField
 						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius,}} 
 						InputProps={{

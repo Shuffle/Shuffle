@@ -92,6 +92,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       region_url: org.region_url,
     })) || []
   );
+  const [activeOrgData, setActiveOrgData] = useState(null);
+  const [isProdStatusOn, setIsProdStatusOn] = useState(false);
   const userOrgs = React.useMemo(() => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
@@ -247,7 +249,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const UpdateTabStatus  = useCallback(() => {  
     const lastTabOpenByUser = localStorage.getItem("lastTabOpenByUser");
-    if ((lastTabOpenByUser === "automate" && currentPath.includes("/dashboards/automate")) || currentPath.includes("/dashboards/automate")) {
+    if ((lastTabOpenByUser === "automate" && currentPath.includes("/new-dashboard")) || currentPath.includes("/new-dashboard")) {
       setOpenautomateTab(true);
       setCurrentOpenTab("automate");
       setOpenSecurityTab(false);
@@ -682,7 +684,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
           Version: <a href="https://github.com/Shuffle/Shuffle/releases" style={{ color: theme.palette.text.primary, textDecoration: "underline" }} target="_blank" rel="noreferrer"> 
-	  		2.1.0
+	  		2.1.1
 	  		</a>
         </Typography>
       </Menu>
@@ -749,6 +751,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     localStorage.setItem("getting_started_sidebar", "open");
     localStorage.removeItem("workflows");
     localStorage.removeItem("apps");
+    localStorage.removeItem("dashboard_onboarding_complete")
+    localStorage.removeItem("dashboard_onboarding_completed")
 
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
       mode: "cors",
@@ -936,6 +940,40 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   const showPartnerLogo = userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.image !== undefined && userdata?.active_org?.image !== null && userdata?.active_org?.image.length > 0 
 
+  useEffect(() => {
+    const orgId = userdata?.active_org?.id;
+    if (!orgId) {
+      return;
+    }
+
+    let fetched = false;
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((org) => {
+        if (!fetched && org) {
+          setActiveOrgData(org);
+          if (!isCloud) {
+              if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                setIsProdStatusOn(true);
+              } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                setIsProdStatusOn(true);
+              } else {
+                setIsProdStatusOn(false);
+              }
+            }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      fetched = true;
+    };
+  }, [userdata?.active_org?.id, globalUrl]);
+
   return (
     <div
       style={{
@@ -975,6 +1013,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           }
         }}
       >  
+        <Box  sx={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+          }}
+        >
         <Tooltip 
           title="Go to Home" 
           placement="top"
@@ -1005,7 +1051,15 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               style={{ width: showPartnerLogo ? 30 : 24, height: showPartnerLogo ? 30 : 24 }}
             />
           </Link>
-        </Tooltip>
+          </Tooltip>
+          {
+            !isCloud && expandLeftNav && (
+              <Typography variant="body2" style={{fontSize: 16, color: themeMode === "dark" ? lightText : darkText, transition: "opacity 0.3s ease", fontWeight: 600, marginTop: -5, marginLeft: 3}}>
+                 {isProdStatusOn ? "Enterprise" : "Open Source"}
+              </Typography>
+            )
+          }
+          </Box>
         <Box
           sx={{
             display: "flex",
@@ -1172,23 +1226,23 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
             <Button
               component={Link}
-              to="/usecases"
+              to={"/new-dashboard"}
               onClick={(event) => {
                 setOpenautomateTab(true);
                 setOpenSecurityTab(false);
-                setCurrentOpenTab("usecases");
-                localStorage.setItem("lastTabOpenByUser", "usecases");
+                setCurrentOpenTab("new-dashboard");
+                localStorage.setItem("lastTabOpenByUser", "new-dashboard");
               }}
               variant="text"
               style={{
                 ...ButtonStyle,
-                backgroundColor: ((currentOpenTab === "automate") || (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent",
+                backgroundColor: ((currentOpenTab === "new-dashboard") || (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent",
               }}
               onMouseOver={(event)=>{
                 event.currentTarget.style.backgroundColor = themeMode === "dark" ? darkHoverColor : lightHoverColor;
               }}
               onMouseOut={(event)=>{
-                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate")|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent";
+                event.currentTarget.style.backgroundColor = ((currentOpenTab === "new-dashboard")|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases" || currentPath.includes("/search"))))? themeMode === "dark" ? darkHoverColor : lightHoverColor : "transparent";
               }}
             >
                   <svg
@@ -1871,19 +1925,68 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         }}
       >
 	  	
-	  	{userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav &&
-      <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
-      <Button
-	  		variant="outlined"
-	  		style={{marginBottom: 15, borderWidth: 2, }}
-	  		onClick={() => {
-				window.open("https://shuffler.io/contact?category=book_a_demo", "_blank")
-			}}
-	  	>
-	  		Book a Demo
-      </Button>
-      </div>
-		}
+      
+	  {userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav && !isProdStatusOn &&
+		  <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
+			  <Button
+					variant="outlined"
+					style={{marginBottom: 15, borderWidth: 2, }}
+					onClick={() => {
+						navigate("/admin?admin_tab=billingstats&ref=left_sidebar_upgrade")
+						if (isCloud) { 
+							window.open("https://shuffler.io/contact?category=book_a_demo&ref=cloud", "_blank")
+						} else {
+							window.open("https://shuffler.io/contact?category=book_a_demo&ref=onprem", "_blank")
+						}
+					}}
+				>
+					Book a Demo
+			  </Button>
+		  </div>
+	  }
+
+      {!isCloud ? (
+          <div
+           style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 20,
+                      padding: "4px 10px",
+                      marginLeft: "5px",
+                      marginRight: "5px",
+                      borderRadius: 20,
+                      marginBottom: "14px",
+                      background: isProdStatusOn
+                        ? "rgba(43, 192, 126, 0.1)"
+                        : "rgba(255, 82, 82, 0.1)",
+                        cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      navigate("/admin?admin_tab=billingstats")
+            }}
+          >
+            <span
+              style={{
+                  width: 8,
+                  height: 8,
+                  marginLeft: 10,
+                  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+                  borderRadius: 999,
+                  display: expandLeftNav ? "inline" : "none",
+              }}
+            />
+              <Typography
+                style={{
+                  fontFamily: "12px",
+                  opacity: 0.9,
+                  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
+                 }}
+              >
+                {expandLeftNav ? isProdStatusOn ? "Production" : "NOT production" : isProdStatusOn ? "ON" : "OFF"}
+              </Typography>
+          </div>
+      ) : null}
+
         <Box ref={autocompleteRef}>
           <Autocomplete
             disablePortal

@@ -237,7 +237,7 @@ const LicencePopup = (props) => {
         return formattedLimit === "Unlimited"
           ? "Unlimited SMS per month"
           : `${formattedLimit} SMS${
-              parseInt(formattedLimit) > 1 ? "s" : ""
+              parseInt(formattedLimit) > 1 ? "" : ""
             } per month`;
       },
       email_trigger: (limit) => {
@@ -296,6 +296,14 @@ const LicencePopup = (props) => {
               parseInt(formattedLimit) > 1 ? "s" : ""
             }`;
       },
+      branding: (limit) => {
+        const formattedLimit = formatLimit(limit);
+        return formattedLimit === "Unlimited"
+          ? "Unlimited Branding"
+          : `${formattedLimit} Branding${
+              parseInt(formattedLimit) > 1 ? "s" : ""
+            }`;
+      }
     };
 
     try {
@@ -1027,7 +1035,7 @@ const LicencePopup = (props) => {
     };
 
     const isCancelled = localSub.cancellationdate !== 0;
-    const isPaidPlan = localSub.amount !== "0";
+    const isPaidPlan = localSub.amount !== "0" || (!isCloud && localSub.name.toLowerCase().includes("enterprise") && !selectedOrganization.cloud_sync);
     const amountToshow = isPaidPlan
       ? String(localSub.currency || "").toLowerCase() === "usd"
         ? "$" + localSub?.amount
@@ -1214,7 +1222,7 @@ const LicencePopup = (props) => {
                 }}
               >
                 {/* EULA Signature Button */}
-                {isCloud && localSub.eula && appRunsLimit >= 12000 && (
+                {false && (
                   <Tooltip
                     title={
                       localSub.eula_signed
@@ -1279,7 +1287,8 @@ const LicencePopup = (props) => {
               </div>
             </div>
 
-            <div
+            { ((!isCloud && selectedOrganization.cloud_sync) || isCloud) && (
+              <div
               style={{
                 display: "flex",
                 alignItems: "baseline",
@@ -1301,11 +1310,12 @@ const LicencePopup = (props) => {
                 </Typography>
               )}
             </div>
+            )}
             {(localSub.enddate || localSub.Enddate) && localSub.active ? (
               <Typography
                 variant="caption"
                 color="textSecondary"
-                style={{ marginTop: 2 }}
+                style={{ marginTop: (isCloud || (!isCloud && selectedOrganization.cloud_sync)) ? 2 : 8 }}
               >
                 {`${
                   isPaidPlan ? "Next billing: " : "App runs resets on "
@@ -1494,17 +1504,17 @@ const LicencePopup = (props) => {
                   Manage subscription
                 </Button>
               ) : null}
-              {subscription.amount === "0" && (
+              {!isPaidPlan && (
                 <Button
                   fullWidth
-                  variant="outlined"
+                  variant="contained"
                   color="primary"
                   style={{ textTransform: "none" }}
                   onClick={() => {
                     if(isCloud) {
-                      navigate("/pricing");
+                      navigate("/pricing?ref=cloud_billing");
                     }else {
-                      window.open("https://shuffler.io/pricing?env=Self-Hosted", "_blank")
+                      window.open("https://shuffler.io/pricing?env=Self-Hosted&ref=onprem_billing", "_blank")
                     }
                   }}
                 >
@@ -1516,10 +1526,10 @@ const LicencePopup = (props) => {
                 variant="outlined"
                 color="primary"
                 onClick={() => {
-                  if(isCloud) {
-                      navigate("/contact?category=contact")
-                  }else {
-                      window.open("https://shuffler.io/contact?category=contact", "_blank")
+                  if (isCloud) {
+                      navigate("/contact?category=contact&ref=cloud_billing")
+                  } else {
+                      window.open("https://shuffler.io/contact?category=contact&ref=onprem_billing", "_blank")
                   }
                 }}
                 style={{ textTransform: "none" }}

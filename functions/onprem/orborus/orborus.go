@@ -1148,8 +1148,16 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT=%s", appContainerSecurityContext))
 	}
 
+	if len(os.Getenv("SHUFFLE_APP_MOUNT_TMP_VOLUME")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_MOUNT_TMP_VOLUME=%s", os.Getenv("SHUFFLE_APP_MOUNT_TMP_VOLUME")))
+	}
+
 	if len(os.Getenv("SHUFFLE_LOGS_DISABLED")) > 0 {
 		env = append(env, fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")))
+	}
+
+	if len(os.Getenv("SHUFFLE_APP_REPLICAS")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_APP_REPLICAS=%s", os.Getenv("SHUFFLE_APP_REPLICAS")))
 	}
 
 	clientset, _, err := shuffle.GetKubernetesClient()
@@ -1397,6 +1405,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		return err
 	}
 
+	svcAppProtocol := "http"
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   identifier,
@@ -1406,9 +1415,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 			Selector: matchLabels,
 			Ports: []corev1.ServicePort{
 				{
-					Protocol:   "TCP",
-					Port:       33333,
-					TargetPort: intstr.FromInt(33333),
+					Protocol:    "TCP",
+					AppProtocol: &svcAppProtocol,
+					Port:        33333,
+					TargetPort:  intstr.FromInt(33333),
 				},
 			},
 			Type: corev1.ServiceTypeClusterIP,
@@ -2067,7 +2077,10 @@ func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequest
 
 	resultResp, err := client.Do(result)
 	if err != nil {
-		log.Printf("[ERROR] Failed making confirm request: %s", err)
+		if !strings.Contains(fmt.Sprintf("%s", err), "timeout") {
+			log.Printf("[ERROR] Failed making confirm request: %s", err)
+		}
+
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 		return err
 	}
@@ -2196,12 +2209,23 @@ func main() {
 		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 	}
 
-	log.Println("[INFO] Setting up execution environment")
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") != "false" {
+		// Run in 15 seconds in a goroutine
+		go func() {
+			time.Sleep(15 * time.Second)
+			log.Printf("[INFO] Auto-downloading Sigma rules during startup")
+			ruleType := "sigma"
+			err := handleFileCategoryChange(ruleType)
+			if err != nil {
+				log.Printf("[WARNING] Failed downloading %s rules: %s", ruleType, err)
+			}
+		}()
+	}
 
+	log.Println("[INFO] Setting up execution environment for env '%s'", environment)
 	// //FIXME
 	if baseUrl == "" {
 		baseUrl = "https://shuffler.io"
-		//baseUrl = "http://localhost:5001"
 	}
 
 	if len(orborusUuid) == 0 {
@@ -2592,7 +2616,7 @@ func main() {
 					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 
 					tenzirDisabled = false
-					err = handleFileCategoryChange()
+					err = handleFileCategoryChange("sigma")
 					if err != nil {
 						log.Printf("[ERROR] Failed to download the file category: %s", err)
 					}
@@ -2602,7 +2626,7 @@ func main() {
 				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
 					log.Printf("[INFO] Got job to disable sigma rules")
 
-					err = removeFileCategory()
+					err = removeFileCategory("sigma")
 					if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
 					}
@@ -3107,8 +3131,8 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Healthcheck: healthconfig,
 		ExposedPorts: nat.PortSet{
 			"5160/tcp": struct{}{},
-			"1514/udp":  struct{}{},
-			"1514/tcp":  struct{}{},
+			"1514/udp": struct{}{},
+			"1514/tcp": struct{}{},
 		},
 		Entrypoint: []string{containerName},
 		Env:        []string{},
@@ -3154,8 +3178,8 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
-			"1514/tcp":  []nat.PortBinding{{HostPort: "1514"}},
-			"1514/udp":  []nat.PortBinding{{HostPort: "1514"}},
+			"1514/tcp": []nat.PortBinding{{HostPort: "1514"}},
+			"1514/udp": []nat.PortBinding{{HostPort: "1514"}},
 			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
 		},
 		Mounts: []mount.Mount{
@@ -3165,16 +3189,16 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 				Target: "/tmp",
 			},
 			/*
-			{
-				Type:   "bind",
-				Source: tenzirStorageFolder,
-				Target: "/var/log/tenzir/",
-			},
-			{
-				Type:   "bind",
-				Source: tenzirStorageFolder,
-				Target: "/var/cache/tenzir/",
-			},
+				{
+					Type:   "bind",
+					Source: tenzirStorageFolder,
+					Target: "/var/log/tenzir/",
+				},
+				{
+					Type:   "bind",
+					Source: tenzirStorageFolder,
+					Target: "/var/cache/tenzir/",
+				},
 			*/
 		},
 		VolumeDriver: "local",
@@ -3392,7 +3416,7 @@ func createPipeline(command, identifier string) (string, error) {
 		"name":        identifier,
 		"hidden":      false,
 		"retry_delay": "500.0ms",
-		"unstoppable":  true,
+		"unstoppable": true,
 	}
 
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -3464,20 +3488,20 @@ func updatePipelineState(command, pipelineId, action string) (string, error) {
 	url := fmt.Sprintf("%s/api/v0/pipeline/update", pipelineUrl)
 	forwardMethod := "POST"
 	requestBody := map[string]interface{}{
-		"id":         pipelineId,
-		"action":     action,
+		"id":     pipelineId,
+		"action": action,
 
 		/*
-		"autostart": map[string]bool{
-			"created":   true,
-			"completed": false,
-			"failed":    false,
-		},
-		"autodelete": map[string]bool{
-			"completed": false,
-			"failed":    false,
-			"stopped":   false,
-		},
+			"autostart": map[string]bool{
+				"created":   true,
+				"completed": false,
+				"failed":    false,
+			},
+			"autodelete": map[string]bool{
+				"completed": false,
+				"failed":    false,
+				"stopped":   false,
+			},
 		*/
 	}
 
@@ -3637,8 +3661,8 @@ func searchPipeline(identifier string) (string, error) {
 	return "", errors.New("no existing pipeline found with name")
 }
 
-func handleFileCategoryChange() error {
-	apiEndpoint := baseUrl + "/api/v1/files/namespaces/sigma"
+func handleFileCategoryChange(ruleType string) error {
+	apiEndpoint := fmt.Sprintf("%s/api/v1/files/namespaces/%s", baseUrl, ruleType)
 	req, err := http.NewRequest("GET", apiEndpoint, nil)
 	if err != nil {
 		return err
@@ -3685,14 +3709,13 @@ func handleFileCategoryChange() error {
 	}
 
 	//log.Println("[DEBUG] ZIP file downloaded successfully.")
-
 	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
 	if len(tenzirStorageFolder) == 0 {
 		tenzirStorageFolder = "/tmp/"
 	}
 
 	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
-	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
+	sigmaPath := fmt.Sprintf("%s/%s_rules", tenzirStorageFolder, ruleType)
 	err = extractZIP("files.zip", sigmaPath)
 	if err != nil {
 		log.Printf("[ERROR] Failed to extract ZIP file: %s", err)
@@ -3780,7 +3803,7 @@ func copyToTenzir(srcPath, destPath string) error {
 	return nil
 }
 
-func removeFileCategory() error {
+func removeFileCategory(ruleType string) error {
 	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
 	if len(tenzirStorageFolder) == 0 {
 		tenzirStorageFolder = "/tmp/"
@@ -3789,14 +3812,14 @@ func removeFileCategory() error {
 	tenzirStorageFolder = strings.TrimRight(tenzirStorageFolder, "/")
 
 	//sigmaPath := "/var/lib/tenzir/sigma_rules/*"
-	sigmaPath := fmt.Sprintf("%s/sigma_rules", tenzirStorageFolder)
+	rulePath := fmt.Sprintf("%s/%s_rules", tenzirStorageFolder, ruleType)
 
-	err := os.RemoveAll(sigmaPath)
+	err := os.RemoveAll(rulePath)
 	if err != nil {
-		return fmt.Errorf("Error removing category files in %s: %v", sigmaPath, err)
+		return fmt.Errorf("Error removing category files in %s: %v", rulePath, err)
 	}
 
-	log.Printf("[INFO] Removed all local category data in %s", sigmaPath)
+	log.Printf("[INFO] Removed all local category data in %s", rulePath)
 
 	return nil
 }
@@ -4216,7 +4239,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Connection refused?
-		log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
+		if !strings.Contains(fmt.Sprintf("%s", err), "timeout") {
+			log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
+		}
 
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("ghcr.io/shuffle/shuffle-worker:%s", workerVersion)

@@ -18,16 +18,15 @@ The Docker setup is the default setup, and is ran with docker compose. This is [
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
-1. Make sure you have [Docker](https://docs.docker.com/get-docker/) installed, and that you have a minimum of **4Gb of RAM** available.
+1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [git](https://git-scm.com/downloads)(for downloading) installed, and that you have a minimum of **4Gb of RAM** available. More RAM = better.
 2. Download Shuffle
 ```bash
 git clone https://github.com/Shuffle/Shuffle
 cd Shuffle
 ```
 
-3. Fix prerequisites for the Opensearch database (Elasticsearch): 
+3. Fix prerequisites for the Opensearch database (Elasticsearch also works). This requires the `shuffle-database` folder to exist.
 ```bash
-mkdir shuffle-database                    # Create a database folder
 sudo chown -R 1000:1000 shuffle-database  # IF you get an error using 'chown', add the user first with 'sudo useradd opensearch'
 
 sudo swapoff -a                           # Disable swap
@@ -35,7 +34,7 @@ sudo swapoff -a                           # Disable swap
 
 4. Run docker-compose.
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 5. Recommended for Opensearch to work well

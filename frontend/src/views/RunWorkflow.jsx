@@ -72,6 +72,7 @@ const RunWorkflow = (defaultprops) => {
   const [executionLoading, setExecutionLoading] = useState(false);
   const [executionData, setExecutionData] = React.useState({});
   const [executionRunning, setExecutionRunning] = useState(false);
+  const [disableButtons, setDisableButtons] = useState(false);
   const [workflowQuestion, setWorkflowQuestion] = useState("");
   const [selectedOrganization, setSelectedOrganization] = React.useState(undefined);
   const [apps, setApps] = React.useState([]);
@@ -84,12 +85,14 @@ const RunWorkflow = (defaultprops) => {
   const [workflows, setWorkflows] = React.useState([])
   const [boxWidth, setBoxWidth] = React.useState(500)
   const [inputQuestions, setInputQuestions] = React.useState([])
+  const [agentic, setAgentic] = React.useState(false)
 
   const searchParams = new URLSearchParams(window.location.search)
   const answer = searchParams.get("answer")
   const execution_id = searchParams.get("reference_execution")
   const authorization = searchParams.get("authorization")
   const sourceNode = searchParams.get("source_node")
+  const decisionId = searchParams.get("decision_id") // ONLY for agentic workflows
   const backendUrl = searchParams.get("backend_url") || globalUrl
 
   useEffect(() => {
@@ -162,11 +165,8 @@ const RunWorkflow = (defaultprops) => {
 		}
 	}
 
-  // Used to swap from login to register. True = login, false = register
-
 	// Error messages etc
 	const [executionInfo, setExecutionInfo] = useState("");
-
 	const handleValidateForm = (executionArgument) => {
 		// Check if every field exists
 		if (executionArgument === undefined || executionArgument === null) {
@@ -184,9 +184,12 @@ const RunWorkflow = (defaultprops) => {
 			}
 		}
 
-		//console.log("EXEC: ", executionArgument)
+		// FIXME: Error with User Input + Required arg (?)
+		// Somehow validation is not happening as it should, and it just checks all 
+		// questions if none are selected
 		for (var key in executionArgument) {
 			if (executionArgument[key] === undefined || executionArgument[key] === null || executionArgument[key] === "") {
+				console.log("Unanswered, required question: ", key)
 				return false
 			}
 		}
@@ -334,17 +337,18 @@ const RunWorkflow = (defaultprops) => {
 		}
 
 		const validate = validateJson(executionData.result)
-
 		return (
 			<div style={{marginTop: executionMargin, }}>
 				{workflowQuestion !== "" ? null : 
-					<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+					<div style={{marginTop: 20, marginBottom: 20, }}/>
 				}
 
 				{workflowQuestion !== "" ? null : 
 				validate.valid === false ?
 					<div style={{marginTop: 20, }}>
-						<Divider />
+						{validate?.result !== undefined && validate?.result !== null && validate?.result.length > 0 ?
+							<Divider />
+						: null }
 						<Markdown
 						  components={{
 							img: Img,
@@ -397,9 +401,12 @@ const RunWorkflow = (defaultprops) => {
 
 		stop()
   	    setMessage("")
-  	    setExecutionLoading(true)
 		setExecutionData({})
 		setExecutionInfo("")
+
+		setTimeout(() => {
+  	    	setExecutionLoading(true)
+		}, 2500)
 
 		var data = {
 			"execution_argument": executionArgument,
@@ -462,6 +469,14 @@ const RunWorkflow = (defaultprops) => {
 			fetchBody.body = JSON.stringify(data)
 		}
 
+		if (agentic === true) {
+			if (url.includes("?")) {
+				url += `&agentic=true&decision_id=${decisionId}`
+			} else {
+				url += `?agentic=true&decision_id=${decisionId}`
+			}
+		}
+
 		// IF there is an execution argument, we should use it
 		fetch(url, fetchBody)
 		.then((response) => {
@@ -480,25 +495,30 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
-			if ((response.status === 401 || response.status === 403) && authorization === undefined || authorization === null || authorization.length === 0) {
-				toast(`This form is not available for you to run. If you this is an error, contact ${supportEmail} with a link to this form`)
-			}
+			//if ((response.status === 401 || response.status === 403) && authorization === undefined || authorization === null || authorization?.length === 0) {
+			//	toast(`This form is not available for you to run. If you this is an error, contact ${supportEmail} with a link to this form (2)`)
+			//}
 
 			return response.json()
 		})
 		.then(responseJson => {
+			//if (responseJson.success === true) {
+			//	setDisableButtons(true)
+			//}
+
 			setExecutionLoading(false)
-			if (responseJson.execution_id !== undefined && responseJson.execution_id !== null && responseJson.execution_id.length > 0) {
+			if (responseJson?.execution_id !== undefined && responseJson?.execution_id !== null && responseJson?.execution_id?.length > 0) {
 				navigate(`?execution_id=${responseJson.execution_id}`)
 			}
 
 			if (responseJson.success === false) {
+
 				console.log("Failed sending execution request")
-				if (responseJson.reason !== undefined && responseJson.reason !== null) {
+				if (responseJson?.reason !== undefined && responseJson?.reason !== null) {
 					if (responseJson?.reason?.toLowerCase().includes("already clicked")) {
-						setMessage("Already answered. You may close this window (2).")
+						setMessage("This form has been answered. You may close this window.")
 					} else {
-						toast.warn(responseJson.reason)
+						toast.warn(responseJson?.reason)
 					}
 				}
 
@@ -520,11 +540,17 @@ const RunWorkflow = (defaultprops) => {
 					setExecutionRequest(responseJson)
 					start()
 				}
+
+				// If execution_id or authorization, add them to the URL
+				if (responseJson?.execution_id !== undefined && responseJson?.execution_id !== null && responseJson?.execution_id?.length > 0 && responseJson?.authorization !== undefined && responseJson?.authorization !== null && responseJson?.authorization?.length > 0) {
+					navigate(`?execution_id=${responseJson.execution_id}&authorization=${responseJson.authorization}`)
+				}
 			}
 		})
 		.catch(error => {
 			//setExecutionInfo("Error in workflow startup: " + error)
-			toast.warn("Error submitting form. Please try again.")
+			console.log("Error starting workflow: ", error)
+			toast.warn(`Error submitting form. Please try again: ${error}`)
 
 			stop()
 			setMessage("")
@@ -597,8 +623,8 @@ const RunWorkflow = (defaultprops) => {
 				if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
 					const newmarkdown = realtimeMarkdown.replace(`{{ ${workflow_id} }}`, "", -1)
 					setRealtimeMarkdown(newmarkdown)
-				} else if (inputWorkflow.form_control.input_markdown !== undefined && inputWorkflow.form_control.input_markdown !== null && inputWorkflow.form_control.input_markdown.length > 0) {
-					const newmarkdown = inputWorkflow.form_control.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+				} else if (inputWorkflow?.form_control?.input_markdown !== undefined && inputWorkflow?.form_control?.input_markdown !== null && inputWorkflow?.form_control?.input_markdown.length > 0) {
+					const newmarkdown = inputWorkflow?.form_control?.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
 					setRealtimeMarkdown(newmarkdown)
 				}
 			}
@@ -608,10 +634,10 @@ const RunWorkflow = (defaultprops) => {
 			console.log("Get workflow error: ", error.toString())
 
 			if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
-				const newmarkdown = inputWorkflow.form_control.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+				const newmarkdown = inputWorkflow?.form_control?.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
 				setRealtimeMarkdown(newmarkdown)
-			} else if (inputWorkflow.form_control.input_markdown !== undefined && inputWorkflow.form_control.input_markdown !== null && inputWorkflow.form_control.input_markdown.length > 0) {
-				const newmarkdown = inputWorkflow.form_control.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+			} else if (inputWorkflow?.form_control?.input_markdown !== undefined && inputWorkflow?.form_control?.input_markdown !== null && inputWorkflow?.form_control?.input_markdown.length > 0) {
+				const newmarkdown = inputWorkflow?.form_control?.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
 				setRealtimeMarkdown(newmarkdown)
 			}
 		})
@@ -646,6 +672,7 @@ const RunWorkflow = (defaultprops) => {
 						trig.parameters = []
 					}
 
+					newexec = {}
 					for (var paramkey in trig.parameters) {
 						const param = trig.parameters[paramkey]
 						if (param.name !== "input_questions") {
@@ -683,6 +710,7 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
+			console.log("Setting exec arg: ", newexec)
 			setExecutionArgument(newexec)
 		}
 
@@ -733,10 +761,10 @@ const RunWorkflow = (defaultprops) => {
 			setInputQuestions(workflow.input_questions)
 		}
 
-		if (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) {
+		if (workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null && workflow?.form_control?.input_markdown.length > 0) {
 			// Look for {{ uuid }} format, and try to run that workflow with their account
 			// This is a hack, but a fun one.
-			var newmarkdown = workflow.form_control.input_markdown.replace("", "")
+			var newmarkdown = workflow?.form_control?.input_markdown.replace("", "")
 			
 			const uuidRegex = /{{\s[a-f0-9-]+\s}}/g
 			const found = newmarkdown.match(uuidRegex)
@@ -784,8 +812,8 @@ const RunWorkflow = (defaultprops) => {
 			}
 		}
 
-		if (workflow.status !== "WAITING") {
-			setMessage("Already answered. You may close this window (3).")
+		if (workflow.status === "EXECUTING" || workflow.status === "SUCCESS" || workflow.status === "ABORTED" || workflow.status === "STOPPED" || workflow.status === "FAILURE" || workflow.status === "FINISHED") {
+			setMessage("Already handled. You may close this window.")
 		}
 	}
 
@@ -806,13 +834,17 @@ const RunWorkflow = (defaultprops) => {
           console.log("Status not 200 for workflows :O!");
         }
 
-		if ((response.status === 401 || response.status === 403) && authorization === undefined || authorization === null || authorization.length === 0) {
-			toast(`This form is not available to you. If you think this is an error, please contact ${supportEmail} with the URL.`)
-		}
+		//if (response.status >= 400 && authorization === undefined || authorization === null || authorization.length === 0) {
+		//	toast.warn(`This form may not be available to you. If you think this is an error, please contact ${supportEmail} with the URL.`)
+		//}
 
         return response.json()
       })
       .then((responseJson) => {
+		if (responseJson.success === false) {
+			return
+		}
+
         // Not sure why this is necessary.
         if (responseJson.isValid === undefined) {
           responseJson.isValid = true;
@@ -1008,14 +1040,78 @@ const RunWorkflow = (defaultprops) => {
 			return response.json();
 		})
 		.then((responseJson) => {
-			if (responseJson.success == false) {
+			if (responseJson?.success == false) {
 				return
 			}
 
-			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && (workflow.id === undefined || workflow.id === null || workflow.id.length === 0) && responseJson.workflow !== undefined && responseJson.workflow !== null) {
+			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && disableButtons === false && responseJson?.status !== "" && responseJson?.status !== "WAITING") {
+				setDisableButtons(true)
+			}
 
+			//if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && (workflow.id === undefined || workflow.id === null || workflow.id.length === 0) && responseJson.workflow !== undefined && responseJson.workflow !== null) {
+			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && responseJson.workflow !== undefined && responseJson.workflow !== null) {
 				setupSourcenode(responseJson.workflow, sourceNode) 
 				setWorkflow(responseJson.workflow)
+
+				//const decisionId = searchParams.get("decision_id") // ONLY for agentic workflows
+				// Check for decision_id in url
+				if (decisionId?.length > 0 && responseJson?.workflow?.actions?.length > 0 && sourceNode?.length > 0 && responseJson?.results?.length > 0) {
+					console.log("Setting workflow: ", responseJson.workflow, ", EXEC RESULTS: ", responseJson.results)
+
+  					setAgentic(true)
+
+					for (var resultkey in responseJson.results) {
+						const result = responseJson.results[resultkey]
+						if (result.action.id !== sourceNode) {
+							continue
+						}
+
+						const validated = validateJson(result.result)
+						if (!validated.valid) {
+							console.log("Error parsing result: ", validated.error)
+							continue
+						}
+
+						var parsedresult = validated.result
+						console.log("PARSED RES: ", parsedresult)
+						if (parsedresult?.decisions?.length > 0) {
+							var newexec = executionArgument
+							if (newexec === undefined || newexec === null || Object.keys(newexec).length === 0) {
+								newexec = {}
+							}
+
+							for (var decisionkey in parsedresult?.decisions) {
+								const decision = parsedresult.decisions[decisionkey]
+								if (decision?.run_details?.id !== decisionId) {
+									continue
+								}
+
+								for (var fieldkey in decision?.fields) {
+									const field = decision.fields[fieldkey]
+									if (field.key === "question" && !inputQuestions.find(q => q.name=== field.value)) {
+										console.log("QUESTION: ", field)
+										const newquestion = {
+											"name": field.value,
+											"value": field.key+"_"+fieldkey,
+										}
+
+										inputQuestions.push(newquestion)
+
+										newexec[newquestion.value] = ""
+									}
+								}
+							}
+
+							setInputQuestions([...inputQuestions] )
+							console.log("EXEC: ", newexec)
+							setExecutionArgument(newexec)
+
+							responseJson.workflow.input_questions = inputQuestions
+							setWorkflow(responseJson?.workflow)
+							setDisableButtons(false)
+						}
+					}
+				}
 			}
 
 
@@ -1031,12 +1127,12 @@ const RunWorkflow = (defaultprops) => {
 					localStorage.setItem(storageKey, JSON.stringify(value))
 				}
 
-				if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
+				if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown?.length > 0) {
 					const newmarkdown = realtimeMarkdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
 					setRealtimeMarkdown(newmarkdown)
 
-				} else if (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) {
-					const newmarkdown = workflow.form_control.input_markdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
+				} else if (workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null && workflow?.form_control?.input_markdown.length > 0) {
+					const newmarkdown = workflow?.form_control?.input_markdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
 					setRealtimeMarkdown(newmarkdown)
 				}
 
@@ -1072,7 +1168,6 @@ const RunWorkflow = (defaultprops) => {
 
 		getWorkflow(props.match.params.key, sourceNode) 
 		if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null) {
-			console.log("Get execution: ", execution_id)
 			fetchUpdates(execution_id, authorization, true)
 		}
 
@@ -1136,13 +1231,13 @@ const RunWorkflow = (defaultprops) => {
 	const buttonStyle = {borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(executionArgument) || executionLoading ? buttonBackground : "grey", color: "white"}
 	
 	// Check if all fields are filled in?
-	var disabledButtons = executionLoading || executionRunning || message.length > 0 
+	var disabledButtons = executionLoading || executionRunning || message.length > 0  || disableButtons
 	if (disabledButtons === false && workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0) {
 		// Check field values
 		//disabledButtons = handleValidateForm(executionArgument)
 	}
 
-	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : "Unknown"
+	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : ""
 	const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.org !== undefined && selectedOrganization.org !== null? selectedOrganization.org : "support@shuffler.io"
 	//const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.contact !== undefined && selectedOrganization.contact !== null? selectedOrganization.contact : "support@shuffler.io"
 	
@@ -1321,12 +1416,12 @@ const RunWorkflow = (defaultprops) => {
 					<div style={{paddingTop: 150, marginTop: 150, width: 250, itemAlign: "center", textAlign: "center", margin: "auto", }}>
 						<CircularProgress />
 						<Typography variant="body1" style={{marginTop: 20, }}>
-							Loading Form Details...
+							Loading Details...
 						</Typography>
 					</div>
 				: 
 				<div>
-					{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? 
+					{workflowQuestion !== "" || (workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null && workflow?.form_control?.input_markdown.length > 0) ? 
 						<div style={{marginBottom: 20, }}>
 							<Markdown
 							  components={{
@@ -1342,13 +1437,13 @@ const RunWorkflow = (defaultprops) => {
 							  }}
 							  rehypePlugins={[rehypeRaw]}
 							>
-							  {workflowQuestion !== "" ? workflowQuestion : realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0 ? realtimeMarkdown : workflow.form_control.input_markdown}
+							  {workflowQuestion !== "" ? workflowQuestion : realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0 ? realtimeMarkdown : workflow?.form_control?.input_markdown}
 		    				</Markdown>
 						</div> 
 					: null}
 
       				<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "25px 0px 15px 0px",}}>
-						{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? null : 
+						{workflowQuestion !== "" || (workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null && workflow?.form_control?.input_markdown.length > 0) ? null : 
 						<div>
 							{/*
 							<img
@@ -1370,10 +1465,12 @@ const RunWorkflow = (defaultprops) => {
 							<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
 								{organization}
 							</Typography>
-							<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+							{organization?.length > 0 &&
+								<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+							}
 
 							{disabledButtons && message.length > 0 ? null : 
-								<Typography color="textSecondary" style={{textAlign: "center", }}>
+								<Typography color="textSecondary" style={{textAlign: "center", marginTop: 15, }}>
 									{message}
 								</Typography>
 							}
@@ -1411,6 +1508,11 @@ const RunWorkflow = (defaultprops) => {
 										// Set the first item to be default
 										executionArgument[multiChoiceOptions[0]] = multiChoiceOptions[1]
 									}
+
+									const parsedLabel = question?.value?.startsWith("question_") ? 
+										"" 
+										: 
+										question?.value?.charAt(0)?.toUpperCase() + question?.value?.slice(1)
 
 									return (
 										<div style={{marginBottom: 10}} key={index}>
@@ -1457,7 +1559,7 @@ const RunWorkflow = (defaultprops) => {
 														backgroundColor: theme.palette.inputColor, 
 														marginTop: 5, 
 													}}
-													label={question?.value?.charAt(0)?.toUpperCase() + question?.value?.slice(1)}
+													label={parsedLabel}
 													required
 
 													disabled={disabledButtons}
@@ -1542,7 +1644,7 @@ const RunWorkflow = (defaultprops) => {
 									: 
 										<Fade in={true} timeout={2500}>
 											<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-												{disabledButtons ? "Already answered. You may close this window." : ""}
+												{disabledButtons ? "Question answered. You may close this window." : ""}
 											</Typography>
 										</Fade>
 									}
@@ -1565,10 +1667,13 @@ const RunWorkflow = (defaultprops) => {
 												textTransform: "none",
 											}} 
 											onClick={() => {
-												setButtonClicked("FINISHED")
-												setExecutionData({
-													status: "FINISHED",
-												})
+												// Timeout 2500 just in case
+												setTimeout(() => {
+													setButtonClicked("FINISHED")
+													setExecutionData({
+														status: "FINISHED",
+													})
+												}, 2500)
 
 												onSubmit(null, execution_id, authorization, true) 
 											}}>
@@ -1586,16 +1691,24 @@ const RunWorkflow = (defaultprops) => {
 												flex: 1, 
 												textTransform: "none", 
 											}} onClick={() => {
-												setButtonClicked("ABORTED")
-												setExecutionData({
-													status: "ABORTED",
-												})
+												setTimeout(() => {
+													setButtonClicked("ABORTED")
+													setExecutionData({
+														status: "ABORTED",
+													})
+												}, 2500)
 
 												onSubmit(null, execution_id, authorization, false) 
 										}}>
 											Stop
 										</Button>
 									</div>
+
+									{handleValidateForm(executionArgument) === false && disabledButtons === false ?
+										<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, underline: "1px solid grey", }}>
+											All required questions have not been answered yet.
+										</Typography>
+									: null}
 								</span>
 							:
 							<div style={{display: "flex", marginTop: "15px"}}>

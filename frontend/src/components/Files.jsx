@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, memo } from "react";
 import { toast } from 'react-toastify';
+import { GetIconInfo, } from "../views/Workflows2.jsx";
 
 import {
   IconButton,
@@ -9,24 +10,25 @@ import {
   ListItemAvatar,
   ListItemSecondaryAction,
   Tooltip,
-	Button,
-	FormControl,
-	InputLabel,
-	TextField,
-	Divider,
-	Select,
-	MenuItem,
-	Dialog,
-	DialogTitle,
-	DialogContent,
-	DialogActions,
-	Typography,
-	Skeleton,
-	Checkbox,
-	Chip,
-	Menu,
-	Pagination,
-	PaginationItem,
+  Button,
+  ButtonGroup,
+  FormControl,
+  InputLabel,
+  TextField,
+  Divider,
+  Select,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Skeleton,
+  Checkbox,
+  Chip,
+  Menu,
+  Pagination,
+  PaginationItem,
 } from "@mui/material";
 
 import { DataGrid } from "@mui/x-data-grid";
@@ -352,8 +354,9 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 					</Tooltip>
 					<Tooltip
 						title={"Delete file"}
-						style={{marginLeft: isSelectedFiles?5:15, }}
+						style={{}}
 						aria-label={"Delete"}
+						placement="right"
 					>
 						<span>
 							<IconButton
@@ -628,8 +631,8 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 		return; 
 	}
 
-	if (folder === undefined || folder === null || folder.length < 2) {
-		toast("Please enter a valid folder name")
+	if (folder === undefined || folder === null || folder.length < 1) {
+		toast("Please enter a valid folder name. For Root: /")
 		return
 	}
 
@@ -637,6 +640,8 @@ const [filesLoaded, setFilesLoaded] = useState(false);
       url: url,
 	  path: folder,
       field_3: downloadBranch || "master",
+
+	  namespace: selectedCategory !== undefined && selectedCategory !== null && selectedCategory !== "default" ? selectedCategory : "",
     };
 
     if (field1.length > 0) {
@@ -1312,57 +1317,80 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 
 
 
-				<Button
-					color="primary"
-					variant="contained"
-					onClick={() => {
-						upload.click();
-					}}
-					style={{ textTransform: 'none',fontSize: 16, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
-				>
-			     Upload files
-				</Button>
-				{/* <FileCategoryInput
-								 isSet={renderTextBox} /> */}
-				<input
-					hidden
-					type="file"
-					multiple
-					ref={(ref) => (upload = ref)}
-					onChange={(event) => {
-						//const file = event.target.value
-						//const fileObject = URL.createObjectURL(actualFile)
-						//setFile(fileObject)
-						//const files = event.target.files[0]
-						uploadFiles(event.target.files);
+				<ButtonGroup style={{top: -10, position: "relative", }}>
+					<Button
+						color="primary"
+						variant="contained"
+						onClick={() => {
+							upload.click();
+						}}
+						style={{ textTransform: 'none',fontSize: 16, width:isSelectedFiles?143:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null,}}
+					>
+			    	 Upload files
+					</Button>
+					{/* <FileCategoryInput
+									 isSet={renderTextBox} /> */}
+					<input
+						hidden
+						type="file"
+						multiple
+						ref={(ref) => (upload = ref)}
+						onChange={(event) => {
+							//const file = event.target.value
+							//const fileObject = URL.createObjectURL(actualFile)
+							//setFile(fileObject)
+							//const files = event.target.files[0]
+							uploadFiles(event.target.files);
 
-					}}
-				/>
-				<Button
-					style={{ marginLeft: 16, marginRight: 15, borderRadius:isSelectedFiles?4:null, width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
-					variant="contained"
-					color="secondary"
-					onClick={() => getFiles(selectedCategory)}
-				>
-					<CachedIcon />
-				</Button>
+						}}
+					/>
+					<Button
+						style={{ width:isSelectedFiles?81:null, height:isSelectedFiles?35:null, boxShadow: isSelectedFiles?'none':null, }}
+						variant="contained"
+						color="secondary"
+						onClick={() => getFiles(selectedCategory)}
+					>
+						<CachedIcon />
+					</Button>
+				</ButtonGroup>
 
+				<ButtonGroup style={{marginLeft: 10, }}>
 			    {/* <div style={{height: 35, width: 1, color: "#494949"}}></div> */}
+
+				{selectedCategory === "sigma" || selectedCategory === "yara" ? 
+					<Tooltip title={"Open Detection Tab"} style={{}} aria-label={""}>
+						<a href={`/detections/${selectedCategory}`} target="_blank" rel="noopener noreferrer">
+							<OpenInNewIcon 
+								color="primary"
+								style={{
+									marginLeft: 10, 
+									marginRight: 10,
+									top: 7, 
+									position: 'relative',
+								}} 
+							/>
+						</a>
+					</Tooltip>
+				: null}
 
 				{fileCategories !== undefined &&
 				fileCategories !== null &&
 				fileCategories.length > 1 ? (
-					<FormControl style={{ minWidth: 150, maxWidth: 150 }}>
+					<FormControl style={{ minWidth: 175, maxWidth: 175, }}>
+						<InputLabel id="category-choice" style={{
+							color: "rgba(255, 255, 255, 0.65)",
+						}}>
+							Category
+						</InputLabel>
 						<Select
-							labelId="input-namespace-select-label"
+							labelId="category-choice"
 							id="input-namespace-select-id"
 							style={{
-								minWidth: 122,
-								maxWidth: 122,
+								minWidth: 175,
+								maxWidth: 175,
 								height: 35,
-								float: "right",
-								position: 'relative',
-								top: 8
+								borderRadius: "5px 0px 0px 5px",
+								overflow: "hidden",
 							}}
 							value={selectedCategory}
 							onChange={(event) => {
@@ -1389,12 +1417,31 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 							}}
 						>
 							{fileCategories.map((data, index) => {
+								const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
+								const iconDetails = GetIconInfo({
+									"app_name": fixedname,
+									"name": fixedname,
+								})
+
 								return (
 									<MenuItem
 										key={index}
 										value={data}
+										style={{ 
+											color: theme.palette.textFieldStyle.color, 
+											display: "flex", 
+											borderBottom: theme.palette.defaultBorder,
+										}}
 									>
-										{data.replaceAll("_", " ")}
+										<Typography style={{display: "flex", marginTop: 5, }}>
+											<div style={{marginRight: 10, }}>
+												{iconDetails?.originalIcon && (
+													iconDetails?.originalIcon
+												)}
+											</div>
+
+											{fixedname}
+										</Typography>
 									</MenuItem>
 								);
 							})}
@@ -1430,36 +1477,51 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 					</FormControl>
 				) : null}
 
-				<div style={{display: "inline-flex", position:"relative", top: 8}}>
-				{renderTextBox ? 
-					<Tooltip title={"Close"} style={{}} aria-label={""}>
-						<Button
-							style={{ marginLeft: 5, marginRight: 15, height: 35, borderRadius: 4, textTransform: 'none', fontSize: 16, }}
-							variant="contained"
-						color="secondary"
-							onClick={() => {
-								setRenderTextBox(false);
-								console.log(" close clicked")
+
+				{/*<div style={{display: "inline-flex", position:"relative", top: 8}}>*/}
+					{renderTextBox ? 
+						<Tooltip title={"Close"} style={{}} aria-label={""}>
+							<Button
+								style={{
+									height: 35, 
+									borderRadius: 4,  
+									textTransform: 'none', 
+									fontSize: 16,
+									borderRadius: "0px 5px 5px 0px",
+
+									marginRight: 10, 
 								}}
-						>
-							<ClearIcon/>
-						</Button>
-					</Tooltip>
-					:
-					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
-						<Button
-							style={{whiteSpace: 'nowrap', textWrap: 'nowrap', marginLeft: 5, marginRight: 15, width: 169, height: 35, borderRadius: 4,  textTransform: 'none', fontSize: 16, }}
-							variant="contained"
-							color="secondary"
-							onClick={() => {
-								setRenderTextBox(true);
+								color="secondary"
+								variant="contained"
+								onClick={() => {
+									setRenderTextBox(false);
+									console.log(" close clicked")
 								}}
-						>
-							<AddIcon/>
-							File Category
-						</Button>
-					</Tooltip> 
-				}
+							>
+								<ClearIcon/>
+							</Button>
+						</Tooltip>
+						:
+						<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
+							<Button
+								style={{
+									whiteSpace: "nowrap", 
+									width: fileCategories !== undefined && fileCategories !== null && fileCategories.length > 1 ? 50 : 169, 
+									height: 35, 
+									textTransform: 'none', 
+									fontSize: 16, 
+								}}
+								variant="outlined"
+								color="secondary"
+								onClick={() => {
+									setRenderTextBox(true);
+								}}
+							>
+								<AddIcon/>
+							</Button>
+						</Tooltip> 
+					}
+				</ButtonGroup>
 
 				{renderTextBox && <TextField
 					onKeyPress={(event)=>{
@@ -1491,7 +1553,8 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 					margin="dense"
 					defaultValue={""}
 					autoFocus
-				/>}</div>
+				/>}
+
 				<ShuffleCodeEditor
 					isCloud={isCloud}
 					expansionModalOpen={openEditor}
@@ -1673,3 +1736,4 @@ const DownloadFileIcon = memo(({ setLoadFileModalOpen, isSelectedFiles }) => {
         </Tooltip>
     );
 });
+

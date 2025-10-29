@@ -3075,7 +3075,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 
 	  const appEnding = app?.public === true ? app?.app_version : app?.id
 
-	  return `curl -L \ \\\n    "${globalUrl}/api/v1/download_docker_image?image=frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${appEnding}" \\\n    -H \"Authorization: Bearer APIKEY" \\\n    -o image.zip; \\\n    docker load -i image.zip`
+	  return `curl -L \ \\\n    "${globalUrl}/api/v1/download_docker_image?image=frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${appEnding}" \\\n    -H \"Authorization: Bearer APIKEY" \\\n    -o image.zip; \\\n    docker load -i image.zip${!app?.public ? ` \\\n    docker tag frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${appEnding} frikky/shuffle:${app?.name.toLowerCase().replaceAll(' ', '_')}_${app.app_version}` : ``}`
   }
 
   const renderedActionOptions = deduplicateByName((
@@ -3405,7 +3405,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                   <div style={{ textAlign: "center", marginTop: 25 }}>
                     <Link
                       rel="noopener noreferrer"
-                      to={`/register?app_one=${app.name}&app_two=${secondaryApp.name}&message=You need to login first to connect ${app.name} and ${secondaryApp.name}`}
+                      to={`/register?app_one=${app.name}&app_two=${secondaryApp.name}&message=You need to login first to connect ${app.name} and ${secondaryApp.name}&view=/apps/${params.appid}/integrations/${secondaryApp.name}`}
                       style={{ textDecoration: "none" }}
                     >
                       <Button
@@ -4300,8 +4300,8 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
               color="primary"
               onClick={() => {
 				if (!isLoggedIn) {
-					//navigate("/login?message=You must be logged in to activate this app&view=/apps/" + params.appid);
-					toast("You must be logged in to activate apps! Go to /login first.") 
+					navigate("/login?message=You must be logged in to activate this app&view=/apps/" + params.appid);
+					// toast("You must be logged in to activate apps! Go to /login first.") 
 					return;
 				}
 

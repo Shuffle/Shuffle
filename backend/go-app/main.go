@@ -14,18 +14,18 @@ import (
 	"crypto/md5"
 	"strconv"
 
-	"os"
-	"io"
-	"log"
-	"fmt"
-	"errors"
-	"net/url"
-	"os/exec"
-	"net/http"
-	"io/ioutil"
-	"math/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
 
 	"net/http/httptest"
 	"strings"
@@ -67,6 +67,7 @@ var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
 var debug = false
+
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
@@ -76,6 +77,7 @@ type retStruct struct {
 	IntervalSeconds int64                         `json:"interval_seconds"`
 	Reason          string                        `json:"reason"`
 	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
+	Licensed        bool                          `json:"licensed"`
 }
 
 type Contact struct {
@@ -951,42 +953,62 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		return childOrgs[i].Created < childOrgs[j].Created
 	})
 
+	parentOrg := &shuffle.Org{}
+	if len(org.CreatorOrg) > 0 {
+		parentOrg, err = shuffle.GetOrg(ctx, org.CreatorOrg)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
+			parentOrg = &shuffle.Org{}
+		}
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *parentOrg)
+		parentOrg = &licenseOrg
+	}
+
+	limit := 3
+
+	if parentOrg.Licensed && parentOrg.SyncFeatures.MultiTenant.Active {
+		limit = int(parentOrg.SyncFeatures.MultiTenant.Limit)
+	}
+
 	for index, org := range childOrgs {
 
-		if index < 3 {
+		if index < limit {
 			continue
 		}
 
 		failToLoadOrgs = append(failToLoadOrgs, org.Id)
 	}
 
-	if len(org.CreatorOrg) > 0 && len(childOrgs) > 3 && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
-		parentOrg, err := shuffle.GetOrg(ctx, org.CreatorOrg)
-		if err != nil {
-			log.Printf("[ERROR] Failed to get parent org during getinfo: %s", err)
-		} else {
-			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
-			parentOrg := &parent
-			if !parentOrg.SyncFeatures.MultiTenant.Active {
-				userInfo.ActiveOrg = shuffle.OrgMini{
-					Id:       parentOrg.Id,
-					Name:     parentOrg.Name,
-					Role:     userInfo.Role,
-					Branding: parentOrg.Branding,
-					Image:    parentOrg.Image,
-				}
-				log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username, parentOrg.Name)
+	if len(org.CreatorOrg) > 0 && len(childOrgs) > limit && shuffle.ArrayContains(failToLoadOrgs, userInfo.ActiveOrg.Id) {
 
-				err = shuffle.SetUser(ctx, &userInfo, false)
-				if err != nil {
-					log.Printf("[WARNING] Failed setting user to parent org: %s", err)
-				}
-				
-				resp.WriteHeader(200)
-				resp.Write([]byte(`{"success": true, "reason": "Parent org has more than 3 child orgs and is not licensed. Moving to parent org. Contact support@shuffler.io for more information", "switch_parent": true}`))
-				return
-			}
+		userInfo.ActiveOrg = shuffle.OrgMini{
+			Id:       parentOrg.Id,
+			Name:     parentOrg.Name,
+			Role:     userInfo.Role,
+			Branding: parentOrg.Branding,
+			Image:    parentOrg.Image,
 		}
+
+		if parentOrg.Licensed {
+			log.Printf("[INFO] Parent org %s is licensed. But Multi-tenant feature is not active. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username)
+		} else {
+			log.Printf("[INFO] Parent org %s has more than 3 child orgs and is not licensed. Moving user %s to parent org %s", parentOrg.Name, userInfo.Username)
+		}
+
+		err = shuffle.SetUser(ctx, &userInfo, false)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting user to parent org: %s", err)
+		}
+
+		reason := "Parent org has more than 3 child orgs and is not licensed. Moving user to parent org. Contact support@shuffler.io for more information"
+
+		if parentOrg.Licensed {
+			reason = fmt.Sprintf("Parent organization is licensed, but the maximum number of sub-organizations (%d) has been reached. You have been moved to the parent organization. Please contact support@shuffler.io for further assistance.", parentOrg.SyncFeatures.MultiTenant.Limit)
+		}
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(`{"success": true, "reason": "` + reason + `", "switch_parent": true}`))
+		return
 	}
 
 	//if err == nil {
@@ -1138,7 +1160,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		// Check for licensing/branding of parent and override
 		parentOrg, err := shuffle.GetOrg(ctx, parentOrgId)
 		if err == nil {
-			if parentOrg.LeadInfo.IntegrationPartner {
+			parent := shuffle.HandleCheckLicense(ctx, *parentOrg)
+			if parent.SyncFeatures.Branding.Active {
 				parsedStatus = append(parsedStatus, "integration_partner")
 
 				// except theme take from parent org
@@ -1176,11 +1199,15 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 						break
 					}
 				}
+			} else {
+				userInfo.ActiveOrg.Branding = shuffle.OrgBranding{}
 			}
 		}
 	} else {
 		// for parent org branding
-		if org.LeadInfo.IntegrationPartner {
+		licenseOrg := shuffle.HandleCheckLicense(ctx, *org)
+		org = &licenseOrg
+		if org.SyncFeatures.Branding.Active {
 			userInfo.ActiveOrg.Branding.Theme = org.Branding.Theme
 			userInfo.ActiveOrg.Branding.DocumentationLink = org.Defaults.DocumentationReference
 			userInfo.ActiveOrg.Branding.SupportEmail = org.Branding.SupportEmail
@@ -1189,6 +1216,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			userInfo.ActiveOrg.Branding.BrandName = org.Branding.BrandName
 
 			parsedStatus = append(parsedStatus, "integration_partner")
+		} else {
+			userInfo.ActiveOrg.Branding = shuffle.OrgBranding{}
 		}
 	}
 
@@ -1254,7 +1283,6 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	count := len(users)
-
 	if count == 0 {
 		log.Printf("[WARNING] No users - redirecting for management user")
 		resp.WriteHeader(200)
@@ -3389,7 +3417,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	// Read and copy the baseline Dockerfile
 	dockerfileContent, err := ioutil.ReadFile(dockerfileSource)
 	if err != nil {
-		foundDockerfile := shuffle.GetBaseDockerfile() 
+		foundDockerfile := shuffle.GetBaseDockerfile()
 		if len(foundDockerfile) > 0 {
 			dockerfileContent = foundDockerfile
 		} else {
@@ -3872,11 +3900,12 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success bool                   `json:"success"`
-		Reason  string                 `json:"reason"`
-		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
-		SyncFeatures shuffle.SyncFeatures   `json:"sync_features"`
+		Success       bool                          `json:"success"`
+		Reason        string                        `json:"reason"`
+		Jobs          []shuffle.CloudSyncJob        `json:"jobs"`
+		SyncFeatures  shuffle.SyncFeatures          `json:"sync_features"`
 		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
+		Licensed      bool                          `json:"licensed"`
 	}
 
 	responseData := retStruct{}
@@ -3959,6 +3988,15 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		shuffle.SetCache(ctx, subscriptionCacheKey, subscriptionsBytes, 1800)
 	}
 
+	licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
+	licensedBytes, err := json.Marshal(responseData.Licensed)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal Licensed for cache: %s", err)
+	} else {
+
+		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
+	}
+
 	for _, job := range responseData.Jobs {
 		err = handleCloudJob(job)
 		if err != nil {
@@ -3996,7 +4034,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	}
 
 	// Just to prevent it from spamming large outbound requests
-	if shouldBackupData { 
+	if shouldBackupData {
 		if org.SyncConfig.WorkflowBackup {
 			workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
 			if err != nil {
@@ -4030,7 +4068,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		}
 
 		// Send stats once every 10 times or so..?
-		// For now, just send every time 
+		// For now, just send every time
 		info, err := shuffle.GetOrgStatistics(ctx, org.Id)
 		if err != nil {
 			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
@@ -4206,10 +4244,8 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
-	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
-		log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
-		time.Sleep(30 * time.Second)
-	}
+	log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
+	time.Sleep(30 * time.Second)
 
 	shuffle.InitOpensearchIndexes()
 
@@ -4366,7 +4402,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		//interval := int(org.SyncConfig.Interval)
-		interval := 30 
+		interval := 30
 		if interval == 0 {
 			log.Printf("[WARNING] Skipping org %s because sync isn't set (0).", org.Id)
 			continue
@@ -4468,7 +4504,6 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 
-
 					respBody, err := ioutil.ReadAll(newresp.Body)
 					if err != nil {
 						log.Printf("[ERROR] Failed setting respbody %s for execution stop. Status: %d", err, newresp.StatusCode)
@@ -4539,7 +4574,7 @@ func runInitEs(ctx context.Context) {
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
 			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/shuffle/python-apps")
-			
+
 			url = "https://github.com/shuffle/python-apps"
 			//url = ""
 			//return
@@ -4623,6 +4658,45 @@ func runInitEs(ctx context.Context) {
 			log.Printf("[DEBUG] Successfully started healthcheck interval of %d minutes", healthcheckInterval)
 		}
 	}
+
+	// Self-cleaning
+	go func() {
+		cursor := ""
+		cnt := 0
+		newCtx := context.Background()
+		for _, org := range activeOrgs {
+			if len(org.Id) == 0 {
+				log.Printf("[DEBUG] No ID found for org with name '%s'. Why was it made?", org.Name)
+				continue
+			}
+
+			log.Printf("[INFO] Starting self-cleanup of cache keys for org %s", org.Id)
+
+			for {
+				keys, newCursor, err := shuffle.GetAllCacheKeys(newCtx, org.Id, "", 1000, cursor)
+				if err != nil {
+					//log.Printf("[ERROR] Failed getting all cache keys for cleanup: %s", err)
+					break
+				}
+
+				if newCursor == cursor || len(newCursor) == 0 {
+					break
+				}
+
+				if len(keys) == 0 {
+					break
+				}
+
+				cursor = newCursor
+				cnt += 1
+				if cnt > 10 {
+					break
+				}
+			}
+
+			log.Printf("[INFO] Finished self-cleanup of cache keys for org %s", org.Id)
+		}
+	}()
 
 	log.Printf("[INFO] Finished INIT (ES)")
 }
@@ -4978,7 +5052,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		Interval: responseData.IntervalSeconds,
 
 		WorkflowBackup: true,
-		AppBackup: true, 
+		AppBackup:      true,
 	}
 
 	interval := int(responseData.IntervalSeconds)
@@ -5443,6 +5517,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate/llm", shuffle.HandleWorkflowGenerationResponse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/edit/llm", shuffle.HandleEditWorkflowWithLLM).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore", shuffle.HandleSetDatastoreKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/automate", shuffle.HandleDatastoreCategoryConfig).Methods("POST", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
@@ -5537,6 +5616,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 
+	r.HandleFunc("/api/v1/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/stats/{key}", shuffle.GetSpecificStats).Methods("GET", "OPTIONS")
+
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
@@ -5592,7 +5675,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
-	if (strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true") {
+	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
 		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
@@ -5609,7 +5692,6 @@ func initHandlers() {
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
-
 	if os.Getenv("DEBUG") == "true" {
 		debug = true
 	}
