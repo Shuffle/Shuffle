@@ -2116,6 +2116,11 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		}
 	}
 
+	if len(data) == 0 {
+		log.Printf("[WARNING] Stream result missing execution ID and authorization; injecting them from workflow execution")
+		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamResultUrl,
