@@ -4,7 +4,7 @@ go 1.24.0
 
 toolchain go1.24.3
 
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 //replace github.com/frikky/schemaless => ../../../schemaless
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
@@ -25,7 +25,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.44
+	github.com/shuffle/shuffle-shared v0.9.45
 	github.com/shuffle/singul v0.0.19
 	golang.org/x/crypto v0.40.0
 	google.golang.org/api v0.236.0
