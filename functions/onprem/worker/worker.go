@@ -2555,6 +2555,11 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 		return workflowExecution, err
 	}
 
+	if debug {
+		log.Printf("[INFO] Here is the result we got back from backend: %s", workflowExecution.Results)
+	}
+
+	setWorkflowExecution(context.Background(), *workflowExecution, false)
 	return workflowExecution, nil
 }
 
