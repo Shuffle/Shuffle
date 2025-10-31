@@ -31,9 +31,6 @@ services:
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
-      - HTTP_PROXY=http://192.168.29.215:5000
-      - HTTPS_PROXY=http://192.168.29.215:5000
-      - NO_PROXY=192.168.29.215:3001, shuffler.io, 192.168.29.215:9200
     restart: unless-stopped
   orborus:
     image: ghcr.io/shuffle/shuffle-orborus:latest
