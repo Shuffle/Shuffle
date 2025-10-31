@@ -4,7 +4,8 @@ go 1.24.0
 
 toolchain go1.24.3
 
-replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+
 //replace github.com/frikky/schemaless => ../../../schemaless
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
