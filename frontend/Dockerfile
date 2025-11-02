@@ -27,7 +27,7 @@ COPY ./*.json /usr/src/app/
 RUN npm run build --loglevel verbose 2>&1
 
 # Production environment
-FROM nginx:1.29.0
+FROM nginx:1.29.3
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css
