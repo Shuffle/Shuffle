@@ -44,7 +44,7 @@ jobs:
             APP_VERSION="${VERSION}"
             CHART_VERSION="${VERSION}"
           else
-            APP_VERSION="lastest"
+            APP_VERSION="latest"
             CHART_VERSION="2.1.1"
           fi
 
