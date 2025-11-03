@@ -38,8 +38,8 @@ import {
 	Avatar,
 } from "@mui/material";
 
-import { 
-	DataGrid, 
+import {
+	DataGrid,
 	GridColDef,
 } from '@mui/x-data-grid';
 
@@ -70,15 +70,15 @@ import {
     VisibilityOff as VisibilityOffIcon,
 	Clear as ClearIcon,
 	Add as AddIcon,
-	Rocket as RocketIcon, 
-	Webhook as WebhookIcon, 
-	Air as AirIcon, 
-	RocketLaunch as RocketLaunchIcon, 
+	Rocket as RocketIcon,
+	Webhook as WebhookIcon,
+	Air as AirIcon,
+	RocketLaunch as RocketLaunchIcon,
 	Send as SendIcon,
 	SmartToy as SmartToyIcon,
 	Settings as SettingsIcon,
 	FilterAlt as FilterAltIcon,
-	CompareArrows as CompareArrowsIcon, 
+	CompareArrows as CompareArrowsIcon,
 } from "@mui/icons-material";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -104,7 +104,7 @@ const useStyles = makeStyles({
 	},
 });
 
-// 
+//
 
 //const CacheView = (props) => {
 const CacheView = memo((props) => {
@@ -130,7 +130,7 @@ const CacheView = memo((props) => {
 	const [cursors, setCursors] = useState({
 		0: "",
 	})
-	const [_, setUpdate] = useState(Math.random()) 
+	const [_, setUpdate] = useState(Math.random())
 	const [selectedRows, setSelectedRows] = useState([]);
 	// Direct category migration from ../components/Files.jsx
     const [selectAllChecked, setSelectAllChecked] = React.useState(false)
@@ -170,7 +170,7 @@ const CacheView = memo((props) => {
 				"key": "workflow_id",
 				"value": "",
 			}],
-			"icon": <AirIcon />, 
+			"icon": <AirIcon />,
 			"enabled": false,
 		},
 		{
@@ -203,7 +203,7 @@ const CacheView = memo((props) => {
 				"key": "webhook_url",
 				"value": "",
 			}],
-			"icon": <WebhookIcon />, 
+			"icon": <WebhookIcon />,
 			"enabled": false,
 		},
 
@@ -237,7 +237,7 @@ const CacheView = memo((props) => {
 
 	const [categoryAutomations, setCategoryAutomations] = useState(defaultAutomation)
 	const [categoryConfig, setCategoryConfig] = useState(undefined)
-    
+
     const { themeMode, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
 	const classes = useStyles();
@@ -312,9 +312,9 @@ const CacheView = memo((props) => {
 
     useEffect(() => {
 		getWorkflows()
-		getApps() 
+		getApps()
 
-		var chosenCategory = selectedCategory 
+		var chosenCategory = selectedCategory
 		const urlParams = new URLSearchParams(window.location.search)
 		const categoryParam = urlParams.get("category")
 		if (categoryParam && categoryParam !== undefined && categoryParam !== "default" && categoryParam !== "") {
@@ -335,7 +335,7 @@ const CacheView = memo((props) => {
 
       if (event.key === 'Escape'){ // not working for some reasons
         console.log('escape pressed')
-        setRenderTextBox(false);  
+        setRenderTextBox(false);
       }
     }
 
@@ -359,7 +359,7 @@ const CacheView = memo((props) => {
 
 		if (page !== undefined && page !== null && page >= 0) {
 			if (cursors[page-1] !== undefined && cursors[page-1] !== null && cursors[page-1] !== "") {
-				url += "&cursor=" + cursors[page-1] 
+				url += "&cursor=" + cursors[page-1]
 			}
 		}
 
@@ -405,8 +405,8 @@ const CacheView = memo((props) => {
 				}
 
 				// Especially important during first load
-				if (index < 2 && (category === "default" || category === "" || category === undefined)) { 
-					// If it exists and isn't blank/default, load it 
+				if (index < 2 && (category === "default" || category === "" || category === undefined)) {
+					// If it exists and isn't blank/default, load it
 					const urlParams = new URLSearchParams(window.location.search);
 					const categoryParam = urlParams.get("category");
 					if (categoryParam && categoryParam !== undefined && categoryParam !== "default" && categoryParam !== "") {
@@ -414,7 +414,7 @@ const CacheView = memo((props) => {
 						if (index === undefined || index === null) {
 							index = 0
 						}
-	
+
 						listOrgCache(orgId, categoryParam, index+1, amount, page)
 					} else {
 						setSelectedCategory("default");
@@ -478,10 +478,10 @@ const CacheView = memo((props) => {
 					} else {
 						setCategoryAutomations(defaultAutomation)
 					}
-				} 
+				}
 			} else {
 				//toast.warn("Failed to load keys. Please try again or contact support@shuffler if this persists.")
-				
+
 				if (category !== undefined && category !== null && category !== "" && category !== "default") {
 					toast.info(`No keys to load in category ${category}`)
 					setSelectedCategory(category)
@@ -495,6 +495,9 @@ const CacheView = memo((props) => {
 
 
     const deleteEntry = (orgId, key, itemCategory, refreshList) => {
+
+    console.log(`Deleting entry for orgId: ${orgId}, key: ${key}, category: ${itemCategory}`);
+
 		const method = "POST"
         const url = `${globalUrl}/api/v1/orgs/${orgId}/delete_cache`
 		var parsed = {
@@ -534,8 +537,8 @@ const CacheView = memo((props) => {
     };
 
     const editOrgCache = (orgId) => {
-        var entry = { 
-			key: dataValue.key, 
+        var entry = {
+			key: dataValue.key,
 			value: value,
 			category: selectedCategory,
 		}
@@ -587,10 +590,10 @@ const CacheView = memo((props) => {
     };
 
     const addOrgCache = (orgId) => {
-        const cache = { 
-			key: key, 
+        const cache = {
+			key: key,
 			value: value,
-			category: selectedCategory, 
+			category: selectedCategory,
 		}
 
         setCacheInput([cache]);
@@ -709,7 +712,7 @@ const CacheView = memo((props) => {
                     fullWidth={true}
                     autoComplete="Key"
                     placeholder="abc"
-                    id="keyfield"   
+                    id="keyfield"
                     margin="normal"
                     variant="outlined"
                     value={editCache ? dataValue.key : key}
@@ -728,7 +731,7 @@ const CacheView = memo((props) => {
 								autoFixJson(value)
 							}}
 						>
-							<AutoFixNormalIcon /> 
+							<AutoFixNormalIcon />
 						</IconButton>
 					</Tooltip>
 				</div>
@@ -758,7 +761,7 @@ const CacheView = memo((props) => {
                 />
 
 
-				{editCache ? 
+				{editCache ?
 					<div>
 						<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
 							Created: {timestamp(dataValue?.created)}
@@ -841,7 +844,7 @@ const CacheView = memo((props) => {
         }
     };
 
-    const changeDistribution = (id, selectedSubOrg) => {	
+    const changeDistribution = (id, selectedSubOrg) => {
 
 		editFileConfig(id, [...new Set(selectedSubOrg)], selectedCategory)
 	}
@@ -855,8 +858,8 @@ const CacheView = memo((props) => {
 			category: category === undefined || category === "" || category === "default" ? "" : category,
 		}
 
-		console.log("data: ", data);	
-		
+		console.log("data: ", data);
+
 		const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/config`;
 
 		fetch(url, {
@@ -989,7 +992,7 @@ const CacheView = memo((props) => {
 			const originalIcon = automation.icon
 			if (typeof automation.icon !== "string") {
 				automation.icon = "";
-			} 
+			}
 		})
 
 		const url = `${globalUrl}/api/v2/datastore/automate`
@@ -999,7 +1002,7 @@ const CacheView = memo((props) => {
 		}
 
 		if (settings !== undefined && settings !== null && Object.keys(settings).length > 0) {
-			data["settings"] = settings 
+			data["settings"] = settings
 		}
 
 		fetch(url, {
@@ -1049,7 +1052,7 @@ const CacheView = memo((props) => {
 			}
 		}
 
-		const runSave = () => { 
+		const runSave = () => {
 			setUpdated(false)
 
 			const newAutomations = [...categoryAutomations]
@@ -1062,11 +1065,11 @@ const CacheView = memo((props) => {
 		}
 
 		return (
-			<div key={index} style={{ 
-					marginBottom: 10, 
+			<div key={index} style={{
+					marginBottom: 10,
 					backgroundColor: hovered ? theme.palette.hoverColor : "transparent",
-					paddingTop: 5, 
-				}} 
+					paddingTop: 5,
+				}}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={() => setHovered(false)}
 			>
@@ -1085,15 +1088,15 @@ const CacheView = memo((props) => {
 								setUpdatedAutomation(updatedAutomation)
 								setUpdated(true)
 
-								setUpdate(Math.random()) 
+								setUpdate(Math.random())
 							}}
 						/>
 					</Tooltip>
-					<div 
+					<div
 						style={{
 							display: "flex",
 							cursor: !automation?.disabled ? "pointer" : "not-allowed",
-							width: "100%", 
+							width: "100%",
 						}}
 						disabled={automation?.disabled === true}
 						onClick={() => {
@@ -1109,30 +1112,30 @@ const CacheView = memo((props) => {
 							}
 						}}
 					>
-						{typeof automation?.icon === "string" && automation?.icon?.length > 0 ? 
+						{typeof automation?.icon === "string" && automation?.icon?.length > 0 ?
 							<img src={automation.icon} alt={automation.name} style={{ width: 20, height: 20, }} />
 							:
 							automation.icon
 						}
 
-						<Typography variant="body1" style={{ 
-							color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary, 
-							marginLeft: 10, 
+						<Typography variant="body1" style={{
+							color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary,
+							marginLeft: 10,
 						}}>
 							{automation.name}
 						</Typography>
 					</div>
 
-					{automation?.disabled !== true ? 
+					{automation?.disabled !== true ?
 						<Button
-							style={{ 
+							style={{
 								borderRadius: theme.palette.borderRadius,
-								textTransform: 'none', 
+								textTransform: 'none',
 								color: updated ? theme.palette.primary.main : theme.palette.text.secondary,
 								marginTop: -6,
 
 								position: "absolute",
-								right: 25, 
+								right: 25,
 							}}
 							disabled={!updated}
 							onClick={(e) => {
@@ -1187,7 +1190,7 @@ const CacheView = memo((props) => {
 										if (newValue.length > 0) {
 											updatedAutomation.enabled = true
 										} else {
-											updatedAutomation.enabled = false 
+											updatedAutomation.enabled = false
 										}
 
 										updatedAutomation.options[optionIndex] = option
@@ -1241,8 +1244,8 @@ const CacheView = memo((props) => {
 													value={data}
 												>
 													<Typography style={{
-														display: "flex", 
-														marginTop: 5, 
+														display: "flex",
+														marginTop: 5,
 														color: keyfound ? red : theme.palette.text.primary,
 													}}>
 														<div style={{marginRight: 10, }}>
@@ -1296,7 +1299,7 @@ const CacheView = memo((props) => {
 								/>
 							)
 						} else if (option?.key === "workflow_id") {
-							return ( 
+							return (
 								<Autocomplete
 									key={optionIndex}
 
@@ -1323,7 +1326,7 @@ const CacheView = memo((props) => {
 										if (newValue.length > 0) {
 											updatedAutomation.enabled = true
 										} else {
-											updatedAutomation.enabled = false 
+											updatedAutomation.enabled = false
 										}
 
 										updatedAutomation.options[optionIndex] = option
@@ -1435,8 +1438,8 @@ const CacheView = memo((props) => {
 								fullWidth
 								style={{
 									...theme.palette.textFieldStyle,
-									marginBottom: 20, 
-									marginTop: 10, 
+									marginBottom: 20,
+									marginTop: 10,
 								}}
             					InputProps={{
 								  style: {
@@ -1448,9 +1451,9 @@ const CacheView = memo((props) => {
 								defaultValue={option.value}
 								onBlur={(e) => {
 									if (e.target.value === "") {
-										updatedAutomation.enabled = false 
+										updatedAutomation.enabled = false
 									} else {
-										updatedAutomation.enabled = true 
+										updatedAutomation.enabled = true
 									}
 
 									updatedAutomation.options[optionIndex].value = e.target.value;
@@ -1468,7 +1471,7 @@ const CacheView = memo((props) => {
 
 	const setCategorySettingsField = (field, value) => {
 		// Check if categoryConfig.settings is set or not. Otherwise set it.
-		var categoryConfig2 = categoryConfig 
+		var categoryConfig2 = categoryConfig
 		if (categoryConfig === undefined || categoryConfig === null) {
 			categoryConfig2 = {}
 		}
@@ -1481,16 +1484,16 @@ const CacheView = memo((props) => {
 		setCategoryConfig(categoryConfig2)
 
 		saveAutomation(
-			categoryAutomations, 
+			categoryAutomations,
 			categoryConfig2.settings,
 		)
 	}
 
 	const columns: GridColDef<(typeof rows)[number]>[] = [
-	  { 
-		  field: 'key', 
-		  headerName: 'Key', 
-		  width: 200, 
+	  {
+		  field: 'key',
+		  headerName: 'Key',
+		  width: 200,
 		  filterable: true,
 		  sortable: true,
 	  },
@@ -1502,10 +1505,10 @@ const CacheView = memo((props) => {
 		renderCell: (props) => {
 			const data = props.row
 
-			if (data?.category?.toLowerCase() === "protected") { 
+			if (data?.category?.toLowerCase() === "protected") {
 				return (
-					<Typography 
-						variant="body2" 
+					<Typography
+						variant="body2"
 						type="password"
 						style={{maxHeight: 200, overflow: "hidden", }}
 					>
@@ -1532,7 +1535,7 @@ const CacheView = memo((props) => {
 								backgroundColor: theme.palette.platformColor,
 								border: theme.palette.defaultBorder,
 								padding: 5,
-								minWidth: 500, 
+								minWidth: 500,
 								maxHeight: 500,
 								overflowY: "auto",
 							}}
@@ -1605,16 +1608,16 @@ const CacheView = memo((props) => {
 				  		style={{
 							color: "white",
 							backgroundColor: iconDetails?.iconBackgroundColor || theme.palette.primary.secondary,
-							marginLeft: 15, 
+							marginLeft: 15,
 							height: 30,
-							width: 30, 
+							width: 30,
 							cursor: data.category !== "" && data.category !== "default" ? "pointer" : "default",
 						}}
 				  		variant="rounded"
 				  	>
 				  	{iconDetails?.originalIcon ?
 						iconDetails?.originalIcon
-						: 
+						:
 				  		avatarLetter
 					}
 				  	</Avatar>
@@ -1633,7 +1636,7 @@ const CacheView = memo((props) => {
 		renderCell: (props) => {
 			const data = props.row
 
-			return ( 
+			return (
 				<span style={{ display: "flex" }}>
 					{data?.workflow_id === "" || data?.workflow_id === null || data?.workflow_id === undefined || data?.workflow_id?.length !== 36 ?
 						<IconButton
@@ -1643,7 +1646,7 @@ const CacheView = memo((props) => {
 							<OpenInNewIcon
 								style={{
 									color:
-										data.workflow_id?.length === 36 
+										data.workflow_id?.length === 36
 											? "#FF8444"
 											: "grey",
 								}}
@@ -1697,7 +1700,7 @@ const CacheView = memo((props) => {
 									onClick={(e) => {
 										e.preventDefault()
 										e.stopPropagation()
-										// Try to make the value JSON indented 
+										// Try to make the value JSON indented
 										const valid = validateJson(data.value)
 										var newvalue = data.value
 										if (valid.valid) {
@@ -1867,23 +1870,23 @@ const CacheView = memo((props) => {
 	const isAutomating = categoryAutomations?.find((automation) => automation.enabled) !== undefined
     return (
         <div style={{
-			minHeight: 2000, 
-			height: isSelectedDataStore?"100%":null, 
+			minHeight: 2000,
+			height: isSelectedDataStore?"100%":null,
 
-			paddingBottom: isSelectedDataStore?null:250, 
-			boxSizing: "border-box", 
-			width: isSelectedDataStore? "100%" :null, 
-			transition: "width 0.3s ease", 
-			padding:isSelectedDataStore?"27px 10px 27px 27px":null, 
-			color: isSelectedDataStore?'#ffffff':null, 
-			backgroundColor: isSelectedDataStore? theme.palette.platformColor :null, 
-			borderTopRightRadius: isSelectedDataStore?'8px':null, 
-			borderBottomRightRadius: isSelectedDataStore?'8px':null, 
-			borderLeft: theme.palette.defaultBorder 
+			paddingBottom: isSelectedDataStore?null:250,
+			boxSizing: "border-box",
+			width: isSelectedDataStore? "100%" :null,
+			transition: "width 0.3s ease",
+			padding:isSelectedDataStore?"27px 10px 27px 27px":null,
+			color: isSelectedDataStore?'#ffffff':null,
+			backgroundColor: isSelectedDataStore? theme.palette.platformColor :null,
+			borderTopRightRadius: isSelectedDataStore?'8px':null,
+			borderBottomRightRadius: isSelectedDataStore?'8px':null,
+			borderLeft: theme.palette.defaultBorder
 		}}>
             {modalView}
 
-			<CollectIngestModal 
+			<CollectIngestModal
 				globalUrl={globalUrl}
 				open={showCollectIngestMenu}
 				setOpen={setShowCollectIngestMenu}
@@ -1906,14 +1909,14 @@ const CacheView = memo((props) => {
 						Shuffle Datastore
 					</Typography>
 
-					{userdata?.support === true ? 
+					{userdata?.support === true ?
 						<Tooltip title={"Collect (support only)"} style={{}} aria-label={""}>
 							<span style={{position: "absolute", right: 0, }}>
 								<Button
-									style={{ 
-										whiteSpace: "nowrap", 
-										height: 35, 
-										textTransform: 'none', 
+									style={{
+										whiteSpace: "nowrap",
+										height: 35,
+										textTransform: 'none',
 
 										//border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
 									}}
@@ -1924,10 +1927,10 @@ const CacheView = memo((props) => {
 									}}
 								>
 									<FilterAltIcon style={{marginRight: 10, }}/>
-									Collect (beta) 
+									Collect (beta)
 								</Button>
 							</span>
-						</Tooltip> 
+						</Tooltip>
 					: null}
 				</div>
 
@@ -1957,14 +1960,14 @@ const CacheView = memo((props) => {
 						style={{textTransform: isSelectedDataStore ? 'capitalize':null, width : isSelectedDataStore ? 120 : null, height:isSelectedDataStore?40:null}}
 						variant="contained"
 						color="primary"
-						onClick={() =>{ 
+						onClick={() =>{
 							setEditCache(false)
 							setModalOpen(true)
 
 							setValue("")
 						}}
 					>
-						Add Key 
+						Add Key
 					</Button>
 					<Button
 						style={{ marginRight: 15, width:isSelectedDataStore ? 81:null, height:isSelectedDataStore?40:null,  }}
@@ -2038,9 +2041,9 @@ const CacheView = memo((props) => {
 										<MenuItem
 											key={index}
 											value={data}
-											style={{ 
-												color: theme.palette.textFieldStyle.color, 
-												display: "flex", 
+											style={{
+												color: theme.palette.textFieldStyle.color,
+												display: "flex",
 												borderBottom: theme.palette.defaultBorder,
 											}}
 										>
@@ -2061,17 +2064,17 @@ const CacheView = memo((props) => {
 					) : null}
 
 				<div style={{display: "inline-flex", position:"relative", top: 8}}>
-					{renderTextBox ? 
+					{renderTextBox ?
 						<Tooltip title={"Close"} style={{}} aria-label={""}>
 							<Button
-								style={{ 
-									height: 35, 
-									borderRadius: 4,  
-									textTransform: 'none', 
+								style={{
+									height: 35,
+									borderRadius: 4,
+									textTransform: 'none',
 									fontSize: 16,
 									borderRadius: "0px 5px 5px 0px",
 
-									marginRight: 10, 
+									marginRight: 10,
 								}}
 								color="secondary"
             	                variant="contained"
@@ -2086,12 +2089,12 @@ const CacheView = memo((props) => {
 						:
 						<Tooltip title={"Add or find category"} style={{}} aria-label={""}>
 							<Button
-								style={{ 
-									whiteSpace: "nowrap", 
-									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? 50 : 169, 
-									height: 35, 
-									textTransform: 'none', 
-									fontSize: 16, 
+								style={{
+									whiteSpace: "nowrap",
+									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? 50 : 169,
+									height: 35,
+									textTransform: 'none',
+									fontSize: 16,
 
 									borderRadius: "0px 5px 5px 0px",
 								}}
@@ -2104,7 +2107,7 @@ const CacheView = memo((props) => {
 								<AddIcon/>
 								{datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? "" : "Category"}
 							</Button>
-						</Tooltip> 
+						</Tooltip>
 					}
 
 					{renderTextBox && <TextField
@@ -2115,11 +2118,11 @@ const CacheView = memo((props) => {
 							const foundValue = event.target.value.trim();
 							if(event.key === 'Enter' && foundValue?.length > 0){
 								setUpdateToThisCategory(event.target.value)
-    
+
     							listOrgCache(orgId, event.target.value, 0, pageSize, 0)
 								setPage(0)
 							}
-								
+
 						}}
 						style={{
 							height: 35,
@@ -2151,10 +2154,10 @@ const CacheView = memo((props) => {
 					<Tooltip title={"Automate current Category"} style={{}} aria-label={""}>
 						<span>
 							<Button
-								style={{ 
-									whiteSpace: "nowrap", 
-									height: 35, 
-									textTransform: 'none', 
+								style={{
+									whiteSpace: "nowrap",
+									height: 35,
+									textTransform: 'none',
 
 									border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
 								}}
@@ -2162,27 +2165,27 @@ const CacheView = memo((props) => {
 								color="secondary"
 								disabled={selectedCategory === undefined || selectedCategory === "" || selectedCategory === "default"}
 								onClick={() => {
-									// Set up: 
-									// Workflow triggers for when a key is added/edited/deleted. 
-									// Automatic ingest mechanisms: 
+									// Set up:
+									// Workflow triggers for when a key is added/edited/deleted.
+									// Automatic ingest mechanisms:
 									//   - IOCs (monitor URLs)
 									//   - Singul ingest
 									setShowAutomationMenu(true)
 								}}
 							>
 								{isAutomating ? <RocketLaunchIcon style={{color: theme.palette.primary.main, marginRight: 10 }}/> : <RocketIcon style={{marginRight: 10, color: theme.palette.secondary.main, }} />}
-								Automate (beta) 
+								Automate (beta)
 							</Button>
 						</span>
-					</Tooltip> 
+					</Tooltip>
 
 					<Tooltip title={"Other category settings"} style={{}} aria-label={""}>
 						<Button
-							style={{ 
-								whiteSpace: "nowrap", 
-								height: 35, 
-								textTransform: 'none', 
-								marginLeft: 3, 
+							style={{
+								whiteSpace: "nowrap",
+								height: 35,
+								textTransform: 'none',
+								marginLeft: 3,
 							}}
 							variant="outlined"
 							color="secondary"
@@ -2193,10 +2196,10 @@ const CacheView = memo((props) => {
 						>
 							<SettingsIcon style={{color: theme.palette.secondary.main, }} />
 						</Button>
-					</Tooltip> 
+					</Tooltip>
 				</ButtonGroup>
 
-				{showAutomationMenu || showSettingsMenu ? 
+				{showAutomationMenu || showSettingsMenu ?
 					<Dialog
 						open={showAutomationMenu || showSettingsMenu}
 						onClose={() => {
@@ -2227,7 +2230,7 @@ const CacheView = memo((props) => {
 						<DialogTitle>
 						</DialogTitle>
 						<DialogContent style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: theme.palette.DialogStyle.backgroundColor, }}>
-							{showSettingsMenu === true ? 
+							{showSettingsMenu === true ?
 								<div>
 									<Typography variant="h6" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
 										<SettingsIcon style={{ verticalAlign: "middle", marginRight: 10 }} />
@@ -2237,7 +2240,7 @@ const CacheView = memo((props) => {
 									<div style={{display: "flex", marginTop: 50,  }}>
 										<div style={{flex: 2, }}>
 											<Typography variant="body1" style={{ color: theme.palette.text.primary, }}>
-												Timeout	
+												Timeout
 											</Typography>
 											<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginBottom: 20 }}>
 												You can set a timeout for the category. This will delete all keys in this category after the specified time. Timeout is in seconds and based on last <b>EDITED</b> time.
@@ -2266,7 +2269,7 @@ const CacheView = memo((props) => {
 													toast.info("Timeout must be a number. Setting to 0.")
 												} else {
 													timeoutValue = parseInt(e.target.value, 10)
-													if (timeoutValue < 60) { 
+													if (timeoutValue < 60) {
 														toast.info("Timeout must be between 60 seconds or more. Setting to 0.")
 													}
 
@@ -2283,7 +2286,7 @@ const CacheView = memo((props) => {
 									<div style={{display: "flex", marginTop: 25,  }}>
 										<div style={{flex: 3, }}>
 											<Typography variant="body1" style={{ color: theme.palette.text.primary, }}>
-												{categoryConfig?.settings?.public === true ? "" : "NOT"} Public 
+												{categoryConfig?.settings?.public === true ? "" : "NOT"} Public
 											</Typography>
 											<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginBottom: 20 }}>
 												This will make the url for this category public. Metadata will be cleared, except for timestamps. Types: keys,ndjson,csv,values,json,meta
@@ -2330,7 +2333,7 @@ const CacheView = memo((props) => {
 										When
 									</Typography>
 									<Typography variant="body1" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
-										A key is edited 
+										A key is edited
 									</Typography>
 
 									<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginTop: 100, marginBottom: 20 }}>
@@ -2339,16 +2342,16 @@ const CacheView = memo((props) => {
 									{categoryAutomations.map((automation, index) => {
 
 										return (
-											<AutomationOptions 
+											<AutomationOptions
 												key={index}
-												automation={automation} 
-												index={index} 
-											/>	
+												automation={automation}
+												index={index}
+											/>
 										)
 									})}
 								</div>
 							}
-							
+
 						</DialogContent>
 					</Dialog>
 				: null}
@@ -2374,17 +2377,17 @@ const CacheView = memo((props) => {
 				setSelectedRows(newSelection);
 				}}
 				keepNonExistentRowsSelected={false}
-				getRowId={(row) => `${row?.key}_${row?.category}`}
+				getRowId={(row) => row?.category ? `${row.key}_${row.category}` : row.key}
 
 				autoHeight={true}
 				sx={{
-					marginTop: 1, 
+					marginTop: 1,
 					height: listCache.length*52+500,
 					width: "100%",
 					'.MuiTablePagination-selectLabel, .MuiTablePagination-select, .MuiTablePagination-selectIcon': {
 					  display: 'none',
 					},
-					marginBottom: 20, 
+					marginBottom: 20,
 				}}
 
 				loading={cachedLoaded === false}
@@ -2404,7 +2407,7 @@ const CacheView = memo((props) => {
 
 					setCursors({
 						0: "",
-					}) 
+					})
 				}}
 
 
@@ -2441,20 +2444,20 @@ const CacheView = memo((props) => {
 				}}
 			  >
 				<div style={{
-					width: 1200, 
-					margin: "auto", 
-					padding: 10, 
+					width: 1200,
+					margin: "auto",
+					padding: 10,
 					backgroundColor: theme.palette.platformColor,
 					borderRadius: 4,
 					border: "1px solid rgba(255, 255, 255, 0.5)",
 
 					display: "flex",
-					textAlign: "center", 
+					textAlign: "center",
 				}}>
 					<Typography variant="body2" style={{ color: theme.palette.text.primary, marginRight: 50, marginTop: 6, marginLeft: 350, }}>
 						{page * pageSize + 1} - {Math.min((page + 1) * pageSize, totalAmount)} of {totalAmount}
 					</Typography>
-					
+
 					<Pagination
 					  count={Number.parseInt(totalAmount/pageSize)}
 					  page={page+1}
@@ -2462,7 +2465,7 @@ const CacheView = memo((props) => {
 						  var disabled = false
 						  if (item?.type === "page") {
 							  if (cursors[item.page-1] === undefined) {
-								  disabled = true 
+								  disabled = true
 							  }
 						  }
 						  if (item?.type === "previous") {
@@ -2470,7 +2473,7 @@ const CacheView = memo((props) => {
 						  }
 
 						  if (cachedLoaded === false) {
-							  disabled = true 
+							  disabled = true
 						  }
 
 						  return (
@@ -2530,10 +2533,10 @@ const CacheView = memo((props) => {
 							variant={"outlined"}
 							color="secondary"
 						>
-							<DeleteOutlineIcon 
+							<DeleteOutlineIcon
 								style={{
 									color: red,
-									marginRight: 10, 
+									marginRight: 10,
 								}}
 							/>
 							Delete {selectedRows.length} Key{ selectedRows.length > 1 ? "s" : "" }
