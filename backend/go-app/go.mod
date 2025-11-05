@@ -4,7 +4,7 @@ go 1.24.0
 
 toolchain go1.24.3
 
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 //replace github.com/frikky/schemaless => ../../../schemaless
 
@@ -26,8 +26,8 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.46
-	github.com/shuffle/singul v0.0.19
+	github.com/shuffle/shuffle-shared v0.9.49
+	github.com/shuffle/singul v0.0.20
 	golang.org/x/crypto v0.40.0
 	google.golang.org/api v0.236.0
 	google.golang.org/grpc v1.72.2
@@ -75,7 +75,7 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/frikky/schemaless v0.0.23 // indirect
+	github.com/frikky/schemaless v0.0.24 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
