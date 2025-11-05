@@ -115,8 +115,8 @@ var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var queuePerMinute = os.Getenv("SHUFFLE_EXECUTION_PER_MINIUTE")
 var queuePerMinuteInt int
 
-// For it to download from Sigma?
-var pipelineApikey = os.Getenv("SHUFFLE_PIPELINE_AUTH")
+// Used to download file categories. Not required since 2.1.1
+var pipelineApikey = ""
 var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 
 var executionIds = []string{}
@@ -2182,6 +2182,18 @@ func main() {
 		return
 	}
 
+	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
+		log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
+	
+		//if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" {
+		//	os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
+		//}
+
+		//if os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
+		//	os.Setenv("SHUFFLE_PIPELINE_ENABLED", "false")
+		//}
+	}
+
 	// Block until a signal is received
 	if shuffle.IsRunningInCluster() {
 		log.Printf("[INFO] Running inside k8s cluster")
@@ -3003,6 +3015,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
+	// Disabled all pipeline features
 	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" || os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
 		// return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 		//log.Printf("[INFO] Pipelines are enabled by user")
@@ -3010,8 +3023,13 @@ func deployTenzirNode() error {
 		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 	}
 
+	// Specifically for standalone tenzir
+	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
+		return nil
+	}
+
 	if isKubernetes == "true" {
-		return errors.New("Kubernetes not implemented for Tenzir node")
+		return errors.New("Tenzir not implemented for k8s")
 	}
 
 	err := checkTenzirNode()
