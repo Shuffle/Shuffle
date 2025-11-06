@@ -969,6 +969,10 @@ const CodeEditor = (props) => {
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
 		if (found !== null && found !== undefined) {
+			// Resolve the child paths/variables first,
+			// So that "$a.b.c" is handled before "$a.b" and then "$a"
+			// Replace "$parent.child" before "$parent" so "$parent.child" doesn't become "parentValue.child" (which can't be matched later).
+			found.sort((a, b) => b.length - a.length)
 
 			//console.log("FOUND: ", found)
 			try {
