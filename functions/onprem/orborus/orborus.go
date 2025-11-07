@@ -3235,12 +3235,21 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		hostConfig.Mounts = []mount.Mount{}
 	}
 
+	//networkingConfig := &network.NetworkingConfig{
+	//	EndpointsConfig: map[string]*network.EndpointSettings{
+	//		"tenzir-network": {
+	//			IPAMConfig: &network.EndpointIPAMConfig{
+	//				IPv4Address: "192.168.102.100",
+	//			},
+	//		},
+	//	},
+	//}
+
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{
 			"tenzir-network": {
-				IPAMConfig: &network.EndpointIPAMConfig{
-					IPv4Address: "192.168.102.100",
-				},
+				IPAMConfig: nil,
+				Aliases: []string{"tenzir-node"},
 			},
 		},
 	}
