@@ -3304,7 +3304,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	log.Printf("[INFO] Successfully deployed Tenzir Node! Setting up default syslog listener on TCP/1514 AND UDP/1514")
 
-	command := `from "tcp://0.0.0.0:1514" { read_syslog } | import`
+	command := `load_tcp "0.0.0.0:1514" { read_syslog } | import`
 	_, err = createPipeline(command, "default-syslog-tcp-514")
 	if err != nil {
 		log.Printf("[ERROR] Failed to create tcp syslog pipeline: %s", err)
