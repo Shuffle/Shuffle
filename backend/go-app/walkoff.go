@@ -1505,30 +1505,39 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 	return
 }
 
-func deleteSchedule(ctx context.Context, id string) error {
-	log.Printf("[DEBUG] Should stop schedule %s!", id)
+func deleteKeySchedule(ctx context.Context, id string) error {
 	err := shuffle.DeleteKey(ctx, "schedules", id)
 	if err != nil {
-		log.Printf("[ERROR] Failed to delete schedule: %s", err)
 		return err
+	}
+	return nil
+}
+
+func deleteSchedule(ctx context.Context, id string) error {
+	log.Printf("[DEBUG] Should stop schedule %s!", id)
+	if value, exists := scheduledJobs[id]; exists {
+		// Stops the schedule properly
+		value.Lock()
 	} else {
-		if value, exists := scheduledJobs[id]; exists {
-			// Stops the schedule properly
-			value.Lock()
-		} else {
-			// FIXME - allow it to kind of stop anyway?
-			if j, ok := cronJobs[id]; ok {
-				err := CronScheduler.RemoveByID(j)
-				if err != nil {
-					log.Printf("[ERROR] Failed to remove the scheduler %s", err)
-					return err
-				}
-			} else {
-				return errors.New("Can't find the schedule.")
+		// FIXME - allow it to kind of stop anyway?
+		if j, ok := cronJobs[id]; ok {
+			err := CronScheduler.RemoveByID(j)
+			if err != nil {
+				log.Printf("[ERROR] Failed to remove the scheduler %s", err)
+				return err
 			}
+		} else {
+			// Just stop and delete anyway if not in memory
+			deleteKeySchedule(ctx, id)
+			return errors.New("Can't find the schedule.")
 		}
 	}
 
+	err := deleteKeySchedule(ctx, id)
+	if err != nil {
+		log.Printf("[ERROR] Failed to stop schedule in db %s: %s", id, err)
+		return err
+	}
 	return nil
 }
 
