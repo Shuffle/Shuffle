@@ -569,14 +569,6 @@ func deployServiceWorkers(image string) {
 				Replicas: &replicatedJobs,
 			},
 		},
-		Networks: []swarm.NetworkAttachmentConfig{
-			swarm.NetworkAttachmentConfig{
-				Target: networkName,
-			},
-			swarm.NetworkAttachmentConfig{
-				Target: "ingress",
-			},
-		},
 		EndpointSpec: &swarm.EndpointSpec{
 			Mode: "vip",
 			Ports: []swarm.PortConfig{
@@ -592,6 +584,14 @@ func deployServiceWorkers(image string) {
 		TaskTemplate: swarm.TaskSpec{
 			Resources: &swarm.ResourceRequirements{
 				Reservations: &swarm.Resources{},
+			},
+			Networks: []swarm.NetworkAttachmentConfig{
+				swarm.NetworkAttachmentConfig{
+					Target: networkName,
+				},
+				swarm.NetworkAttachmentConfig{
+					Target: "ingress",
+				},
 			},
 			LogDriver: &swarm.Driver{
 				Name: "json-file",
