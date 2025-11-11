@@ -765,7 +765,36 @@ func deployServiceWorkers(image string) {
 
 	if err == nil {
 		log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
+		// wait for service to be ready
+		time.Sleep(time.Duration(rand.Intn(4)+1) * time.Second)
+
 		//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
+		// patch service network
+		// this is an edgecase that we noticed on docker version 29
+		// and API version 1.44
+		services, serr := dockercli.ServiceList(ctx, types.ServiceListOptions{})
+		if serr == nil {
+			for _, svc := range services {
+				if svc.Spec.Annotations.Name == innerContainerName {
+					log.Printf("[DEBUG] Found service %s (%s) — patching network attach", innerContainerName, svc.ID)
+
+					spec := svc.Spec
+					spec.TaskTemplate.Networks = append(spec.TaskTemplate.Networks, swarm.NetworkAttachmentConfig{
+						Target: networkID,
+					})
+
+					_, uerr := dockercli.ServiceUpdate(ctx, svc.ID, svc.Version, spec, types.ServiceUpdateOptions{})
+					if uerr != nil {
+						log.Printf("[WARNING] Failed to patch service %s with network %s: %v", innerContainerName, networkID, uerr)
+					} else {
+						log.Printf("[INFO] Successfully attached network %s to service %s", networkID, innerContainerName)
+					}
+					break
+				}
+			}
+		} else {
+			log.Printf("[WARNING] Failed to list services for patching network attach: %v", serr)
+		}
 	} else {
 		if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 			log.Printf("[ERROR] Failed making service: %s", err)
@@ -3926,7 +3955,6 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 	err := deployTenzirNode()
 	if err != nil {
 		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES") && !strings.Contains(err.Error(), "Kubernetes not implemented for Tenzir node")) && !strings.Contains(err.Error(), "Tenzir Node is already running") && !strings.Contains(err.Error(), "docker daemon") {
-
 			log.Printf("[ERROR] Tenzir node connection problem: %s", err)
 
 		} else {
