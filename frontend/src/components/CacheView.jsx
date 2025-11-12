@@ -4,10 +4,11 @@ import { getTheme } from "../theme.jsx";
 import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
-import { GetIconInfo, } from "../views/Workflows2.jsx";
-import { validateJson, handleReactJsonClipboard,  } from "../views/Workflows.jsx";
+import {  validateJson, handleReactJsonClipboard,  GetIconInfo, } from "../views/Workflows2.jsx";
 import { red } from "../views/AngularWorkflow.jsx";
 import CollectIngestModal from "../components/CollectIngestModal.jsx";
+import CorrelationGraph from "../components/CorrelationGraph.jsx";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import {
 	Typography,
     Tooltip,
@@ -38,8 +39,8 @@ import {
 	Avatar,
 } from "@mui/material";
 
-import {
-	DataGrid,
+import { 
+	DataGrid, 
 	GridColDef,
 } from '@mui/x-data-grid';
 
@@ -70,15 +71,16 @@ import {
     VisibilityOff as VisibilityOffIcon,
 	Clear as ClearIcon,
 	Add as AddIcon,
-	Rocket as RocketIcon,
-	Webhook as WebhookIcon,
-	Air as AirIcon,
-	RocketLaunch as RocketLaunchIcon,
+	Rocket as RocketIcon, 
+	Webhook as WebhookIcon, 
+	Air as AirIcon, 
+	RocketLaunch as RocketLaunchIcon, 
 	Send as SendIcon,
 	SmartToy as SmartToyIcon,
 	Settings as SettingsIcon,
 	FilterAlt as FilterAltIcon,
-	CompareArrows as CompareArrowsIcon,
+	CompareArrows as CompareArrowsIcon, 
+	Hub as HubIcon,
 } from "@mui/icons-material";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -104,7 +106,7 @@ const useStyles = makeStyles({
 	},
 });
 
-//
+// 
 
 //const CacheView = (props) => {
 const CacheView = memo((props) => {
@@ -130,7 +132,7 @@ const CacheView = memo((props) => {
 	const [cursors, setCursors] = useState({
 		0: "",
 	})
-	const [_, setUpdate] = useState(Math.random())
+	const [_, setUpdate] = useState(Math.random()) 
 	const [selectedRows, setSelectedRows] = useState([]);
 	// Direct category migration from ../components/Files.jsx
     const [selectAllChecked, setSelectAllChecked] = React.useState(false)
@@ -146,6 +148,9 @@ const CacheView = memo((props) => {
 	const [showAutomationMenu, setShowAutomationMenu] = useState(false);
 	const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 	const [showCollectIngestMenu, setShowCollectIngestMenu] = useState(false);
+	const [showCorrelations, setShowCorrelations] = useState(undefined);
+
+    let navigate = useNavigate();
 
 	useEffect(() => {
 		if (selectedCategory === "" || selectedCategory === null || selectedCategory === undefined || selectedCategory === "default") {
@@ -165,14 +170,15 @@ const CacheView = memo((props) => {
 	const defaultAutomation = [
 		{
 			"name": "Run workflow",
-			"description": "Runs a workflow with the updated value.",
+			"description": "Runs one or more workflows with the updated value as runtime argument",
 			"options": [{
 				"key": "workflow_id",
 				"value": "",
 			}],
-			"icon": <AirIcon />,
+			"icon": <AirIcon />, 
 			"enabled": false,
 		},
+		/*
 		{
 			"name": "Correlate Categories",
 			"description": "",
@@ -185,9 +191,21 @@ const CacheView = memo((props) => {
 			"enabled": false,
 			"disabled": false,
 		},
+		*/
+		{
+			"name": "Send webhook",
+			"description": "Sends the updated value to a specified webhook URL as a POST request",
+			"options": [{
+				"key": "webhook_url",
+				"value": "",
+			}],
+			"icon": <WebhookIcon />, 
+			"enabled": false,
+		},
+
 		{
 			"name": "Run AI Agent",
-			"description": "",
+			"description": "Runs an AI Agent to process the updated value. Uses built-in ShuffleAI configs. Learn more: https://shuffler.io/docs/AI",
 			"options": [{
 				"key": "",
 				"value": "",
@@ -196,18 +214,18 @@ const CacheView = memo((props) => {
 			"enabled": false,
 			"disabled": true,
 		},
+
 		{
-			"name": "Send webhook",
-			"description": "Sends the updated value to a specified webhook URL.",
+			"name": "Enrich",
+			"description": "Enriches the data. Only runs on valid JSON data AND if the 'enrichment' field does not exist.",
+			"type": "singul",
 			"options": [{
-				"key": "webhook_url",
+				"key": "",
 				"value": "",
 			}],
-			"icon": <WebhookIcon />,
-			"enabled": false,
+			"icon": "/images/logos/singul.svg",
+			"disabled": false,
 		},
-
-
 
 		{
 			"name": "Send message",
@@ -221,23 +239,11 @@ const CacheView = memo((props) => {
 			"disabled": true,
 			"enabled": false,
 		},
-		{
-			"name": "Enrich",
-			"description": "",
-			"type": "singul",
-			"options": [{
-				"key": "",
-				"value": "",
-			}],
-			"icon": "/images/logos/singul.svg",
-			"enabled": false,
-			"disabled": true,
-		},
 	]
 
 	const [categoryAutomations, setCategoryAutomations] = useState(defaultAutomation)
 	const [categoryConfig, setCategoryConfig] = useState(undefined)
-
+    
     const { themeMode, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
 	const classes = useStyles();
@@ -312,9 +318,9 @@ const CacheView = memo((props) => {
 
     useEffect(() => {
 		getWorkflows()
-		getApps()
+		getApps() 
 
-		var chosenCategory = selectedCategory
+		var chosenCategory = selectedCategory 
 		const urlParams = new URLSearchParams(window.location.search)
 		const categoryParam = urlParams.get("category")
 		if (categoryParam && categoryParam !== undefined && categoryParam !== "default" && categoryParam !== "") {
@@ -322,7 +328,10 @@ const CacheView = memo((props) => {
 			setSelectedCategory(categoryParam)
 		}
 
-        listOrgCache(orgId, chosenCategory, 0, pageSize, page)
+        listOrgCache(orgId, "", 0, pageSize, page)
+		setTimeout(() => {
+        	listOrgCache(orgId, chosenCategory, 0, pageSize, page)
+		}, 100)
     }, [])
 
 
@@ -335,7 +344,7 @@ const CacheView = memo((props) => {
 
       if (event.key === 'Escape'){ // not working for some reasons
         console.log('escape pressed')
-        setRenderTextBox(false);
+        setRenderTextBox(false);  
       }
     }
 
@@ -359,7 +368,7 @@ const CacheView = memo((props) => {
 
 		if (page !== undefined && page !== null && page >= 0) {
 			if (cursors[page-1] !== undefined && cursors[page-1] !== null && cursors[page-1] !== "") {
-				url += "&cursor=" + cursors[page-1]
+				url += "&cursor=" + cursors[page-1] 
 			}
 		}
 
@@ -405,8 +414,8 @@ const CacheView = memo((props) => {
 				}
 
 				// Especially important during first load
-				if (index < 2 && (category === "default" || category === "" || category === undefined)) {
-					// If it exists and isn't blank/default, load it
+				if (index < 2 && (category === "default" || category === "" || category === undefined)) { 
+					// If it exists and isn't blank/default, load it 
 					const urlParams = new URLSearchParams(window.location.search);
 					const categoryParam = urlParams.get("category");
 					if (categoryParam && categoryParam !== undefined && categoryParam !== "default" && categoryParam !== "") {
@@ -414,7 +423,7 @@ const CacheView = memo((props) => {
 						if (index === undefined || index === null) {
 							index = 0
 						}
-
+	
 						listOrgCache(orgId, categoryParam, index+1, amount, page)
 					} else {
 						setSelectedCategory("default");
@@ -478,10 +487,10 @@ const CacheView = memo((props) => {
 					} else {
 						setCategoryAutomations(defaultAutomation)
 					}
-				}
+				} 
 			} else {
 				//toast.warn("Failed to load keys. Please try again or contact support@shuffler if this persists.")
-
+				
 				if (category !== undefined && category !== null && category !== "" && category !== "default") {
 					toast.info(`No keys to load in category ${category}`)
 					setSelectedCategory(category)
@@ -495,9 +504,6 @@ const CacheView = memo((props) => {
 
 
     const deleteEntry = (orgId, key, itemCategory, refreshList) => {
-
-    console.log(`Deleting entry for orgId: ${orgId}, key: ${key}, category: ${itemCategory}`);
-
 		const method = "POST"
         const url = `${globalUrl}/api/v1/orgs/${orgId}/delete_cache`
 		var parsed = {
@@ -537,8 +543,8 @@ const CacheView = memo((props) => {
     };
 
     const editOrgCache = (orgId) => {
-        var entry = {
-			key: dataValue.key,
+        var entry = { 
+			key: dataValue.key, 
 			value: value,
 			category: selectedCategory,
 		}
@@ -590,10 +596,10 @@ const CacheView = memo((props) => {
     };
 
     const addOrgCache = (orgId) => {
-        const cache = {
-			key: key,
+        const cache = { 
+			key: key, 
 			value: value,
-			category: selectedCategory,
+			category: selectedCategory, 
 		}
 
         setCacheInput([cache]);
@@ -712,7 +718,7 @@ const CacheView = memo((props) => {
                     fullWidth={true}
                     autoComplete="Key"
                     placeholder="abc"
-                    id="keyfield"
+                    id="keyfield"   
                     margin="normal"
                     variant="outlined"
                     value={editCache ? dataValue.key : key}
@@ -731,7 +737,7 @@ const CacheView = memo((props) => {
 								autoFixJson(value)
 							}}
 						>
-							<AutoFixNormalIcon />
+							<AutoFixNormalIcon /> 
 						</IconButton>
 					</Tooltip>
 				</div>
@@ -761,7 +767,7 @@ const CacheView = memo((props) => {
                 />
 
 
-				{editCache ?
+				{editCache ? 
 					<div>
 						<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
 							Created: {timestamp(dataValue?.created)}
@@ -844,7 +850,7 @@ const CacheView = memo((props) => {
         }
     };
 
-    const changeDistribution = (id, selectedSubOrg) => {
+    const changeDistribution = (id, selectedSubOrg) => {	
 
 		editFileConfig(id, [...new Set(selectedSubOrg)], selectedCategory)
 	}
@@ -858,8 +864,8 @@ const CacheView = memo((props) => {
 			category: category === undefined || category === "" || category === "default" ? "" : category,
 		}
 
-		console.log("data: ", data);
-
+		console.log("data: ", data);	
+		
 		const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/config`;
 
 		fetch(url, {
@@ -992,7 +998,7 @@ const CacheView = memo((props) => {
 			const originalIcon = automation.icon
 			if (typeof automation.icon !== "string") {
 				automation.icon = "";
-			}
+			} 
 		})
 
 		const url = `${globalUrl}/api/v2/datastore/automate`
@@ -1002,7 +1008,7 @@ const CacheView = memo((props) => {
 		}
 
 		if (settings !== undefined && settings !== null && Object.keys(settings).length > 0) {
-			data["settings"] = settings
+			data["settings"] = settings 
 		}
 
 		fetch(url, {
@@ -1052,7 +1058,7 @@ const CacheView = memo((props) => {
 			}
 		}
 
-		const runSave = () => {
+		const runSave = () => { 
 			setUpdated(false)
 
 			const newAutomations = [...categoryAutomations]
@@ -1064,414 +1070,430 @@ const CacheView = memo((props) => {
 			saveAutomation(newAutomations)
 		}
 
+		console.log("AUTO: ", automation)
 		return (
-			<div key={index} style={{
-					marginBottom: 10,
-					backgroundColor: hovered ? theme.palette.hoverColor : "transparent",
-					paddingTop: 5,
-				}}
-				onMouseEnter={() => setHovered(true)}
-				onMouseLeave={() => setHovered(false)}
+			<Tooltip title={
+					<Typography style={{margin: 10, }}>
+						{automation?.description}
+					</Typography>
+				} 
+				placement="right" 
+				style={theme.palette.tooltip}
 			>
-				<div style={{display: "flex", }}>
-					<Tooltip title={automation.enabled ? "Disable Automation" : "Enable Automation"} style={{}} aria-label={""}>
-						<Checkbox
-							style={{ marginRight: 10, marginTop: -10, }}
-							checked={automation.enabled}
-							// Check if automation options have a value
-							disabled={automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === "")}
-							onChange={(e) => {
-								e.stopPropagation()
-								e.preventDefault()
+				<div key={index} style={{ 
+						marginBottom: 10, 
+						backgroundColor: hovered ? theme.palette.hoverColor : "transparent",
+						paddingTop: 5, 
+					}} 
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
+				>
+					<div style={{display: "flex", }}>
+						<Tooltip title={automation.enabled ? "Disable Automation" : "Enable Automation"} style={{}} aria-label={""}>
+							<Checkbox
+								style={{ marginRight: 10, marginTop: -10, }}
+								checked={automation.enabled}
+								// Check if automation options have a value
+								disabled={automation.name !== "Enrich" && (automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === ""))}
+								onChange={(e) => {
+									e.stopPropagation()
+									e.preventDefault()
 
-								updatedAutomation.enabled = !updatedAutomation.enabled
-								setUpdatedAutomation(updatedAutomation)
-								setUpdated(true)
+									updatedAutomation.enabled = !updatedAutomation.enabled
+									setUpdatedAutomation(updatedAutomation)
+									setUpdated(true)
 
-								setUpdate(Math.random())
-							}}
-						/>
-					</Tooltip>
-					<div
-						style={{
-							display: "flex",
-							cursor: !automation?.disabled ? "pointer" : "not-allowed",
-							width: "100%",
-						}}
-						disabled={automation?.disabled === true}
-						onClick={() => {
-							if (automation?.disabled === true) {
-								return
-							}
-
-							setShowOptions(!showOptions)
-
-							// Auto saves when the options are closed/saved
-							if (updated && showOptions) {
-								runSave()
-							}
-						}}
-					>
-						{typeof automation?.icon === "string" && automation?.icon?.length > 0 ?
-							<img src={automation.icon} alt={automation.name} style={{ width: 20, height: 20, }} />
-							:
-							automation.icon
-						}
-
-						<Typography variant="body1" style={{
-							color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary,
-							marginLeft: 10,
-						}}>
-							{automation.name}
-						</Typography>
-					</div>
-
-					{automation?.disabled !== true ?
-						<Button
+									setUpdate(Math.random()) 
+								}}
+							/>
+						</Tooltip>
+						<div 
 							style={{
-								borderRadius: theme.palette.borderRadius,
-								textTransform: 'none',
-								color: updated ? theme.palette.primary.main : theme.palette.text.secondary,
-								marginTop: -6,
-
-								position: "absolute",
-								right: 25,
+								display: "flex",
+								cursor: !automation?.disabled ? "pointer" : "not-allowed",
+								width: "100%", 
 							}}
-							disabled={!updated}
-							onClick={(e) => {
-								e.stopPropagation();
-								e.preventDefault();
+							disabled={automation?.disabled === true}
+							onClick={() => {
+								if (automation?.disabled === true) {
+									return
+								}
 
-								runSave()
+								if (automation?.name === "Enrich") {
+									automation.enabled = !automation.enabled
+									runSave()
+									return
+								}
+
+								setShowOptions(!showOptions)
+
+								// Auto saves when the options are closed/saved
+								if (updated && showOptions) {
+									runSave()
+								}
 							}}
 						>
-							Save
-						</Button>
-					: null}
-				</div>
+							{typeof automation?.icon === "string" && automation?.icon?.length > 0 ? 
+								<img src={automation.icon} alt={automation.name} style={{ width: 20, height: 20, }} />
+								:
+								automation.icon
+							}
 
-				{showOptions && (
-					updatedAutomation.options.map((option, optionIndex) => {
-						if (option?.key === "datastore_categories") {
-							if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
+							<Typography variant="body1" style={{ 
+								color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary, 
+								marginLeft: 10, 
+							}}>
+								{automation.name}
+							</Typography>
+						</div>
+
+						{automation?.disabled !== true ? 
+							<Button
+								style={{ 
+									borderRadius: theme.palette.borderRadius,
+									textTransform: 'none', 
+									color: updated ? theme.palette.primary.main : theme.palette.text.secondary,
+									marginTop: -6,
+
+									position: "absolute",
+									right: 25, 
+								}}
+								disabled={!updated}
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+
+									runSave()
+								}}
+							>
+								Save
+							</Button>
+						: null}
+					</div>
+
+					{showOptions && (
+						updatedAutomation.options.map((option, optionIndex) => {
+							if (option?.key === "datastore_categories") {
+								if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
+									return (
+										<Typography key={optionIndex} style={{ color: theme.palette.text.secondary, marginTop: 10 }}>
+											No categories available. Please add categories in the settings.
+										</Typography>
+									)
+								}
+
 								return (
-									<Typography key={optionIndex} style={{ color: theme.palette.text.secondary, marginTop: 10 }}>
-										No categories available. Please add categories in the settings.
-									</Typography>
+									<Autocomplete
+										key={optionIndex}
+
+										multiple
+										label="Choose Datastore Categories"
+										id="datastore_category_search"
+										autoHighlight
+										freeSolo
+										value={datastoreCategories?.filter(c => option?.value.includes(c)) || []}
+										classes={{ inputRoot: classes.inputRoot }}
+										ListboxProps={{
+											style: {
+												backgroundColor: theme.palette.surfaceColor,
+												color: theme.palette.text.primary,
+												borderRadius: theme.palette.borderRadius,
+											},
+										}}
+										onChange={(event, newValue) => {
+											console.log("New Value: ", newValue)
+
+											option.value = ""
+											for (var i = 0; i < newValue.length; i++) {
+												option.value += newValue[i] + ","
+											}
+
+											if (newValue.length > 0) {
+												updatedAutomation.enabled = true
+											} else {
+												updatedAutomation.enabled = false 
+											}
+
+											updatedAutomation.options[optionIndex] = option
+											setUpdatedAutomation(updatedAutomation)
+											setUpdated(true)
+
+											setUpdate(Math.random()) // Force re-render
+										}}
+
+										getOptionLabel={(option) => {
+											if (option === undefined || option === null) {
+												return "No Categories Selected";
+											}
+
+											return option
+										}}
+										options={datastoreCategories}
+										fullWidth
+										style={{
+											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											borderRadius: theme.palette.textFieldStyle.borderRadius,
+											color: theme.palette.textFieldStyle.color,
+											height: 35,
+											marginBottom: 40,
+										}}
+										renderOption={(props, data, state) => {
+											const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
+											const iconDetails = GetIconInfo({
+												"app_name": fixedname,
+												"name": fixedname,
+											})
+
+											const keyfound = option?.value.includes(data)
+
+											return (
+												<Tooltip arrow placement="left" title={
+													<span style={{}}>
+														{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+															<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
+															: null}
+														<Typography>
+															Choose {data}
+														</Typography>
+													</span>
+												} >
+													<MenuItem
+														{...props}
+														style={{
+															backgroundColor: theme.palette.surfaceColor,
+														}}
+														value={data}
+													>
+														<Typography style={{
+															display: "flex", 
+															marginTop: 5, 
+															color: keyfound ? red : theme.palette.text.primary,
+														}}>
+															<div style={{marginRight: 10, }}>
+																{iconDetails?.originalIcon && (
+																	iconDetails?.originalIcon
+																)}
+															</div>
+
+															{fixedname}
+														</Typography>
+													</MenuItem>
+												</Tooltip>
+											)
+										}}
+										renderInput={(params) => {
+											return (
+												<TextField
+													{...params}
+													style={{
+														backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+														color: theme.palette.textFieldStyle.color,
+														borderRadius: theme.palette.textFieldStyle.borderRadius,
+														height: 35,
+														fontSize: 16,
+														marginTop: "16px"
+													}}
+													InputProps={{
+														...params.InputProps,
+														style: {
+															height: 35,
+															display: "flex",
+															alignItems: "center",
+															padding: "0px 8px",
+															fontSize: 16,
+															borderRadius: 4,
+														},
+														inputProps: {
+															...params.inputProps,
+															style: {
+																height: "100%",
+																boxSizing: "border-box",
+															}
+
+														}
+													}}
+													variant="outlined"
+													placeholder="Select Categories to Correlate"
+												/>
+											)
+										}}
+									/>
+								)
+							} else if (option?.key === "workflow_id") {
+								return ( 
+									<Autocomplete
+										key={optionIndex}
+
+										multiple
+										label="Find a workflow"
+										id="workflow_search"
+										autoHighlight
+										freeSolo
+										value={workflows?.filter(w => option?.value.includes(w.id)) || []}
+										classes={{ inputRoot: classes.inputRoot }}
+										ListboxProps={{
+											style: {
+												backgroundColor: theme.palette.surfaceColor,
+												color: theme.palette.text.primary,
+												borderRadius: theme.palette.borderRadius,
+											},
+										}}
+										onChange={(event, newValue) => {
+											option.value = ""
+											for (var i = 0; i < newValue.length; i++) {
+												option.value += newValue[i].id + ","
+											}
+
+											if (newValue.length > 0) {
+												updatedAutomation.enabled = true
+											} else {
+												updatedAutomation.enabled = false 
+											}
+
+											updatedAutomation.options[optionIndex] = option
+											setUpdatedAutomation(updatedAutomation)
+											setUpdated(true)
+
+											setUpdate(Math.random()) // Force re-render
+										}}
+
+										getOptionLabel={(option) => {
+											if (
+												option === undefined ||
+												option === null ||
+												option?.name === undefined ||
+												option?.name === null
+											) {
+												return "No Workflows Selected";
+											}
+
+											const newname = (
+												option.name.charAt(0).toUpperCase() + option.name.substring(1)
+											).replaceAll("_", " ")
+
+											return newname
+										}}
+										options={workflows}
+										fullWidth
+										style={{
+											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											borderRadius: theme.palette.textFieldStyle.borderRadius,
+											color: theme.palette.textFieldStyle.color,
+											height: 35,
+											marginBottom: 40,
+										}}
+										renderOption={(props, data, state) => {
+											/*
+											if (data.id === option?.value) {
+												data = workflow;
+											}
+											*/
+
+											return (
+												<Tooltip arrow placement="left" title={
+													<span style={{}}>
+														{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+															<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
+															: null}
+														<Typography>
+															Choose {data.name}
+														</Typography>
+													</span>
+												} >
+													<MenuItem
+														{...props}
+														style={{
+															backgroundColor: theme.palette.surfaceColor,
+															color: data.id === option?.value ? red : theme.palette.text.primary,
+														}}
+														value={data}
+													>
+														{data.name}
+													</MenuItem>
+												</Tooltip>
+											)
+										}}
+										renderInput={(params) => {
+											return (
+												<TextField
+													{...params}
+													style={{
+														backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+														color: theme.palette.textFieldStyle.color,
+														borderRadius: theme.palette.textFieldStyle.borderRadius,
+														height: 35,
+														fontSize: 16,
+														marginTop: "16px"
+													}}
+													InputProps={{
+														...params.InputProps,
+														style: {
+															height: 35,
+															display: "flex",
+															alignItems: "center",
+															padding: "0px 8px",
+															fontSize: 16,
+															borderRadius: 4,
+														},
+														inputProps: {
+															...params.inputProps,
+															style: {
+																height: "100%",
+																boxSizing: "border-box",
+															}
+
+														}
+													}}
+													variant="outlined"
+													placeholder="Select workflows to run"
+												/>
+											)
+										}}
+									/>
 								)
 							}
 
 							return (
-								<Autocomplete
+								<TextField
 									key={optionIndex}
-
-									multiple
-									label="Choose Datastore Categories"
-									id="datastore_category_search"
-									autoHighlight
-									freeSolo
-									value={datastoreCategories?.filter(c => option?.value.includes(c)) || []}
-									classes={{ inputRoot: classes.inputRoot }}
-									ListboxProps={{
-										style: {
-											backgroundColor: theme.palette.surfaceColor,
-											color: theme.palette.text.primary,
-											borderRadius: theme.palette.borderRadius,
-										},
-									}}
-									onChange={(event, newValue) => {
-										console.log("New Value: ", newValue)
-
-										option.value = ""
-										for (var i = 0; i < newValue.length; i++) {
-											option.value += newValue[i] + ","
-										}
-
-										if (newValue.length > 0) {
-											updatedAutomation.enabled = true
-										} else {
-											updatedAutomation.enabled = false
-										}
-
-										updatedAutomation.options[optionIndex] = option
-										setUpdatedAutomation(updatedAutomation)
-										setUpdated(true)
-
-										setUpdate(Math.random()) // Force re-render
-									}}
-
-									getOptionLabel={(option) => {
-										if (option === undefined || option === null) {
-											return "No Categories Selected";
-										}
-
-										return option
-									}}
-									options={datastoreCategories}
 									fullWidth
 									style={{
+										...theme.palette.textFieldStyle,
+										marginBottom: 20, 
+										marginTop: 10, 
+									}}
+            						InputProps={{
+									  style: {
 										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-										borderRadius: theme.palette.textFieldStyle.borderRadius,
 										color: theme.palette.textFieldStyle.color,
-										height: 35,
-										marginBottom: 40,
+									  },
 									}}
-									renderOption={(props, data, state) => {
-										const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
-										const iconDetails = GetIconInfo({
-											"app_name": fixedname,
-											"name": fixedname,
-										})
+									label={option.key}
+									defaultValue={option.value}
+									onBlur={(e) => {
+										if (e.target.value === "") {
+											updatedAutomation.enabled = false 
+										} else {
+											updatedAutomation.enabled = true 
+										}
 
-										const keyfound = option?.value.includes(data)
-
-										return (
-											<Tooltip arrow placement="left" title={
-												<span style={{}}>
-													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
-														: null}
-													<Typography>
-														Choose {data}
-													</Typography>
-												</span>
-											} >
-												<MenuItem
-													{...props}
-													style={{
-														backgroundColor: theme.palette.surfaceColor,
-													}}
-													value={data}
-												>
-													<Typography style={{
-														display: "flex",
-														marginTop: 5,
-														color: keyfound ? red : theme.palette.text.primary,
-													}}>
-														<div style={{marginRight: 10, }}>
-															{iconDetails?.originalIcon && (
-																iconDetails?.originalIcon
-															)}
-														</div>
-
-														{fixedname}
-													</Typography>
-												</MenuItem>
-											</Tooltip>
-										)
-									}}
-									renderInput={(params) => {
-										return (
-											<TextField
-												{...params}
-												style={{
-													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-													color: theme.palette.textFieldStyle.color,
-													borderRadius: theme.palette.textFieldStyle.borderRadius,
-													height: 35,
-													fontSize: 16,
-													marginTop: "16px"
-												}}
-												InputProps={{
-													...params.InputProps,
-													style: {
-														height: 35,
-														display: "flex",
-														alignItems: "center",
-														padding: "0px 8px",
-														fontSize: 16,
-														borderRadius: 4,
-													},
-													inputProps: {
-														...params.inputProps,
-														style: {
-															height: "100%",
-															boxSizing: "border-box",
-														}
-
-													}
-												}}
-												variant="outlined"
-												placeholder="Select Categories to Correlate"
-											/>
-										)
+										updatedAutomation.options[optionIndex].value = e.target.value;
+										setUpdatedAutomation(updatedAutomation)
+										setUpdated(true)
 									}}
 								/>
 							)
-						} else if (option?.key === "workflow_id") {
-							return (
-								<Autocomplete
-									key={optionIndex}
-
-									multiple
-									label="Find a workflow"
-									id="workflow_search"
-									autoHighlight
-									freeSolo
-									value={workflows?.filter(w => option?.value.includes(w.id)) || []}
-									classes={{ inputRoot: classes.inputRoot }}
-									ListboxProps={{
-										style: {
-											backgroundColor: theme.palette.surfaceColor,
-											color: theme.palette.text.primary,
-											borderRadius: theme.palette.borderRadius,
-										},
-									}}
-									onChange={(event, newValue) => {
-										option.value = ""
-										for (var i = 0; i < newValue.length; i++) {
-											option.value += newValue[i].id + ","
-										}
-
-										if (newValue.length > 0) {
-											updatedAutomation.enabled = true
-										} else {
-											updatedAutomation.enabled = false
-										}
-
-										updatedAutomation.options[optionIndex] = option
-										setUpdatedAutomation(updatedAutomation)
-										setUpdated(true)
-
-										setUpdate(Math.random()) // Force re-render
-									}}
-
-									getOptionLabel={(option) => {
-										if (
-											option === undefined ||
-											option === null ||
-											option?.name === undefined ||
-											option?.name === null
-										) {
-											return "No Workflows Selected";
-										}
-
-										const newname = (
-											option.name.charAt(0).toUpperCase() + option.name.substring(1)
-										).replaceAll("_", " ")
-
-										return newname
-									}}
-									options={workflows}
-									fullWidth
-									style={{
-										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-										borderRadius: theme.palette.textFieldStyle.borderRadius,
-										color: theme.palette.textFieldStyle.color,
-										height: 35,
-										marginBottom: 40,
-									}}
-									renderOption={(props, data, state) => {
-										/*
-										if (data.id === option?.value) {
-											data = workflow;
-										}
-										*/
-
-										return (
-											<Tooltip arrow placement="left" title={
-												<span style={{}}>
-													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
-														: null}
-													<Typography>
-														Choose {data.name}
-													</Typography>
-												</span>
-											} >
-												<MenuItem
-													{...props}
-													style={{
-														backgroundColor: theme.palette.surfaceColor,
-														color: data.id === option?.value ? red : theme.palette.text.primary,
-													}}
-													value={data}
-												>
-													{data.name}
-												</MenuItem>
-											</Tooltip>
-										)
-									}}
-									renderInput={(params) => {
-										return (
-											<TextField
-												{...params}
-												style={{
-													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-													color: theme.palette.textFieldStyle.color,
-													borderRadius: theme.palette.textFieldStyle.borderRadius,
-													height: 35,
-													fontSize: 16,
-													marginTop: "16px"
-												}}
-												InputProps={{
-													...params.InputProps,
-													style: {
-														height: 35,
-														display: "flex",
-														alignItems: "center",
-														padding: "0px 8px",
-														fontSize: 16,
-														borderRadius: 4,
-													},
-													inputProps: {
-														...params.inputProps,
-														style: {
-															height: "100%",
-															boxSizing: "border-box",
-														}
-
-													}
-												}}
-												variant="outlined"
-												placeholder="Select workflows to run"
-											/>
-										)
-									}}
-								/>
-							)
-						}
-
-						return (
-							<TextField
-								key={optionIndex}
-								fullWidth
-								style={{
-									...theme.palette.textFieldStyle,
-									marginBottom: 20,
-									marginTop: 10,
-								}}
-            					InputProps={{
-								  style: {
-									backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-									color: theme.palette.textFieldStyle.color,
-								  },
-								}}
-								label={option.key}
-								defaultValue={option.value}
-								onBlur={(e) => {
-									if (e.target.value === "") {
-										updatedAutomation.enabled = false
-									} else {
-										updatedAutomation.enabled = true
-									}
-
-									updatedAutomation.options[optionIndex].value = e.target.value;
-									setUpdatedAutomation(updatedAutomation)
-									setUpdated(true)
-								}}
-							/>
-						)
-					})
-				)}
-			</div>
+						})
+					)}
+				</div>
+			</Tooltip>
 		)
 	}
 
 
 	const setCategorySettingsField = (field, value) => {
 		// Check if categoryConfig.settings is set or not. Otherwise set it.
-		var categoryConfig2 = categoryConfig
+		var categoryConfig2 = categoryConfig 
 		if (categoryConfig === undefined || categoryConfig === null) {
 			categoryConfig2 = {}
 		}
@@ -1484,16 +1506,16 @@ const CacheView = memo((props) => {
 		setCategoryConfig(categoryConfig2)
 
 		saveAutomation(
-			categoryAutomations,
+			categoryAutomations, 
 			categoryConfig2.settings,
 		)
 	}
 
 	const columns: GridColDef<(typeof rows)[number]>[] = [
-	  {
-		  field: 'key',
-		  headerName: 'Key',
-		  width: 200,
+	  { 
+		  field: 'key', 
+		  headerName: 'Key', 
+		  width: 200, 
 		  filterable: true,
 		  sortable: true,
 	  },
@@ -1505,10 +1527,10 @@ const CacheView = memo((props) => {
 		renderCell: (props) => {
 			const data = props.row
 
-			if (data?.category?.toLowerCase() === "protected") {
+			if (data?.category?.toLowerCase() === "protected") { 
 				return (
-					<Typography
-						variant="body2"
+					<Typography 
+						variant="body2" 
 						type="password"
 						style={{maxHeight: 200, overflow: "hidden", }}
 					>
@@ -1535,7 +1557,7 @@ const CacheView = memo((props) => {
 								backgroundColor: theme.palette.platformColor,
 								border: theme.palette.defaultBorder,
 								padding: 5,
-								minWidth: 500,
+								minWidth: 500, 
 								maxHeight: 500,
 								overflowY: "auto",
 							}}
@@ -1608,16 +1630,16 @@ const CacheView = memo((props) => {
 				  		style={{
 							color: "white",
 							backgroundColor: iconDetails?.iconBackgroundColor || theme.palette.primary.secondary,
-							marginLeft: 15,
+							marginLeft: 15, 
 							height: 30,
-							width: 30,
+							width: 30, 
 							cursor: data.category !== "" && data.category !== "default" ? "pointer" : "default",
 						}}
 				  		variant="rounded"
 				  	>
 				  	{iconDetails?.originalIcon ?
 						iconDetails?.originalIcon
-						:
+						: 
 				  		avatarLetter
 					}
 				  	</Avatar>
@@ -1636,7 +1658,7 @@ const CacheView = memo((props) => {
 		renderCell: (props) => {
 			const data = props.row
 
-			return (
+			return ( 
 				<span style={{ display: "flex" }}>
 					{data?.workflow_id === "" || data?.workflow_id === null || data?.workflow_id === undefined || data?.workflow_id?.length !== 36 ?
 						<IconButton
@@ -1646,7 +1668,7 @@ const CacheView = memo((props) => {
 							<OpenInNewIcon
 								style={{
 									color:
-										data.workflow_id?.length === 36
+										data.workflow_id?.length === 36 
 											? "#FF8444"
 											: "grey",
 								}}
@@ -1700,7 +1722,7 @@ const CacheView = memo((props) => {
 									onClick={(e) => {
 										e.preventDefault()
 										e.stopPropagation()
-										// Try to make the value JSON indented
+										// Try to make the value JSON indented 
 										const valid = validateJson(data.value)
 										var newvalue = data.value
 										if (valid.valid) {
@@ -1740,6 +1762,37 @@ const CacheView = memo((props) => {
 								</IconButton>
 							</span>
 						</Tooltip>
+
+						<Tooltip
+							title={"Explore correlations: Requires a category."}
+							style={{}}
+							aria-label={"Edit"}
+						>
+							<span>
+								<IconButton
+									style={{ padding: "6px" }}
+									disabled={userdata?.support !== true || data?.category === "" || data?.category === null || data?.category === undefined}
+									onClick={(e) => {
+										if (userdata?.support !== true) {
+											toast.warn("Correlation graphs are a beta feature.")
+										}
+
+										toast.info("Opening correlations window")
+
+										// add the key we are correlating
+										const currentParams = new URLSearchParams(window.location.search);
+										currentParams.set("category", selectedCategory);
+										currentParams.set("correlations", "true");
+										currentParams.set("key", data.key);
+										navigate(`${window.location.pathname}?${currentParams.toString()}`);
+										setShowCorrelations(data)
+									}}
+								>
+									<HubIcon />
+								</IconButton>
+							</span>
+						</Tooltip>
+
 						<Tooltip
 							title={data?.org_id !== selectedOrganization.id ? "You can not access public URL for this key as it is controlled by parent organization." : "Public URL (types: text, raw, json)" }
 							style={{ marginLeft: 0, }}
@@ -1870,23 +1923,61 @@ const CacheView = memo((props) => {
 	const isAutomating = categoryAutomations?.find((automation) => automation.enabled) !== undefined
     return (
         <div style={{
-			minHeight: 2000,
-			height: isSelectedDataStore?"100%":null,
+			minHeight: 2000, 
+			height: isSelectedDataStore?"100%":null, 
 
-			paddingBottom: isSelectedDataStore?null:250,
-			boxSizing: "border-box",
-			width: isSelectedDataStore? "100%" :null,
-			transition: "width 0.3s ease",
-			padding:isSelectedDataStore?"27px 10px 27px 27px":null,
-			color: isSelectedDataStore?'#ffffff':null,
-			backgroundColor: isSelectedDataStore? theme.palette.platformColor :null,
-			borderTopRightRadius: isSelectedDataStore?'8px':null,
-			borderBottomRightRadius: isSelectedDataStore?'8px':null,
-			borderLeft: theme.palette.defaultBorder
+			paddingBottom: isSelectedDataStore?null:250, 
+			boxSizing: "border-box", 
+			width: isSelectedDataStore? "100%" :null, 
+			transition: "width 0.3s ease", 
+			padding:isSelectedDataStore?"27px 10px 27px 27px":null, 
+			color: isSelectedDataStore?'#ffffff':null, 
+			backgroundColor: isSelectedDataStore? theme.palette.platformColor :null, 
+			borderTopRightRadius: isSelectedDataStore?'8px':null, 
+			borderBottomRightRadius: isSelectedDataStore?'8px':null, 
+			borderLeft: theme.palette.defaultBorder 
 		}}>
             {modalView}
 
-			<CollectIngestModal
+			{showCorrelations !== undefined ?
+				<Dialog
+					open={showCorrelations !== undefined}
+					onClose={() => setShowCorrelations(undefined)}
+					PaperProps={{
+						sx: {
+							borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+							border: theme?.palette?.DialogStyle?.border,
+							minWidth: 1000,
+							minHeight: 768,
+							fontFamily: theme?.typography?.fontFamily,
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							zIndex: 1000,
+							'& .MuiDialogContent-root': {
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+							'& .MuiDialogTitle-root': {
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+							'& .MuiDialogActions-root': {
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+						},
+					}}
+				>
+					<DialogTitle>
+						Correlations
+					</DialogTitle>
+					<DialogContent>
+						<CorrelationGraph 
+							globalUrl={globalUrl} 
+							datastoreData={showCorrelations} 
+							userdata={userdata}
+						/>
+					</DialogContent>
+				</Dialog>
+			: null}
+
+			<CollectIngestModal 
 				globalUrl={globalUrl}
 				open={showCollectIngestMenu}
 				setOpen={setShowCollectIngestMenu}
@@ -1909,14 +2000,14 @@ const CacheView = memo((props) => {
 						Shuffle Datastore
 					</Typography>
 
-					{userdata?.support === true ?
+					{userdata?.support === true ? 
 						<Tooltip title={"Collect (support only)"} style={{}} aria-label={""}>
 							<span style={{position: "absolute", right: 0, }}>
 								<Button
-									style={{
-										whiteSpace: "nowrap",
-										height: 35,
-										textTransform: 'none',
+									style={{ 
+										whiteSpace: "nowrap", 
+										height: 35, 
+										textTransform: 'none', 
 
 										//border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
 									}}
@@ -1927,10 +2018,10 @@ const CacheView = memo((props) => {
 									}}
 								>
 									<FilterAltIcon style={{marginRight: 10, }}/>
-									Collect (beta)
+									Collect (beta) 
 								</Button>
 							</span>
-						</Tooltip>
+						</Tooltip> 
 					: null}
 				</div>
 
@@ -1960,14 +2051,14 @@ const CacheView = memo((props) => {
 						style={{textTransform: isSelectedDataStore ? 'capitalize':null, width : isSelectedDataStore ? 120 : null, height:isSelectedDataStore?40:null}}
 						variant="contained"
 						color="primary"
-						onClick={() =>{
+						onClick={() =>{ 
 							setEditCache(false)
 							setModalOpen(true)
 
 							setValue("")
 						}}
 					>
-						Add Key
+						Add Key 
 					</Button>
 					<Button
 						style={{ marginRight: 15, width:isSelectedDataStore ? 81:null, height:isSelectedDataStore?40:null,  }}
@@ -2041,9 +2132,9 @@ const CacheView = memo((props) => {
 										<MenuItem
 											key={index}
 											value={data}
-											style={{
-												color: theme.palette.textFieldStyle.color,
-												display: "flex",
+											style={{ 
+												color: theme.palette.textFieldStyle.color, 
+												display: "flex", 
 												borderBottom: theme.palette.defaultBorder,
 											}}
 										>
@@ -2064,17 +2155,17 @@ const CacheView = memo((props) => {
 					) : null}
 
 				<div style={{display: "inline-flex", position:"relative", top: 8}}>
-					{renderTextBox ?
+					{renderTextBox ? 
 						<Tooltip title={"Close"} style={{}} aria-label={""}>
 							<Button
-								style={{
-									height: 35,
-									borderRadius: 4,
-									textTransform: 'none',
+								style={{ 
+									height: 35, 
+									borderRadius: 4,  
+									textTransform: 'none', 
 									fontSize: 16,
 									borderRadius: "0px 5px 5px 0px",
 
-									marginRight: 10,
+									marginRight: 10, 
 								}}
 								color="secondary"
             	                variant="contained"
@@ -2089,12 +2180,12 @@ const CacheView = memo((props) => {
 						:
 						<Tooltip title={"Add or find category"} style={{}} aria-label={""}>
 							<Button
-								style={{
-									whiteSpace: "nowrap",
-									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? 50 : 169,
-									height: 35,
-									textTransform: 'none',
-									fontSize: 16,
+								style={{ 
+									whiteSpace: "nowrap", 
+									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? 50 : 169, 
+									height: 35, 
+									textTransform: 'none', 
+									fontSize: 16, 
 
 									borderRadius: "0px 5px 5px 0px",
 								}}
@@ -2107,7 +2198,7 @@ const CacheView = memo((props) => {
 								<AddIcon/>
 								{datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? "" : "Category"}
 							</Button>
-						</Tooltip>
+						</Tooltip> 
 					}
 
 					{renderTextBox && <TextField
@@ -2118,11 +2209,11 @@ const CacheView = memo((props) => {
 							const foundValue = event.target.value.trim();
 							if(event.key === 'Enter' && foundValue?.length > 0){
 								setUpdateToThisCategory(event.target.value)
-
+    
     							listOrgCache(orgId, event.target.value, 0, pageSize, 0)
 								setPage(0)
 							}
-
+								
 						}}
 						style={{
 							height: 35,
@@ -2154,10 +2245,10 @@ const CacheView = memo((props) => {
 					<Tooltip title={"Automate current Category"} style={{}} aria-label={""}>
 						<span>
 							<Button
-								style={{
-									whiteSpace: "nowrap",
-									height: 35,
-									textTransform: 'none',
+								style={{ 
+									whiteSpace: "nowrap", 
+									height: 35, 
+									textTransform: 'none', 
 
 									border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
 								}}
@@ -2165,27 +2256,27 @@ const CacheView = memo((props) => {
 								color="secondary"
 								disabled={selectedCategory === undefined || selectedCategory === "" || selectedCategory === "default"}
 								onClick={() => {
-									// Set up:
-									// Workflow triggers for when a key is added/edited/deleted.
-									// Automatic ingest mechanisms:
+									// Set up: 
+									// Workflow triggers for when a key is added/edited/deleted. 
+									// Automatic ingest mechanisms: 
 									//   - IOCs (monitor URLs)
 									//   - Singul ingest
 									setShowAutomationMenu(true)
 								}}
 							>
 								{isAutomating ? <RocketLaunchIcon style={{color: theme.palette.primary.main, marginRight: 10 }}/> : <RocketIcon style={{marginRight: 10, color: theme.palette.secondary.main, }} />}
-								Automate (beta)
+								Automate (beta) 
 							</Button>
 						</span>
-					</Tooltip>
+					</Tooltip> 
 
 					<Tooltip title={"Other category settings"} style={{}} aria-label={""}>
 						<Button
-							style={{
-								whiteSpace: "nowrap",
-								height: 35,
-								textTransform: 'none',
-								marginLeft: 3,
+							style={{ 
+								whiteSpace: "nowrap", 
+								height: 35, 
+								textTransform: 'none', 
+								marginLeft: 3, 
 							}}
 							variant="outlined"
 							color="secondary"
@@ -2196,10 +2287,10 @@ const CacheView = memo((props) => {
 						>
 							<SettingsIcon style={{color: theme.palette.secondary.main, }} />
 						</Button>
-					</Tooltip>
+					</Tooltip> 
 				</ButtonGroup>
 
-				{showAutomationMenu || showSettingsMenu ?
+				{showAutomationMenu || showSettingsMenu ? 
 					<Dialog
 						open={showAutomationMenu || showSettingsMenu}
 						onClose={() => {
@@ -2230,7 +2321,7 @@ const CacheView = memo((props) => {
 						<DialogTitle>
 						</DialogTitle>
 						<DialogContent style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: theme.palette.DialogStyle.backgroundColor, }}>
-							{showSettingsMenu === true ?
+							{showSettingsMenu === true ? 
 								<div>
 									<Typography variant="h6" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
 										<SettingsIcon style={{ verticalAlign: "middle", marginRight: 10 }} />
@@ -2240,7 +2331,7 @@ const CacheView = memo((props) => {
 									<div style={{display: "flex", marginTop: 50,  }}>
 										<div style={{flex: 2, }}>
 											<Typography variant="body1" style={{ color: theme.palette.text.primary, }}>
-												Timeout
+												Timeout	
 											</Typography>
 											<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginBottom: 20 }}>
 												You can set a timeout for the category. This will delete all keys in this category after the specified time. Timeout is in seconds and based on last <b>EDITED</b> time.
@@ -2269,7 +2360,7 @@ const CacheView = memo((props) => {
 													toast.info("Timeout must be a number. Setting to 0.")
 												} else {
 													timeoutValue = parseInt(e.target.value, 10)
-													if (timeoutValue < 60) {
+													if (timeoutValue < 60) { 
 														toast.info("Timeout must be between 60 seconds or more. Setting to 0.")
 													}
 
@@ -2286,7 +2377,7 @@ const CacheView = memo((props) => {
 									<div style={{display: "flex", marginTop: 25,  }}>
 										<div style={{flex: 3, }}>
 											<Typography variant="body1" style={{ color: theme.palette.text.primary, }}>
-												{categoryConfig?.settings?.public === true ? "" : "NOT"} Public
+												{categoryConfig?.settings?.public === true ? "" : "NOT"} Public 
 											</Typography>
 											<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginBottom: 20 }}>
 												This will make the url for this category public. Metadata will be cleared, except for timestamps. Types: keys,ndjson,csv,values,json,meta
@@ -2333,7 +2424,7 @@ const CacheView = memo((props) => {
 										When
 									</Typography>
 									<Typography variant="body1" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
-										A key is edited
+										A key is edited 
 									</Typography>
 
 									<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginTop: 100, marginBottom: 20 }}>
@@ -2342,16 +2433,16 @@ const CacheView = memo((props) => {
 									{categoryAutomations.map((automation, index) => {
 
 										return (
-											<AutomationOptions
+											<AutomationOptions 
 												key={index}
-												automation={automation}
-												index={index}
-											/>
+												automation={automation} 
+												index={index} 
+											/>	
 										)
 									})}
 								</div>
 							}
-
+							
 						</DialogContent>
 					</Dialog>
 				: null}
@@ -2377,17 +2468,17 @@ const CacheView = memo((props) => {
 				setSelectedRows(newSelection);
 				}}
 				keepNonExistentRowsSelected={false}
-				getRowId={(row) => row?.category ? `${row.key}_${row.category}` : row.key}
+				getRowId={(row) => `${row?.key}_${row?.category}`}
 
 				autoHeight={true}
 				sx={{
-					marginTop: 1,
+					marginTop: 1, 
 					height: listCache.length*52+500,
 					width: "100%",
 					'.MuiTablePagination-selectLabel, .MuiTablePagination-select, .MuiTablePagination-selectIcon': {
 					  display: 'none',
 					},
-					marginBottom: 20,
+					marginBottom: 20, 
 				}}
 
 				loading={cachedLoaded === false}
@@ -2407,7 +2498,7 @@ const CacheView = memo((props) => {
 
 					setCursors({
 						0: "",
-					})
+					}) 
 				}}
 
 
@@ -2444,20 +2535,20 @@ const CacheView = memo((props) => {
 				}}
 			  >
 				<div style={{
-					width: 1200,
-					margin: "auto",
-					padding: 10,
+					width: 1200, 
+					margin: "auto", 
+					padding: 10, 
 					backgroundColor: theme.palette.platformColor,
 					borderRadius: 4,
 					border: "1px solid rgba(255, 255, 255, 0.5)",
 
 					display: "flex",
-					textAlign: "center",
+					textAlign: "center", 
 				}}>
 					<Typography variant="body2" style={{ color: theme.palette.text.primary, marginRight: 50, marginTop: 6, marginLeft: 350, }}>
 						{page * pageSize + 1} - {Math.min((page + 1) * pageSize, totalAmount)} of {totalAmount}
 					</Typography>
-
+					
 					<Pagination
 					  count={Number.parseInt(totalAmount/pageSize)}
 					  page={page+1}
@@ -2465,7 +2556,7 @@ const CacheView = memo((props) => {
 						  var disabled = false
 						  if (item?.type === "page") {
 							  if (cursors[item.page-1] === undefined) {
-								  disabled = true
+								  disabled = true 
 							  }
 						  }
 						  if (item?.type === "previous") {
@@ -2473,7 +2564,7 @@ const CacheView = memo((props) => {
 						  }
 
 						  if (cachedLoaded === false) {
-							  disabled = true
+							  disabled = true 
 						  }
 
 						  return (
@@ -2533,10 +2624,10 @@ const CacheView = memo((props) => {
 							variant={"outlined"}
 							color="secondary"
 						>
-							<DeleteOutlineIcon
+							<DeleteOutlineIcon 
 								style={{
 									color: red,
-									marginRight: 10,
+									marginRight: 10, 
 								}}
 							/>
 							Delete {selectedRows.length} Key{ selectedRows.length > 1 ? "s" : "" }

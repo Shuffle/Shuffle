@@ -3141,7 +3141,7 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 				orgId: subOrg.id,
 				limit: subOrg?.sync_features?.app_executions?.limit || "N/A",
 				usage: stat?.monthly_app_executions || "N/A",
-				workflows_usage: stat?.total_workflow_executions || "N/A",
+				workflows_usage: stat?.monthly_workflow_executions || "N/A",
 				workflow_usage_limit: subOrg?.sync_features?.workflow_executions?.limit || "N/A",
 				app_runs_hard_limit: subOrg?.Billing?.app_runs_hard_limit || 0,
 			}

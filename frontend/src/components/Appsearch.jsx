@@ -22,7 +22,7 @@ import {
 import aa from 'search-insights'
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const Appsearch = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp, inputHeight, }  = props
 	const { themeMode } = useContext(Context)
 	const theme = getTheme(themeMode)
     const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
@@ -37,6 +37,8 @@ const Appsearch = props => {
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3
 	window.title = "Shuffle | Apps | Find and integration any app"
+
+	const parsedInputHeight = inputHeight === undefined || inputHeight === null ? 295 : inputHeight 
 
 
 	// value={currentRefinement}
@@ -91,7 +93,7 @@ const Appsearch = props => {
 		var counted = 0
 
 		return (
-			<Grid container spacing={0} style={{border: "1px solid rgba(255,255,255,0.2)", maxHeight: 250, minHeight: 250, overflowY: "auto", overflowX: "hidden", }}>
+			<Grid container spacing={0} style={{border: "1px solid rgba(255,255,255,0.2)", maxHeight: parsedInputHeight, minHeight: parsedInputHeight, overflowY: "auto", overflowX: "hidden", }}>
 				{hits.map((data, index) => {
 					const paperStyle = {
 						backgroundColor: index === mouseHoverIndex ? theme.palette.hoverColor : theme.palette.textFieldStyle.backgroundColor,
@@ -182,7 +184,7 @@ const Appsearch = props => {
 	const CustomHits = connectHits(InputHits)
 
 	return (
-		<div style={{width: isMobile ? null : 287, height: 295, padding: "16px 16px 267px 16px", alignItems: "center", gap: 138,}}>
+		<div style={{width: isMobile ? null : 287, minHeight: parsedInputHeight, maxHeight: parsedInputHeight, padding: "16px 16px 64px 16px", alignItems: "center", }}>
 			<InstantSearch searchClient={searchClient} indexName="appsearch">
 				<div style={{maxWidth: 450, margin: "auto", }}>
 					<CustomSearchBox />

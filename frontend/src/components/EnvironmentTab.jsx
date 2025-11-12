@@ -432,7 +432,7 @@ const EnvironmentTab = memo((props) => {
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
         -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
-        -e SHUFFLE_SKIP_PIPELINES=true \\` : ""}${showDetection ? `
+        -e SHUFFLE_PIPELINE_URL=http://tenzir-node:5160 \ \n        -e SHUFFLE_PIPELINE_STANDALONE=true \\` : ""}${!showDetection ? `
         -v /tmp:/tmp \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest
             `)
@@ -467,8 +467,7 @@ const EnvironmentTab = memo((props) => {
         -e ENVIRONMENT_NAME="${environment.Name}" \\
         -e ORG="${props.userdata.active_org.id}" \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
-      -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
-      -e SHUFFLE_SKIP_PIPELINES=true \\` : ""}
+        -e HTTPS_PROXY=IP:PORT \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest`
 
         return commandData
@@ -959,7 +958,7 @@ const EnvironmentTab = memo((props) => {
                     display: "grid",
                     gridTemplateColumns: "80px 80px 80px 150px 100px 80px 400px 100px", 
                     width: "100%",
-                    minWidth: 800,
+                    minWidth: showLoader ? 800 : 0,
                     paddingBottom: 0,
                     borderBottom: theme.palette.defaultBorder,    
                   }}
@@ -976,7 +975,7 @@ const EnvironmentTab = memo((props) => {
 								  textOverflow: "ellipsis",
 								  overflow: "hidden",
 								  fontWeight: "bold",
-								  textAlign: header === "Actions" ? "left" : header === "Distribution" ? "right" : "center",                
+								  textAlign: "center",                
 								}}
 							/>
                     	)
@@ -987,7 +986,6 @@ const EnvironmentTab = memo((props) => {
       <ListItem
         key={rowIndex}
         style={{
-          display: "grid",
           backgroundColor: theme.palette.platformColor,
           height: 40,
           width: "100%",
@@ -1674,10 +1672,9 @@ const EnvironmentTab = memo((props) => {
 									setUpdate(Math.random())
 								  }}
 								/>
-								<Typography variant='body2' color="textSecondary">Enable Detection Controller</Typography>	 
+								<Typography variant='body2' color="textSecondary">Disable Detection Controller</Typography>	 
                             </div>
 
-							{/*
                             <div style={{display: 'flex', alignItems: 'center', }}>
 								<Checkbox 
 								  id="shuffle_skip_pipelines"
@@ -1692,9 +1689,8 @@ const EnvironmentTab = memo((props) => {
 									setUpdate(Math.random())
 								  }}
 								/>
-								<Typography variant='body2' color="textSecondary">Disable Pipelines & Data Lake</Typography> 
+								<Typography variant='body2' color="textSecondary">Use Remote Pipeline</Typography> 
                             </div>
-							*/}
                           </div>
         
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
@@ -1706,16 +1702,16 @@ const EnvironmentTab = memo((props) => {
                           </Typography>
                         </div>
                       </div>
-
 					  {currentEnvQueue.length === 0 ? null : 
 						  <List style={{ minWidth: 700, maxWidth: 700, maxHeight: 300, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin', }}>
 						  	{currentEnvQueue.map((queueItem, queueIndex) => {
 								return ( 
 									<ListItem
+										key={queueIndex}
 										style={{ 
-											backgroundColor: theme.palette.surfaceColor, 
+											backgroundColor: theme.palette.platformColor, 
+                      border: '1px solid #333333',
 											borderBottom: theme.palette.defaultBorder, 
-											maxHeight: 50, 
 										}}
 									>	
 										<ListItemText style={{minWidth: 50, maxWidth: 50, }}>
@@ -1767,7 +1763,7 @@ const EnvironmentTab = memo((props) => {
                                     padding: 15,
                                     textAlign: "center",
                                     height: 70,
-                                    backgroundColor: theme.palette.surfaceColor,
+                                    backgroundColor: theme.palette.platformColor,
                                     display: "flex",
                                   }}
                                 >

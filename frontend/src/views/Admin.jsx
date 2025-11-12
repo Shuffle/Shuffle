@@ -1765,7 +1765,17 @@ If you're interested, please let me know a time that works for you, or set up a 
           setTimeout(() => {
             window.location.reload()
           }, 2000);
-          toast("Successfully changed active organization - refreshing!");
+
+          toast.success("Successfully changed active organization - refreshing!");
+		  if (responseJson.org_id !== undefined && responseJson.org_id !== null && responseJson.org_id.length === 36) {
+		  	  navigate(`/admin?org_id=${responseJson.org_id}`)
+		  } else {
+			  if (orgId !== undefined && orgId !== null && orgId?.includes("@")) {
+		  		  navigate(`/admin`)
+			  } else {
+				  toast("No pivot?")
+			  }
+		  }
         } else {
 			if (responseJson.reason !== undefined && responseJson.reason !== null) {
 				if (!responseJson.reason.includes("already")) {

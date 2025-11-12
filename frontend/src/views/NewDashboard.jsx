@@ -11,7 +11,9 @@ import {
   Select,
   MenuItem,   
   Tooltip, 
-  CircularProgress, 
+  CircularProgress,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import { toast } from "react-toastify";
 
@@ -54,6 +56,15 @@ const NewDashboard = (props) => {
   const [overrideDays, setOverrideDays] = useState(undefined);
   const [rotMonthOverride, setRotMonthOverride] = useState(undefined);
   const [isProdStatusOn, setIsProdStatusOn] = useState(false)
+  const [selectedOrganization, setSelectedOrganization] = useState(null)
+  const [selectedOrgForStats, setSelectedOrgForStats] = useState(userdata?.active_org?.id || null)
+  const [availableOrgs, setAvailableOrgs] = useState([])
+  const [selectedOrgStats, setSelectedOrgStats] = useState(null)
+  const [loadingSelectedOrgStats, setLoadingSelectedOrgStats] = useState(false)
+  const [selectedOrgDetailsForStats, setSelectedOrgDetailsForStats] = useState(null)
+  const [fallbackToParentStats, setFallbackToParentStats] = useState(false);
+
+  document.title = "Shuffle - Dashboard";
 
   const isCloud =
     serverside === true || typeof window === "undefined"
@@ -121,15 +132,22 @@ const NewDashboard = (props) => {
   const displayName = userdata !== undefined && userdata?.username !== undefined ? userdata?.username?.split('@')[0]?.charAt(0)?.toUpperCase() + userdata?.username?.split('@')[0]?.slice(1) : 'User';
 
   useEffect(() => {
-    let t;
-    const anyLoading = loadingSfw || loadingRot || loadingNoti;
-    if (anyLoading) {
-      t = setShowOverlay(true);
-    } else {
-      setShowOverlay(false);
-    }
-    return () => { if (t) clearTimeout(t); };
-  }, [loadingSfw, loadingRot, loadingNoti]);
+    const anyLoading =
+      loadingSfw ||
+      loadingRot ||
+      loadingNoti ||
+      loadingSelectedOrgStats ||
+      !selectedOrganization ||
+      !selectedOrgForStats;
+    setShowOverlay(anyLoading);
+  }, [
+    loadingSfw,
+    loadingRot,
+    loadingNoti,
+    loadingSelectedOrgStats,
+    selectedOrganization,
+    selectedOrgForStats,
+  ]);
 
   // Auto-open onboarding when there aren't enough active days of stats
   useEffect(() => {
@@ -211,6 +229,7 @@ const NewDashboard = (props) => {
       .then((response) => (response.ok ? response.json() : null))
       .then((org) => {
         if (!fetched && org) {
+          setSelectedOrganization(org);
           if (!isCloud) {
               if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
@@ -229,8 +248,136 @@ const NewDashboard = (props) => {
     };
   }, [userdata?.active_org?.id, globalUrl]);
 
+  useEffect(() => {
+    if (!selectedOrgForStats) {
+        return;
+      }
+      
+      let fetched = false;
+      fetch(`${globalUrl}/api/v1/orgs/${selectedOrgForStats}`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((org) => {
+          if (!fetched && org) {
+            setSelectedOrgDetailsForStats(org);
+          }
+        })
+        .catch(() => {});
+  
+      return () => {
+        fetched = true;
+      };
+    }, [selectedOrgForStats, globalUrl]);
+
+
+  // Build list of available orgs for stats (parent + child orgs)
+  useEffect(() => {
+    if (!selectedOrganization) return;
+    
+    const orgs = [{ id: 'ALL', name: 'All Organizations', isAll: true }];
+    
+    // Add parent org
+    if (selectedOrganization?.id) {
+      orgs.push({ 
+        id: selectedOrganization.id, 
+        name: selectedOrganization.name || 'Parent Organization',
+        isAll: false 
+      });
+    }
+    
+    // Add child orgs if they exist
+    if (selectedOrganization?.child_orgs && Array.isArray(selectedOrganization.child_orgs)) {
+      selectedOrganization.child_orgs.forEach(child => {
+        if (child?.id && child?.name) {
+          orgs.push({ 
+            id: child.id, 
+            name: child.name,
+            isAll: false 
+          });
+        }
+      });
+    }
+    
+    setAvailableOrgs(orgs);
+    setSelectedOrgForStats(selectedOrganization?.id);
+  }, [selectedOrganization]);
+
+  // Fetch statistics for specifically selected org (not for ALL)
+  useEffect(() => {
+
+    let aborted = false;
+    const load = async () => {
+      try {
+        if (!selectedOrgForStats || selectedOrgForStats === 'ALL') {
+          setSelectedOrgStats(null);
+          setFallbackToParentStats(false);
+          return;
+        }
+        setLoadingSelectedOrgStats(true);
+        const resp = await fetch(`${globalUrl}/api/v1/orgs/${encodeURIComponent(selectedOrgForStats)}/stats`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        let fallback = false;
+        let data = null;
+        if (resp.ok) {
+          data = await resp.json();
+        }
+        const isParentContext = selectedOrganization && userdata?.active_org?.id === selectedOrganization.id;
+        if (!data || !Array.isArray(data.daily_statistics) || data.daily_statistics.length === 0) {
+          fallback = true;
+          setSelectedOrgStats(null);
+          // Only fallback to parent if on parent org dashboard
+          if (isParentContext && selectedOrganization && selectedOrgForStats !== selectedOrganization.id) {
+            toast.info('No stats available for selected org. Showing parent org stats.');
+            setSelectedOrgForStats(selectedOrganization.id);
+          }
+        } else {
+            // If data exists but has near-zero activity over the last 30 days, fallback to parent
+          try {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 30);
+            const recent = data.daily_statistics.filter((d) => {
+              if (!d?.date) return false;
+              const dt = new Date(d.date);
+              return dt >= cutoff;
+            });
+            const sumWork = recent.reduce((s, d) => s + Number(d?.workflow_executions_finished || 0) + Number(d?.workflow_executions_failed || 0), 0);
+            const sumApp = recent.reduce((s, d) => s + Number(d?.app_executions || 0), 0);
+            const nearZero = (Number(sumWork) + Number(sumApp)) <= 0;
+            if (nearZero && isParentContext && selectedOrganization && selectedOrgForStats !== selectedOrganization.id) {
+              fallback = true;
+              setSelectedOrgStats(null);
+              toast.info('Selected org has no activity in the last 30 days. Showing parent org stats.');
+              setSelectedOrgForStats(selectedOrganization.id);
+            } else {
+              setSelectedOrgStats(data || null);
+            }
+          } catch {
+            setSelectedOrgStats(data || null);
+          }
+        }
+        setFallbackToParentStats(fallback && isParentContext);
+      } catch {
+        if (!aborted) setSelectedOrgStats(null);
+        setFallbackToParentStats(false);
+      } finally {
+        if (!aborted) setLoadingSelectedOrgStats(false);
+      }
+    };
+
+    // Calling the function.
+    load();
+    return () => { aborted = true; };
+  }, [selectedOrgForStats, selectedOrganization, globalUrl, userdata?.active_org?.id]);
+
   return (
     <div style={{ maxWidth: 1366, margin: '0 auto', padding: 16, paddingTop: 50, paddingBottom: 30, paddingLeft: leftSideBarOpenByClick ? 270 : 80, transition: 'padding-left 0.3s ease', position: 'relative' }}>
+       {(onboardingOpen && !loadingSelectedOrgStats) && (
       <DashboardOnboarding
         open={onboardingOpen}
         globalUrl={globalUrl}
@@ -251,6 +398,7 @@ const NewDashboard = (props) => {
         headerTitle="Unlock your Dashboard"
         headerSubtitle="Complete these steps to start seeing insights."
       />
+      )}
       {showOverlay && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,17,17,0.6)', backdropFilter: 'blur(2px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -262,9 +410,33 @@ const NewDashboard = (props) => {
       {/* Header / Greeting */}
       <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0 16px 0' }}>
         <Typography variant="h5">{`${getGreeting()}, ${displayName ?? 'User'}!`}</Typography>
-        <>
+        <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {availableOrgs.length > 2 && (
+            <FormControl size="small" variant="outlined" style={{ minWidth: 200, marginTop: -8 }} sx={{
+              '& .MuiInputBase-root': {
+                height: 40,
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                borderRadius: '20px',
+              },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.22)' },
+            }}>
+              <InputLabel id="stats-org-select-label">View Stats For</InputLabel>
+              <Select
+                labelId="stats-org-select-label"
+                label="View Stats"
+                value={selectedOrgForStats || ''}
+                onChange={(e) => setSelectedOrgForStats(e.target.value)}
+              >
+                {availableOrgs.map((org) => (
+                  <MenuItem key={org.id} value={org.id}>
+                    {org.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           {sfwControls}
-        </>
+        </Box>
       </Box>
 
       {/* KPI cards */}
@@ -309,12 +481,27 @@ const NewDashboard = (props) => {
           onControlsChange={handleSfwControls}
           onLoadingChange={setLoadingSfw}
           onTotalsChange={setTotals}
+          loadingSelectedOrgStats={loadingSelectedOrgStats}
+          selectedOrganization={selectedOrganization}
+          selectedOrgForStats={selectedOrgForStats}
+          orgStats={selectedOrgStats}
+          orgForLimit={selectedOrgDetailsForStats || selectedOrganization}
         />
       </Paper>
 
       {/* Runs over time section */}
       <Paper style={{ padding: 16, marginTop: 19, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}>
-        <RunsOverTimeWidget globalUrl={globalUrl} onLoadingChange={setLoadingRot} monthOverride={rotMonthOverride} dummyMode={onboardingOpen} />
+        <RunsOverTimeWidget 
+          globalUrl={globalUrl} 
+          onLoadingChange={setLoadingRot} 
+          loadingSelectedOrgStats={loadingSelectedOrgStats}
+          monthOverride={rotMonthOverride} 
+          dummyMode={onboardingOpen}
+          selectedOrganization={selectedOrganization}
+          selectedOrgForStats={selectedOrgForStats}
+          orgStats={selectedOrgStats}
+          orgForLimit={selectedOrgDetailsForStats || selectedOrganization}
+        />
       </Paper>
     </div>
   );

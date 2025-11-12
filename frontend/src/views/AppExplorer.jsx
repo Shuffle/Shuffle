@@ -74,7 +74,7 @@ import {
 } from "react-instantsearch-dom";
 import AppStats from "../components/AppStats.jsx";
 import ParsedAction from "../components/ParsedAction.jsx";
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
+import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import { base64_decode, appCategories } from "../views/AppCreator.jsx";
 import { triggers as workflowTriggers } from "../views/AngularWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
@@ -4454,7 +4454,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
              ): null}
                 
               {userdata && (userdata?.active_org?.creator_org?.length > 0 || userdata?.active_org?.child_orgs?.length === 0) ? null : (
-                  <Button variant="outlined" color="secondary" onClick={()=> {setShowDistributionPopup(true)}} >Distribute App</Button>
+                  <Button variant="outlined" color="secondary" onClick={()=> {setShowDistributionPopup(true)}}>Distribute</Button>
               )}
 			</div>
           ) : (

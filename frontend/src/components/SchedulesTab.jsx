@@ -17,6 +17,8 @@ import {
 	TextField,
     Chip,
 	CircularProgress,
+	Select,
+	MenuItem,
 } from '@mui/material';
 
 import {
@@ -39,10 +41,13 @@ const SchedulesTab = memo((props) => {
   const [showLoader, setShowLoader] = React.useState(true);
   const [workflows, setWorkflows] = React.useState([]);
   const [pipelineModalOpen, setPipelineModalOpen] = React.useState(false);
-  const [newPipelineValue, setNewPipelineValue] = React.useState(`export | sigma "/tmp/sigma_rules" | to "SHUFFLE_WEBHOOK"`);
+  const [newPipelineValue, setNewPipelineValue] = React.useState(`export live=true | sigma "/tmp/sigma_rules" | to "SHUFFLE_WEBHOOK"`);
 
   const [ticketWebhook, setTicketWebhook] = React.useState("");
   const [detectionWorkflowId, setDetectionWorkflowId] = React.useState("");
+
+  const [environments, setEnvironments] = React.useState([]);
+  const [selectedEnvironment, setSelectedEnvironment] = React.useState("");
 
   const { themeMode, brandColor } = useContext(Context);
   const theme = getTheme(themeMode, brandColor);
@@ -74,7 +79,7 @@ const SchedulesTab = memo((props) => {
 						if (responseJson[i].triggers[triggerkey].trigger_type === "WEBHOOK") { 
   							setDetectionWorkflowId(responseJson[i].id)
 							setTicketWebhook(`${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
-							setNewPipelineValue(`export | sigma /tmp/sigma_rules | to ${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+							setNewPipelineValue(`export live=true | sigma /tmp/sigma_rules | to ${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
 							break;
 						}
 					}
@@ -91,6 +96,7 @@ const SchedulesTab = memo((props) => {
   	handleGetWorkflows() 
     if (allSchedules.length === 0 && webHooks.length === 0 && pipelines.length === 0) {
       handleGetAllTriggers()
+  	  handleGetEnvironments() 
     }
   }, []) 
   
@@ -168,8 +174,8 @@ const SchedulesTab = memo((props) => {
       })
     } 
 
-	const submitPipelineWrapper = (pipelineValue) => {
-		submitPipeline(pipelineValue)
+	const submitPipelineWrapper = (pipelineValue, environment) => {
+		submitPipeline(pipelineValue, environment)
 	}
 
 	const NewPipelineView = (
@@ -277,9 +283,48 @@ const SchedulesTab = memo((props) => {
 							setNewPipelineValue(event.target.value)
                         }
                     />
+
                 </div>
             </DialogContent>
             <DialogActions style={{padding: "0px 50px 50px 50px", }}>
+				{environments.length === 0 ? null : 
+					<div>
+						<Typography variant="body1" color="textSecondary">Runtime Location</Typography>
+						<Select
+							label="Runtime Location"
+							value={selectedEnvironment}
+							onChange={(event) => {
+								const selectedEnv = event.target.value
+								setSelectedEnvironment(selectedEnv)
+							}}
+							style={{marginRight: 300, }}
+						>
+							{environments.map((environment, index) => {
+							  if (environment.archived) {
+								  return null
+							  }
+
+							  if (environment.Name === "Cloud") {
+								  return null
+							  }
+
+							  return (
+								<MenuItem
+								  key={index}
+								  style={{
+									backgroundColor: theme.palette.inputColor,
+									color: theme.palette.text.primary,
+								  }}
+								  value={environment}
+								>
+								  {environment.Name}
+								</MenuItem>
+							  )
+							})}
+						</Select>
+					</div>
+				}
+
                 <Button
                     style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", color: theme.palette.primary.main }}
                     onClick={() => {
@@ -312,6 +357,10 @@ const SchedulesTab = memo((props) => {
 	  workflow_id: "",
 	  trigger_id: "",
 	  start_node: "",
+	}
+
+	if (selectedEnvironment !== undefined && selectedEnvironment !== "") {
+		pipelineConfig.environment = selectedEnvironment.Name
 	}
 
 	if (environment !== undefined && environment !== "") {
@@ -441,7 +490,46 @@ const SchedulesTab = memo((props) => {
       });
   };
 
+  const handleGetEnvironments = () => {
+    fetch(`${globalUrl}/api/v1/environments`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for getting all triggers");
+        }
   
+        return response.json();
+      })
+      .then((responseJson) => {
+		setEnvironments(responseJson || []);
+
+		if (responseJson?.length > 0) {
+			var selectedEnv = ""
+			for (var i = 0; i < responseJson?.length; i++) {
+				const env = responseJson[i]
+				if (env.archived) {
+					continue
+				}
+
+				selectedEnv = env.Name
+				if (env?.data_lake?.enabled === true) {
+					break
+				}
+			}
+
+			setSelectedEnvironment(selectedEnv.Name)
+		}
+      })
+      .catch((error) => {
+        // toast(error.toString());
+      });
+  }
 
   const handleGetAllTriggers = () => {
     fetch(globalUrl + "/api/v1/triggers", {

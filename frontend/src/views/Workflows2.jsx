@@ -102,6 +102,7 @@ import {
 	List as ListIcon,
 	Publish as PublishIcon,
 	GetApp as GetAppIcon,
+	Image as ImageIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -139,8 +140,115 @@ const getCookie = (name) => {
   return "";
 };
 
+export const HandleJsonCopy = (base, copy, base_node_name) => {
+    if (typeof copy.name === "string") {
+      copy.name = copy.name.replaceAll(" ", "_");
+    }
 
+    //lol
+    if (typeof base === 'object' || typeof base === 'dict') {
+      base = JSON.stringify(base)
+    }
 
+    if (base_node_name === "execution_argument" || base_node_name === "Runtime Argument") {
+      base_node_name = "exec"
+    }
+
+    //console.log("COPY: ", base_node_name, copy);
+
+    //var newitem = JSON.parse(base);
+    var newitem = validateJson(base).result
+
+    var to_be_copied = "$" + base_node_name?.toLowerCase()?.replaceAll(" ", "_");
+    for (let copykey in copy.namespace) {
+      if (copy.namespace[copykey].includes("Results for")) {
+        continue;
+      }
+
+      if (newitem !== undefined && newitem !== null) {
+        newitem = newitem[copy.namespace[copykey]];
+        if (!isNaN(copy.namespace[copykey])) {
+          to_be_copied += ".#";
+        } else {
+          to_be_copied += "." + copy.namespace[copykey];
+        }
+      }
+    }
+
+    if (newitem !== undefined && newitem !== null) {
+      newitem = newitem[copy.name];
+      if (!isNaN(copy.name)) {
+        to_be_copied += ".#";
+      } else {
+        to_be_copied += "." + copy.name;
+      }
+    }
+
+    to_be_copied = to_be_copied.replaceAll(" ", "_");
+	console.log("COPY: ", to_be_copied);
+    const elementName = "copy_element_shuffle";
+    var copyText = document.getElementById(elementName);
+    if (copyText !== null && copyText !== undefined) {
+      //console.log("NAVIGATOR: ", navigator);
+      const clipboard = navigator.clipboard;
+      if (clipboard === undefined) {
+        toast("Can only copy over HTTPS (port 3443)");
+        return;
+      }
+
+      navigator.clipboard.writeText(to_be_copied).catch(() => {
+        const temp = document.createElement("textarea");
+        temp.value = to_be_copied;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+      });
+      //console.log("COPYING!");
+      toast("Copied JSON path to clipboard.")
+    } else {
+      console.log("Couldn't find element ", elementName);
+    }
+}
+
+export const handleReactJsonClipboard = (copy) => {
+	const elementName = "copy_element_shuffle";
+	var copyText = document.getElementById(elementName);
+	if (copyText !== null && copyText !== undefined) {
+	  if (
+		copy.namespace !== undefined &&
+		copy.name !== undefined &&
+		copy.src !== undefined
+	  ) {
+		copy = copy.src;
+	  }
+
+	  const clipboard = navigator.clipboard;
+	  if (clipboard === undefined) {
+		toast("Can only copy over HTTPS (port 3443)");
+		return;
+	  }
+
+	  var stringified = JSON.stringify(copy);
+	  if (stringified.startsWith('"') && stringified.endsWith('"')) {
+		stringified = stringified.substring(1, stringified.length - 1);
+	  }
+
+      navigator.clipboard.writeText(stringified).catch(() => {
+        const temp = document.createElement("textarea");
+        temp.value = stringified;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+      });
+
+	  console.log("COPYING!");
+	  toast.success("Copied Value, NOT json path.")
+	} else {
+	  console.log("Failed to copy from " + elementName + ": ", copyText);
+	}
+}
 
 
 
@@ -150,7 +258,7 @@ const getCookie = (name) => {
 export const GetIconInfo = (action) => {
     // Finds the icon based on the action. Should be verbs.
     const iconList = [
-        { key: "cases", values: ["cases", "ticket", "alert"] },
+        { key: "cases", values: ["cases", "ticket", "tickets", "alert"] },
         { key: "cache_add", values: ["set_cache"] },
         { key: "cache_get", values: ["get_cache"] },
         { key: "filter", values: ["filter"] },
@@ -181,7 +289,7 @@ export const GetIconInfo = (action) => {
             key: "repeat",
             values: ["repeat", "retry", "pause", "skip", "copy", "replicat", "demo",],
         },
-        { key: "execute", values: ["execute", "run", "play", "raise"] },
+        { key: "execute", values: ["execute", "run", "play", "raise", "control", "ctrl"] },
         { key: "extract", values: ["extract", "unpack", "decompress", "open"] },
         { key: "inflate", values: ["inflate", "pack", "compress"] },
         {
@@ -211,7 +319,6 @@ export const GetIconInfo = (action) => {
         { key: "communication", values: ["communication", "comms", "email", "mail",] },
         { key: "eradication", values: ["eradication", "edr", "xdr", "sigma", "yara",] },
         { key: "iam", values: ["iam", "identity", "access", "auth", "authentication", "authorization", "oauth", "sso", "openid"] },
-		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator",] },
 		{ key: "network", values: ["network", "net", "networking", "firewall", "proxy", "vpn", "sdwan", "sd-wan"] },
         {
             key: "send",
@@ -235,7 +342,8 @@ export const GetIconInfo = (action) => {
 				"passwd",
 				"protect",
 			],
-		}
+		},
+		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator", "hash", "ip", "url", "domain", ] },
     ];
 
     var selectedKey = ""
@@ -482,29 +590,35 @@ export const GetIconInfo = (action) => {
     return selectedItem;
 };
 
+export const collapseField = (field, inputdata) => {
+  if (field === undefined || field === null) {
+    return true
+  }
 
+  if (field.namespace !== undefined && field.namespace !== null && field.namespace.length === 1) {
+	  return false 
+  }
 
-export const collapseField = (field) => {
-    if (field === undefined || field === null) {
-        return true
+  if (field.name === "headers" || field.name === "cookies") {
+    return true
+  }
+
+  if (field.name === "result") {
+	  return false
+  }
+
+  if (field.type === "array") {
+    return true
+  }
+
+  // If more than 10 keys in object, collapse
+  if (field.type === "object") {
+    if (Object.keys(field.src).length > 7) {
+      return true
     }
+  }
 
-    if (field.name === "headers" || field.name === "cookies") {
-        return true
-    }
-
-    if (field.type === "array") {
-        return true
-    }
-
-    // If more than 10 keys in object, collapse
-    if (field.type === "object") {
-        if (Object.keys(field.src).length > 7) {
-            return true
-        }
-    }
-
-    return false
+  return false
 }
 
 export const validateJson = (showResult) => {
@@ -700,7 +814,8 @@ const Workflows2 = (props) => {
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true" || isCloud) 
+	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true") 
+	const [showWorkflowImages, setShowWorkflowImages] = React.useState(localStorage?.getItem("showWorkflowImages") === "true")
 
     const imgSize = 60;
 
@@ -2158,7 +2273,7 @@ const Workflows2 = (props) => {
         position: "relative",
         borderRadius: "8px",
         // backgroundColor: "#212121",
-        padding: "15px 15px 0px 20px",
+        padding: "15px 15px 0px 30px",
     };
 
     const gridContainer = {
@@ -2177,7 +2292,6 @@ const Workflows2 = (props) => {
         justifyContent: "space-between",
         fontFamily: theme.typography?.fontFamily,
 		textAlign: "center", 
-		margin: "auto", 
     };
 
     const exportAllWorkflows = (allWorkflows) => {
@@ -2959,7 +3073,7 @@ const Workflows2 = (props) => {
             const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
             if (foundOrg !== undefined && foundOrg !== null) {
                 //position: "absolute", bottom: 5, right: -5,
-				imageStyle.border = foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null
+				imageStyle.border = foundOrg.id === userdata.active_org.id ? `2px solid ${boxColor}` : null
 
 
                 image =
@@ -2997,10 +3111,10 @@ const Workflows2 = (props) => {
 
 				relevantTrigger = trigger
 				if (trigger?.status === "running") {
-					imageStyle.border = `3px solid ${green}`
+					imageStyle.border = `2px solid ${green}`
 					break
 				} else {
-					imageStyle.border = `3px solid ${red}`
+					imageStyle.border = `2px solid ${red}`
 				}
 
 
@@ -3012,10 +3126,10 @@ const Workflows2 = (props) => {
 
 				relevantTrigger = trigger
 				if (trigger?.status === "running") {
-					imageStyle.border = `3px solid ${green}`
+					imageStyle.border = `2px solid ${green}`
 					break
 				} else {
-					imageStyle.border = `3px solid ${red}`
+					imageStyle.border = `2px solid ${red}`
 				}
 
 			} 
@@ -3081,13 +3195,12 @@ const Workflows2 = (props) => {
         }
 
 		//const isPublicWorkflow = data?.objectID === undefined || data?.objectID === null
-		const foundImage = data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
-
+		const foundImage = currTab !== 2 && showWorkflowImages === false ? "" : data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
 		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
         return (
             <div 
 				id={`workflowbox-${data.id}`}
-				style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? `2px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily, overflow: "hidden", }}
+				style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : "inherit", borderBottom: isDistributed || hasSuborgs ? `1px solid ${theme.palette.distributionColor}` : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme.typography?.fontFamily, overflow: "hidden", }}
 			>
 
 				{foundImage?.length > 0 ? 
@@ -3140,26 +3253,7 @@ const Workflows2 = (props) => {
                         style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme.typography?.fontFamily }}
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
-							{currTab === 2 ? null : 
-								<Tooltip title={`${relevantTrigger?.name}: ${relevantTrigger?.status}`} placement="bottom">
-									<div
-										style={{ cursor: "" }}
-										onClick={() => {
-											//navigate("/admin")
-										}}
-									>
-										{image?.includes("data:image") ? 
-											<img
-												alt={orgName}
-												src={image}
-												style={imageStyle}
-											/>
-											:
-											image
-										}
-									</div>
-								</Tooltip>
-							}
+
 
                             <Tooltip arrow
                                 onMouseEnter={() => {
@@ -3228,7 +3322,7 @@ const Workflows2 = (props) => {
 
                                 <Typography
                                     style={{
-										textAlign: "center",
+										textAlign: "left",
                                         marginBottom: 0,
                                         paddingBottom: 0,
                                         fontSize: 22,
@@ -3239,8 +3333,9 @@ const Workflows2 = (props) => {
                                         fontWeight: 500,
 										minWidth: 375, 
 										maxWidth: 375, 
-										margin: "auto", 
 										overflow: "hidden", 
+
+										color: "rgba(255,255,255,0.85)",
                                     }}
                                 >
                                     <Link
@@ -3431,14 +3526,13 @@ const Workflows2 = (props) => {
                             style={{
                                 justifyContent: "left",
                                 overflow: "hidden",
-                                marginTop: 13,
+                                marginTop: 8,
                                 maxHeight: 35,
                                 fontFamily: theme.typography?.fontFamily,
 
-								textAlign: "center", 
+								textAlign: "left", 
 								minWidth: 200, 
 								maxWidth: 200,
-								margin: "auto", 
                             }}
                         >
                             {data.tags !== undefined && data.tags !== null
@@ -3478,7 +3572,7 @@ const Workflows2 = (props) => {
 
                         {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") && type !== "public" ?
                             <Tooltip title="Edit Form" placement="top">
-                                <div style={{ position: "absolute", top: 80, right: 8, }}>
+                                <div style={{ position: "absolute", top: 100, right: 8, }}>
                                     <IconButton
                                         aria-label="more"
                                         aria-controls="long-menu"
@@ -3520,6 +3614,27 @@ const Workflows2 = (props) => {
                                 </div>
                             </Tooltip>
 						: null}
+
+						{currTab === 2 ? null : 
+							<Tooltip title={`${relevantTrigger?.name}: ${relevantTrigger?.status}`} placement="bottom">
+								<div
+									style={{ position: "absolute", top: 70, right: -2, cursor: "" }}
+									onClick={() => {
+										//navigate("/admin")
+									}}
+								>
+									{image?.includes("data:image") ? 
+										<img
+											alt={orgName}
+											src={image}
+											style={imageStyle}
+										/>
+										:
+										image
+									}
+								</div>
+							</Tooltip>
+						}
 
                     </Grid>
 
@@ -5302,6 +5417,21 @@ const Workflows2 = (props) => {
                         	                    disabled={currTab === 2}
                         	                >
                         	                    <BarChartIcon />
+                        	                </IconButton>
+                        	            </Tooltip>
+
+										<Tooltip title="Show/Hide Workflow image" placement="top">
+                        	                <IconButton
+                        	                    style={currTab === 2 ? iconButtonDisabledStyle : {...iconButtonStyle, color: showWorkflowImages ? "#1a1a1a" : theme.palette.text.primary, background: showWorkflowImages ? theme.palette.primary.main : theme.palette.platformColor}}
+                        	                    onClick={() => {
+
+                        	                        const newView = !showWorkflowImages
+                        	                        localStorage.setItem("showWorkflowImages", newView)
+													setShowWorkflowImages(!showWorkflowImages)
+												}}
+                        	                    disabled={currTab === 2}
+                        	                >
+												<ImageIcon />
                         	                </IconButton>
                         	            </Tooltip>
 

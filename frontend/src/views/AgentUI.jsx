@@ -6,7 +6,11 @@ import { getTheme } from "../theme.jsx";
 import { toast } from "react-toastify"
 import ReactJson from "react-json-view-ssr";
 import { v4 as uuidv4} from "uuid";
-import { validateJson, collapseField, handleReactJsonClipboard, HandleJsonCopy } from "../views/Workflows.jsx";
+import { validateJson, collapseField, handleReactJsonClipboard, HandleJsonCopy } from "../views/Workflows2.jsx";
+import AppSearch from "../components/Appsearch.jsx";
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Paragraph, Blockquote, CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 
 import {
 	Box,
@@ -18,6 +22,8 @@ import {
 	Tooltip,
 	IconButton,
 	TextField,
+	Popover,
+	Divider,
 } from '@mui/material'
 
 import {
@@ -32,10 +38,13 @@ import {
 	Close as CloseIcon,
 	OpenInNew as OpenInNewIcon,
 	Refresh as RefreshIcon,
+	Add as AddIcon,
+	Warning as WarningIcon,
 } from '@mui/icons-material'
 
 import { 
 	green,
+	yellow,
 	red,
 } from '../views/AngularWorkflow.jsx'
 
@@ -55,11 +64,35 @@ const AgentUI = (props) => {
 	const [actionInput, setActionInput] = useState("")
 	const [questionAnswers, setQuestionAnswers] = useState({})
 
+    const [newSelectedApp, setNewSelectedApp] = React.useState({})
+	const [appPickerAnchor, setAppPickerAnchor] = React.useState(null)
+	const [chosenApps, setChosenApps] = useState([])
+
+
+	useEffect(() => {
+		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === null || newSelectedApp.objectID === "") {
+			return
+		}
+
+		setNewSelectedApp({})
+		setAppPickerAnchor(null)
+		if (chosenApps.findIndex((app) => app.id === newSelectedApp.objectID) !== -1) {
+		} else {
+			setChosenApps(chosenApps.concat([{
+				name: newSelectedApp.name,
+				id: newSelectedApp.objectID,
+				image: newSelectedApp.image_url,
+			}]))
+		}
+	}, [newSelectedApp])
+
     const {themeMode} = useContext(Context)
   	const theme = getTheme(themeMode)
     const navigate = useNavigate();
 
-    document.title = "Shuffle AI Agents"
+	if (document !== undefined && document !== null && !document?.title?.includes("Agent")) {
+    	document.title = "Shuffle AI Agents"
+	}
 
 	const agentWrapperStyle = {
 		width: 1000,
@@ -78,6 +111,44 @@ const AgentUI = (props) => {
 			data.input = JSON.stringify(verifiedInput.result, null, 2)
 		}
 	}
+
+
+  const Heading = (props) => {
+    const element = React.createElement(
+      `h${props.level}`,
+      { style: { marginTop: 40 } },
+      props.children
+    );
+
+    return (
+      <Typography>
+        {props.level !== 1 ? (
+          <Divider
+            style={{
+              width: "90%",
+              marginTop: 40,
+              backgroundColor: theme.palette.inputColor,
+            }}
+          />
+        ) : null}
+        {element}
+      </Typography>
+    );
+  }
+
+    const markdownComponents = {
+        img: Img,
+        code: CodeHandler,
+        h1: Heading,
+        h2: Heading,
+        h3: Heading,
+        h4: Heading,
+        h5: Heading,
+        h6: Heading,
+        a:  OuterLink,
+        p:  Paragraph,
+        blockquote: Blockquote,
+    }
 
 	const findNodeData = (execution_data, node_id) => {
 		if (execution_data === undefined || execution_data === null) {
@@ -311,7 +382,73 @@ const AgentUI = (props) => {
 		getAppAuth() 
 	}, [])
 
-	const maxTimelineWidth = 300 
+	const maxTimelineWidth = 380 
+
+	const submitQuestions = (decisionId, questionAnswers, isContinuation) => {
+		console.log("Submitting questions: ", decisionId, questionAnswers)
+		if (decisionId === undefined || decisionId === null || decisionId === "") {
+			toast.error("No decision ID provided. Cannot submit answers.")
+			return
+		}
+
+		if (Object.keys(questionAnswers).length === 0) {
+			toast.error("No answers provided. Cannot submit empty answers.")
+			return
+		}
+
+		var newArgument = {}
+		if (isContinuation === true) {
+			// Just a single answer
+			for (var key in questionAnswers) {
+				const answer = questionAnswers[key]
+				newArgument[key] = answer
+			}
+
+			if (Object.keys(newArgument).length === 0) {
+				toast.error("No answers details. Cannot submit the answer.")
+				return
+			}
+
+		} else {
+			for (var key in questionAnswers) {
+				const answer = questionAnswers[key]
+				if (isContinuation === true) {
+					newArgument["question_"+(answer.index)] = answer.value
+				}
+			}
+		}
+
+		setAgentRequestLoading(true) 
+		const params = new URLSearchParams(window.location.search)
+		const executionId = params.get("execution_id")
+		const nodeId = params.get("node_id")
+		const authorization = params.get("authorization")
+
+		const url = `${globalUrl}/api/v1/workflows/${executionId}/run?reference_execution=${executionId}&authorization=${authorization}&answer=true&note=${encodeURIComponent(JSON.stringify(newArgument))}&agentic=true&decision_id=${decisionId}`
+		fetch(url, {
+			method: "GET",
+			credentials: "include",
+		})
+		.then((response) => {
+			setAgentRequestLoading(false) 
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success !== false) {
+				setTimeout(() => {
+					GetExecution(execution.execution_id, agentActionResult.action.id, execution.authorization) 
+				}, 500)
+
+				toast.success("Successfully submitted answers! The agent should continue shortly.")
+			} else {
+				toast.warn("Failed to submit answers. Please try again or contact support@shuffler.io if this persists..")
+			}
+		})
+		.catch((error) => {
+			setAgentRequestLoading(false) 
+			toast.error("Problem with submitting: " + error)
+		})
+	}
 
 	var latestEndTime = 0
 	var originalStartTime = 0
@@ -330,6 +467,11 @@ const AgentUI = (props) => {
 			item.status === "ABORTED" || item.status === "FAILURE" ?
 				<Tooltip title={`${item.status}: Check the raw data`} placement="top">
 					<ErrorIcon style={{color: red, marginRight: 10, }} />
+				</Tooltip>
+			: 
+			item.status === "IGNORED" || item.status === "IGNORE" ?
+				<Tooltip title={`${item.status}: Previous FAILURE before the agent was reran.`} placement="top">
+					<WarningIcon style={{color: yellow, marginRight: 10, }} />
 				</Tooltip>
 			: 
 			<Tooltip title={`Not started yet: ${item.status}`} placement="top">
@@ -399,6 +541,10 @@ const AgentUI = (props) => {
 		const defaultTopPadding = 10
 		const open = openIndexes.includes(index)
 
+		if (item?.type === "agent" && item?.details?.original_input !== undefined) {
+			document.title = "Agent: " + item?.details?.original_input?.substring(0, 50)
+		}
+
 		var questions = []
 		if (item?.details?.action === "finish" || item.category == "finish" || item?.details?.action == "finalise") {
 			item.type = "finalise"
@@ -433,6 +579,10 @@ const AgentUI = (props) => {
 			: item.category === "ask" ? 
 			<Tooltip title="Ask" placement="top">
 				<img src="/images/workflows/UserInput2.svg" style={categoryStyle} />
+			</Tooltip>
+			: item.category === "finalise" || item.category === "finish" || item.action === "finish" ?
+			<Tooltip title="The action finished successfully" placement="top">
+				<CheckIcon style={{color: green, marginRight: 10, }} />
 			</Tooltip>
 			:
 			<div style={categoryStyle} />
@@ -487,10 +637,10 @@ const AgentUI = (props) => {
 			}
 		}
 
-		const barColor = item.status === "FINISHED" ? green : 
+		const barColor = item.status === "IGNORED" ? yellow : item.status === "FINISHED" ? green : 
 			item.status === "FAILURE" || item.status == "ABORTED" ? red : 
 			item.status === "RUNNING" || item.status === "" ? theme.palette.main :
-			theme.palette.surfaceColor
+			red	
 
 		const rerunAgentButton = 
 			<Tooltip title="Rerun from the start with the same input" placement="right">
@@ -501,7 +651,7 @@ const AgentUI = (props) => {
 							e.preventDefault()
 							e.stopPropagation()
 
-							toast.info("Attempting to rerun everything.")
+							toast.info("Rerunning agent with the same input.")
 							setDisableButtons(true)
 
 							if (item?.details === undefined || item?.details === null || item?.details?.input === undefined || item?.details?.input === null) {
@@ -529,7 +679,7 @@ const AgentUI = (props) => {
 
 								
 		const rerunButton = 
-			<Tooltip title="Rerun JUST this decision. This can be used if an agent decision action somehow stopped and didn't get a result." placement="right">
+			<Tooltip title="Rerun FROM this decision. This can be used if an agent decision action somehow stopped and didn't get a result. Clears out all decisions AFTER this one." placement="right">
 				<span>
 					<IconButton
 						disabled={item.type !== "decision" || disableButtons}
@@ -546,56 +696,7 @@ const AgentUI = (props) => {
 						<RestartAltIcon /> 
 					</IconButton>
 				</span>
-			</Tooltip>
-
-		const submitQuestions = (decisionId, questionAnswers) => {
-			console.log("Submitting questions: ", decisionId, questionAnswers)
-			if (decisionId === undefined || decisionId === null || decisionId === "") {
-				toast.error("No decision ID provided. Cannot submit answers.")
-				return
-			}
-
-			if (Object.keys(questionAnswers).length === 0) {
-				toast.error("No answers provided. Cannot submit empty answers.")
-				return
-			}
-
-			// Loop qu
-			var newArgument = {}
-			for (var key in questionAnswers) {
-				const answer = questionAnswers[key]
-				newArgument["question_"+(answer.index)] = answer.value
-			}
-
-			const params = new URLSearchParams(window.location.search)
-			const executionId = params.get("execution_id")
-			const nodeId = params.get("node_id")
-			const authorization = params.get("authorization")
-
-			const url = `${globalUrl}/api/v1/workflows/${executionId}/run?reference_execution=${executionId}&authorization=${authorization}&answer=true&note=${encodeURIComponent(JSON.stringify(newArgument))}&agentic=true&decision_id=${decisionId}`
-			console.log("PARSED URL: ", url)
-			fetch(url, {
-				method: "GET",
-				credentials: "include",
-			})
-			.then((response) => {
-				return response.json()
-			})
-			.then((responseJson) => {
-				if (responseJson.success !== false) {
-					setTimeout(() => {
-						GetExecution(execution.execution_id, agentActionResult.action.id, execution.authorization) 
-					}, 500)
-
-					toast.success("Successfully submitted answers! The agent should continue shortly.")
-				} else {
-					toast.warn("Failed to submit answers. Please try again or contact support@shuffler.io if this persists..")
-				}
-			})
-			.catch((error) => {
-				toast.error("Problem with submitting: " + error)
-			})
-		}
+			</Tooltip>	
 
 		return (
 			<div 
@@ -675,6 +776,7 @@ const AgentUI = (props) => {
 						minWidth: 300, 
 						maxWidth: 300, 
 						paddingTop: defaultTopPadding, 
+						paddingBottom: defaultTopPadding,
 					}}>
 						{item.label}
 					</div>
@@ -746,10 +848,11 @@ const AgentUI = (props) => {
 								</Tooltip>
 								*/}
 
-								<Tooltip title="See in another window" placement="left">
+								<Tooltip title="Answer in the Form UI" placement="left">
 									<span>
 										<IconButton
 											style={{marginLeft: 0, }}
+											disabled={item?.details?.run_details?.status === "FINISHED"}
 											onClick={(e) => {
 												e.preventDefault()
 												e.stopPropagation()
@@ -767,6 +870,28 @@ const AgentUI = (props) => {
 							:
 							item.category === "agent" ? 
 								rerunAgentButton
+							:
+							item?.type === "decision" ?
+								<div style={{display: "flex", }}>
+									{rerunButton}
+									<Tooltip title="Explore/debug execution" placement="left">
+										<span>
+											<IconButton
+												disabled={item?.details?.run_details?.debug_url === undefined || item?.details?.run_details?.debug_url === null || item?.details?.run_details?.debug_url === ""}
+												style={{marginLeft: 0, }}
+												onClick={(e) => {
+													e.preventDefault()
+													e.stopPropagation()
+
+													//http://localhost:3002/forms/aadfe022-fe93-431c-8634-de42dd7440ac?authorization=9357f6a6-7d59-44be-ad66-be27657369ac&reference_execution=0726378d-b501-470f-b850-f7fb48cd8ca4&source_node=de446bcf-ad37-4337-9f72-e069c7425fac&backend_url=https://ec4245cd2941.ngrok-free.app
+													window.open(item?.details?.run_details?.debug_url, '_blank', 'noopener,noreferrer');
+												}}
+											>
+												<OpenInNewIcon color={barColor === red ? "primary" : "secondary"} />
+											</IconButton>
+										</span>
+									</Tooltip>
+								</div>
 							:
 								rerunButton
 						}
@@ -805,13 +930,25 @@ const AgentUI = (props) => {
 						{questions.map((q, questionIndex) => {
 							return (
 								<div style={{marginTop: 25, }}>
-									<Typography variant="body2">
-										{`${q.question}`}
-									</Typography>
+									<div id="markdown_wrapper_outer" style={{cursor: "default", }}>
+										<Markdown
+											components={markdownComponents}
+											id="markdown_wrapper"
+											className={"style.reactMarkdown"}
+											escapeHtml={false}
+											skipHtml={false}
+											remarkPlugins={[remarkGfm]}
+											style={{
+												maxWidth: "100%", minWidth: "100%",
+											}}
+										>
+											{q.question}
+										</Markdown>
+									</div>
 									
 									<TextField
 										label={`Question ${q.index}`}
-										placeholder="No question found"
+										placeholder="Your answer here"
 										variant="outlined"
 										style={{width: 800, marginTop: 20, }}
 										multiline
@@ -838,7 +975,7 @@ const AgentUI = (props) => {
 
 						<Button
 							variant="contained"
-							style={{marginTop: 10, }}
+							style={{marginTop: 16, }}
 							disabled={questionSubmitDisabled}
 							onClick={() => {
 								submitQuestions(item?.details?.run_details?.id, questionAnswers)
@@ -886,6 +1023,8 @@ const AgentUI = (props) => {
 
 	const TimelineRender = (props) => {
 		const { agent_data } = props;
+
+		const [continuationText, setContinuationText] = useState("")
 
 		var actionResult = execution?.results?.length > 0 ? execution.results[0] : execution 
 		const validate = validateJson(actionResult?.result)
@@ -938,6 +1077,7 @@ const AgentUI = (props) => {
 			}
 		}
 
+		var finishDecisionId = ""
 		var sortedTimelineItems = []
 		for (var key in agent_data?.decisions) {
 			const item = agent_data.decisions[key]
@@ -962,6 +1102,11 @@ const AgentUI = (props) => {
 
 			newTimelineItem.details = item
 			timelineItems.push(newTimelineItem)
+
+			if (item?.details?.action === "finish" || item.action === "finish" || item.category == "finish" || item?.details?.action == "finalise") {
+				finishDecisionId = item?.run_details?.id
+			}
+
 		}
 
 		timelineItems.sort((a, b) => {
@@ -1002,6 +1147,72 @@ const AgentUI = (props) => {
 					)
 				})}
 
+				{finishDecisionId !== "" ?
+					<Box 
+						component="form" 
+						style={{width: "100%", textAlign: "center",}}
+						onSubmit={(e) => {
+							e.preventDefault();
+
+							// Uses the submitQuestion and adds more details to 
+							//setAgentRequestLoading ?
+							submitQuestions(finishDecisionId, {
+								"continue": continuationText,
+							}, true)
+						}}
+					>
+						<div style={{display: "flex", maxWidth: 550, minWidth: 550, margin: "auto", marginTop: 50, }}>
+							<div>
+								<TextField
+									label="Add more details to the current task"
+									variant="outlined"
+									disabled={agentRequestLoading}
+									style={{width: 400, margin: "auto", }}
+									multiline
+									minRows={1}
+									onChange={(e) => {
+										console.log("Value: ", e.target.value)
+										//setActionInput(e.target.value)
+										//
+										setContinuationText(e.target.value)
+									}}
+									InputProps={{
+										endAdornment: (
+											agentRequestLoading ?
+												<CircularProgress size={24} style={{marginRight: 10, }} />
+											: 
+											<Tooltip title="This is the input for the AI Agent. It can be any valid JSON.">
+												<IconButton 
+													type="submit"
+													disabled={continuationText === ""}
+												> 
+													<SendIcon 
+														color={continuationText === "" ? "disabled" : "primary"}
+													/>
+												</IconButton>
+											</Tooltip>
+										),
+									}}
+								/>
+								<Typography variant="body2" color="textSecondary" style={{marginTop: 10, }}>
+									Any failed tasks will be set to ignored (TBD). <a href="/docs/AI#agent-continuations" target="_blank" rel="noreferrer" style={{color: theme.palette.main, textDecoration: "none", }}>Learn more</a>
+								</Typography>
+							</div>
+							<Typography color="textSecondary" variant="body1" style={{marginTop: 25, marginLeft: 20, }}>
+								OR 
+							</Typography>
+							<Button
+								variant={"contained"}
+								color="primary"
+								disabled={true}
+								style={{marginTop: 10, marginLeft: 20, minWidth: 150, maxWidth: 150, height: 56, }}
+							>
+								Create as Workflow
+							</Button>
+						</div>
+					</Box>
+				: null}
+
 			</div>
 		)
 	}
@@ -1021,14 +1232,28 @@ const AgentUI = (props) => {
 
 		setAgentActionResult(null)
 
+    	document.title = `Agent: ${inputText.substring(0, 30)}...`
 		if (inputText === undefined || inputText === null || inputText === "") {
 			toast.error("Please provide a valid input for the AI Agent.")
+			setAgentRequestLoading(false)
 			return
 		}
 
 		// 1. Run the execution. Can this be a single-action run?
 		// 2. Get the execution ID and node ID from the response.
 		const uuid = uuidv4()
+		var parsedAction = "list_tickets,API" // Default action for now
+		if (chosenApps.length > 0) {
+			parsedAction = "" 
+			for (var appKey in chosenApps) {
+				const app = chosenApps[appKey]
+				const appname = app.name.toLowerCase().replaceAll(" ", "_").replaceAll("-", "_")
+				parsedAction += `app:${app.id}:${appname.replaceAll(",", "").replaceAll(":", "")},`
+			}
+
+			parsedAction = parsedAction.slice(0, -1) // Remove last comma
+		}
+
 		const data = {
 			"id": uuid,
 			"name":"agent",
@@ -1049,7 +1274,7 @@ const AgentUI = (props) => {
 				},
 				{
 					"name":"action",
-					"value":"list_tickets,API"
+					"value": parsedAction,
 				}
 		]}
 
@@ -1080,13 +1305,18 @@ const AgentUI = (props) => {
 
 	}
 
-	const handleKeyDown = (e) => {
+	const handleKeyDownRoot = (e) => {
     	const isCmdEnter = e.metaKey && e.key === "Enter"; // macOS
     	const isCtrlEnter = e.ctrlKey && e.key === "Enter"; // Windows/Linux
 		if (isCmdEnter || isCtrlEnter) {
 		  	e.preventDefault()
 			submitInput(actionInput)
 		}
+	}
+
+	const chipStyle = {
+		margin: 4, 
+		cursor: "pointer",
 	}
 
 	return (
@@ -1100,7 +1330,7 @@ const AgentUI = (props) => {
 				<Box 
 					component="form" 
 					style={{textAlign: "center", }} 
-					onKeyDown={handleKeyDown}
+					onKeyDown={handleKeyDownRoot}
 					onSubmit={(e) => {
 						e.preventDefault();
 						submitInput(actionInput);
@@ -1123,7 +1353,7 @@ const AgentUI = (props) => {
 						disabled={agentRequestLoading}
 						style={{width: 450, marginRight: 20, marginTop: 30, }}
 						multiline
-						minRows={2}
+						minRows={1}
 						defaultValue={actionInput || ""}
 						onChange={(e) => {
 							setActionInput(e.target.value)
@@ -1143,6 +1373,54 @@ const AgentUI = (props) => {
 							),
 						}}
 					/>
+
+					<div style={{display: "flex", margin: "auto", paddingTop: 10, minWidth: 300, maxWidth: 300, justifyContent: "center", overflowWrap: "wrap", }}>
+						<div>
+							<Chip 
+								id="add_app_chip"
+								icon={<AddIcon />} label="Select Apps"  
+								style={chipStyle}
+								onClick={() => {
+									setAppPickerAnchor(document.getElementById("add_app_chip"))
+								}}
+							/>
+							<Popover
+								open={appPickerAnchor !== null}
+								anchorEl={appPickerAnchor}
+								onClose={() => {
+									setAppPickerAnchor(null)
+								}}
+								anchorOrigin={{
+									vertical: 'bottom',
+									horizontal: 'left',
+								}}
+							>
+									<AppSearch
+										userdata={userdata}
+										defaultSearch={""}
+										newSelectedApp={newSelectedApp}
+										setNewSelectedApp={setNewSelectedApp}
+										inputHeight={200}
+									/>
+							</Popover>
+						</div>
+						
+						{chosenApps.map((app, index) => {
+							const chosenName = (app?.name?.charAt(0).toUpperCase() + app?.name?.slice(1))?.replaceAll("_", " ").replaceAll("-", " ")
+							const chosenImagePath = app?.image
+							const chosenImage = <img src={chosenImagePath} style={{width: 24, height: 24, borderRadius: 20, marginRight: 1, }} />
+
+							return ( 
+								<Chip icon={chosenImage} label={chosenName} variant="outlined" 
+									style={chipStyle}
+									onDelete={() => {
+										const newChosenApps = chosenApps.filter((a, i) => i !== index)
+										setChosenApps(newChosenApps)
+									}}
+								/>
+							)
+						})}
+					</div>
 				</Box>
 				: 
 				<div>

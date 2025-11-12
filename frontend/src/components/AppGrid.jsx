@@ -33,7 +33,7 @@ import {
   ClearRefinements,
   connectStateResults
 } from "react-instantsearch-dom";
-import { useDebouncedCallback } from "../utils/useDebouncedCallback";
+import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
 import aa from "search-insights";
 import { useLocation } from 'react-router-dom';

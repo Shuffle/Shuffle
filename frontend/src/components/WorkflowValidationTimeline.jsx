@@ -24,7 +24,7 @@ import {
 } from "../views/AngularWorkflow.jsx"
 
 import WorkflowTemplatePopup2 from "../components/WorkflowTemplatePopup2.jsx"
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
+import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import theme from "../theme.jsx";
 const itemHeight = 24
 

@@ -329,7 +329,7 @@ const LoginPage = props => {
 			const tmpMessage = new URLSearchParams(window.location.search).get("message")
 			if (tmpMessage !== undefined && tmpMessage !== null && message !== tmpMessage) {
 				setMessage(tmpMessage)
-				toast(tmpMessage)
+				toast.warn(tmpMessage)
 			}
 		}
 	}, [])

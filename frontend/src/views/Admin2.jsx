@@ -2,18 +2,22 @@ import React, { useContext, useEffect, useState } from 'react';
 import AdminNavBar from '../components/AdminNavBar.jsx';
 import { toast } from "react-toastify";
 import { Context } from '../context/ContextApi.jsx';
+import { useNavigate, Link } from "react-router-dom";
+
 
 const Admin2 = (props) => {
     // Destructure props if needed
-    const { userdata, globalUrl, serverside, checkLogin, notifications, setNotifications, stripeKey, isLoaded, isLoggedIn} = props;
+    const { userdata, globalUrl, serverside, checkLogin, notifications, setNotifications, stripeKey, isLoaded, } = props;
     const [selectedTab, setSelectedTab] = useState('editdetails');
     const [selectedStatus, setSelectedStatus] = React.useState([]);
     const [selectedOrganization, setSelectedOrganization] = useState({});
     const [organizationFeatures, setOrganizationFeatures] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [isOrgLoaded, setIsOrgLoaded] = React.useState(false);
-    const {brandName}  = useContext(Context)
+    const {brandName, updateOrg, setUpdateOrg}  = useContext(Context)
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+
+    let navigate = useNavigate();
 
 	if (document !== undefined) {
         if (selectedOrganization?.name !== undefined) {
@@ -24,6 +28,9 @@ const Admin2 = (props) => {
 	}
 
     const handleGetOrg = (orgId) => {
+		if (orgId === undefined || orgId === null || orgId.length !== 36) {
+			return
+		}
 
         fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
             method: "GET",
@@ -40,13 +47,13 @@ const Admin2 = (props) => {
             })
             .then((responseJson) => {
                 if (responseJson["success"] === false) {
-                    toast(
-                        "Failed getting your org. If this persists, please contact support. Redirecting to workflows...",
-                    );
+                    toast.warn("Failed getting your org. If this persists, please contact support. Redirecting to workflows...")
                     setTimeout(() => {
                         window.location.href = "/workflows";
                     }, 3000);
                 } else {
+
+                    setUpdateOrg(false);
                     if (
                         responseJson.sync_features === undefined ||
                         responseJson.sync_features === null
@@ -163,6 +170,13 @@ const Admin2 = (props) => {
             });
     };
 
+    useEffect(() => {
+        if (updateOrg && userdata?.active_org?.id !== undefined && userdata?.active_org?.id !== null && userdata?.active_org?.id.length > 0) {
+            handleGetOrg(userdata.active_org.id);
+            setUpdateOrg(false);
+        }
+        
+    }, [updateOrg]);
     
     useEffect(() => {
         const urlSearchParams = new URLSearchParams(window.location.search);
@@ -216,16 +230,26 @@ const Admin2 = (props) => {
               setTimeout(() => {
                 window.location.reload()
               }, 3000);
-              toast("Successfully changed active organization - refreshing!");
-            } else {
-                if (responseJson.reason !== undefined && responseJson.reason !== null) {
-                    if (!responseJson.reason.includes("already")) {
-                          toast("Failed changing org: " + responseJson.reason);
-                    }
-                } else {
-                      toast("Failed changing org")
-                }
-            }
+
+			  toast.success("Successfully changed active organization - refreshing!");
+			  if (responseJson.org_id !== undefined && responseJson.org_id !== null && responseJson.org_id.length === 36) {
+				  navigate(`/admin?org_id=${responseJson.org_id}`)
+			  } else {
+				  if (orgId !== undefined && orgId !== null && orgId?.includes("@")) {
+					  navigate(`/admin`)
+				  } else {
+					  toast("No pivot?")
+				  }
+			  }
+			} else {
+				if (responseJson.reason !== undefined && responseJson.reason !== null) {
+					if (!responseJson.reason.includes("already")) {
+						toast("Failed changing org: " + responseJson.reason);
+					}
+				} else {
+					toast("Failed changing org")
+				}
+			}
           })
           .catch((error) => {
             console.log("error changing: ", error);

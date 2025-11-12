@@ -35,6 +35,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import InfoIcon from "@mui/icons-material/Info";
 import { Link, useNavigate } from "react-router-dom";
 
 // Helper function to get the correct image path based on app category
@@ -1034,7 +1035,12 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
       {/* Add Usecase Dialog */}
       <Dialog
         open={openDialog}
-        onClose={handleCloseDialog}
+        onClose={(event, reason) => {
+          if (reason !== "backdropClick") {
+            handleCloseDialog();
+          }
+        }}
+        disableEscapeKeyDown
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -1642,7 +1648,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                     <Box key={contentIndex} sx={{ mb: 1 }}>
                       <TextField
                         multiline
-                        rows={5}
+                        rows={6}
                         value={content}
                         onChange={(e) => {
                           const newItems = [...formData.navigation.items];
@@ -1653,13 +1659,25 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                             navigation: { items: newItems },
                           });
                         }}
-                        placeholder="Content"
+                        placeholder="Content (Markdown supported)"
+                        helperText={
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                            <InfoIcon sx={{ fontSize: "14px", opacity: 0.7 }} />
+                            <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                              Markdown syntax is supported
+                            </Typography>
+                          </Box>
+                        }
                         fullWidth
                         sx={{
                           "& .MuiOutlinedInput-root": {
                             backgroundColor: theme.palette.usecaseDialogFieldColor,
                             color: theme.palette.text.primary,
                             "& fieldset": { border: theme.palette.defaultBorder },
+                          },
+                          "& .MuiOutlinedInput-root textarea": {
+                            overflow: "auto",
+                            resize: "vertical",
                           },
                         }}
                       />

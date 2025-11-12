@@ -25,7 +25,7 @@ import {
   Divider,
 } from "@mui/material";
 
-import { validateJson, } from "../views/Workflows.jsx";
+import { validateJson, } from "../views/Workflows2.jsx";
 import { isMobile } from "react-device-detect"
 import theme  from "../theme.jsx";
 import PaperComponent from "../components/PaperComponent.jsx";
@@ -277,7 +277,8 @@ const ApiExplorerWrapper = (props) => {
         parsedapp.name !== undefined &&
         parsedapp.name !== null &&
         parsedapp.name.length !== 0;
-      if(parsedapp?.id.length > 0){
+
+      if (parsedapp?.id.length > 0) {
         setSelectedAppData(parsedapp)
         handleAppAuthenticationType(parsedapp)
         const apptype = selectedAppData?.generated === false ? "python" : "openapi"
@@ -441,7 +442,6 @@ const ApiExplorerWrapper = (props) => {
 		selectedAppData.name = appname
 	}
 
-	console.log("APPNAME: ", appname, openapi.id)
 	if (openapi?.id === "HTTP" || appname === "HTTP" || appname === "http") {
 		setAppAuthentication(data)
 		setSelectedAuthentication({})

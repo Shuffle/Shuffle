@@ -30,7 +30,7 @@ import {
 } from "@mui/material";
 import throttle from "lodash/throttle";
 import {getTheme} from "../theme.jsx";
-import { validateJson, collapseField, } from "../views/Workflows.jsx";
+import { validateJson, collapseField, } from "../views/Workflows2.jsx";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Context } from "../context/ContextApi.jsx";

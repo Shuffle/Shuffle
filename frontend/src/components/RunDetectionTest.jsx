@@ -104,12 +104,11 @@ const RunDetectionTest = (props) => {
 		  return
 	  }
 
-	  if (haveDetectionPipelines() === false) {
+	  if (haveDetectionPipelines().length === 0) {
     	  setDetectionTestRunning(false)
 		  toast.error("No detection pipelines found. Please deploy the Syslog (TCP) & Sigma pipelines first.")
 		  return 
 	  }
-
 
 	  // 1. Run a new pipeline which exits. 
 	  const detectionTest = `from {message: "<165>1 2025-10-06T12:34:56.789Z myhost.example.com myapp 1234 ID47 [huh eventSource=\\\"App\\\" EventID=\\\"4688\\\" NewProcessName=\\\"notepad.exe\\\" Context=\\\"Testing\\\"] This is a test log message"} | this = message.parse_syslog() | import`
@@ -124,7 +123,17 @@ const RunDetectionTest = (props) => {
 	  // 1. Submit it to run
 	  // 2. Check executions if they happened recently~
 	  if (submitPipelineWrapper !== undefined) {
-      	submitPipelineWrapper(detectionTest)
+
+		//`Run a detection test with Sigma rules on your Tenzir Orborus instance. Requires: TCPC Syslog- & Sigma pipeline\n\nEnvironments: ${haveDetectionPipelines().join(", ")}`
+		const validEnv = haveDetectionPipelines()
+		for (var envKey in validEnv) {
+			const envName = validEnv[envKey]
+      		submitPipelineWrapper(detectionTest, envName)
+		}
+
+		//if (validEnv.length > 0) {
+			//toast.success(`Submitted detection test pipeline to environment(s): ${validEnv.join(", ")}`)
+		//}
 	  }
 
 	  for (var i = 0; i < 10; i++) {
@@ -141,10 +150,10 @@ const RunDetectionTest = (props) => {
     const haveDetectionPipelines = () => {
 		if (pipelines === undefined) {
 			toast.warn("No pipelines found. Please create the Syslog (TCP) & Sigma pipelines first.")
-			return false
+			return []
 		}
 
-        var foundCorrect = 0 
+        var foundCorrect = []
         for (var pipelineKey in pipelines) {
       	  const curPipeline = pipelines[pipelineKey]
       	  //if (curPipeline?.definition?.includes("load_tcp") && curPipeline?.definition?.includes("import")) {
@@ -152,27 +161,25 @@ const RunDetectionTest = (props) => {
       	  //}
 
       	  if (curPipeline?.definition?.includes("sigma") && curPipeline?.definition?.includes("export")) {
-      		  foundCorrect += 1
+			  foundCorrect.push(curPipeline.environment)
       	  }
         }
 
-        if (foundCorrect >= 1) {
-      	  return true
-        }
-
-        return false
+        return foundCorrect
     }
 
 	return ( 
 		<div style={{display: "flex", }}>
 			<ButtonGroup style={{minWidth: 150, maxWidth: 225,}}>
-				  <Tooltip title={"Run a detection test with Sigma rules on your Tenzir Orborus instance. Requires: TCPC Syslog- & Sigma pipeline"} style={{}} aria-label={"Run detection test"}>
+				  <Tooltip title={
+					  `Run a detection test with Sigma rules on your Tenzir Orborus instance. Requires: TCPC Syslog- & Sigma pipeline\n\nEnvironments: ${haveDetectionPipelines().join(", ")}`
+				  } style={{}} aria-label={"Run detection test"}>
 	  				  <div>
 						  <Button
 							style={{minWidth: 150, maxWidth: 150,  minHeight: 40, maxHeight: 40, }}
 							variant="outlined"
 							color="secondary"
-							disabled={haveDetectionPipelines() == false || ticketWebhook === "" || detectionWorkflowId === "" || detectionTestRunning}
+							disabled={haveDetectionPipelines().length === 0 || ticketWebhook === "" || detectionWorkflowId === "" || detectionTestRunning}
 							onClick={() => {
 								//setPipelineModalOpen(true)
 								runDetectionTest()

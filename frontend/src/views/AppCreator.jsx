@@ -3455,9 +3455,9 @@ const AppCreator = (defaultprops) => {
 			required_bodyfields: [],
 		});
 
-		useEffect(() => {
-			console.log("Queries: ", urlPathQueries)
-		}, [urlPathQueries])
+		//useEffect(() => {
+		//	console.log("Queries: ", urlPathQueries)
+		//}, [urlPathQueries])
 
 		const findBodyParams = (body) => {
 			const regex = /\${(\w+)}/g;

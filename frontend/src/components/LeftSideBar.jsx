@@ -64,7 +64,7 @@ const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
   const navigate = useNavigate();
-  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
+  const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, updateOrg, setUpdateOrg, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
     userdata?.active_org?.name || "Select Organziation"
@@ -684,7 +684,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
           Version: <a href="https://github.com/Shuffle/Shuffle/releases" style={{ color: theme.palette.text.primary, textDecoration: "underline" }} target="_blank" rel="noreferrer"> 
-	  		2.1.1
+	  		2.1.2
 	  		</a>
         </Typography>
       </Menu>
@@ -956,6 +956,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       .then((org) => {
         if (!fetched && org) {
           setActiveOrgData(org);
+          setUpdateOrg(false);
           if (!isCloud) {
               if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
@@ -972,7 +973,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     return () => {
       fetched = true;
     };
-  }, [userdata?.active_org?.id, globalUrl]);
+  }, [userdata?.active_org?.id, globalUrl, updateOrg]);
 
   return (
     <div
@@ -1226,8 +1227,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
             <Button
               component={Link}
-              to={"/new-dashboard"}
+              to={userdata?.support === true ? "/new-dashboard" : "/workflows"}
               onClick={(event) => {
+                if(!userdata?.support){
+                  return;
+                }
                 setOpenautomateTab(true);
                 setOpenSecurityTab(false);
                 setCurrentOpenTab("new-dashboard");
