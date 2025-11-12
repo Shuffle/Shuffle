@@ -4079,7 +4079,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 // Has some issues with loading when running multiple workers and such.
 func baseDeploy() {
 
-	//var cli *dockerclient.Client
+	var cli *dockerclient.Client
 	//var err error
 
 	if isKubernetes != "true" {
@@ -4146,9 +4146,12 @@ func baseDeploy() {
 		log.Printf("[DEBUG] Deploying app with identifier %s to ensure basic apps are available from the get-go", identifier)
 
 		//findAppInfo("frikky/shuffle:http_1.4.0", "http_1-4-0", true)
-		go findAppInfo(value, identifier, false)
+		// go findAppInfo(value, identifier, false)
 
-		//go deployApp(cli, value, identifier, env, workflowExecution, action)
+		// findAppInfo leads to the following error:
+		// Unable to list services: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running? (may continue anyway?)
+		// Replaced with deployApp again. See https://github.com/Shuffle/Shuffle/issues/1817.
+		go deployApp(cli, value, identifier, env, workflowExecution, action)
 		//err := deployApp(cli, value, identifier, env, workflowExecution, action)
 		//if err != nil {
 		//	log.Printf("[DEBUG] Failed deploying app %s: %s", value, err)
