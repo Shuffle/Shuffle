@@ -36,7 +36,7 @@ import {
 	Avatar,
   AvatarGroup,
 } from "@mui/material"
-import { useDebouncedCallback } from "../utils/useDebouncedCallback";
+import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const CreatorGrid = props => {

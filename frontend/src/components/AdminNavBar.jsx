@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 
 import theme, { getTheme } from '../theme.jsx';
-import { Button, Skeleton, Tooltip } from '@mui/material';
+import { Box, Button, Skeleton, Tooltip, Typography } from '@mui/material';
 import { Index } from 'react-instantsearch-dom';
 import { Context } from '../context/ContextApi.jsx';
 import { toast } from 'react-toastify';
@@ -265,7 +265,7 @@ const AdminNavBar = (props) => {
             : selectedOrganization?.image;
 
     return (
-        !isOrgLoaded && !isUserDataLoaded ? <Loader /> :
+        !isOrgLoaded || !isUserDataLoaded ? <Loader /> :
         <Wrapper>
             <div style={{ flexDirection: 'column', width: 220, }}>
                 <nav style={{ padding: '25px 25px 3px 25px', height: isCloud ? "calc(100% - 60px)" : "calc(100% - 30px)" , fontSize: '16px', borderTopLeftRadius: 8, borderBottomLeftRadius: 8, background: theme.palette.platformColor, color: '#9CA3AF' }}>
@@ -358,7 +358,6 @@ const AdminNavBar = (props) => {
 export default AdminNavBar;
 
 const Loader = () => {
-  const dummyItems = Array.from({ length: 6 });
   const dummyNavItems = Array.from({ length: 6 });
   const dummyTabItems = ['Org Configuration', 'SSO', 'Notifications', 'Billing & Stats', 'Branding'];
   const { leftSideBarOpenByClick, windowWidth, themeMode } = useContext(Context);
@@ -366,9 +365,7 @@ const Loader = () => {
   return (
     <div style={{ 
       display: 'flex', 
-      width: '100%', 
-      height: '100%',
-      minHeight: '100vh',
+      width: '100%',
       maxWidth: '1200px',
       fontFamily: 'Arial, sans-serif',
       paddingLeft: leftSideBarOpenByClick ? windowWidth <= 1300 ? 220 : 200 : 80,
@@ -446,15 +443,49 @@ const Loader = () => {
         </div>
         <div style={{ flex: 1, padding: '24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%', margin: '0 auto', alignItems: 'flex-start' }}>
-            <Skeleton variant='square' width="200px" height="200px" sx={{ marginBottom: '20px' }} />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '50px' }}>
-                {dummyItems.map((_, index) => (
-                    <div key={index} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <Skeleton width={'400px'} height="36px" />
-                    </div>
-                ))}
+            <Typography variant="h2">
+                <Skeleton variant="text" width={289} height={29}/>
+            </Typography>
+            <Typography variant="body2" sx={{mb: 2}}>
+                <Skeleton variant="text" width={550} height={22}/>
+            </Typography>
+            <div style={{display: 'flex'}}>
+                <Skeleton variant='square' width="145px" height="145px" sx={{ borderRadius: '8px' }} />
+            <div style={{flexDirection: 'column', marginLeft: '10px', justifyContent: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+                {Array.from({ length: 2 }).map((_, index) => (
+              <Skeleton 
+                key={index}
+                sx={{ marginBottom: '10px', height: '35px', width: '109px', borderRadius: '4px' }}
+                />
+            ))}
             </div>
+            </div>
+            <Box sx={{ minWidth: 700, marginTop: 5}}>
+                <Typography variant="h5" sx={{ mb: 2 }}>
+                    <Skeleton variant='text' width="40%" height={30} />
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, mb: 3 }}>
+                    <Skeleton variant="rectangular" height={35} style={{borderRadius: '4px'}} />
+                    <Skeleton variant="rectangular" height={35} style={{borderRadius: '4px'}} />
+                    <Skeleton variant="rectangular" height={35} style={{borderRadius: '4px'}}/>
+                </Box>
+
+
+                <Skeleton variant="rectangular" height={89} sx={{ mb: 4, borderRadius: "4px"}} />
+
+
+                <Skeleton width="30%" height={28} sx={{ mb: 2 }} />
+
+                <Skeleton width="90%" height={20} sx={{ mb: 1 }} />
+                <Skeleton width="70%" height={20} sx={{ mb: 3 }} />
+
+
+                <Skeleton variant="rectangular" height={35} sx={{ mb: 4, borderRadius: '4px' }} />
+
+                <Skeleton width="40%" height={35} sx={{ mb: 1, borderRadius: '4px' }} />
+                <Skeleton width="80%" height={35} sx={{ mb: 1, borderRadius: '4px' }} />
+                <Skeleton variant="rectangular" height={56} sx={{ mb: 3, borderRadius: '4px' }} />
+                </Box>
           </div>
         </div>
       </div>

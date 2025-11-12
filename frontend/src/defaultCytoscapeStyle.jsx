@@ -553,6 +553,37 @@ export default function defaultCytoscapeStyle(theme) {
       },
     },
     {
+      selector: `edge[?correlation]`,
+      css: {
+		  "curve-style": "straight",
+		  "width": 2,
+		  "line-color": "#ccc",
+		  "target-arrow-color": "#ccc",
+		  "source-arrow-shape": "none",
+		  "target-arrow-shape": "none",
+      },
+    },
+    {
+      selector: `node[type="CORRELATION"]`,
+      css: {
+        label: function (element) {
+          return element.data("label")
+        },
+        shape: "round",
+        color: "data(color)",
+        width: "data(width)",
+        height: "data(height)",
+        padding: "0px",
+        margin: "0px",
+        "background-color": "data(iconBackground)",
+        "background-fill": "data(fillstyle)",
+        "background-gradient-direction": "to-right",
+        "background-gradient-stop-colors": "data(fillGradient)",
+        "border-width": "0px",
+        "font-size": "0px",
+      },
+    },
+    {
       selector: `node[?source_workflow]`,
       css: {
         "background-opacity": "0",
@@ -578,41 +609,41 @@ export default function defaultCytoscapeStyle(theme) {
       selector: `node[name="switch"]`,
       css: {
         label: function(element) {
-        // Load from the actual element
-        var nodeheight = 400 
-        var conditions = [{
-          "name": "Condition 1",
-          "check": "X equals Y",
-        },
-        {
-          "name": "Condition 2",
-          "check": "X2 equals Y2",
-        },
-        {
-          "name": "Condition 3",
-          "check": "X3 equals Y3",
-        }]
-  
-        conditions.push({
-          "name": "Else",
-          "check": "If all else fails",
-        })
-  
-        const newlines = nodeheight / conditions.length
-        console.log("Newlines: ", newlines)
-  
-        const label = conditions.map((condition) => {
-          return `${condition.name}\n\n\n`
-        }).join("\n")
-  
-        return label
-      },
+			// Load from the actual element
+			var nodeheight = 400 
+			var conditions = [{
+			  "name": "Condition 1",
+			  "check": "X equals Y",
+			},
+			{
+			  "name": "Condition 2",
+			  "check": "X2 equals Y2",
+			},
+			{
+			  "name": "Condition 3",
+			  "check": "X3 equals Y3",
+			}]
+	  
+			conditions.push({
+			  "name": "Else",
+			  "check": "If all else fails",
+			})
+	  
+			const newlines = nodeheight / conditions.length
+			console.log("Newlines: ", newlines)
+	  
+			const label = conditions.map((condition) => {
+			  return `${condition.name}\n\n\n`
+			}).join("\n")
+	  
+			return label
+		},
         color: theme.palette.text.primary || "white",
         "border-color": "#f85a3e",
-      "background-color": "#1f1f1f",
+      	"background-color": "#1f1f1f",
         "font-size": "19px",
         "text-margin-x": "-110px",
-      "text-wrap": "wrap",
+      	"text-wrap": "wrap",
         shape: "roundrectangle",
         width: "100",
         height: "300",

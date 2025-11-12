@@ -3,10 +3,10 @@ import React, {useState, useEffect, useContext} from 'react';
 import ReactDOM from "react-dom"
 
 import ReactJson from "react-json-view-ssr";
-import { green, yellow, red, grey} from "./AngularWorkflow.jsx";
+import { green, yellow, red, grey} from "../views/AngularWorkflow.jsx";
 import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { validateJson, collapseField, GetIconInfo } from "./Workflows.jsx";
+import { validateJson, collapseField, GetIconInfo } from "../views/Workflows2.jsx";
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import { toast } from "react-toastify" 
 import { makeStyles } from '@mui/material/styles';
@@ -47,6 +47,10 @@ import {
   OpenInNew as OpenInNewIcon,
   Edit as EditIcon,
   Polyline as PolylineIcon,
+  CheckCircle as CheckCircleIcon,
+  DirectionsRun as DirectionsRunIcon,
+  Error as ErrorIcon,
+  Pause as PauseIcon, 
 } from '@mui/icons-material';
 import { Context } from '../context/ContextApi.jsx';
 
@@ -145,6 +149,7 @@ const RunWorkflow = (defaultprops) => {
 		padding: "25px 50px 50px 50px", 
 		borderRadius: 25, 
 		minHeight: 500, 
+		position: "relative",
 	}
 
     const params = useParams();
@@ -189,7 +194,7 @@ const RunWorkflow = (defaultprops) => {
 		// questions if none are selected
 		for (var key in executionArgument) {
 			if (executionArgument[key] === undefined || executionArgument[key] === null || executionArgument[key] === "") {
-				console.log("Unanswered, required question: ", key)
+				//console.log("Unanswered, required question: ", key)
 				return false
 			}
 		}
@@ -406,7 +411,7 @@ const RunWorkflow = (defaultprops) => {
 
 		setTimeout(() => {
   	    	setExecutionLoading(true)
-		}, 2500)
+		}, 250)
 
 		var data = {
 			"execution_argument": executionArgument,
@@ -842,6 +847,7 @@ const RunWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
 		if (responseJson.success === false) {
+			toast.warn("Failed getting the workflow. Please contact support@shuffler.io if this persists.")
 			return
 		}
 
@@ -915,20 +921,37 @@ const RunWorkflow = (defaultprops) => {
 
 				//console.log("Updating data!")
 				setExecutionData(responseJson)
-
 				for (var key in responseJson.results) {
-					if (responseJson.results[key].status === "WAITING") {
-						const validate = validateJson(responseJson.results[key].result)
-						if (validate.valid && typeof validate.result === "string") {
-							validate.result = JSON.parse(validate.result)
-						} 
-
-						if (validate.result["information"] !== undefined && validate.result["information"] !== null) {
-							setWorkflowQuestion(validate.result["information"])
-						}
-
-						break
+					if (responseJson.results[key].status !== "WAITING") {
+						continue
 					}
+
+
+					const validate = validateJson(responseJson.results[key].result)
+					if (validate.valid && typeof validate.result === "string") {
+						validate.result = JSON.parse(validate.result)
+					} 
+
+					console.log("Found waiting!: ", validate.result)
+
+					if (validate?.result?.information !== undefined && validate?.result?.information !== null) {
+						console.log("Success! Not checking again.")
+						setWorkflowQuestion(validate?.result?.information)
+					} else {
+						console.log("No information found for questions?: ", validate.result)
+
+						// Specific case for "too early" config of waiting 
+						if (typeof validate.result === "string" || Object.keys(validate.result).length === 2) {
+							setTimeout(() => {
+								fetchUpdates(responseJson.execution_id, responseJson.authorization)
+							}, 2000)
+						} else {
+							console.log("NOT re-fetching")
+						}
+						//setWorkflowQuestions{
+					}
+
+					break
 				}
           } else {
             console.log("NOT updating executiondata state.");
@@ -1034,7 +1057,7 @@ const RunWorkflow = (defaultprops) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!");
 
-				toast.warn("Error getting results.. Please try again or contact support@shuffler.io if this persists.")
+				//toast.warn("Error getting results.. Please try again or contact support@shuffler.io if this persists.")
 			}
 		
 			return response.json();
@@ -1045,18 +1068,19 @@ const RunWorkflow = (defaultprops) => {
 			}
 
 			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && disableButtons === false && responseJson?.status !== "" && responseJson?.status !== "WAITING") {
+				console.log("IN here 1")
 				setDisableButtons(true)
 			}
 
-			//if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && (workflow.id === undefined || workflow.id === null || workflow.id.length === 0) && responseJson.workflow !== undefined && responseJson.workflow !== null) {
 			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && responseJson.workflow !== undefined && responseJson.workflow !== null) {
+				console.log("IN here 2")
 				setupSourcenode(responseJson.workflow, sourceNode) 
 				setWorkflow(responseJson.workflow)
 
 				//const decisionId = searchParams.get("decision_id") // ONLY for agentic workflows
 				// Check for decision_id in url
 				if (decisionId?.length > 0 && responseJson?.workflow?.actions?.length > 0 && sourceNode?.length > 0 && responseJson?.results?.length > 0) {
-					console.log("Setting workflow: ", responseJson.workflow, ", EXEC RESULTS: ", responseJson.results)
+					console.log("AGENTIC: Setting workflow: ", responseJson.workflow, ", EXEC RESULTS: ", responseJson.results)
 
   					setAgentic(true)
 
@@ -1409,6 +1433,27 @@ const RunWorkflow = (defaultprops) => {
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
+				<div style={{position: "absolute", top: 20, right: 10,}}>
+					{executionData?.status === "" ? null :
+					executionData?.status === "FINISHED" ? 
+						<Tooltip title="The previous Workflow Finished" placement="top">
+							<CheckCircleIcon style={{color: green, marginRight: 10, }} />
+						</Tooltip>
+					: executionData?.status === "EXECUTING" ? 
+						<Tooltip title="The Workflow is current running" placement="top">
+							<DirectionsRunIcon style={{color: theme.palette.secondary, marginRight: 10, }} />
+						</Tooltip>
+					: executionData?.status === "ABORTED" || executionData?.status === "FAILURE" ? 
+						<Tooltip title={`The workflow run failed with status ${executionData?.status}`} placement="top">
+							<ErrorIcon style={{color: red, marginRight: 10, }} />
+						</Tooltip>
+					: executionData?.status === "WAITING" ?
+						<Tooltip title={`The workflow is waiting for user input`} placement="top"> 
+							<PauseIcon style={{color: yellow, marginRight: 10, }} />
+						</Tooltip>
+					: null}
+				</div>
+
 				{explorerUi === true ? 
 					<ExplorerUi />
 					:
@@ -1562,7 +1607,6 @@ const RunWorkflow = (defaultprops) => {
 													label={parsedLabel}
 													required
 
-													disabled={disabledButtons}
 													fullWidth={true}
 													placeholder=""
 													id="emailfield"
@@ -1582,43 +1626,46 @@ const RunWorkflow = (defaultprops) => {
 						: 
 						(answer !== undefined && answer !== null) || message !== ""  ? null :
 						
-							<span>
-								{foundSourcenode !== undefined && foundSourcenode !== null ? 
-									"Add Note"
-									:
-									"Runtime Argument"
-								}
+							executionRunning ? null : 
+								<span>
+									{foundSourcenode !== undefined && foundSourcenode !== null ? 
+										"Add Note"
+										:
+										"Runtime Argument"
+									}
 
-								<div style={{marginBottom: 5}}>
-									<TextField
-										color="primary"
-										style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
-										multiLine
-										maxRows={2}
-										type="text"
-										autoComplete="off"
-										InputProps={{
-											autocomplete: "off",
-											form: {
+									<div style={{marginBottom: 5}}>
+										<TextField
+											disabled={executionRunning}
+											color="primary"
+											style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
+											multiLine
+											maxRows={2}
+											type="text"
+											autoComplete="off"
+											InputProps={{
 												autocomplete: "off",
-											},
-											style:{
-												height: "50px", 
-												color: "white",
-												fontSize: "1em",
-											},
-										}}
-										fullWidth={true}
-										placeholder=""
-										id="emailfield"
-										margin="normal"
-										variant="outlined"
-										onChange={(e) => {
-											setExecutionArgument(e.target.value)	
-										}}
-									/>
-								</div>
-							</span>
+												form: {
+													autocomplete: "off",
+												},
+												style:{
+													height: "50px", 
+													color: "white",
+													fontSize: "1em",
+												},
+											}}
+											fullWidth={true}
+											placeholder=""
+											id="emailfield"
+											margin="normal"
+											variant="outlined"
+											onChange={(e) => {
+												setExecutionArgument(e.target.value)	
+											}}
+										/>
+									</div>
+								</span>
+							
 						}
 
 						
@@ -1724,12 +1771,12 @@ const RunWorkflow = (defaultprops) => {
 								>
 									{executionLoading ? 
 										<CircularProgress color="secondary" style={{color: "white",}} /> 
-										: 
-										executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ? "Run Again" 
-											:
-											"Submit"
-										}
-								</Button> 				
+									: executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ? 
+										"Run Again" 
+									: executionData?.status === "WAITING" ? 
+										"Submit answers"
+									: "Submit"}
+							</Button> 				
 							</div>
 						}
 
@@ -1780,7 +1827,7 @@ const RunWorkflow = (defaultprops) => {
 									}
 
 									return (
-										<div style={{marginBottom: 10, }}>
+										<div style={{marginBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.3)", paddingBottom: 5, }} key={index}>
 											{foundresult?.action?.label?.replaceAll("_", " ")} - {foundresult.status}:
 											<br />
 
@@ -1807,7 +1854,7 @@ const RunWorkflow = (defaultprops) => {
 
 			{workflowQuestion !== "" ? null : 
 				<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 10, }} >
-					Form submission data includes your Organization's unique ID while logged in, or a unique identifier for your browser otherwise. Your input will be automatically sanitized.
+					Form submission data includes your Organization's unique ID, or a unique identifier for your browser. Your input will be automatically sanitized.
 				</Typography>
 			}
 		</div>

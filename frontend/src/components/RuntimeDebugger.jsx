@@ -768,6 +768,7 @@ const RuntimeDebugger = (props) => {
 				  toast("Error executing workflow: "+responseJson.error)
 			  } else {
 				  console.log("Executed workflow: ", responseJson)
+				  submitSearch(workflowId, status, startTime, endTime, rowCursor, maxExecutionCount, suborgWorkflowRuns)
 			  }
     	    })
     	    .catch((error) => {
@@ -1236,8 +1237,8 @@ const RuntimeDebugger = (props) => {
 						setRowsPerPage(newPaginationModel.pageSize)
 						// No API call needed - this is just for client-side pagination
 					}}
-
-		  			onRowSelectionModelChange={(newSelection) => {
+					selectionModel={selectedWorkflowExecutions.map((workflow) => workflow.id)}
+		  			onSelectionModelChange={(newSelection) => {
 						//console.log("newSelection: ", newSelection)
 		  			    //setSelectedWorkflowExecutionsIndexes(newSelection)
 						var found = []	

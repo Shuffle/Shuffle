@@ -18,12 +18,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/shuffle/shuffle-shared"
@@ -113,8 +115,8 @@ var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var queuePerMinute = os.Getenv("SHUFFLE_EXECUTION_PER_MINIUTE")
 var queuePerMinuteInt int
 
-// For it to download from Sigma?
-var pipelineApikey = os.Getenv("SHUFFLE_PIPELINE_AUTH")
+// Used to download file categories. Not required since 2.1.1
+var pipelineApikey = ""
 var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 
 var executionIds = []string{}
@@ -439,9 +441,29 @@ func deployServiceWorkers(image string) {
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "already exists") {
 			// Try patching for attachable
-
+			if debug {
+				log.Printf("[DEBUG] Network %s already exists", networkName)
+			}
 		} else {
 			log.Printf("[DEBUG] Failed to create network %s for workers: %s. This is not critical, and containers will still be added", networkName, err)
+		}
+	}
+
+	networkID := ""
+
+	// find network ID
+	networks, err := dockercli.NetworkList(ctx, network.ListOptions{})
+	if err == nil {
+		for _, net := range networks {
+			if net.Name == networkName {
+				if net.Scope == "swarm" {
+					log.Printf("[DEBUG] Found swarm-scoped network: %s (%s)", networkName, net.ID)
+					networkID = net.ID
+				} else {
+					log.Printf("[WARNING] Network %s exists but is not swarm scoped (scope=%s)", networkName, net.Scope)
+				}
+				break
+			}
 		}
 	}
 
@@ -461,12 +483,17 @@ func deployServiceWorkers(image string) {
 		}
 	*/
 
+	if networkID == "" {
+		log.Printf("[ERROR] Network %s does not exist", networkName)
+		networkID = networkName
+	}
+
 	defaultNetworkAttach := false
 	if containerId != "" {
 		log.Printf("[DEBUG] Should connect orborus container to worker network as it's running in Docker with name %#v!", containerId)
 		// https://pkg.go.dev/github.com/docker/docker@v20.10.12+incompatible/api/types/network#EndpointSettings
 		networkConfig := &network.EndpointSettings{}
-		err := dockercli.NetworkConnect(ctx, networkName, containerId, networkConfig)
+		err := dockercli.NetworkConnect(ctx, networkID, containerId, networkConfig)
 		if err != nil {
 			log.Printf("[ERROR] Failed connecting Orborus to docker network %s: %s", networkName, err)
 		}
@@ -489,7 +516,7 @@ func deployServiceWorkers(image string) {
 			for _, container := range containers {
 				if strings.Contains(strings.ToLower(container.Image), "docker-socket-proxy") {
 					networkConfig := &network.EndpointSettings{}
-					err := dockercli.NetworkConnect(ctx, networkName, container.ID, networkConfig)
+					err := dockercli.NetworkConnect(ctx, networkID, container.ID, networkConfig)
 					if err != nil {
 						log.Printf("[ERROR] Failed connecting Docker socket proxy to docker network %s: %s", networkName, err)
 					} else {
@@ -569,7 +596,7 @@ func deployServiceWorkers(image string) {
 		},
 		Networks: []swarm.NetworkAttachmentConfig{
 			swarm.NetworkAttachmentConfig{
-				Target: networkName,
+				Target: networkID,
 			},
 			swarm.NetworkAttachmentConfig{
 				Target: "ingress",
@@ -738,7 +765,36 @@ func deployServiceWorkers(image string) {
 
 	if err == nil {
 		log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
+		// wait for service to be ready
+		time.Sleep(time.Duration(rand.Intn(4)+1) * time.Second)
+
 		//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
+		// patch service network
+		// this is an edgecase that we noticed on docker version 29
+		// and API version 1.44
+		services, serr := dockercli.ServiceList(ctx, types.ServiceListOptions{})
+		if serr == nil {
+			for _, svc := range services {
+				if svc.Spec.Annotations.Name == innerContainerName {
+					log.Printf("[DEBUG] Found service %s (%s) — patching network attach", innerContainerName, svc.ID)
+
+					spec := svc.Spec
+					spec.TaskTemplate.Networks = append(spec.TaskTemplate.Networks, swarm.NetworkAttachmentConfig{
+						Target: networkID,
+					})
+
+					_, uerr := dockercli.ServiceUpdate(ctx, svc.ID, svc.Version, spec, types.ServiceUpdateOptions{})
+					if uerr != nil {
+						log.Printf("[WARNING] Failed to patch service %s with network %s: %v", innerContainerName, networkID, uerr)
+					} else {
+						log.Printf("[INFO] Successfully attached network %s to service %s", networkID, innerContainerName)
+					}
+					break
+				}
+			}
+		} else {
+			log.Printf("[WARNING] Failed to list services for patching network attach: %v", serr)
+		}
 	} else {
 		if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 			log.Printf("[ERROR] Failed making service: %s", err)
@@ -2075,7 +2131,10 @@ func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequest
 
 	resultResp, err := client.Do(result)
 	if err != nil {
-		log.Printf("[ERROR] Failed making confirm request: %s", err)
+		if !strings.Contains(fmt.Sprintf("%s", err), "timeout") {
+			log.Printf("[ERROR] Failed making confirm request: %s", err)
+		}
+
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 		return err
 	}
@@ -2102,6 +2161,66 @@ func cleanup() {
 	os.Exit(0)
 }
 
+func StartAgent() {
+	log.Printf("[INFO] Starting Orborus agent mode")
+
+	auditLogEnabled := os.Getenv("SHUFFLE_AUDIT_LOG_ENABLED") == "true"
+
+	if auditLogEnabled {
+		log.Printf("[INFO] Audit log monitoring is enabled")
+
+		// Initialize telemetry configuration
+		telemetryConfig := shuffle.TelemetryConfig{
+			Enabled:       true,
+			Modes:         []string{"audit_log"},
+			BufferSize:    1000,
+			FlushInterval: 10 * time.Second,
+		}
+
+		if excludePatterns := os.Getenv("SHUFFLE_AUDIT_LOG_EXCLUDE"); excludePatterns != "" {
+			patterns := strings.Split(excludePatterns, ",")
+			telemetryConfig.Filters = append(telemetryConfig.Filters, shuffle.TelemetryFilter{
+				Type:    "message",
+				Exclude: patterns,
+			})
+		}
+
+		if includePatterns := os.Getenv("SHUFFLE_AUDIT_LOG_INCLUDE"); includePatterns != "" {
+			patterns := strings.Split(includePatterns, ",")
+			telemetryConfig.Filters = append(telemetryConfig.Filters, shuffle.TelemetryFilter{
+				Type:    "message",
+				Include: patterns,
+			})
+		}
+
+		collector, err := shuffle.NewAuditLogCollector(telemetryConfig)
+		if err != nil {
+			log.Printf("[ERROR] Failed to create audit log collector: %v", err)
+		} else {
+			ctx := context.Background()
+			if err := collector.LogCollectorStart(ctx); err != nil {
+				log.Printf("[ERROR] Failed to start audit log collector: %v", err)
+			} else {
+				log.Printf("[INFO] Audit log collector started successfully")
+
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+				go func() {
+					<-sigChan
+					log.Printf("[INFO] Received shutdown signal, stopping audit log collector...")
+					collector.Stop()
+
+					os.Exit(0)
+				}()
+			}
+		}
+	} else {
+		log.Printf("[INFO] Audit log monitoring is disabled")
+	}
+	select {}
+}
+
 // Initial loop etc
 func main() {
 	// Get arch. amd64 or arm64
@@ -2109,6 +2228,25 @@ func main() {
 	//sigCh := make(chan os.Signal, 1)
 	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	//defer cleanup()
+
+	agentMode := os.Getenv("SHUFFLE_AGENT_MODE")
+	if agentMode == "true" {
+		log.Printf("[INFO] Running in agent mode. Starting the agent.")
+		StartAgent()
+		return
+	}
+
+	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
+		log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
+
+		//if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" {
+		//	os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
+		//}
+
+		//if os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
+		//	os.Setenv("SHUFFLE_PIPELINE_ENABLED", "false")
+		//}
+	}
 
 	// Block until a signal is received
 	if shuffle.IsRunningInCluster() {
@@ -2931,15 +3069,18 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" || os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
-		// return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
-		//log.Printf("[INFO] Pipelines are enabled by user")
-	} else {
+	// Disabled all pipeline features
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" {
 		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
 	}
 
+	// Specifically for standalone tenzir
+	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
+		return nil
+	}
+
 	if isKubernetes == "true" {
-		return errors.New("Kubernetes not implemented for Tenzir node")
+		return errors.New("Tenzir not implemented for k8s")
 	}
 
 	err := checkTenzirNode()
@@ -3145,12 +3286,21 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		hostConfig.Mounts = []mount.Mount{}
 	}
 
+	//networkingConfig := &network.NetworkingConfig{
+	//	EndpointsConfig: map[string]*network.EndpointSettings{
+	//		"tenzir-network": {
+	//			IPAMConfig: &network.EndpointIPAMConfig{
+	//				IPv4Address: "192.168.102.100",
+	//			},
+	//		},
+	//	},
+	//}
+
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{
 			"tenzir-network": {
-				IPAMConfig: &network.EndpointIPAMConfig{
-					IPv4Address: "192.168.102.100",
-				},
+				IPAMConfig: nil,
+				Aliases:    []string{"tenzir-node"},
 			},
 		},
 	}
@@ -3205,7 +3355,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	log.Printf("[INFO] Successfully deployed Tenzir Node! Setting up default syslog listener on TCP/1514 AND UDP/1514")
 
-	command := `from "tcp://0.0.0.0:1514" { read_syslog } | import`
+	command := `load_tcp "0.0.0.0:1514" { read_syslog } | import`
 	_, err = createPipeline(command, "default-syslog-tcp-514")
 	if err != nil {
 		log.Printf("[ERROR] Failed to create tcp syslog pipeline: %s", err)
@@ -3805,12 +3955,14 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 	err := deployTenzirNode()
 	if err != nil {
 		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES") && !strings.Contains(err.Error(), "Kubernetes not implemented for Tenzir node")) && !strings.Contains(err.Error(), "Tenzir Node is already running") && !strings.Contains(err.Error(), "docker daemon") {
-
 			log.Printf("[ERROR] Tenzir node connection problem: %s", err)
 
 		} else {
 			//tenzirDisabled = true
-			log.Printf("[WARNING] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)
+			if debug {
+				log.Printf("[WARNING] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)
+			}
+
 		}
 
 		return pipelinePayload, err
@@ -4167,7 +4319,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Connection refused?
-		log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
+		if !strings.Contains(fmt.Sprintf("%s", err), "timeout") {
+			log.Printf("[ERROR][%s] Error running worker request to %s (1): %s", workflowExecution.ExecutionId, streamUrl, err)
+		}
 
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("ghcr.io/shuffle/shuffle-worker:%s", workerVersion)

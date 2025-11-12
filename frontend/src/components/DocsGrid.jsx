@@ -26,7 +26,7 @@ import {
 	ListItemAvatar,
 	ListItemText,
 } from '@mui/material';
-import { useDebouncedCallback } from "../utils/useDebouncedCallback";
+import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
 	
 

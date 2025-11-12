@@ -4,10 +4,11 @@ import { getTheme } from "../theme.jsx";
 import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
-import { GetIconInfo, } from "../views/Workflows2.jsx";
-import { validateJson, handleReactJsonClipboard,  } from "../views/Workflows.jsx";
+import {  validateJson, handleReactJsonClipboard,  GetIconInfo, } from "../views/Workflows2.jsx";
 import { red } from "../views/AngularWorkflow.jsx";
 import CollectIngestModal from "../components/CollectIngestModal.jsx";
+import CorrelationGraph from "../components/CorrelationGraph.jsx";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import {
 	Typography,
     Tooltip,
@@ -79,6 +80,7 @@ import {
 	Settings as SettingsIcon,
 	FilterAlt as FilterAltIcon,
 	CompareArrows as CompareArrowsIcon, 
+	Hub as HubIcon,
 } from "@mui/icons-material";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -146,6 +148,9 @@ const CacheView = memo((props) => {
 	const [showAutomationMenu, setShowAutomationMenu] = useState(false);
 	const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 	const [showCollectIngestMenu, setShowCollectIngestMenu] = useState(false);
+	const [showCorrelations, setShowCorrelations] = useState(undefined);
+
+    let navigate = useNavigate();
 
 	useEffect(() => {
 		if (selectedCategory === "" || selectedCategory === null || selectedCategory === undefined || selectedCategory === "default") {
@@ -165,7 +170,7 @@ const CacheView = memo((props) => {
 	const defaultAutomation = [
 		{
 			"name": "Run workflow",
-			"description": "Runs a workflow with the updated value.",
+			"description": "Runs one or more workflows with the updated value as runtime argument",
 			"options": [{
 				"key": "workflow_id",
 				"value": "",
@@ -173,6 +178,7 @@ const CacheView = memo((props) => {
 			"icon": <AirIcon />, 
 			"enabled": false,
 		},
+		/*
 		{
 			"name": "Correlate Categories",
 			"description": "",
@@ -185,20 +191,10 @@ const CacheView = memo((props) => {
 			"enabled": false,
 			"disabled": false,
 		},
-		{
-			"name": "Run AI Agent",
-			"description": "",
-			"options": [{
-				"key": "",
-				"value": "",
-			}],
-			"icon": <SmartToyIcon />,
-			"enabled": false,
-			"disabled": true,
-		},
+		*/
 		{
 			"name": "Send webhook",
-			"description": "Sends the updated value to a specified webhook URL.",
+			"description": "Sends the updated value to a specified webhook URL as a POST request",
 			"options": [{
 				"key": "webhook_url",
 				"value": "",
@@ -207,7 +203,29 @@ const CacheView = memo((props) => {
 			"enabled": false,
 		},
 
+		{
+			"name": "Run AI Agent",
+			"description": "Runs an AI Agent to process the updated value. Uses built-in ShuffleAI configs. Learn more: https://shuffler.io/docs/AI",
+			"options": [{
+				"key": "",
+				"value": "",
+			}],
+			"icon": <SmartToyIcon />,
+			"enabled": false,
+			"disabled": true,
+		},
 
+		{
+			"name": "Enrich",
+			"description": "Enriches the data. Only runs on valid JSON data AND if the 'enrichment' field does not exist.",
+			"type": "singul",
+			"options": [{
+				"key": "",
+				"value": "",
+			}],
+			"icon": "/images/logos/singul.svg",
+			"disabled": false,
+		},
 
 		{
 			"name": "Send message",
@@ -220,18 +238,6 @@ const CacheView = memo((props) => {
 			"icon": <SendIcon />,
 			"disabled": true,
 			"enabled": false,
-		},
-		{
-			"name": "Enrich",
-			"description": "",
-			"type": "singul",
-			"options": [{
-				"key": "",
-				"value": "",
-			}],
-			"icon": "/images/logos/singul.svg",
-			"enabled": false,
-			"disabled": true,
 		},
 	]
 
@@ -322,7 +328,10 @@ const CacheView = memo((props) => {
 			setSelectedCategory(categoryParam)
 		}
 
-        listOrgCache(orgId, chosenCategory, 0, pageSize, page)
+        listOrgCache(orgId, "", 0, pageSize, page)
+		setTimeout(() => {
+        	listOrgCache(orgId, chosenCategory, 0, pageSize, page)
+		}, 100)
     }, [])
 
 
@@ -1061,407 +1070,423 @@ const CacheView = memo((props) => {
 			saveAutomation(newAutomations)
 		}
 
+		console.log("AUTO: ", automation)
 		return (
-			<div key={index} style={{ 
-					marginBottom: 10, 
-					backgroundColor: hovered ? theme.palette.hoverColor : "transparent",
-					paddingTop: 5, 
-				}} 
-				onMouseEnter={() => setHovered(true)}
-				onMouseLeave={() => setHovered(false)}
+			<Tooltip title={
+					<Typography style={{margin: 10, }}>
+						{automation?.description}
+					</Typography>
+				} 
+				placement="right" 
+				style={theme.palette.tooltip}
 			>
-				<div style={{display: "flex", }}>
-					<Tooltip title={automation.enabled ? "Disable Automation" : "Enable Automation"} style={{}} aria-label={""}>
-						<Checkbox
-							style={{ marginRight: 10, marginTop: -10, }}
-							checked={automation.enabled}
-							// Check if automation options have a value
-							disabled={automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === "")}
-							onChange={(e) => {
-								e.stopPropagation()
-								e.preventDefault()
+				<div key={index} style={{ 
+						marginBottom: 10, 
+						backgroundColor: hovered ? theme.palette.hoverColor : "transparent",
+						paddingTop: 5, 
+					}} 
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
+				>
+					<div style={{display: "flex", }}>
+						<Tooltip title={automation.enabled ? "Disable Automation" : "Enable Automation"} style={{}} aria-label={""}>
+							<Checkbox
+								style={{ marginRight: 10, marginTop: -10, }}
+								checked={automation.enabled}
+								// Check if automation options have a value
+								disabled={automation.name !== "Enrich" && (automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === ""))}
+								onChange={(e) => {
+									e.stopPropagation()
+									e.preventDefault()
 
-								updatedAutomation.enabled = !updatedAutomation.enabled
-								setUpdatedAutomation(updatedAutomation)
-								setUpdated(true)
+									updatedAutomation.enabled = !updatedAutomation.enabled
+									setUpdatedAutomation(updatedAutomation)
+									setUpdated(true)
 
-								setUpdate(Math.random()) 
+									setUpdate(Math.random()) 
+								}}
+							/>
+						</Tooltip>
+						<div 
+							style={{
+								display: "flex",
+								cursor: !automation?.disabled ? "pointer" : "not-allowed",
+								width: "100%", 
 							}}
-						/>
-					</Tooltip>
-					<div 
-						style={{
-							display: "flex",
-							cursor: !automation?.disabled ? "pointer" : "not-allowed",
-							width: "100%", 
-						}}
-						disabled={automation?.disabled === true}
-						onClick={() => {
-							if (automation?.disabled === true) {
-								return
-							}
+							disabled={automation?.disabled === true}
+							onClick={() => {
+								if (automation?.disabled === true) {
+									return
+								}
 
-							setShowOptions(!showOptions)
+								if (automation?.name === "Enrich") {
+									automation.enabled = !automation.enabled
+									runSave()
+									return
+								}
 
-							// Auto saves when the options are closed/saved
-							if (updated && showOptions) {
-								runSave()
-							}
-						}}
-					>
-						{typeof automation?.icon === "string" && automation?.icon?.length > 0 ? 
-							<img src={automation.icon} alt={automation.name} style={{ width: 20, height: 20, }} />
-							:
-							automation.icon
-						}
+								setShowOptions(!showOptions)
 
-						<Typography variant="body1" style={{ 
-							color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary, 
-							marginLeft: 10, 
-						}}>
-							{automation.name}
-						</Typography>
-					</div>
-
-					{automation?.disabled !== true ? 
-						<Button
-							style={{ 
-								borderRadius: theme.palette.borderRadius,
-								textTransform: 'none', 
-								color: updated ? theme.palette.primary.main : theme.palette.text.secondary,
-								marginTop: -6,
-
-								position: "absolute",
-								right: 25, 
-							}}
-							disabled={!updated}
-							onClick={(e) => {
-								e.stopPropagation();
-								e.preventDefault();
-
-								runSave()
+								// Auto saves when the options are closed/saved
+								if (updated && showOptions) {
+									runSave()
+								}
 							}}
 						>
-							Save
-						</Button>
-					: null}
-				</div>
+							{typeof automation?.icon === "string" && automation?.icon?.length > 0 ? 
+								<img src={automation.icon} alt={automation.name} style={{ width: 20, height: 20, }} />
+								:
+								automation.icon
+							}
 
-				{showOptions && (
-					updatedAutomation.options.map((option, optionIndex) => {
-						if (option?.key === "datastore_categories") {
-							if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
+							<Typography variant="body1" style={{ 
+								color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary, 
+								marginLeft: 10, 
+							}}>
+								{automation.name}
+							</Typography>
+						</div>
+
+						{automation?.disabled !== true ? 
+							<Button
+								style={{ 
+									borderRadius: theme.palette.borderRadius,
+									textTransform: 'none', 
+									color: updated ? theme.palette.primary.main : theme.palette.text.secondary,
+									marginTop: -6,
+
+									position: "absolute",
+									right: 25, 
+								}}
+								disabled={!updated}
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+
+									runSave()
+								}}
+							>
+								Save
+							</Button>
+						: null}
+					</div>
+
+					{showOptions && (
+						updatedAutomation.options.map((option, optionIndex) => {
+							if (option?.key === "datastore_categories") {
+								if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
+									return (
+										<Typography key={optionIndex} style={{ color: theme.palette.text.secondary, marginTop: 10 }}>
+											No categories available. Please add categories in the settings.
+										</Typography>
+									)
+								}
+
 								return (
-									<Typography key={optionIndex} style={{ color: theme.palette.text.secondary, marginTop: 10 }}>
-										No categories available. Please add categories in the settings.
-									</Typography>
+									<Autocomplete
+										key={optionIndex}
+
+										multiple
+										label="Choose Datastore Categories"
+										id="datastore_category_search"
+										autoHighlight
+										freeSolo
+										value={datastoreCategories?.filter(c => option?.value.includes(c)) || []}
+										classes={{ inputRoot: classes.inputRoot }}
+										ListboxProps={{
+											style: {
+												backgroundColor: theme.palette.surfaceColor,
+												color: theme.palette.text.primary,
+												borderRadius: theme.palette.borderRadius,
+											},
+										}}
+										onChange={(event, newValue) => {
+											console.log("New Value: ", newValue)
+
+											option.value = ""
+											for (var i = 0; i < newValue.length; i++) {
+												option.value += newValue[i] + ","
+											}
+
+											if (newValue.length > 0) {
+												updatedAutomation.enabled = true
+											} else {
+												updatedAutomation.enabled = false 
+											}
+
+											updatedAutomation.options[optionIndex] = option
+											setUpdatedAutomation(updatedAutomation)
+											setUpdated(true)
+
+											setUpdate(Math.random()) // Force re-render
+										}}
+
+										getOptionLabel={(option) => {
+											if (option === undefined || option === null) {
+												return "No Categories Selected";
+											}
+
+											return option
+										}}
+										options={datastoreCategories}
+										fullWidth
+										style={{
+											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											borderRadius: theme.palette.textFieldStyle.borderRadius,
+											color: theme.palette.textFieldStyle.color,
+											height: 35,
+											marginBottom: 40,
+										}}
+										renderOption={(props, data, state) => {
+											const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
+											const iconDetails = GetIconInfo({
+												"app_name": fixedname,
+												"name": fixedname,
+											})
+
+											const keyfound = option?.value.includes(data)
+
+											return (
+												<Tooltip arrow placement="left" title={
+													<span style={{}}>
+														{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+															<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
+															: null}
+														<Typography>
+															Choose {data}
+														</Typography>
+													</span>
+												} >
+													<MenuItem
+														{...props}
+														style={{
+															backgroundColor: theme.palette.surfaceColor,
+														}}
+														value={data}
+													>
+														<Typography style={{
+															display: "flex", 
+															marginTop: 5, 
+															color: keyfound ? red : theme.palette.text.primary,
+														}}>
+															<div style={{marginRight: 10, }}>
+																{iconDetails?.originalIcon && (
+																	iconDetails?.originalIcon
+																)}
+															</div>
+
+															{fixedname}
+														</Typography>
+													</MenuItem>
+												</Tooltip>
+											)
+										}}
+										renderInput={(params) => {
+											return (
+												<TextField
+													{...params}
+													style={{
+														backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+														color: theme.palette.textFieldStyle.color,
+														borderRadius: theme.palette.textFieldStyle.borderRadius,
+														height: 35,
+														fontSize: 16,
+														marginTop: "16px"
+													}}
+													InputProps={{
+														...params.InputProps,
+														style: {
+															height: 35,
+															display: "flex",
+															alignItems: "center",
+															padding: "0px 8px",
+															fontSize: 16,
+															borderRadius: 4,
+														},
+														inputProps: {
+															...params.inputProps,
+															style: {
+																height: "100%",
+																boxSizing: "border-box",
+															}
+
+														}
+													}}
+													variant="outlined"
+													placeholder="Select Categories to Correlate"
+												/>
+											)
+										}}
+									/>
+								)
+							} else if (option?.key === "workflow_id") {
+								return ( 
+									<Autocomplete
+										key={optionIndex}
+
+										multiple
+										label="Find a workflow"
+										id="workflow_search"
+										autoHighlight
+										freeSolo
+										value={workflows?.filter(w => option?.value.includes(w.id)) || []}
+										classes={{ inputRoot: classes.inputRoot }}
+										ListboxProps={{
+											style: {
+												backgroundColor: theme.palette.surfaceColor,
+												color: theme.palette.text.primary,
+												borderRadius: theme.palette.borderRadius,
+											},
+										}}
+										onChange={(event, newValue) => {
+											option.value = ""
+											for (var i = 0; i < newValue.length; i++) {
+												option.value += newValue[i].id + ","
+											}
+
+											if (newValue.length > 0) {
+												updatedAutomation.enabled = true
+											} else {
+												updatedAutomation.enabled = false 
+											}
+
+											updatedAutomation.options[optionIndex] = option
+											setUpdatedAutomation(updatedAutomation)
+											setUpdated(true)
+
+											setUpdate(Math.random()) // Force re-render
+										}}
+
+										getOptionLabel={(option) => {
+											if (
+												option === undefined ||
+												option === null ||
+												option?.name === undefined ||
+												option?.name === null
+											) {
+												return "No Workflows Selected";
+											}
+
+											const newname = (
+												option.name.charAt(0).toUpperCase() + option.name.substring(1)
+											).replaceAll("_", " ")
+
+											return newname
+										}}
+										options={workflows}
+										fullWidth
+										style={{
+											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											borderRadius: theme.palette.textFieldStyle.borderRadius,
+											color: theme.palette.textFieldStyle.color,
+											height: 35,
+											marginBottom: 40,
+										}}
+										renderOption={(props, data, state) => {
+											/*
+											if (data.id === option?.value) {
+												data = workflow;
+											}
+											*/
+
+											return (
+												<Tooltip arrow placement="left" title={
+													<span style={{}}>
+														{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+															<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
+															: null}
+														<Typography>
+															Choose {data.name}
+														</Typography>
+													</span>
+												} >
+													<MenuItem
+														{...props}
+														style={{
+															backgroundColor: theme.palette.surfaceColor,
+															color: data.id === option?.value ? red : theme.palette.text.primary,
+														}}
+														value={data}
+													>
+														{data.name}
+													</MenuItem>
+												</Tooltip>
+											)
+										}}
+										renderInput={(params) => {
+											return (
+												<TextField
+													{...params}
+													style={{
+														backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+														color: theme.palette.textFieldStyle.color,
+														borderRadius: theme.palette.textFieldStyle.borderRadius,
+														height: 35,
+														fontSize: 16,
+														marginTop: "16px"
+													}}
+													InputProps={{
+														...params.InputProps,
+														style: {
+															height: 35,
+															display: "flex",
+															alignItems: "center",
+															padding: "0px 8px",
+															fontSize: 16,
+															borderRadius: 4,
+														},
+														inputProps: {
+															...params.inputProps,
+															style: {
+																height: "100%",
+																boxSizing: "border-box",
+															}
+
+														}
+													}}
+													variant="outlined"
+													placeholder="Select workflows to run"
+												/>
+											)
+										}}
+									/>
 								)
 							}
 
 							return (
-								<Autocomplete
+								<TextField
 									key={optionIndex}
-
-									multiple
-									label="Choose Datastore Categories"
-									id="datastore_category_search"
-									autoHighlight
-									freeSolo
-									value={datastoreCategories?.filter(c => option?.value.includes(c)) || []}
-									classes={{ inputRoot: classes.inputRoot }}
-									ListboxProps={{
-										style: {
-											backgroundColor: theme.palette.surfaceColor,
-											color: theme.palette.text.primary,
-											borderRadius: theme.palette.borderRadius,
-										},
-									}}
-									onChange={(event, newValue) => {
-										console.log("New Value: ", newValue)
-
-										option.value = ""
-										for (var i = 0; i < newValue.length; i++) {
-											option.value += newValue[i] + ","
-										}
-
-										if (newValue.length > 0) {
-											updatedAutomation.enabled = true
-										} else {
-											updatedAutomation.enabled = false 
-										}
-
-										updatedAutomation.options[optionIndex] = option
-										setUpdatedAutomation(updatedAutomation)
-										setUpdated(true)
-
-										setUpdate(Math.random()) // Force re-render
-									}}
-
-									getOptionLabel={(option) => {
-										if (option === undefined || option === null) {
-											return "No Categories Selected";
-										}
-
-										return option
-									}}
-									options={datastoreCategories}
 									fullWidth
 									style={{
+										...theme.palette.textFieldStyle,
+										marginBottom: 20, 
+										marginTop: 10, 
+									}}
+            						InputProps={{
+									  style: {
 										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-										borderRadius: theme.palette.textFieldStyle.borderRadius,
 										color: theme.palette.textFieldStyle.color,
-										height: 35,
-										marginBottom: 40,
+									  },
 									}}
-									renderOption={(props, data, state) => {
-										const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
-										const iconDetails = GetIconInfo({
-											"app_name": fixedname,
-											"name": fixedname,
-										})
+									label={option.key}
+									defaultValue={option.value}
+									onBlur={(e) => {
+										if (e.target.value === "") {
+											updatedAutomation.enabled = false 
+										} else {
+											updatedAutomation.enabled = true 
+										}
 
-										const keyfound = option?.value.includes(data)
-
-										return (
-											<Tooltip arrow placement="left" title={
-												<span style={{}}>
-													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
-														: null}
-													<Typography>
-														Choose {data}
-													</Typography>
-												</span>
-											} >
-												<MenuItem
-													{...props}
-													style={{
-														backgroundColor: theme.palette.surfaceColor,
-													}}
-													value={data}
-												>
-													<Typography style={{
-														display: "flex", 
-														marginTop: 5, 
-														color: keyfound ? red : theme.palette.text.primary,
-													}}>
-														<div style={{marginRight: 10, }}>
-															{iconDetails?.originalIcon && (
-																iconDetails?.originalIcon
-															)}
-														</div>
-
-														{fixedname}
-													</Typography>
-												</MenuItem>
-											</Tooltip>
-										)
-									}}
-									renderInput={(params) => {
-										return (
-											<TextField
-												{...params}
-												style={{
-													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-													color: theme.palette.textFieldStyle.color,
-													borderRadius: theme.palette.textFieldStyle.borderRadius,
-													height: 35,
-													fontSize: 16,
-													marginTop: "16px"
-												}}
-												InputProps={{
-													...params.InputProps,
-													style: {
-														height: 35,
-														display: "flex",
-														alignItems: "center",
-														padding: "0px 8px",
-														fontSize: 16,
-														borderRadius: 4,
-													},
-													inputProps: {
-														...params.inputProps,
-														style: {
-															height: "100%",
-															boxSizing: "border-box",
-														}
-
-													}
-												}}
-												variant="outlined"
-												placeholder="Select Categories to Correlate"
-											/>
-										)
+										updatedAutomation.options[optionIndex].value = e.target.value;
+										setUpdatedAutomation(updatedAutomation)
+										setUpdated(true)
 									}}
 								/>
 							)
-						} else if (option?.key === "workflow_id") {
-							return ( 
-								<Autocomplete
-									key={optionIndex}
-
-									multiple
-									label="Find a workflow"
-									id="workflow_search"
-									autoHighlight
-									freeSolo
-									value={workflows?.filter(w => option?.value.includes(w.id)) || []}
-									classes={{ inputRoot: classes.inputRoot }}
-									ListboxProps={{
-										style: {
-											backgroundColor: theme.palette.surfaceColor,
-											color: theme.palette.text.primary,
-											borderRadius: theme.palette.borderRadius,
-										},
-									}}
-									onChange={(event, newValue) => {
-										option.value = ""
-										for (var i = 0; i < newValue.length; i++) {
-											option.value += newValue[i].id + ","
-										}
-
-										if (newValue.length > 0) {
-											updatedAutomation.enabled = true
-										} else {
-											updatedAutomation.enabled = false 
-										}
-
-										updatedAutomation.options[optionIndex] = option
-										setUpdatedAutomation(updatedAutomation)
-										setUpdated(true)
-
-										setUpdate(Math.random()) // Force re-render
-									}}
-
-									getOptionLabel={(option) => {
-										if (
-											option === undefined ||
-											option === null ||
-											option?.name === undefined ||
-											option?.name === null
-										) {
-											return "No Workflows Selected";
-										}
-
-										const newname = (
-											option.name.charAt(0).toUpperCase() + option.name.substring(1)
-										).replaceAll("_", " ")
-
-										return newname
-									}}
-									options={workflows}
-									fullWidth
-									style={{
-										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-										borderRadius: theme.palette.textFieldStyle.borderRadius,
-										color: theme.palette.textFieldStyle.color,
-										height: 35,
-										marginBottom: 40,
-									}}
-									renderOption={(props, data, state) => {
-										/*
-										if (data.id === option?.value) {
-											data = workflow;
-										}
-										*/
-
-										return (
-											<Tooltip arrow placement="left" title={
-												<span style={{}}>
-													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
-														: null}
-													<Typography>
-														Choose {data.name}
-													</Typography>
-												</span>
-											} >
-												<MenuItem
-													{...props}
-													style={{
-														backgroundColor: theme.palette.surfaceColor,
-														color: data.id === option?.value ? red : theme.palette.text.primary,
-													}}
-													value={data}
-												>
-													{data.name}
-												</MenuItem>
-											</Tooltip>
-										)
-									}}
-									renderInput={(params) => {
-										return (
-											<TextField
-												{...params}
-												style={{
-													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-													color: theme.palette.textFieldStyle.color,
-													borderRadius: theme.palette.textFieldStyle.borderRadius,
-													height: 35,
-													fontSize: 16,
-													marginTop: "16px"
-												}}
-												InputProps={{
-													...params.InputProps,
-													style: {
-														height: 35,
-														display: "flex",
-														alignItems: "center",
-														padding: "0px 8px",
-														fontSize: 16,
-														borderRadius: 4,
-													},
-													inputProps: {
-														...params.inputProps,
-														style: {
-															height: "100%",
-															boxSizing: "border-box",
-														}
-
-													}
-												}}
-												variant="outlined"
-												placeholder="Select workflows to run"
-											/>
-										)
-									}}
-								/>
-							)
-						}
-
-						return (
-							<TextField
-								key={optionIndex}
-								fullWidth
-								style={{
-									...theme.palette.textFieldStyle,
-									marginBottom: 20, 
-									marginTop: 10, 
-								}}
-            					InputProps={{
-								  style: {
-									backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-									color: theme.palette.textFieldStyle.color,
-								  },
-								}}
-								label={option.key}
-								defaultValue={option.value}
-								onBlur={(e) => {
-									if (e.target.value === "") {
-										updatedAutomation.enabled = false 
-									} else {
-										updatedAutomation.enabled = true 
-									}
-
-									updatedAutomation.options[optionIndex].value = e.target.value;
-									setUpdatedAutomation(updatedAutomation)
-									setUpdated(true)
-								}}
-							/>
-						)
-					})
-				)}
-			</div>
+						})
+					)}
+				</div>
+			</Tooltip>
 		)
 	}
 
@@ -1737,6 +1762,37 @@ const CacheView = memo((props) => {
 								</IconButton>
 							</span>
 						</Tooltip>
+
+						<Tooltip
+							title={"Explore correlations: Requires a category."}
+							style={{}}
+							aria-label={"Edit"}
+						>
+							<span>
+								<IconButton
+									style={{ padding: "6px" }}
+									disabled={userdata?.support !== true || data?.category === "" || data?.category === null || data?.category === undefined}
+									onClick={(e) => {
+										if (userdata?.support !== true) {
+											toast.warn("Correlation graphs are a beta feature.")
+										}
+
+										toast.info("Opening correlations window")
+
+										// add the key we are correlating
+										const currentParams = new URLSearchParams(window.location.search);
+										currentParams.set("category", selectedCategory);
+										currentParams.set("correlations", "true");
+										currentParams.set("key", data.key);
+										navigate(`${window.location.pathname}?${currentParams.toString()}`);
+										setShowCorrelations(data)
+									}}
+								>
+									<HubIcon />
+								</IconButton>
+							</span>
+						</Tooltip>
+
 						<Tooltip
 							title={data?.org_id !== selectedOrganization.id ? "You can not access public URL for this key as it is controlled by parent organization." : "Public URL (types: text, raw, json)" }
 							style={{ marginLeft: 0, }}
@@ -1882,6 +1938,44 @@ const CacheView = memo((props) => {
 			borderLeft: theme.palette.defaultBorder 
 		}}>
             {modalView}
+
+			{showCorrelations !== undefined ?
+				<Dialog
+					open={showCorrelations !== undefined}
+					onClose={() => setShowCorrelations(undefined)}
+					PaperProps={{
+						sx: {
+							borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+							border: theme?.palette?.DialogStyle?.border,
+							minWidth: 1000,
+							minHeight: 768,
+							fontFamily: theme?.typography?.fontFamily,
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							zIndex: 1000,
+							'& .MuiDialogContent-root': {
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+							'& .MuiDialogTitle-root': {
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+							'& .MuiDialogActions-root': {
+							  backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+							},
+						},
+					}}
+				>
+					<DialogTitle>
+						Correlations
+					</DialogTitle>
+					<DialogContent>
+						<CorrelationGraph 
+							globalUrl={globalUrl} 
+							datastoreData={showCorrelations} 
+							userdata={userdata}
+						/>
+					</DialogContent>
+				</Dialog>
+			: null}
 
 			<CollectIngestModal 
 				globalUrl={globalUrl}

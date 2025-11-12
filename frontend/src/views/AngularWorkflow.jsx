@@ -135,12 +135,10 @@ import {
   OpenInFull as OpenInFullIcon,
   Difference as DifferenceIcon,
   DataObject as DataObjectIcon, 
+  SwapHoriz as SwapHorizIcon
 } from "@mui/icons-material";
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-//import * as cytoscape from "cytoscape";
+
 import cytoscape from "cytoscape";
-
-
 import edgehandles from "cytoscape-edgehandles";
 
 import CytoscapeComponent from "react-cytoscapejs";
@@ -152,7 +150,7 @@ import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import LineChartWrapper from "../components/LineChartWrapper.jsx";
 
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
-import { validateJson, collapseField, GetIconInfo, handleReactJsonClipboard, HandleJsonCopy, } from "../views/Workflows.jsx";
+import { validateJson, collapseField, GetIconInfo, handleReactJsonClipboard, HandleJsonCopy, } from "../views/Workflows2.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
@@ -1065,7 +1063,29 @@ const AngularWorkflow = (defaultprops) => {
       "type": "",
     },
     "description": "Build & integrate tools easily with standard input and standard output. Built by Shuffle. https://singul.io",
-    "actions": [{
+    "actions": [
+ 	{
+      "name": "Translate standard",
+      "description": "Translates your JSON data into a standard formats, then stores it in the Shuffle Datastore",
+      "label": "Translate standard",
+	  "example": "{\"source_data\": \"{\\\"event\\\": \\\"login\\\", \\\"user\\\": \\\"john_doe\\\", \\\"timestamp\\\": \\\"2023-10-01T12:00:00Z\\\"}\", \"standard\": \"OCSF\"}",
+      "parameters": [{
+        "name": "source_data",
+        "value": "",
+        "required": true,
+		"multiline": true,
+      },
+      {
+        "name": "standard",
+        "value": "OCSF",
+		"description": "The standard to use from https://github.com/Shuffle/standards/tree/main",
+		"options": [
+			"OCSF"
+		],
+        "required": true,
+        "multiline": false,
+      }]
+    }, {
       "name": "Cases",
       "description": "Available actions for case management",
       "label": "Cases",
@@ -1277,29 +1297,7 @@ const AngularWorkflow = (defaultprops) => {
       	  }
 	  ]
     },
-	*/
-    {
-      "name": "Translate standard",
-      "description": "Translates your JSON data into a standard formats, then stores it in the Shuffle Datastore",
-      "label": "Translate standard",
-	  "example": "{\"source_data\": \"{\\\"event\\\": \\\"login\\\", \\\"user\\\": \\\"john_doe\\\", \\\"timestamp\\\": \\\"2023-10-01T12:00:00Z\\\"}\", \"standard\": \"OCSF\"}",
-      "parameters": [{
-        "name": "source_data",
-        "value": "",
-        "required": true,
-		"multiline": true,
-      },
-      {
-        "name": "standard",
-        "value": "OCSF",
-		"description": "The standard to use from https://github.com/Shuffle/standards/tree/main",
-		"options": [
-			"OCSF"
-		],
-        "required": true,
-        "multiline": false,
-      }]
-    },
+	*/ 
 	]}]
 
 
@@ -2244,6 +2242,11 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const getWorkflowExecution = (id, execution_id, filter, orgId) => {
+	if (id === undefined) {
+		console.log("No workflow ID defined for getting executions")
+		return
+	}
+
     var url = `${globalUrl}/api/v2/workflows/${id}/executions`
     var method = "GET"
     if (filter === undefined || filter === null || filter.toUpperCase() === "ALL") {
@@ -22082,6 +22085,153 @@ const AngularWorkflow = (defaultprops) => {
     }
   }
 
+  // Should probably put this on the backend instead when notifications are made :))
+  const getErrorSuggestion = (result) => {
+    if (result === undefined || result === null) {
+      return ""
+    }
+
+    // Check if array with json inside to handle one item at a time~
+    if (typeof result === "object" && result.length !== undefined) {
+      if (result.length > 0) {
+        // Check type inside
+        if (typeof result[0] === "object") {
+          result = result[0]
+        }
+      }
+    }
+
+    if (result.success === true && result.status === 200) {
+      if (result.body !== undefined && result.body !== null) {
+        const stringbody = result.body.toString()
+        if ((stringbody.startsWith("{") && stringbody.endsWith("}")) || (stringbody.startsWith("[") && stringbody.endsWith("]"))) {
+          return ""
+        }
+
+        if (stringbody.length > 1000) {
+          return "Body looks to be big in a standard format. Consider using the 'To File' parameter to automatically make it into a file."
+        }
+      }
+    }
+
+    if (result.status === 429) {
+      return "Rate limit exceeded. Consider using a different API key or wait a bit before trying again."
+    }
+
+    if (result.status === 405) {
+      return `Method not allowed. Check the URL to ensure it has all the required parameters. If you keep getting a 405, please forward a screenshot of this to ${supportEmail}`
+    }
+
+    if (result.status === 415) {
+      return "Content-Type header missing or wrong. Please add the correct Content-Type header and save the workflow."
+    }
+
+    if (result.status === 401) {
+      return "Authentication failed (401). The URL or auth key is wrong. Check the body of the result for more information."
+    }
+
+    if (result.status === 403) {
+      return "Authorization failed (403). The API user most likely doesn't have the correct permissions. Check the body of the result for more information."
+    }
+
+    if (result.status === 404) {
+      return "The URL, or content of the URL is incorrect. Check it and try again."
+    }
+
+    if (result.status === 400) {
+      return "The queries or data sent to the API is most likely wrong (400). Check the body of the result for more information."
+    }
+
+    if (result.status === 200 || result.status === 201 || result.status === 204) {
+      return "It looks like the result was successful! If it didn't work, make sure to check if the body you are sending was correct."
+    }
+
+
+    // Validate and check for newlines
+    if (result.success !== false) {
+
+      var stringjson = result
+      const valid = validateJson(stringjson, true)
+      if (valid.valid === false) {
+        if (stringjson.startsWith("{") && stringjson.endsWith("}")) {
+          // Look for newline
+          if (stringjson.includes("\n") && !stringjson.includes("\n")) {
+            return "Looks like you have a newline problem. Consider using the | replace: '\n', '\\n' }} filter in Liquid."
+          } else {
+            return "The result looks like it should be JSON, but is invalid. Look for potential single quotes instead of double quotes, missing commas or newlines"
+          }
+        }
+      }
+
+      //return ""
+    }
+
+
+    try {
+      stringjson = JSON.stringify(result)
+    } catch (e) {
+    }
+
+    stringjson = stringjson.toLowerCase()
+    if (stringjson.includes("localhost")) {
+      return "You can't use localhost in apps. Use the external ip or url of the server instead"
+    }
+
+    if (stringjson.includes("manifest unknown")) {
+      return "The app's Docker Image is not available in the environment yet. Re-run the app to force a re-download of the app. If the problem persists, contact support"
+    }
+
+    if (stringjson.toLowerCase().includes("too many values to unpack")) {
+		return "This is a known error with old apps. Please rebuild the app. Contact support@shuffler.io if it persists after rebuild."
+	}
+
+    if (result.status !== 200 && result.url !== undefined && result.url !== null && typeof result.url === "string" && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
+      return "Consider whether your Orborus environment can connect to a local IP or not."
+    }
+
+    if (stringjson.includes("kms/")) {
+      return `KMS authentication most likely failed. Check your notifications for more details on this page: /admin?admin_tab=notifications. If you need help with KMS, please contact ${supportEmail}`
+    }
+
+    if (stringjson.includes("string indices must be integers")) {
+      return `String indices must be integers typically means you are getting a list, while you expected a dictionary. Check the Variable & Debug for more information.` 
+    }
+
+    if (stringjson.includes("invalidurl")) {
+      // IF count of "http" is more than one, 1, it's prolly invalid
+      var additionalinfo = ""
+      if (stringjson.includes("http") && stringjson.match(/http/g).length > 1) {
+        additionalinfo = "You may be using multiple 'http' in the URL. "
+      }
+
+      return "The URL is invalid. Change the URL to a valid one, and try again. " + additionalinfo
+    }
+
+    if (stringjson.includes("result too large to handle")) {
+      return "Execution loading failed. Reload the execution by closing it and clicking it again"
+    }
+
+    if (isCloud && stringjson.toLowerCase().includes("timeout error")) {
+      return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=locations to create an environment to connect to"
+    }
+
+    if (stringjson.toLowerCase().includes("invalid header")) {
+      return "A header or authentication token in the app is invalid. Check the app's configuration"
+    }
+
+
+    if (stringjson.includes("connectionerror")) {
+      if (stringjson.includes("kms")) {
+        return `KMS authentication most likely failed (2). Check your notifications for more details on this page: /admin?admin_tab=notifications&kms=true. If you need help with KMS, please contact ${supportEmail}`
+      }
+
+      return "The URL is incorrect, or Shuffle can't reach it. Set up a Shuffle Environment in the same VLAN, or whitelist Shuffle's IPs."
+    }
+
+
+    return ""
+  }
+
   const ShowCopyingTooltip = () => {
     const [showCopying, setShowCopying] = React.useState(true)
 
@@ -22161,8 +22311,8 @@ const AngularWorkflow = (defaultprops) => {
           </IconButton>
         </Tooltip>
         : null}
-      {executionModalView === 0 ? (
 
+      {executionModalView === 0 ? (
         <div style={{ position: "relative", padding: isMobile ? "0px 0px 0px 10px" : "25px 25px 25px 25px", zIndex: 12502,  backgroundColor: theme.palette.drawer.backgroundColor,  height: "100%", }}>
           <div style={{ display: "flex", }}>
             <Breadcrumbs
@@ -23073,7 +23223,14 @@ const AngularWorkflow = (defaultprops) => {
                         height: imgsize,
                         border: `2px solid ${statusColor}`,
                         borderRadius: executionData.start === data.action.id ? 25 : 5,
+
+						cursor: isCloud ? "pointer" : "default",
                       }}
+					  onClick={() => {
+						  if (isCloud) { 
+							window.open(`/apps/${data?.action?.app_name}`, "_blank")
+						  }
+					  }}
                     />
                   );
 
@@ -23095,7 +23252,7 @@ const AngularWorkflow = (defaultprops) => {
                     );
                   }
 
-                  if (data?.action?.app_name === "User Input" || data?.action?.name === "run_userinput") {
+                  if (data?.action?.name === "User Input" || data?.action?.app_name === "User Input" || data?.action?.name === "run_userinput") {
                     actionimg = (
                       <img
                         alt={"User Input Trigger"}
@@ -23219,6 +23376,13 @@ const AngularWorkflow = (defaultprops) => {
 						if (param?.name?.endsWith("_error") && (param?.name?.startsWith("shuffle_") || param?.name?.startsWith("liquid_"))) {
 							relevant_errors.push(param)
 						}
+					}
+				}
+
+				if (relevant_errors.length === 0) {
+					const foundError = getErrorSuggestion(validate.result)
+					if (foundError !== undefined && foundError !== null && foundError !== "") {
+						relevant_errors = [foundError]
 					}
 				}
 
@@ -23669,150 +23833,7 @@ const AngularWorkflow = (defaultprops) => {
     )
   }
 
-  var draggingDisabled = false;
-
-  // Should probably put this on the backend instead when notifications are made :))
-  const getErrorSuggestion = (result) => {
-    if (result === undefined || result === null) {
-      return ""
-    }
-
-    // Check if array with json inside to handle one item at a time~
-    if (typeof result === "object" && result.length !== undefined) {
-      if (result.length > 0) {
-        // Check type inside
-        if (typeof result[0] === "object") {
-          result = result[0]
-        }
-      }
-    }
-
-    if (result.success === true && result.status === 200) {
-      if (result.body !== undefined && result.body !== null) {
-        const stringbody = result.body.toString()
-        if ((stringbody.startsWith("{") && stringbody.endsWith("}")) || (stringbody.startsWith("[") && stringbody.endsWith("]"))) {
-          return ""
-        }
-
-        if (stringbody.length > 1000) {
-          return "Body looks to be big in a standard format. Consider using the 'To File' parameter to automatically make it into a file."
-        }
-      }
-    }
-
-    if (result.status === 429) {
-      return "Rate limit exceeded. Consider using a different API key or wait a bit before trying again."
-    }
-
-    if (result.status === 405) {
-      return `Method not allowed. Check the URL to ensure it has all the required parameters. If you keep getting a 405, please forward a screenshot of this to ${supportEmail}`
-    }
-
-    if (result.status === 415) {
-      return "Content-Type header missing or wrong. Please add the correct Content-Type header and save the workflow."
-    }
-
-    if (result.status === 401) {
-      return "Authentication failed (401). The URL or auth key is wrong. Check the body of the result for more information."
-    }
-
-    if (result.status === 403) {
-      return "Authorization failed (403). The API user most likely doesn't have the correct permissions. Check the body of the result for more information."
-    }
-
-    if (result.status === 404) {
-      return "The URL, or content of the URL is incorrect. Check it and try again."
-    }
-
-    if (result.status === 400) {
-      return "The queries or data sent to the API is most likely wrong (400). Check the body of the result for more information."
-    }
-
-    if (result.status === 200 || result.status === 201 || result.status === 204) {
-      return "It looks like the result was successful! If it didn't work, make sure to check if the body you are sending was correct."
-    }
-
-
-    // Validate and check for newlines
-    if (result.success !== false) {
-
-      var stringjson = result
-      const valid = validateJson(stringjson, true)
-      if (valid.valid === false) {
-        if (stringjson.startsWith("{") && stringjson.endsWith("}")) {
-          // Look for newline
-          if (stringjson.includes("\n") && !stringjson.includes("\n")) {
-            return "Looks like you have a newline problem. Consider using the | replace: '\n', '\\n' }} filter in Liquid."
-          } else {
-            return "The result looks like it should be JSON, but is invalid. Look for potential single quotes instead of double quotes, missing commas or newlines"
-          }
-        }
-      }
-
-      //return ""
-    }
-
-
-    try {
-      stringjson = JSON.stringify(result)
-    } catch (e) {
-    }
-
-    stringjson = stringjson.toLowerCase()
-    if (stringjson.includes("localhost")) {
-      return "You can't use localhost in apps. Use the external ip or url of the server instead"
-    }
-
-    if (stringjson.includes("manifest unknown")) {
-      return "The app's Docker Image is not available in the environment yet. Re-run the app to force a re-download of the app. If the problem persists, contact support"
-    }
-
-    if (result.status !== 200 && result.url !== undefined && result.url !== null && typeof result.url === "string" && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
-      return "Consider whether your Orborus environment can connect to a local IP or not."
-    }
-
-    if (stringjson.includes("kms/")) {
-      return `KMS authentication most likely failed. Check your notifications for more details on this page: /admin?admin_tab=notifications. If you need help with KMS, please contact ${supportEmail}`
-    }
-
-    if (stringjson.includes("string indices must be integers")) {
-      return `String indices must be integers typically means you are getting a list, while you expected a dictionary. Check the Variable & Debug for more information.` 
-    }
-
-    if (stringjson.includes("invalidurl")) {
-      // IF count of "http" is more than one, 1, it's prolly invalid
-      var additionalinfo = ""
-      if (stringjson.includes("http") && stringjson.match(/http/g).length > 1) {
-        additionalinfo = "You may be using multiple 'http' in the URL. "
-      }
-
-      return "The URL is invalid. Change the URL to a valid one, and try again. " + additionalinfo
-    }
-
-    if (stringjson.includes("result too large to handle")) {
-      return "Execution loading failed. Reload the execution by closing it and clicking it again"
-    }
-
-    if (isCloud && stringjson.toLowerCase().includes("timeout error")) {
-      return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=locations to create an environment to connect to"
-    }
-
-    if (stringjson.toLowerCase().includes("invalid header")) {
-      return "A header or authentication token in the app is invalid. Check the app's configuration"
-    }
-
-
-    if (stringjson.includes("connectionerror")) {
-      if (stringjson.includes("kms")) {
-        return `KMS authentication most likely failed (2). Check your notifications for more details on this page: /admin?admin_tab=notifications&kms=true. If you need help with KMS, please contact ${supportEmail}`
-      }
-
-      return "The URL is incorrect, or Shuffle can't reach it. Set up a Shuffle Environment in the same VLAN, or whitelist Shuffle's IPs."
-    }
-
-
-    return ""
-  }
+  var draggingDisabled = false; 
 
   const currentSuggestion = getErrorSuggestion(validate.result)
   const codePopoutModal = !codeModalOpen ? null : (

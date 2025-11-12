@@ -2116,6 +2116,11 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		}
 	}
 
+	if len(data) == 0 {
+		log.Printf("[WARNING] Stream result missing execution ID and authorization; injecting them from workflow execution")
+		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamResultUrl,
@@ -2550,6 +2555,11 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 		return workflowExecution, err
 	}
 
+	if debug {
+		log.Printf("[INFO] Here is the result we got back from backend: %s", workflowExecution.Results)
+	}
+
+	setWorkflowExecution(context.Background(), *workflowExecution, false)
 	return workflowExecution, nil
 }
 
@@ -3449,7 +3459,6 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	_ = service
 
 	if err != nil {
-
 		if strings.Contains(fmt.Sprintf("%s", err), "network") && strings.Contains(fmt.Sprintf("%s", err), "not found") {
 			log.Printf("[DEBUG] Network %s not found. Trying to initialize it.", networkName)
 			networkErr := initSwarmNetwork()
@@ -3476,6 +3485,63 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 
 		log.Printf("[DEBUG] Failed deploying %s with image %s: %s", name, image, err)
 		return err
+	} else {
+		// wait for service to be ready
+		time.Sleep(time.Duration(rand.Intn(4)+1) * time.Second)
+		//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
+		// patch service network
+		// this is an edgecase that we noticed on docker version 29
+		// and API version 1.44
+
+		// get networkID of swarmNetworkName
+		networkID := ""
+
+		ctx := context.Background()
+
+		// find network ID
+		networks, err := dockercli.NetworkList(ctx, network.ListOptions{})
+		if err == nil {
+			for _, net := range networks {
+				if net.Name == networkName {
+					if net.Scope == "swarm" {
+						log.Printf("[DEBUG] Found swarm-scoped network: %s (%s)", networkName, net.ID)
+						networkID = net.ID
+					} else {
+						log.Printf("[WARNING] Network %s exists but is not swarm scoped (scope=%s)", networkName, net.Scope)
+					}
+					break
+				}
+			}
+		}
+
+		if networkID == "" {
+			log.Printf("[ERROR] Network %s not found", networkName)
+			networkID = networkName
+		}
+
+		services, serr := dockercli.ServiceList(ctx, types.ServiceListOptions{})
+		if serr == nil {
+			for _, svc := range services {
+				if svc.ID == service.ID {
+					log.Printf("[DEBUG] Found service %s (%s) — patching network attach", service.ID, svc.ID)
+
+					spec := svc.Spec
+					spec.TaskTemplate.Networks = append(spec.TaskTemplate.Networks, swarm.NetworkAttachmentConfig{
+						Target: networkID,
+					})
+
+					_, uerr := dockercli.ServiceUpdate(ctx, svc.ID, svc.Version, spec, types.ServiceUpdateOptions{})
+					if uerr != nil {
+						log.Printf("[WARNING] Failed to patch service %s with network %s: %v", service.ID, networkID, uerr)
+					} else {
+						log.Printf("[INFO] Successfully attached network %s to service %s", networkID, service.ID)
+					}
+					break
+				}
+			}
+		} else {
+			log.Printf("[WARNING] Failed to list services for patching network attach: %v", serr)
+		}
 	}
 
 	log.Printf("[DEBUG] Successfully deployed service %s with image %s on port %d", name, image, deployport)

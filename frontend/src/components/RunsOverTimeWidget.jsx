@@ -13,8 +13,51 @@ function formatCompactNumber(value) {
   return `${n}`;
 }
 
-const RunsOverTimeWidget = (props) => {
-  const { globalUrl, onLoadingChange, monthOverride, dummyMode } = props;
+// Helpers to keep date and "today" logic concise and consistent
+function toYMD(date) {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function entriesContainDateYMD(entries, date) {
+  const target = toYMD(date);
+  return Array.isArray(entries) && entries.some((e) => toYMD(e.date) === target);
+}
+
+function computeTodayValueForAll(key, data) {
+  if (key === 'app_executions') {
+    return Number(data?.daily_app_executions ?? 0) + Number(data?.daily_child_app_executions ?? 0);
+  }
+  if (key === 'workflow_executions') {
+    const parent = Number(data?.daily_workflow_executions ?? 0);
+    const parentFinished = Number(data?.daily_workflow_executions_finished ?? 0);
+    const parentFailed = Number(data?.daily_workflow_executions_failed ?? 0);
+    const childFinished = Number(data?.daily_child_workflow_executions_finished ?? 0);
+    const childFailed = Number(data?.daily_child_workflow_executions_failed ?? 0);
+    const parentVal = parent > 0 ? parent : (parentFinished + parentFailed);
+    return parentVal + childFinished + childFailed;
+  }
+  return 0;
+}
+
+function computeTodayValueForOrg(key, orgStats) {
+  if (key === 'workflow_executions') {
+    const total = orgStats?.daily_workflow_executions;
+    const finished = Number(orgStats?.daily_workflow_executions_finished ?? 0);
+    const failed = Number(orgStats?.daily_workflow_executions_failed ?? 0);
+    return total !== undefined ? Number(total || 0) : (finished + failed);
+  }
+  if (key === 'app_executions') {
+    return Number(orgStats?.daily_app_executions ?? 0);
+  }
+  return 0;
+}
+
+  const RunsOverTimeWidget = (props) => {
+    const { globalUrl, onLoadingChange, monthOverride, dummyMode, selectedOrganization, selectedOrgForStats, orgStats, orgForLimit, loadingSelectedOrgStats } = props;
   const [mode, setMode] = useState('workflows'); // 'apps' | 'workflows'
   const [series, setSeries] = useState([]);
   const [days, setDays] = useState(365); // aggregate to last 12 months by default
@@ -24,6 +67,99 @@ const RunsOverTimeWidget = (props) => {
   // Helper: fetch time series for a specific statistics key
   const fetchSeriesForKey = async (key) => {
     try {
+      // If specific org is selected and pre-fetched stats are available, use them directly
+      if (selectedOrgForStats && selectedOrgForStats !== 'ALL' && orgStats && Array.isArray(orgStats?.daily_statistics)) {
+        const dailyStats = orgStats.daily_statistics;
+        const processedEntries = [];
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+
+        for (const day of dailyStats) {
+          if (!day?.date) continue;
+          const dayDate = new Date(day.date);
+          if (dayDate < cutoff) continue;
+
+          let value = 0;
+          if (key === 'workflow_executions') {
+            const finished = Number(day?.workflow_executions_finished || 0);
+            const failed = Number(day?.workflow_executions_failed || 0);
+            value = finished + failed;
+          } else {
+            value = Number(day?.[key] || 0);
+          }
+          processedEntries.push({ date: day.date, value });
+        }
+
+        // Append today's values if not present
+        try {
+          if (!entriesContainDateYMD(processedEntries, new Date())) {
+            const todayVal = computeTodayValueForOrg(key, orgStats);
+            if (!Number.isNaN(todayVal)) {
+              processedEntries.push({ date: new Date().toISOString(), value: todayVal });
+            }
+          }
+        } catch {}
+
+        return processedEntries;
+      }
+
+      // If selectedOrgForStats is 'ALL', use parent org's full stats endpoint and combine app_executions + child_app_executions
+      if (selectedOrgForStats === 'ALL' && selectedOrganization?.id) {
+        // Use the full stats endpoint to get daily_statistics
+        const url = `${globalUrl}/api/v1/orgs/${encodeURIComponent(selectedOrganization.id)}/stats`;
+        const r = await fetch(url, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+        if (r.ok) {
+          const data = await r.json();
+          const dailyStats = Array.isArray(data?.daily_statistics) ? data.daily_statistics : [];
+          
+          // Process each day's data, combining parent + child org runs
+          const processedEntries = [];
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - days);
+          
+          for (const day of dailyStats) {
+            if (day?.date) {
+              const dayDate = new Date(day.date);
+              if (dayDate < cutoff) continue; // Filter by days
+              
+              let value = day?.[key] || 0;
+              // Add child org executions based on the key
+              if (key === 'app_executions' && day?.child_app_executions !== undefined) {
+                value += (day.child_app_executions || 0);
+              } else if (key === 'workflow_executions') {
+                // For workflow_executions, sum both child_workflow_executions_finished and child_workflow_executions_failed
+                const childFinished = day?.child_workflow_executions_finished || 0;
+                const childFailed = day?.child_workflow_executions_failed || 0;
+                value += (childFinished + childFailed);
+              }
+              processedEntries.push({ date: day.date, value });
+            }
+          }
+
+          // Append today's datapoint for ALL by combining parent + child daily_* counters
+          try {
+            if (!entriesContainDateYMD(processedEntries, new Date())) {
+              const todayVal = computeTodayValueForAll(key, data);
+              if (!Number.isNaN(todayVal)) {
+                processedEntries.push({ date: new Date().toISOString(), value: todayVal });
+              }
+            }
+          } catch {}
+          return processedEntries;
+        }
+      }
+      
+      // // If a specific org is selected
+      // if (selectedOrgForStats && selectedOrgForStats !== 'ALL') {
+      //   const url = `${globalUrl}/api/v1/orgs/${encodeURIComponent(selectedOrgForStats)}/stats/${encodeURIComponent(key)}?days=${encodeURIComponent(days)}`;
+      //   const r = await fetch(url, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      //   if (r.ok) {
+      //     const j = await r.json();
+      //     return Array.isArray(j?.entries) ? j.entries : [];
+      //   }
+      // }
+
+      // Fallback to global stats
       const urlA = `${globalUrl}/api/v1/stats/${encodeURIComponent(key)}?days=${encodeURIComponent(days)}`;
       const doFetch = async (u) => {
         const r = await fetch(u, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
@@ -34,23 +170,15 @@ const RunsOverTimeWidget = (props) => {
       const a = await doFetch(urlA);
       if (a.length > 0) return a;
 
-      // Optional org route fallback if present globally
-      const orgId = (window && window.selectedOrganization && window.selectedOrganization.id) || null;
-      if (orgId) {
-        const urlB = `${globalUrl}/api/v1/orgs/${encodeURIComponent(orgId)}/stats/${encodeURIComponent(key)}?days=${encodeURIComponent(days)}`;
-        const b = await doFetch(urlB);
-        if (b.length > 0) return b;
-      }
-
-      // Final fallback: old aggregate endpoint returning daily_statistics
-      const fallback = await fetch(`${globalUrl}/api/v1/stats`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
-      if (fallback.ok) {
-        const data = await fallback.json();
-        const daily = Array.isArray(data?.daily_statistics) ? data.daily_statistics : [];
-        const valField = key;
-        return daily.map((d) => ({ date: d?.date, value: Number(d?.[valField] || 0) }));
-      }
-      return [];
+      // // Final fallback: old aggregate endpoint returning daily_statistics
+      // const fallback = await fetch(`${globalUrl}/api/v1/stats`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      // if (fallback.ok) {
+      //   const data = await fallback.json();
+      //   const daily = Array.isArray(data?.daily_statistics) ? data.daily_statistics : [];
+      //   const valField = key;
+      //   return daily.map((d) => ({ date: d?.date, value: Number(d?.[valField] || 0) }));
+      // }
+      // return [];
     } catch (e) {
       return [];
     }
@@ -154,9 +282,13 @@ const RunsOverTimeWidget = (props) => {
     }
   }, [monthOverride]);
 
-  useEffect(() => {
-    load(mode);
-  }, [mode, globalUrl, days, selectedMonth, dummyMode]);
+    useEffect(() => {
+      if (loadingSelectedOrgStats === true) {
+        setSeries([]);
+        return;
+      }
+      load(mode);
+    }, [mode, globalUrl, days, selectedMonth, dummyMode, selectedOrgForStats, loadingSelectedOrgStats]);
 
   // Notify parent on loading changes
   useEffect(() => {
@@ -169,7 +301,7 @@ const RunsOverTimeWidget = (props) => {
     (Array.isArray(series) ? series : []).map((d) => {
       const dt = new Date(d.key);
       const label = selectedMonth instanceof Date
-        ? String(dt.getDate()) // day of month for daily view
+        ? `${dt.toLocaleString('default', { month: 'short' })} ${dt.getDate()}` // e.g., 'Oct 1'
         : dt.toLocaleString('default', { month: 'short' });
       return { key: label, data: Number(d?.data || 0) };
     })
@@ -197,7 +329,7 @@ const RunsOverTimeWidget = (props) => {
 							backgroundColor: "#1A1A1A",
 							border: "1px solid rgba(255,255,255,0.22)",
 							color: theme.palette.text.primary,
-							padding: 8,
+							padding: 10,
 							maxWidth: 240,
 							pointerEvents: 'none',
 						}}>
@@ -208,6 +340,7 @@ const RunsOverTimeWidget = (props) => {
 					/>
 					}
 				/>;
+
 	
   return (
     <div>
@@ -295,7 +428,12 @@ const RunsOverTimeWidget = (props) => {
       </div>
 
       <div style={{ marginTop: 24 }}>
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '100%', position: 'relative' }}>
+          {loadingSelectedOrgStats === true ? (
+            <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography variant="body2" color="textSecondary">Loading…</Typography>
+            </div>
+          ) : (
           <BarChart
             key={`${mode}-${selectedMonth ? `${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}` : 'yearly'}`}
             height={300}
@@ -315,6 +453,123 @@ const RunsOverTimeWidget = (props) => {
             }
             animated={false}
           />
+          )}
+          {/* Custom reference line overlays for app execution limits (suborg and parent) */}
+          {mode === 'apps' && barData.length > 0 && (() => {
+            // Determine limits
+            const parentAppExecutionLimit = selectedOrganization?.sync_features?.app_executions?.limit ? Number(selectedOrganization.sync_features.app_executions.limit) : null;
+            const suborgAppExecutionLimit = orgForLimit?.sync_features?.app_executions?.limit ? Number(orgForLimit.sync_features.app_executions.limit) : null;
+
+            const maxValue = Math.max(...barData.map(d => Number(d.data) || 0), 0);
+            if (maxValue <= 0) return null;
+
+            const chartTopPadding = 1;
+            const chartBottomPadding = 8;
+            const usableHeight = 100 - chartTopPadding - chartBottomPadding;
+
+            // Helpers to compute Y position in percentage
+            const posFor = (limit) => {
+              const perc = Math.max(0, Math.min(1, (Number(limit) || 0) / maxValue));
+              return chartTopPadding + ((1 - perc) * usableHeight);
+            };
+
+            let showParentLimit = false;
+            let showSuborgLimit = false;
+
+            // Suborg/current limit: only when viewing a specific org (not ALL)
+            if (selectedOrgForStats !== 'ALL' && typeof suborgAppExecutionLimit === 'number' && suborgAppExecutionLimit > 0 && suborgAppExecutionLimit <= maxValue && selectedOrgForStats === orgForLimit?.id) {
+              showSuborgLimit = true;
+            }
+
+            if (typeof parentAppExecutionLimit === 'number' && parentAppExecutionLimit > 0 && parentAppExecutionLimit <= maxValue) {
+              if (selectedOrgForStats === 'ALL') {
+                showParentLimit = true;
+              } else if (parentAppExecutionLimit !== suborgAppExecutionLimit) {
+                showParentLimit = true;
+              }
+            }
+
+            if (!showParentLimit && !showSuborgLimit) return null;
+
+            const suborgTop = showSuborgLimit ? posFor(suborgAppExecutionLimit) : null;
+            const parentTop = showParentLimit ? posFor(parentAppExecutionLimit) : null;
+
+            return (
+              <>
+                {showSuborgLimit && (
+                  <>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: `${suborgTop}%`,
+                        left: '2%',
+                        right: '0%',
+                        height: '2px',
+                        backgroundImage: 'repeating-linear-gradient(to right, #ff8544 0px, #ff8544 8px, transparent 8px, transparent 16px)',
+                        pointerEvents: 'none',
+                        zIndex: 10,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: `${suborgTop}%`,
+                        right: '-5%',
+                        transform: 'translate(0, -50%)',
+                        pointerEvents: 'none',
+                        zIndex: 10,
+                        backgroundColor: 'rgba(26, 26, 26, 0.95)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid #ff8544',
+                      }}
+                    >
+                      <Typography style={{ fontSize: '12px', fontWeight: 600, color: '#ff8544' }}>
+                        {formatCompactNumber(suborgAppExecutionLimit)} limit
+                      </Typography>
+                    </div>
+                  </>
+                )}
+
+                {showParentLimit && (
+                  <>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: `${parentTop}%`,
+                        left: '2%',
+                        right: '0%',
+                        height: '2px',
+                        backgroundImage: 'repeating-linear-gradient(to right, #FD4C62 0px, #FD4C62 12px, transparent 12px, transparent 22px)',
+                        pointerEvents: 'none',
+                        zIndex: 9,
+                        opacity: 0.8,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: `${parentTop}%`,
+                        right: '-5%',
+                        transform: 'translate(0, -50%)',
+                        pointerEvents: 'none',
+                        zIndex: 9,
+                        backgroundColor: 'rgba(26, 26, 26, 0.93)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid #FD4C62',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                      }}
+                    >
+                      <Typography style={{ fontSize: '12px', fontWeight: 600, color: '#FD4C62' }}>
+                        {formatCompactNumber(parentAppExecutionLimit)} limit
+                      </Typography>
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>

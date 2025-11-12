@@ -15,6 +15,7 @@ export const AppContext = (props) => {
     const [windowWidth, setWindowWidth] = useState(serverside === true ? 100 : window.innerWidth);
     const [brandColor, setBrandColor] = useState(() => localStorage.getItem("brandColor") || "#ff8544");
     const [brandName, setBrandName] = useState(()=> localStorage.getItem("brandName") || "Shuffle");
+    const [updateOrg, setUpdateOrg] = useState(false);
 
     const [themeMode, setThemeMode] = useState(
       () => localStorage.getItem("theme") || "dark"
@@ -117,6 +118,8 @@ export const AppContext = (props) => {
             setBrandColor,
             brandName,
             setBrandName,
+            updateOrg,
+            setUpdateOrg,
         }}>
             {props.children}
         </Context.Provider>

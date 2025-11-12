@@ -6,7 +6,7 @@ import ReactJson from "react-json-view-ssr";
 import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
+import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import remarkGfm from 'remark-gfm'
 import { Context } from "../context/ContextApi.jsx";
 import {
@@ -87,6 +87,34 @@ const innerHrefStyle = {
     textDecoration: "none",
 };
 
+const noteLabelStyle = {
+	fontWeight: "bold",
+	color: "#f86a3e",
+	display: "block",
+	marginBottom: "5px",
+};
+
+const alertNote = {
+	padding: "10px",
+	borderLeft: "5px solid #f86a3e",
+	backgroundColor: "rgb(26,26,26)",
+};
+
+export const Blockquote = ({ children }) => {
+
+	const textContent = children.map(child =>
+	  child.props && child.props.children ? child.props.children.join('') : child
+	).join('').trim();
+
+	// Maybe some more contents....
+	const isNote = textContent.startsWith("[!TIP]");
+	return (
+	  <blockquote style={isNote ? alertNote : {}}>
+		{isNote && <span style={noteLabelStyle}>Tips:</span>}
+		{isNote ? textContent.replace("[!TIP]", "").trim() : children}
+	  </blockquote>
+	);
+  };
 
 export const CopyToClipboard = (props) => {
     const { text, style, onCopy } = props;
@@ -173,6 +201,86 @@ export const OuterLink = (props) => {
     );
 }
 
+// Markdown table renderers for improved styling and readability
+export const TableRenderer = (props) => {
+    const { themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
+        return (
+          <div
+            style={{
+              overflowX: "auto",
+              marginTop: 16,
+              marginBottom: 24,
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: theme.palette?.borderRadius,
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "separate",
+                borderSpacing: 0,
+                minWidth: 600,
+              }}
+            >
+              {props.children}
+            </table>
+          </div>
+        );
+}
+
+export const TableRowRenderer = (props) => {
+    const { themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
+    return (
+      <tr
+        style={{
+          borderBottom: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        {props.children}
+      </tr>
+    );
+}
+    
+export const TableHeaderCellRenderer = (props) => {
+    const { themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
+    return (
+      <th
+        style={{
+          textAlign: "left",
+          padding: "12px 14px",
+          backgroundColor: theme.palette.platformColor,
+          color: theme.palette.textColor,
+          fontWeight: 600,
+          position: "sticky",
+          top: 0,
+          borderBottom: "1px solid rgba(255,255,255,0.2)",
+        }}
+      >
+        {props.children}
+      </th>
+    );
+}
+
+export const TableCellRenderer = (props) => {
+    const { themeMode } = useContext(Context)
+    const theme = getTheme(themeMode)
+    return (
+      <td
+        style={{
+          padding: "10px 14px",
+          verticalAlign: "top",
+          color: theme.palette.textColor,
+          backgroundColor: "transparent",
+        }}
+      >
+        {props.children}
+      </td>
+    );
+}
+
 
 
 export const Img = (props) => {
@@ -250,9 +358,23 @@ export const CodeHandler = (props) => {
 
     // Need to check if it's singletick or multi
     if (props.inline === true) {
-        // Show it inline
+        // Enhanced inline code styling for readability and long strings
         return (
-            <span style={{ backgroundColor: theme.palette.inputColor, display: "inline", whiteSpace: "pre-wrap", padding: "6px 3px 6px 3px", }}>
+            <span
+                style={{
+                    backgroundColor: theme.palette.inputColor,
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "6px",
+                    padding: "1px 6px",
+                    margin: "0 2px",
+                    display: "inline-block",
+                    lineHeight: 1.6,
+                    fontSize: "0.95em",
+                    fontFamily:
+                        'SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    whiteSpace: "pre-wrap",
+                }}
+            >
                 {newprop}
             </span>
         )
@@ -317,6 +439,8 @@ const Docs = (defaultprops) => {
     var props = Object.assign({ selected: false }, defaultprops);
     props.match = {}
     props.match.params = params
+
+	window.title = "Shuffle - Documentation"
 
     //console.log("PARAMS: ", params)
     const { themeMode } = useContext(Context)
@@ -668,36 +792,13 @@ const Docs = (defaultprops) => {
         minHeight: "80vh",
     };
 
-    const noteLabelStyle = {
-        fontWeight: "bold",
-        color: "#f86a3e",
-        display: "block",
-        marginBottom: "5px",
-    };
-
-    const Blockquote = ({ children }) => {
-
-        const textContent = children.map(child =>
-          child.props && child.props.children ? child.props.children.join('') : child
-        ).join('').trim();
-
-        // Maybe some more contents....
-        const isNote = textContent.startsWith("[!TIP]");
-        return (
-          <blockquote style={isNote ? alertNote : {}}>
-            {isNote && <span style={noteLabelStyle}>Tips:</span>}
-            {isNote ? textContent.replace("[!TIP]", "").trim() : children}
-          </blockquote>
-        );
-      };
-
 
     const Heading = (props) => {
         const [hover, setHover] = useState(false);
 
-        var id = (props.children?.[0] ?? props.children ?? '').toString().toLowerCase();
-        if (props.level <= 3) {
-            id = props.children[0].toLowerCase().toString().replaceAll(" ", "-");
+        var id = (props?.children?.[0] ?? props.children ?? '').toString().toLowerCase();
+        if (props?.level <= 3) {
+            id = props?.children?.[0]?.toLowerCase().toString().replaceAll(" ", "-") ?? '';
         }
 
         const element = React.createElement(
@@ -1098,11 +1199,6 @@ const Docs = (defaultprops) => {
         fontSize: isMobile ? "1.3rem" : "1.1rem",
     };
 
-    const alertNote = {
-        padding: "10px",
-        borderLeft: "5px solid #f86a3e",
-        backgroundColor: "rgb(26,26,26)",
-    };
 
     const CustomButton = (props) => {
         const { title, icon, link } = props
@@ -1192,7 +1288,7 @@ const Docs = (defaultprops) => {
             </Typography>
 			{showPartnerLogo === true ? null : 
 				<div style={{ display: "flex", marginTop: 25, }}>
-					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> />
+					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/contact?category=support" />
 					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
 				</div>
 			}
@@ -1230,6 +1326,8 @@ const Docs = (defaultprops) => {
             </div>
         </div>
 
+
+
     const markdownComponents = {
         img: Img,
         code: CodeHandler,
@@ -1242,6 +1340,10 @@ const Docs = (defaultprops) => {
         a:  OuterLink,
         p:  Paragraph,
         blockquote: Blockquote,
+        table: TableRenderer,
+        tr: TableRowRenderer,
+        th: TableHeaderCellRenderer,
+        td: TableCellRenderer,
     }
 
 

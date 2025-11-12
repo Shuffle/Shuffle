@@ -4,7 +4,7 @@ import { CheckCircle, Error, ArrowBack, Close, Cached as CachedIcon, Pause as Pa
 import theme from '../theme.jsx';
 import ReactJson from "react-json-view-ssr";
 import { toast } from 'react-toastify';
-import { validateJson } from "../views/Workflows.jsx";
+import { validateJson } from "../views/Workflows2.jsx";
 // import HandleJsonCopy from "./ShuffleCodeEditor1";
 
 const STATUS_CONFIG = {

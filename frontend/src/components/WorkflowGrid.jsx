@@ -20,7 +20,7 @@ import {
 	Zoom,
 	Chip,
 } from '@mui/material';
-import { useDebouncedCallback } from "../utils/useDebouncedCallback";
+import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"

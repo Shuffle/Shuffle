@@ -49,7 +49,7 @@ const CloudSyncTab = (props) => {
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
 
-    const { themeMode, brandColor } = useContext(Context);
+    const { themeMode, brandColor, setUpdateOrg } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
 
     useEffect(() => { getSettings(); }, []);
@@ -327,7 +327,6 @@ const CloudSyncTab = (props) => {
         );
     };
     const handleGetOrg = (orgId) => {
-
         if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
             const urlSearchParams = new URLSearchParams(window.location.search);
             const params = Object.fromEntries(urlSearchParams.entries());
@@ -337,10 +336,15 @@ const CloudSyncTab = (props) => {
             }
         }
 
+		if (orgId === undefined || orgId === null || (orgId.length !== 36 && orgId.length !== 0)) {
+			return
+		}
+
         if (orgId.length === 0) {
             toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
             return;
         }
+
 
         // Just use this one?
 
@@ -359,7 +363,7 @@ const CloudSyncTab = (props) => {
             })
             .then((responseJson) => {
                 if (responseJson["success"] === false) {
-                    toast("Failed getting your org. If this persists, please contact support.");
+                    toast.warn("Failed getting your org. If this persists, please contact support (cloud sync)")
                 } else {
                     if (
                         responseJson.sync_features === undefined ||
@@ -457,6 +461,8 @@ const CloudSyncTab = (props) => {
                 setLoading(false);
                 if (response.status === 200) {
                     console.log("Cloud sync success?");
+                    handleGetOrg(userdata.active_org.id);
+                    setUpdateOrg(true);
                 } else {
                     console.log("Cloud sync fail?");
                 }

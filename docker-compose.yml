@@ -122,11 +122,10 @@ services:
   #    - MEMCACHED_MAX_CONNECTIONS=2500
   #  ports:
   #    - 11211:11211
-  #  deploy:
-  #    resources:
-  #      limits:
-  #        memory: 2048M
-  
+  #  networks:
+  #  -  shuffle
+  #  -  swarm_executions
+
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
   #  container_name: docker-socket-proxy 
