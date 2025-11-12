@@ -27,7 +27,7 @@ FROM alpine:latest as certs
 RUN apk add --update ca-certificates
 
 # Sets up the final image
-FROM alpine:3.22.1
+FROM alpine:3.22.2
 
 # FIXME: Install cgo because CGO_ENABLED=1 during build
 RUN apk add --no-cache libc6-compat

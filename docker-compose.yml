@@ -42,8 +42,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_APP_SDK_TIMEOUT=300
-      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=7 # The amount of concurrent executions Orborus can handle. 
-      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - ENVIRONMENT_NAME=Shuffle
       - ORG_ID=Shuffle
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
@@ -52,9 +50,11 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
+      - SHUFFLE_APP_REPLICAS=${SHUFFLE_APP_REPLICAS}
       - SHUFFLE_STATS_DISABLED=true
       - SHUFFLE_LOGS_DISABLED=true
       - SHUFFLE_SWARM_CONFIG=run
+      - SHUFFLE_APP_REPLICAS=3
       - CLEANUP=false
       - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:latest
     env_file: .env
@@ -122,11 +122,10 @@ services:
   #    - MEMCACHED_MAX_CONNECTIONS=2500
   #  ports:
   #    - 11211:11211
-  #  deploy:
-  #    resources:
-  #      limits:
-  #        memory: 2048M
-  
+  #  networks:
+  #  -  shuffle
+  #  -  swarm_executions
+
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
   #  container_name: docker-socket-proxy 

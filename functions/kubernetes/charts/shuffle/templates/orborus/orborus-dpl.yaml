@@ -86,8 +86,6 @@ spec:
               value: kubernetes
             - name: IS_KUBERNETES
               value: "true"
-            - name: SHUFFLE_SWARM_CONFIG
-              value: run
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
