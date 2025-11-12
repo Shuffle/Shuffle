@@ -19,6 +19,7 @@ Shuffle Automation
 
 Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
+
 </h4>
 
 ![Example Shuffle webhook integration](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
