@@ -5393,6 +5393,13 @@ func initHandlers() {
 		elasticConfig = ""
 	}
 
+	log.Printf("[DEBUG] Checking docker api version compatibility")
+	// This sets the env variable to valid version so it just works
+	_, _, err = shuffle.GetDockerClient(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed to find valid version of docker api %s", err)
+	}
+
 	for {
 		_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), gceProject, "onprem", true, elasticConfig, false, 0)
 		if err != nil {
@@ -5729,6 +5736,7 @@ func main() {
 	if err != nil {
 		hostname = "MISSING"
 	}
+
 
 	innerPort := os.Getenv("BACKEND_PORT")
 	if innerPort == "" {

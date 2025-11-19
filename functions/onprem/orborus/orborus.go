@@ -136,7 +136,7 @@ var window = shuffle.NewTimeWindow(1 * time.Minute)
 func init() {
 	var err error
 
-	dockercli, err = getDockerClient(context.Background())
+	dockercli, dockerApiVersion, err = shuffle.GetDockerClient(context.Background())
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 	}
@@ -152,35 +152,6 @@ func init() {
 		}
 	}
 
-}
-
-func getDockerClient(ctx context.Context) (*dockerclient.Client, error) {
-	cli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = cli.Info(ctx)
-	if err == nil {
-		return cli, nil
-	}
-
-	if strings.Contains(err.Error(), "Minimum supported API version is") {
-		re := regexp.MustCompile(`Minimum supported API version is ([0-9\.]+)`)
-		match := re.FindStringSubmatch(err.Error())
-		if len(match) == 2 {
-			required := match[1]
-			os.Setenv("DOCKER_API_VERSION", required)
-			cli, err = dockerclient.NewEnvClient()
-			dockerApiVersion = required
-			if err != nil {
-				return nil, err
-			}
-			_, err = cli.Info(ctx)
-		}
-	}
-
-	return cli, err
 }
 
 // form id of current running container

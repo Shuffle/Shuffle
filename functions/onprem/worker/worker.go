@@ -4461,6 +4461,10 @@ func main() {
 	// Testing swarm auto-replacements. This also tests ports
 	// in rapid succession
 
+	// init dockerclient fix env variable
+	ctx := context.Background()
+	_, dockerApiVersion, _ = shuffle.GetDockerClient(ctx)
+
 	checkStandaloneRun()
 	if os.Getenv("DEBUG") == "true" {
 		debug = true
