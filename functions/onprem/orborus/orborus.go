@@ -1426,6 +1426,9 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
+	// worker makes authenticated requests to the k8s api to create app deployments.
+	// Therefore, it needs to have access to the service account token.
+	automountServiceAccountToken := true
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1445,9 +1448,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					Containers: []corev1.Container{
 						containerAttachment,
 					},
-					DNSPolicy:          corev1.DNSClusterFirst,
-					ServiceAccountName: workerServiceAccountName,
-					SecurityContext:    podSecurityContext,
+					DNSPolicy:                    corev1.DNSClusterFirst,
+					ServiceAccountName:           workerServiceAccountName,
+					AutomountServiceAccountToken: &automountServiceAccountToken,
+					SecurityContext:              podSecurityContext,
 				},
 			},
 		},

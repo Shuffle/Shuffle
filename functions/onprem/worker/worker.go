@@ -625,6 +625,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
+	// apps do not need access the k8s api.
+	automountServiceAccountToken := false
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -656,9 +658,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 							Resources:       buildResourcesFromEnv(),
 						},
 					},
-					DNSPolicy:          corev1.DNSClusterFirst,
-					ServiceAccountName: appServiceAccountName,
-					SecurityContext:    podSecurityContext,
+					DNSPolicy:                    corev1.DNSClusterFirst,
+					ServiceAccountName:           appServiceAccountName,
+					AutomountServiceAccountToken: &automountServiceAccountToken,
+					SecurityContext:              podSecurityContext,
 				},
 			},
 		},
