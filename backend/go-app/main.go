@@ -5395,7 +5395,7 @@ func initHandlers() {
 
 	log.Printf("[DEBUG] Checking docker api version compatibility")
 	// This sets the env variable to valid version so it just works
-	_, _, err = shuffle.GetDockerClient(ctx)
+	_, _, err = shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("[ERROR] Failed to find valid version of docker api %s", err)
 	}

@@ -4462,8 +4462,7 @@ func main() {
 	// in rapid succession
 
 	// init dockerclient fix env variable
-	ctx := context.Background()
-	_, dockerApiVersion, _ = shuffle.GetDockerClient(ctx)
+	_, dockerApiVersion, _ = shuffle.GetDockerClient()
 
 	checkStandaloneRun()
 	if os.Getenv("DEBUG") == "true" {
