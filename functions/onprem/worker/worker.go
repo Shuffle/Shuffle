@@ -4462,7 +4462,10 @@ func main() {
 	// in rapid succession
 
 	// init dockerclient fix env variable
-	_, dockerApiVersion, _ = shuffle.GetDockerClient()
+	_, dockerApiVersion, err := shuffle.GetDockerClient()
+	if err != nil {
+		log.Printf("[ERROR] Failed to get docker client: %s", err)
+	}
 
 	checkStandaloneRun()
 	if os.Getenv("DEBUG") == "true" {
@@ -4481,7 +4484,7 @@ func main() {
 
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
 	// Recursive import kind of :)
-	_, err := shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch", false, 0)
+	_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch", false, 0)
 	if err != nil {
 		if !strings.Contains(fmt.Sprintf("%s", err), "no such host") {
 			log.Printf("[ERROR] Failed to run worker init: %s", err)
