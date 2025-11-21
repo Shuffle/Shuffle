@@ -136,7 +136,8 @@ var window = shuffle.NewTimeWindow(1 * time.Minute)
 func init() {
 	var err error
 
-	dockercli, err = dockerclient.NewEnvClient()
+	// dockercli, err = dockerclient.NewEnvClient()
+	dockercli, dockerApiVersion, err = shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 	}

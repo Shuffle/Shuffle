@@ -21,7 +21,6 @@ import (
 	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
 	newdockerclient "github.com/fsouza/go-dockerclient"
 	"github.com/go-git/go-billy/v5"
 
@@ -35,12 +34,13 @@ import (
 	"os"
 	"strings"
 
+	"time"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"time"
 	// "k8s.io/client-go/tools/clientcmd"
 	// "k8s.io/client-go/util/homedir"
 )
@@ -206,7 +206,8 @@ func fixTags(tags []string) []string {
 // Custom Docker image builder wrapper in memory
 func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
-	client, err := client.NewEnvClient()
+	// client, err := client.NewEnvClient()
+	client, _, err := shuffle.GetDockerClient()
 	defer client.Close()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
@@ -474,7 +475,8 @@ func buildImage(tags []string, dockerfileLocation string) error {
 	}
 
 	ctx := context.Background()
-	client, err := client.NewEnvClient()
+	// client, err := client.NewEnvClient()
+	client, _, err := shuffle.GetDockerClient()
 	defer client.Close()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
@@ -562,7 +564,8 @@ func imageCheckBuilder(images []string) error {
 	return nil
 
 	ctx := context.Background()
-	client, err := client.NewEnvClient()
+	// client, err := client.NewEnvClient()
+	client, _, err := shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 		return err
@@ -651,7 +654,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("[DEBUG] Image to load: %s", version.Name)
-	dockercli, err := client.NewEnvClient()
+	dockercli, _, err := shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("[WARNING] Unable to create docker client: %s", err)
 		resp.WriteHeader(422)
