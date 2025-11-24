@@ -403,6 +403,7 @@ func buildImage(tags []string, dockerfileLocation string) error {
 								Image: "gcr.io/kaniko-project/executor:latest",
 								Args: []string{
 									"--verbosity=debug",
+									"--log-format=text",
 									"--dockerfile=Dockerfile",
 									"--context=dir://" + contextDir,
 									"--skip-tls-verify",
@@ -412,6 +413,10 @@ func buildImage(tags []string, dockerfileLocation string) error {
 									{
 										Name:      "kaniko-workspace",
 										MountPath: "/app/generated",
+									},
+									{
+										Name: "docker-config",
+										MountPath: "/kaniko/.docker/",
 									},
 								},
 							},
@@ -424,6 +429,20 @@ func buildImage(tags []string, dockerfileLocation string) error {
 								VolumeSource: corev1.VolumeSource{
 									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 										ClaimName: "backend-apps-claim",
+									},
+								},
+							},
+							{
+								Name: "docker-config",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: os.Getenv("SHUFFLE_REGISTRY_SECRET"),
+										Items: []corev1.KeyToPath{
+											{
+											Key: ".dockerconfigjson",
+											Path: "config.json",
+											},
+										},
 									},
 								},
 							},
