@@ -2416,6 +2416,27 @@ func main() {
 	}
 
 	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
+		if os.Getenv("SHUFFLE_EC2_INSTANCE") == "true" {
+			log.Printf("[INFO] Detected AWS EC2 instance. Setting up Docker Swarm with AWS optimizations.")
+			containers, err := dockercli.ContainerList(ctx, container.ListOptions{})
+			if err == nil {
+				for _, container := range containers {
+					if strings.Contains(container.Image, "shuffle-orborus") {
+						if len(container.Names) != 0 {
+							if strings.Contains(container.Names[0], "shuffle-orborus") {
+								containerName = container.Names[0]
+								containerName = strings.TrimPrefix(containerName, "/")
+								os.Setenv("ORBORUS_CONTAINER_NAME", containerName)
+								log.Printf("[DEBUG] Found orborus container name: %s", containerName)
+							}
+						}
+					}
+				}
+			} else {
+				log.Printf("[ERROR] Failed to find orborus container: %s", err)
+			}
+		}
+
 		if isKubernetes != "true" {
 			checkSwarmService(ctx)
 		}
@@ -2750,6 +2771,8 @@ func main() {
 								fmt.Sprintf("/detections/Sigma"),
 								org,
 								true,
+								"LOW",
+								"TENZIR_START",
 							)
 
 							if err != nil {
