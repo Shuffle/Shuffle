@@ -3393,6 +3393,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 						fmt.Sprintf("/apps"),
 						orgId,
 						false,
+						"HIGH",
+						"APP_BUID",
 					)
 				}
 
