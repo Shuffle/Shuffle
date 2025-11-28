@@ -15,7 +15,6 @@ Here is the default architecture it follows, with the "Frontend" being the expos
 We don't support minikube yet. Please use GKE or another cloud based k8s engine to test out Shuffle.
 
 ## GKE testing
-
 For testing on GKE, you can use the following command:
 
 ```bash
@@ -39,6 +38,6 @@ helm install shuffle oci://ghcr.io/shuffle/charts/shuffle \
   --namespace shuffle \
   --create-namespace
 
-# 3. Verify
+# verify
 kubectl get pods -n shuffle
 ```
