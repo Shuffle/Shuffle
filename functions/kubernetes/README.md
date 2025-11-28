@@ -12,7 +12,7 @@ Here is the default architecture it follows, with the "Frontend" being the expos
 <img width="1006" height="1069" alt="image" src="https://github.com/user-attachments/assets/263369a1-6944-4ef5-8f19-14bc234130d8" />
 
 ## MiniKube
-We don't support minikube yet. Please use GKE or another cloud based k8s engine to test out Shuffle.
+We don't support minikube yet. Please use GKE, Amazon EKS, Azure AKS or another cloud based k8s engine to test out Shuffle.
 
 ## GKE testing
 For testing on GKE, you can use the following command:
@@ -30,6 +30,7 @@ gcloud container clusters create "$CLUSTER_NAME" \
   --num-nodes "1" \
   --node-locations "asia-south2-b,asia-south2-a,asia-south2-c"
 
+# given that your gcloud cli is connected with kubectl
 kubectl config set-context $CLUSTER_NAME
 
 # apply shuffle k8s helm chart
