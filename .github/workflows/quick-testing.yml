@@ -18,6 +18,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Shai-Hulud 2.0 Detector
+      uses: gensecaihq/Shai-Hulud-2.0-Detector@v1.0.0
+
     - name: Install Docker Compose
       run: |
         sudo apt-get update
