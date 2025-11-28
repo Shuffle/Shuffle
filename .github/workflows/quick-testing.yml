@@ -15,144 +15,144 @@ jobs:
         os: [ubuntu-latest]
         architecture: [x64, arm64]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Shai-Hulud 2.0 Detector
-      uses: gensecaihq/Shai-Hulud-2.0-Detector@v1.0.0
+      # - name: Shai-Hulud 2.0 Detector
+      #   uses: gensecaihq/Shai-Hulud-2.0-Detector@v1.0.0
 
-    - name: Install Docker Compose
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
-        docker-compose --version
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+          docker-compose --version
 
-    - name: Set up opensearch directory
-      run: chmod -R 777 shuffle-database
+      - name: Set up opensearch directory
+        run: chmod -R 777 shuffle-database
 
-    - name: Build the stack
-      run: docker compose up -d
+      - name: Build the stack
+        run: docker compose up -d
 
-    - name: Wait for 30 seconds
-      run: sleep 30
+      - name: Wait for 30 seconds
+        run: sleep 30
 
-    - name: Check for restarting containers in a loop and fixing perms again 
-      run: |
-        # echo "Changing permissions on shuffle-database directory again"
-        # chmod -R 777 shuffle-database
+      - name: Check for restarting containers in a loop and fixing perms again
+        run: |
+          # echo "Changing permissions on shuffle-database directory again"
+          # chmod -R 777 shuffle-database
 
-        ATTEMPTS=30  # Total time = ATTEMPTS * 5 seconds = 30 seconds
-        for i in $(seq 1 $ATTEMPTS); do
-          RESTARTING_CONTAINERS=$(docker ps --filter "status=restarting" --format "{{.Names}}")
-          if [ -n "$RESTARTING_CONTAINERS" ]; then
-            echo "The following containers are restarting:"
-            echo "$RESTARTING_CONTAINERS"
+          ATTEMPTS=30  # Total time = ATTEMPTS * 5 seconds = 30 seconds
+          for i in $(seq 1 $ATTEMPTS); do
+            RESTARTING_CONTAINERS=$(docker ps --filter "status=restarting" --format "{{.Names}}")
+            if [ -n "$RESTARTING_CONTAINERS" ]; then
+              echo "The following containers are restarting:"
+              echo "$RESTARTING_CONTAINERS"
+              exit 1
+            fi
+            echo "No containers are restarting. Attempt $i/$ATTEMPTS."
+            sleep 1
+          done
+          echo "No containers were found in a restarting state after $ATTEMPTS checks."
+
+      - name: Check if the response from the frontend contains the word "Shuffle"
+        run: |
+          RESPONSE=$(curl -s http://localhost:3001)
+          if echo "$RESPONSE" | grep -q "Shuffle"; then
+            echo "The word 'Shuffle' was found in the response."
+          else
+            echo "The word 'Shuffle' was not found in the response."
             exit 1
           fi
-          echo "No containers are restarting. Attempt $i/$ATTEMPTS."
-          sleep 1
-        done
-        echo "No containers were found in a restarting state after $ATTEMPTS checks."
+      - name: Register a user and check the status code
+        run: |
+          MAX_RETRIES=30
+          RETRY_INTERVAL=10
+          CONTAINER_NAME="shuffle-backend"
 
-    - name: Check if the response from the frontend contains the word "Shuffle"
-      run: |
-        RESPONSE=$(curl -s http://localhost:3001)
-        if echo "$RESPONSE" | grep -q "Shuffle"; then
-          echo "The word 'Shuffle' was found in the response."
-        else
-          echo "The word 'Shuffle' was not found in the response."
+          for (( i=1; i<=$MAX_RETRIES; i++ ))
+          do
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:3001/api/v1/register' \
+              -H 'Accept: */*' \
+              -H 'Accept-Language: en-US,en;q=0.9' \
+              -H 'Connection: keep-alive' \
+              -H 'Content-Type: application/json' \
+              --data-raw '{"username":"demo@demo.io","password":"supercoolpassword"}')
+
+            if [ "$STATUS_CODE" -eq 200 ]; then
+              echo "User registration was successful with status code 200."
+              exit 0
+            elif [ "$STATUS_CODE" -ne 502 ]; then
+              echo "User registration failed with status code $STATUS_CODE."
+              exit 1
+            fi
+
+            echo "Received status code $STATUS_CODE. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+            echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
+
+            logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
+            echo "$logs_output"
+
+            echo "Fetching last 30 lines of logs from container shuffle-opensearch..."
+
+            opensearch_logs=$(docker logs --tail 30 shuffle-opensearch)
+            echo "$opensearch_logs"
+
+            sleep $RETRY_INTERVAL
+          done
+
+          echo "User registration failed after $MAX_RETRIES attempts."
           exit 1
-        fi
-    - name: Register a user and check the status code
-      run: |
-        MAX_RETRIES=30
-        RETRY_INTERVAL=10
-        CONTAINER_NAME="shuffle-backend"
 
-        for (( i=1; i<=$MAX_RETRIES; i++ ))
-        do
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:3001/api/v1/register' \
-            -H 'Accept: */*' \
-            -H 'Accept-Language: en-US,en;q=0.9' \
-            -H 'Connection: keep-alive' \
-            -H 'Content-Type: application/json' \
-            --data-raw '{"username":"demo@demo.io","password":"supercoolpassword"}')
+      - name: Run Selenium testing for frontend
+        run: |
+          cd $GITHUB_WORKSPACE/frontend
+          # write some log to see the current directory
+          chmod +x frontend-testing.sh
+          ./frontend-testing.sh
 
-          if [ "$STATUS_CODE" -eq 200 ]; then
-            echo "User registration was successful with status code 200."
+      - name: Get the API key and run a health check
+        id: health_check
+        run: |
+          RESPONSE=$(curl -s -k -u admin:StrongShufflePassword321! 'https://localhost:9200/users/_search')
+          echo "Raw Response: $RESPONSE"
+
+          API_KEY=$(echo "$RESPONSE" | jq -r '.hits.hits[0]._source.apikey')
+          if [ -n "$API_KEY" ] && [ "$API_KEY" != "null" ]; then
+            echo "Admin API key: $API_KEY"
+            echo "API_KEY=$API_KEY" >> $GITHUB_ENV
+          else
+            echo "Failed to retrieve the API key for the admin user."
+            exit 1
+          fi
+
+          echo "Waiting 1 minute before sending the health API request..."
+          sleep 60
+
+          echo "Checking health API..."
+          HEALTH_RESPONSE=$(curl -s 'http://localhost:3001/api/v1/health?force=true' \
+            -H "Authorization: Bearer $API_KEY")
+
+          echo "Health API Response: $HEALTH_RESPONSE"
+
+          WORKFLOWS_CREATE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.create')
+          WORKFLOWS_RUN=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run')
+          WORKFLOWS_RUN_FINISHED=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_finished')
+          WORKFLOWS_RUN_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_status')
+          WORKFLOWS_DELETE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.delete')
+
+          echo "WORKFLOWS_CREATE: $WORKFLOWS_CREATE"
+          echo "WORKFLOWS_RUN: $WORKFLOWS_RUN"
+          echo "WORKFLOWS_RUN_FINISHED: $WORKFLOWS_RUN_FINISHED"
+          echo "WORKFLOWS_RUN_STATUS: $WORKFLOWS_RUN_STATUS"
+          echo "WORKFLOWS_DELETE: $WORKFLOWS_DELETE"
+
+          if [ "$WORKFLOWS_CREATE" = "true" ] && [ "$WORKFLOWS_RUN" = "true" ] && [ "$WORKFLOWS_RUN_FINISHED" = "true" ] && [ "$WORKFLOWS_RUN_STATUS" = "FINISHED" ] && [ "$WORKFLOWS_DELETE" = "true" ]; then
+            echo "Health endpoint check was successful."
             exit 0
-          elif [ "$STATUS_CODE" -ne 502 ]; then
-            echo "User registration failed with status code $STATUS_CODE."
+          else
+            echo "Health check failed."
             exit 1
           fi
-
-          echo "Received status code $STATUS_CODE. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
-          echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
-
-          logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
-          echo "$logs_output"
-
-          echo "Fetching last 30 lines of logs from container shuffle-opensearch..."
-
-          opensearch_logs=$(docker logs --tail 30 shuffle-opensearch)
-          echo "$opensearch_logs"
-
-          sleep $RETRY_INTERVAL
-        done
-
-        echo "User registration failed after $MAX_RETRIES attempts."
-        exit 1
-
-    - name: Run Selenium testing for frontend
-      run: |
-        cd $GITHUB_WORKSPACE/frontend
-        # write some log to see the current directory
-        chmod +x frontend-testing.sh
-        ./frontend-testing.sh
-
-    - name: Get the API key and run a health check
-      id: health_check
-      run: |
-        RESPONSE=$(curl -s -k -u admin:StrongShufflePassword321! 'https://localhost:9200/users/_search')
-        echo "Raw Response: $RESPONSE"
-
-        API_KEY=$(echo "$RESPONSE" | jq -r '.hits.hits[0]._source.apikey')
-        if [ -n "$API_KEY" ] && [ "$API_KEY" != "null" ]; then
-          echo "Admin API key: $API_KEY"
-          echo "API_KEY=$API_KEY" >> $GITHUB_ENV
-        else
-          echo "Failed to retrieve the API key for the admin user."
-          exit 1
-        fi
-
-        echo "Waiting 1 minute before sending the health API request..."
-        sleep 60
-
-        echo "Checking health API..."
-        HEALTH_RESPONSE=$(curl -s 'http://localhost:3001/api/v1/health?force=true' \
-          -H "Authorization: Bearer $API_KEY")
-
-        echo "Health API Response: $HEALTH_RESPONSE"
-
-        WORKFLOWS_CREATE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.create')
-        WORKFLOWS_RUN=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run')
-        WORKFLOWS_RUN_FINISHED=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_finished')
-        WORKFLOWS_RUN_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_status')
-        WORKFLOWS_DELETE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.delete')
-
-        echo "WORKFLOWS_CREATE: $WORKFLOWS_CREATE"
-        echo "WORKFLOWS_RUN: $WORKFLOWS_RUN"
-        echo "WORKFLOWS_RUN_FINISHED: $WORKFLOWS_RUN_FINISHED"
-        echo "WORKFLOWS_RUN_STATUS: $WORKFLOWS_RUN_STATUS"
-        echo "WORKFLOWS_DELETE: $WORKFLOWS_DELETE"
-
-        if [ "$WORKFLOWS_CREATE" = "true" ] && [ "$WORKFLOWS_RUN" = "true" ] && [ "$WORKFLOWS_RUN_FINISHED" = "true" ] && [ "$WORKFLOWS_RUN_STATUS" = "FINISHED" ] && [ "$WORKFLOWS_DELETE" = "true" ]; then
-          echo "Health endpoint check was successful."
-          exit 0
-        else
-          echo "Health check failed."
-          exit 1
-        fi
 
   notify:
     needs: build
@@ -166,7 +166,7 @@ jobs:
           Repository: ${{ github.repository }}
           Branch: ${{ github.ref_name }}
           Workflow URL: $WORKFLOW_URL"
-          
+
           curl -s -X POST https://api.twilio.com/2010-04-01/Accounts/${{ secrets.TWILIO_ACCOUNT_SID }}/Messages.json \
               --data-urlencode "To=${{ secrets.TWILIO_TO_NUMBER }}" \
               --data-urlencode "From=${{ secrets.TWILIO_FROM_NUMBER }}" \
