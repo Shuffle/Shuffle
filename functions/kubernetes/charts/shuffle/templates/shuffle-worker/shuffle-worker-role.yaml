@@ -9,6 +9,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 rules:
+  {{- if .Values.worker.manageAppDeployments }}
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list", "delete"]
@@ -18,4 +19,11 @@ rules:
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["list", "create"]
+  {{- else }}
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["list"]
 {{- end }}

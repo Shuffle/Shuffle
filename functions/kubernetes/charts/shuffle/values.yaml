@@ -84,7 +84,7 @@ shuffle:
 
   ## @param shuffle.appRegistry The registry from / to which shuffle apps are pulled / pushed
   ##
-  appRegistry: ""
+  appRegistry: "" # TODO: Default?
 
   ## @param shuffle.timezone The timezone used by Shuffle
   ##
@@ -1209,7 +1209,7 @@ orborus:
     - name: KUBERNETES_NAMESPACE
       value: "shuffle"
     - name: SHUFFLE_BASE_IMAGE_NAME
-      value: "frikky/shuffle"
+      value: "frikky/shuffle" # TODO: Allow to configure, share with worker
   ## @param orborus.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for orborus containers
   ##
   extraEnvVarsCM: ""
@@ -1346,10 +1346,20 @@ orborus:
     ##           istio: pilot
     ##
     extraEgress: []
+  
+    ## @param orborus.manageWorkerDeployments Whether workers are deployed and managed by orborus. When disabled, every worker is expected to be already deployed (see worker.enableHelmDeployment).
+    ## This effectively removes required RBAC permissions from the shuffle-orborus service account to create deployments and services.
+    ## Orborus might still attempt to create kubernetes objects, resulting in an error. There is currently no way to tell orborus, that it should not manage k8s resources.
+    ## You likely want to enable worker.enableHelmDeployment when enabling this.
+    manageWorkerDeployments: true
 
 ## @section worker Parameters
 ##
-worker:
+worker: # TODO: Add values that other helm deployed components have, mark helm-only params
+  ## @param worker.enableHelmDeployment Deploy worker via helm. By default, workers are deployed by Orborus.
+  ## You might want to disable orborus.manageWorkerDeployments when enabling this.
+  enableHelmDeployment: false
+
   ## worker image
   ## @param worker.image.registry worker image registry
   ## @param worker.image.repository worker image repository
@@ -1480,6 +1490,11 @@ worker:
     ##           istio: pilot
     ##
     extraEgress: []
+  
+  ## @param worker.manageAppDeployments Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see app.deployViaHelm).
+  ## This effectively removes required RBAC permissions from the shuffle-worker service account to create deployments and services.
+  ## The worker might still attempt to create kubernetes objects, resulting in an error. There is currently no way to tell the worker, that it should not manage k8s resources.
+  manageAppDeployments: true
 
 ## @section app Parameters
 ##
@@ -1597,6 +1612,32 @@ app:
   ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests. 
   ##
   exposedContainerPort: 80
+
+  ## @param app.deployViaHelm A list of apps that should be deployed using helm.
+  ## By default, workers create deployments and services for apps when they are first needed (or during startup for some selected apps).
+  ## Deploying apps via workers has some drawbacks, such as:
+  ## - A workflow fails when the app is not deployed when the workflow gets executed (see https://github.com/Shuffle/Shuffle/issues/1739)
+  ## - There is no way to set different service accounts, security contexts, resources, env variables, volume mounts, or replicas for different apps
+  ## - Worker needs elevated permissions in Kubernetes
+  ## Note that you can deploy some apps via helm, while keeping the flexibility of letting workers deploy apps if they are not already deployed.
+  ## If you deploy all needed apps via helm and dont want workers to create additional deployments, set worker.manageAppDeployments to false.
+  ##
+  ## Sample value:
+  ## - app: my-app # required
+  ##   version: 1.0.0 # required
+  ##   replicas: 1 # optional, default to 1
+  ##   image: "" # optional, default to appregistry/baseimage/appname:appversion
+  ##   imagePullSecrets: null # optional, defaults to global.imagePullSecrets
+  ##   resources: null # optional, defaults to app.resources (or app.resourcePreset)
+  ##   extraVolumes: [] # optional
+  ##   extraVolumeMounts: [] # optional
+  ##   extraEnv: [] # optional
+  ##   podSecurityContext: null # optional, defaults to app.podSecurityContext
+  ##   containerSecurityContext: null # optional, defaults to app.containerSecurityContext
+  ##   
+  ##   TODO: allow to override resources, serviceAccount, mounts, env, security Contexts. Fall back to app defaults as defined above.
+  ##
+  deployViaHelm: []
 
 ## @section Traffic Exposure Parameters
 ##

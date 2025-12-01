@@ -60,19 +60,31 @@ app.kubernetes.io/component: orborus
 {{- end -}}
 
 {{/*
-Return the common labels for worker components
+Return the common labels for worker components deployed via helm
 */}}
 {{- define "shuffle.worker.labels" -}}
-{{- include "common.labels.standard" . }}
-app.kubernetes.io/component: worker
+app.kubernetes.io/name: shuffle-worker
+helm.sh/chart: {{ include "common.names.chart" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: shuffle
+{{- with .Chart.AppVersion }}
+app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
+{{- end -}}
 {{- end -}}
 
 {{/*
-Return the common labels for app components
+Return the common labels for app components deployed via helm
 */}}
 {{- define "shuffle.app.labels" -}}
-{{- include "common.labels.standard" . }}
-app.kubernetes.io/component: app
+app.kubernetes.io/name: shuffle-app
+helm.sh/chart: {{ include "common.names.chart" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: shuffle
+{{- with .Chart.AppVersion }}
+app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -100,16 +112,18 @@ app.kubernetes.io/component: orborus
 {{- end -}}
 
 {{/*
-Return the match labels for worker components
-NOTE: This does not match the labels from shuffle.worker.labels, but the labels set by the orborus GoLang app.
+Return the match labels for worker components.
+These must match the labels of helm-deployed worker components (shuffle.worker.labels),
+as well as orborus-deployed worker components (deployk8sworker).
 */}}
 {{- define "shuffle.worker.matchLabels" -}}
 app.kubernetes.io/name: shuffle-worker
 {{- end -}}
 
 {{/*
-Return the match labels for app components
-NOTE: This does not match the labels from shuffle.worker.labels, but the labels set by the orborus GoLang app.
+Return the match labels for app components.
+These must match the labels of helm-deployed app components (shuffle.app.labels),
+as well as worker-deployed app deployments (deployK8sApp).
 */}}
 {{- define "shuffle.app.matchLabels" -}}
 app.kubernetes.io/name: shuffle-app
@@ -375,3 +389,7 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{- define "shuffle.backend.baseUrl -}}
+http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}
+{{- end - }}

@@ -11,10 +11,10 @@ data:
   ENVIRONMENT_NAME: "{{ .Values.shuffle.org }}"
   ORG_ID: "{{ .Values.shuffle.org }}"
   TZ: "{{ .Values.shuffle.timezone }}"
-  BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}"
-  KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
+  BASE_URL: {{ import "shuffle.backend.baseUrl" . | quote }}
   REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
 
+  {{- if .Values.orborus.manageWorkerDeployments }}
   # Shuffle worker configuration
   SHUFFLE_WORKER_IMAGE: {{ include "shuffle.worker.image" . | quote }}
   SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME: {{ include "shuffle.worker.serviceAccount.name" . | quote  }}
@@ -46,6 +46,7 @@ data:
   SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT: {{ (index $workerResources.limits "ephemeral-storage") | quote }}
   {{- end }}
 
+  {{- if .Values.worker.manageAppDeployments }}
   # Shuffle app configuration
   SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
   SHUFFLE_APP_SERVICE_ACCOUNT_NAME: {{ include "shuffle.app.serviceAccount.name" . | quote }}
@@ -75,4 +76,6 @@ data:
   {{- end }}
   {{- if and $appResources.limits (index $appResources.limits "ephemeral-storage") }}
   SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT: {{ (index $appResources.limits "ephemeral-storage") | quote }}
+  {{- end }}
+  {{- end }}
   {{- end }}
