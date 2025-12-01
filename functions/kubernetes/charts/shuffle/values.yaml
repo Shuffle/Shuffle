@@ -74,7 +74,7 @@ diagnosticMode:
 shuffle:
   ## @param shuffle.baseUrl The external base URL under which Shuffle is reachable.
   ##
-  #baseUrl: ""
+  baseUrl: ""
 
   ## ref: https://shuffler.io/docs/organizations
   ## This chart only supports single-tenant deployments at the moment
@@ -84,14 +84,18 @@ shuffle:
 
   ## @param shuffle.appRegistry The registry from / to which shuffle apps are pulled / pushed
   ##
-  appRegistry: "" # TODO: Default?
+  appRegistry: "docker.io"
+
+  ## @param shuffle.appBaseImageName The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion>
+  ##
+  appBaseImageName: "frikky"
 
   ## @param shuffle.timezone The timezone used by Shuffle
   ##
   timezone: Europe/Berlin
 
 ## @section backend Parameters
-##
+## 
 backend:
   ## backend image
   ## @param backend.image.registry backend image registry
@@ -525,8 +529,6 @@ backend:
     ## @param backend.openSearch.username The username that is used for authenticating with OpenSearch
     ##
     username: admin
-
-    password: StrongShufflePassword321!
     ## @param backend.openSearch.certificateFile The path to a custom OpenSearch certificate file
     ##
     certificateFile: ""
@@ -887,16 +889,6 @@ frontend:
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
     ##
     labels: {}
-    type: NodePort
-    ports:
-      - name: http
-        port: 80
-        targetPort: 3001
-        nodePort: 30080
-      - name: https
-        port: 443
-        targetPort: 3443
-        nodePort: 30443
 
   ## ServiceAccount configuration
   ##
@@ -1199,17 +1191,7 @@ orborus:
   ##   - name: FOO
   ##     value: "bar"
   ##
-  extraEnvVars: # TODO: Make this list empty and move to other values. Also check if these need to be set on worker or apps.
-    - name: SHUFFLE_APP_SDK_TIMEOUT
-      value: "300"
-    - name: SHUFFLE_ORBORUS_EXCUTION_CONCURRENCY
-      value: "7"
-    - name: SHUFFLE_STATS_DISABLED
-      value: "true"
-    - name: KUBERNETES_NAMESPACE
-      value: "shuffle"
-    - name: SHUFFLE_BASE_IMAGE_NAME
-      value: "frikky/shuffle" # TODO: Allow to configure, share with worker
+  extraEnvVars: []
   ## @param orborus.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for orborus containers
   ##
   extraEnvVarsCM: ""
@@ -1347,6 +1329,10 @@ orborus:
     ##
     extraEgress: []
   
+  ## @param orborus.executionConcurrency The maximum amount of concurrent workflow executions per worker
+  ##
+  executionConcurrency: 25
+  
   ## @param orborus.manageWorkerDeployments Whether workers are deployed and managed by orborus. When disabled, every worker is expected to be already deployed (see worker.enableHelmDeployment).
   ## This effectively removes required RBAC permissions from the shuffle-orborus service account to create deployments and services.
   ## Orborus might still attempt to create kubernetes objects, resulting in an error. There is currently no way to tell orborus, that it should not manage k8s resources.
@@ -1365,8 +1351,8 @@ worker:
   ## @param worker.image.repository worker image repository
   ## @param worker.image.tag worker image tag (immutable tags are recommended, defaults to appVersion)
   ## @param worker.image.digest worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)
-  ## @param worker.image.pullPolicy worker image pull policy
-  ## @param worker.image.pullSecrets worker image pull secrets
+  ## @param worker.image.pullPolicy worker image pull policy. Only effective with worker.enableHelmDeployment.
+  ## @param worker.image.pullSecrets worker image pull secrets. Only effective with worker.enableHelmDeployment.
   ##
   image:
     registry: ghcr.io
@@ -1386,10 +1372,10 @@ worker:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
-  ## @param worker.replicaCount Number of worker replicas to deploy
+  ## @param worker.replicaCount Number of worker replicas to deploy. Only effective with worker.enableHelmDeployment.
   ##
   replicaCount: 1
-  ## @param worker.extraContainerPorts Optionally specify extra list of additional ports for worker containers
+  ## @param worker.extraContainerPorts Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.
   ## e.g:
   ## extraContainerPorts:
   ##   - name: myservice
@@ -1398,7 +1384,7 @@ worker:
   extraContainerPorts: []
   ## Configure extra options for worker containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ## @param worker.livenessProbe.enabled Enable livenessProbe on worker containers
+  ## @param worker.livenessProbe.enabled Enable livenessProbe on worker containers. Only effective with worker.enableHelmDeployment.
   ## @param worker.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
   ## @param worker.livenessProbe.periodSeconds Period seconds for livenessProbe
   ## @param worker.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
@@ -1412,7 +1398,7 @@ worker:
     timeoutSeconds: 1
     failureThreshold: 4
     successThreshold: 1
-  ## @param worker.readinessProbe.enabled Enable readinessProbe on worker containers
+  ## @param worker.readinessProbe.enabled Enable readinessProbe on worker containers. Only effective with worker.enableHelmDeployment.
   ## @param worker.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
   ## @param worker.readinessProbe.periodSeconds Period seconds for readinessProbe
   ## @param worker.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
@@ -1426,7 +1412,7 @@ worker:
     timeoutSeconds: 1
     failureThreshold: 3
     successThreshold: 1
-  ## @param worker.startupProbe.enabled Enable startupProbe on worker containers
+  ## @param worker.startupProbe.enabled Enable startupProbe on worker containers. Only effective with worker.enableHelmDeployment.
   ## @param worker.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
   ## @param worker.startupProbe.periodSeconds Period seconds for startupProbe
   ## @param worker.startupProbe.timeoutSeconds Timeout seconds for startupProbe
@@ -1440,13 +1426,13 @@ worker:
     timeoutSeconds: 1
     failureThreshold: 60
     successThreshold: 1
-  ## @param worker.customLivenessProbe Custom livenessProbe that overrides the default one
+  ## @param worker.customLivenessProbe Custom livenessProbe that overrides the default one. Only effective with worker.enableHelmDeployment.
   ##
   customLivenessProbe: {}
-  ## @param worker.customReadinessProbe Custom readinessProbe that overrides the default one
+  ## @param worker.customReadinessProbe Custom readinessProbe that overrides the default one. Only effective with worker.enableHelmDeployment.
   ##
   customReadinessProbe: {}
-  ## @param worker.customStartupProbe Custom startupProbe that overrides the default one
+  ## @param worker.customStartupProbe Custom startupProbe that overrides the default one. Only effective with worker.enableHelmDeployment.
   ##
   customStartupProbe: {}
   ## worker resource requests and limits
@@ -1508,37 +1494,37 @@ worker:
       drop: ["ALL"]
     seccompProfile:
       type: "RuntimeDefault"
-  ## @param worker.command Override default worker container command (useful when using custom images)
+  ## @param worker.command Override default worker container command (useful when using custom images). Only effective with worker.enableHelmDeployment.
   ##
   command: []
-  ## @param worker.args Override default worker container args (useful when using custom images)
+  ## @param worker.args Override default worker container args (useful when using custom images). Only effective with worker.enableHelmDeployment.
   ##
   args: []
-  ## @param worker.automountServiceAccountToken Mount Service Account token in worker pods
+  ## @param worker.automountServiceAccountToken Mount Service Account token in worker pods. Only effective with worker.enableHelmDeployment.
   ## NOTE: worker requires the service account credentials to be mounted if manageAppDeployments is enabled.
   ##
   automountServiceAccountToken: true
-  ## @param worker.hostAliases worker pods host aliases
+  ## @param worker.hostAliases worker pods host aliases. Only effective with worker.enableHelmDeployment.
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param worker.deploymentAnnotations Annotations for worker deployment
+  ## @param worker.deploymentAnnotations Annotations for worker deployment. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   deploymentAnnotations: {}
-  ## @param worker.podLabels Extra labels for worker pods
+  ## @param worker.podLabels Extra labels for worker pods. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
   podLabels: {}
-  ## @param worker.podAnnotations Annotations for worker pods
+  ## @param worker.podAnnotations Annotations for worker pods. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   podAnnotations: {}
-  ## @param worker.podAffinityPreset Pod affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`
+  ## @param worker.podAffinityPreset Pod affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   ##
   podAffinityPreset: ""
-  ## @param worker.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`
+  ## @param worker.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   ##
   podAntiAffinityPreset: soft
@@ -1546,7 +1532,7 @@ worker:
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
   ##
   nodeAffinityPreset:
-    ## @param worker.nodeAffinityPreset.type Node affinity preset type. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`
+    ## @param worker.nodeAffinityPreset.type Node affinity preset type. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.
     ##
     type: ""
     ## @param worker.nodeAffinityPreset.key Node label key to match. Ignored if `worker.affinity` is set
@@ -1559,64 +1545,64 @@ worker:
     ##   - e2e-az2
     ##
     values: []
-  ## @param worker.affinity Affinity for worker pods assignment
+  ## @param worker.affinity Affinity for worker pods assignment. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ## NOTE: `worker.podAffinityPreset`, `worker.podAntiAffinityPreset`, and `worker.nodeAffinityPreset` will be ignored when it's set
   ##
   affinity: {}
-  ## @param worker.nodeSelector Node labels for worker pods assignment
+  ## @param worker.nodeSelector Node labels for worker pods assignment. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
-  ## @param worker.tolerations Tolerations for worker pods assignment
+  ## @param worker.tolerations Tolerations for worker pods assignment. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## @param worker.updateStrategy.type worker deployment strategy type
+  ## @param worker.updateStrategy.type worker deployment strategy type. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
   ##
   updateStrategy:
     ## Can be set to RollingUpdate or Recreate
     ##
     type: RollingUpdate
-  ## @param worker.priorityClassName worker pods' priorityClassName
+  ## @param worker.priorityClassName worker pods' priorityClassName. Only effective with worker.enableHelmDeployment.
   ##
   priorityClassName: ""
-  ## @param worker.topologySpreadConstraints Topology Spread Constraints for worker pod assignment spread across your cluster among failure-domains
+  ## @param worker.topologySpreadConstraints Topology Spread Constraints for worker pod assignment spread across your cluster among failure-domains. Only effective with worker.enableHelmDeployment.
   ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/#spread-constraints-for-pods
   ##
   topologySpreadConstraints: []
-  ## @param worker.schedulerName Name of the k8s scheduler (other than default) for worker pods
+  ## @param worker.schedulerName Name of the k8s scheduler (other than default) for worker pods. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
   ##
   schedulerName: ""
-  ## @param worker.terminationGracePeriodSeconds Seconds worker pods need to terminate gracefully
+  ## @param worker.terminationGracePeriodSeconds Seconds worker pods need to terminate gracefully. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
   ##
   terminationGracePeriodSeconds: ""
-  ## @param worker.lifecycleHooks for worker containers to automate configuration before or after startup
+  ## @param worker.lifecycleHooks for worker containers to automate configuration before or after startup. Only effective with worker.enableHelmDeployment.
   ##
   lifecycleHooks: {}
-  ## @param worker.extraEnvVars Array with extra environment variables to add to worker containers
+  ## @param worker.extraEnvVars Array with extra environment variables to add to worker containers. Only effective with worker.enableHelmDeployment.
   ## e.g:
   ## extraEnvVars:
   ##   - name: FOO
   ##     value: "bar"
   ##
   extraEnvVars: []
-  ## @param worker.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for worker containers
+  ## @param worker.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for worker containers. Only effective with worker.enableHelmDeployment.
   ##
   extraEnvVarsCM: ""
-  ## @param worker.extraEnvVarsSecret Name of existing Secret containing extra env vars for worker containers
+  ## @param worker.extraEnvVarsSecret Name of existing Secret containing extra env vars for worker containers. Only effective with worker.enableHelmDeployment.
   ##
   extraEnvVarsSecret: ""
-  ## @param worker.extraVolumes Optionally specify extra list of additional volumes for the worker pods
+  ## @param worker.extraVolumes Optionally specify extra list of additional volumes for the worker pods. Only effective with worker.enableHelmDeployment.
   ##
   extraVolumes: []
-  ## @param worker.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the worker containers
+  ## @param worker.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the worker containers. Only effective with worker.enableHelmDeployment.
   ##
   extraVolumeMounts: []
-  ## @param worker.sidecars Add additional sidecar containers to the worker pods
+  ## @param worker.sidecars Add additional sidecar containers to the worker pods. Only effective with worker.enableHelmDeployment.
   ## e.g:
   ## sidecars:
   ##   - name: your-image-name
@@ -1627,7 +1613,7 @@ worker:
   ##         containerPort: 1234
   ##
   sidecars: []
-  ## @param worker.initContainers Add additional init containers to the worker pods
+  ## @param worker.initContainers Add additional init containers to the worker pods. Only effective with worker.enableHelmDeployment.
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
   ## e.g:
   ## initContainers:
@@ -1639,7 +1625,7 @@ worker:
   initContainers: []
   ## Pod Disruption Budget configuration
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb
-  ## @param worker.pdb.create Enable/disable a Pod Disruption Budget creation
+  ## @param worker.pdb.create Enable/disable a Pod Disruption Budget creation. Only effective with worker.enableHelmDeployment.
   ## @param worker.pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
   ## @param worker.pdb.maxUnavailable Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `worker.pdb.minAvailable` and `worker.pdb.maxUnavailable` are empty.
   ##
@@ -1651,7 +1637,7 @@ worker:
   ## ref: https://kubernetes.io/docs/concepts/workloads/autoscaling/
   ##
   autoscaling:
-    ## @param worker.autoscaling.vpa.enabled Enable VPA for worker pods
+    ## @param worker.autoscaling.vpa.enabled Enable VPA for worker pods. Only effective with worker.enableHelmDeployment.
     ## @param worker.autoscaling.vpa.annotations Annotations for VPA resource
     ## @param worker.autoscaling.vpa.controlledResources VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory
     ## @param worker.autoscaling.vpa.maxAllowed VPA Max allowed resources for the pod
@@ -1669,7 +1655,7 @@ worker:
       ##
       updatePolicy:
         updateMode: Auto
-    ## @param worker.autoscaling.hpa.enabled Enable HPA for worker pods
+    ## @param worker.autoscaling.hpa.enabled Enable HPA for worker pods. Only effective with worker.enableHelmDeployment.
     ## @param worker.autoscaling.hpa.minReplicas Minimum number of replicas
     ## @param worker.autoscaling.hpa.maxReplicas Maximum number of replicas
     ## @param worker.autoscaling.hpa.targetCPU Target CPU utilization percentage
@@ -1685,7 +1671,7 @@ worker:
   ## Service configuration
   ##
   service:
-    ## @param worker.service.labels Extra labels for worker service
+    ## @param worker.service.labels Extra labels for worker service. Only effective with worker.enableHelmDeployment.
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
     ##
     labels: {}
@@ -1870,8 +1856,14 @@ app:
   ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests. 
   ##
   exposedContainerPort: 80
+  ## @param app.sdkTimeout The timeout in seconds for app actions.
+  ##
+  sdkTimeout: 300
+  ## @param app.disableLogs Do not capture app logs. By default, app logs are captured, so that they are visible in the frontend.
+  ##
+  disableLogs: false
 
-  ## @param app.deployViaHelm A list of apps that should be deployed using helm.
+  ## @param app.deployViaHelm [object] A list of apps that should be deployed using helm.
   ## By default, workers create deployments and services for apps when they are first needed (or during startup for some selected apps).
   ## Deploying apps via workers has some drawbacks, such as:
   ## - A workflow fails when the app is not deployed when the workflow gets executed (see https://github.com/Shuffle/Shuffle/issues/1739)
@@ -1879,7 +1871,11 @@ app:
   ## - Worker needs elevated permissions in Kubernetes
   ## Note that you can deploy some apps via helm, while keeping the flexibility of letting workers deploy apps if they are not already deployed.
   ## If you deploy all needed apps via helm and dont want workers to create additional deployments, set worker.manageAppDeployments to false.
-  ##
+  ## The key of the app does not matter.
+  ## @extra app.deployViaHelm.MY_APP.app [string] The name of the app (required, e.g. shuffle-tools)
+  ## @extra app.deployViaHelm.MY_APP.version [string] The version of the app (required, e.g. 1.2.0)
+
+  # TODO: Convert sample value to @extra.
   ## Sample value:
   ## - app: my-app # required
   ##   version: 1.0.0 # required
@@ -1892,10 +1888,9 @@ app:
   ##   extraEnv: [] # optional
   ##   podSecurityContext: null # optional, defaults to app.podSecurityContext
   ##   containerSecurityContext: null # optional, defaults to app.containerSecurityContext
-  ##   
   ##   TODO: allow to override resources, serviceAccount, mounts, env, security Contexts. Fall back to app defaults as defined above.
   ##
-  deployViaHelm: []
+  deployViaHelm: {}
 
 ## @section Traffic Exposure Parameters
 ##
@@ -2192,6 +2187,8 @@ volumePermissions:
 ## OpenSearch chart configuration
 ## ref: https://github.com/bitnami/charts/blob/main/bitnami/opensearch/values.yaml
 ## @param opensearch.enabled Switch to enable or disable the opensearch helm chart
+## @skip opensearch.sysctlImage
+## @skip opensearch.image
 ## @skip opensearch.master
 ## @skip opensearch.data
 ## @skip opensearch.coordinating
@@ -2200,15 +2197,12 @@ volumePermissions:
 ##
 opensearch:
   enabled: true
-
   sysctlImage:
     enabled: false
-
   image:
     registry: docker.io
     repository: bitnamilegacy/opensearch
     tag: "3.2.0"
-
   master:
     replicaCount: 1
   data:

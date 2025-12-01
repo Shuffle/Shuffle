@@ -130,7 +130,12 @@
                 "appRegistry": {
                     "type": "string",
                     "description": "The registry from / to which shuffle apps are pulled / pushed",
-                    "default": ""
+                    "default": "docker.io"
+                },
+                "appBaseImageName": {
+                    "type": "string",
+                    "description": "The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion>",
+                    "default": "frikky"
                 },
                 "timezone": {
                     "type": "string",
@@ -1466,7 +1471,7 @@
                         "tag": {
                             "type": "string",
                             "description": "orborus image tag (immutable tags are recommended, defaults to appVersion)",
-                            "default": ""
+                            "default": "nightly"
                         },
                         "digest": {
                             "type": "string",
@@ -2053,12 +2058,27 @@
                             "items": {}
                         }
                     }
+                },
+                "executionConcurrency": {
+                    "type": "number",
+                    "description": "The maximum amount of concurrent workflow executions per worker",
+                    "default": 25
+                },
+                "manageWorkerDeployments": {
+                    "type": "boolean",
+                    "description": "Whether workers are deployed and managed by orborus. When disabled, every worker is expected to be already deployed (see worker.enableHelmDeployment).",
+                    "default": true
                 }
             }
         },
         "worker": {
             "type": "object",
             "properties": {
+                "enableHelmDeployment": {
+                    "type": "boolean",
+                    "description": "Deploy worker via helm. By default, workers are deployed by Orborus.",
+                    "default": false
+                },
                 "image": {
                     "type": "object",
                     "properties": {
@@ -2081,8 +2101,150 @@
                             "type": "string",
                             "description": "worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)",
                             "default": ""
+                        },
+                        "pullPolicy": {
+                            "type": "string",
+                            "description": "worker image pull policy. Only effective with worker.enableHelmDeployment.",
+                            "default": "IfNotPresent"
+                        },
+                        "pullSecrets": {
+                            "type": "array",
+                            "description": "worker image pull secrets. Only effective with worker.enableHelmDeployment.",
+                            "default": [],
+                            "items": {}
                         }
                     }
+                },
+                "replicaCount": {
+                    "type": "number",
+                    "description": "Number of worker replicas to deploy. Only effective with worker.enableHelmDeployment.",
+                    "default": 1
+                },
+                "extraContainerPorts": {
+                    "type": "array",
+                    "description": "Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "livenessProbe": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable livenessProbe on worker containers. Only effective with worker.enableHelmDeployment.",
+                            "default": false
+                        },
+                        "initialDelaySeconds": {
+                            "type": "number",
+                            "description": "Initial delay seconds for livenessProbe",
+                            "default": 0
+                        },
+                        "periodSeconds": {
+                            "type": "number",
+                            "description": "Period seconds for livenessProbe",
+                            "default": 15
+                        },
+                        "timeoutSeconds": {
+                            "type": "number",
+                            "description": "Timeout seconds for livenessProbe",
+                            "default": 1
+                        },
+                        "failureThreshold": {
+                            "type": "number",
+                            "description": "Failure threshold for livenessProbe",
+                            "default": 4
+                        },
+                        "successThreshold": {
+                            "type": "number",
+                            "description": "Success threshold for livenessProbe",
+                            "default": 1
+                        }
+                    }
+                },
+                "readinessProbe": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable readinessProbe on worker containers. Only effective with worker.enableHelmDeployment.",
+                            "default": false
+                        },
+                        "initialDelaySeconds": {
+                            "type": "number",
+                            "description": "Initial delay seconds for readinessProbe",
+                            "default": 0
+                        },
+                        "periodSeconds": {
+                            "type": "number",
+                            "description": "Period seconds for readinessProbe",
+                            "default": 5
+                        },
+                        "timeoutSeconds": {
+                            "type": "number",
+                            "description": "Timeout seconds for readinessProbe",
+                            "default": 1
+                        },
+                        "failureThreshold": {
+                            "type": "number",
+                            "description": "Failure threshold for readinessProbe",
+                            "default": 3
+                        },
+                        "successThreshold": {
+                            "type": "number",
+                            "description": "Success threshold for readinessProbe",
+                            "default": 1
+                        }
+                    }
+                },
+                "startupProbe": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable startupProbe on worker containers. Only effective with worker.enableHelmDeployment.",
+                            "default": false
+                        },
+                        "initialDelaySeconds": {
+                            "type": "number",
+                            "description": "Initial delay seconds for startupProbe",
+                            "default": 0
+                        },
+                        "periodSeconds": {
+                            "type": "number",
+                            "description": "Period seconds for startupProbe",
+                            "default": 1
+                        },
+                        "timeoutSeconds": {
+                            "type": "number",
+                            "description": "Timeout seconds for startupProbe",
+                            "default": 1
+                        },
+                        "failureThreshold": {
+                            "type": "number",
+                            "description": "Failure threshold for startupProbe",
+                            "default": 60
+                        },
+                        "successThreshold": {
+                            "type": "number",
+                            "description": "Success threshold for startupProbe",
+                            "default": 1
+                        }
+                    }
+                },
+                "customLivenessProbe": {
+                    "type": "object",
+                    "description": "Custom livenessProbe that overrides the default one. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "customReadinessProbe": {
+                    "type": "object",
+                    "description": "Custom readinessProbe that overrides the default one. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "customStartupProbe": {
+                    "type": "object",
+                    "description": "Custom startupProbe that overrides the default one. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
                 },
                 "resourcesPreset": {
                     "type": "string",
@@ -2191,6 +2353,273 @@
                         }
                     }
                 },
+                "command": {
+                    "type": "array",
+                    "description": "Override default worker container command (useful when using custom images). Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "args": {
+                    "type": "array",
+                    "description": "Override default worker container args (useful when using custom images). Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "automountServiceAccountToken": {
+                    "type": "boolean",
+                    "description": "Mount Service Account token in worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": true
+                },
+                "hostAliases": {
+                    "type": "array",
+                    "description": "worker pods host aliases. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "deploymentAnnotations": {
+                    "type": "object",
+                    "description": "Annotations for worker deployment. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "podLabels": {
+                    "type": "object",
+                    "description": "Extra labels for worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "podAnnotations": {
+                    "type": "object",
+                    "description": "Annotations for worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "podAffinityPreset": {
+                    "type": "string",
+                    "description": "Pod affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.",
+                    "default": ""
+                },
+                "podAntiAffinityPreset": {
+                    "type": "string",
+                    "description": "Pod anti-affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.",
+                    "default": "soft"
+                },
+                "nodeAffinityPreset": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "Node affinity preset type. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.",
+                            "default": ""
+                        },
+                        "key": {
+                            "type": "string",
+                            "description": "Node label key to match. Ignored if `worker.affinity` is set",
+                            "default": ""
+                        },
+                        "values": {
+                            "type": "array",
+                            "description": "Node label values to match. Ignored if `worker.affinity` is set",
+                            "default": [],
+                            "items": {}
+                        }
+                    }
+                },
+                "affinity": {
+                    "type": "object",
+                    "description": "Affinity for worker pods assignment. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "nodeSelector": {
+                    "type": "object",
+                    "description": "Node labels for worker pods assignment. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "tolerations": {
+                    "type": "array",
+                    "description": "Tolerations for worker pods assignment. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "updateStrategy": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "worker deployment strategy type. Only effective with worker.enableHelmDeployment.",
+                            "default": "RollingUpdate"
+                        }
+                    }
+                },
+                "priorityClassName": {
+                    "type": "string",
+                    "description": "worker pods' priorityClassName. Only effective with worker.enableHelmDeployment.",
+                    "default": ""
+                },
+                "topologySpreadConstraints": {
+                    "type": "array",
+                    "description": "Topology Spread Constraints for worker pod assignment spread across your cluster among failure-domains. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "schedulerName": {
+                    "type": "string",
+                    "description": "Name of the k8s scheduler (other than default) for worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": ""
+                },
+                "terminationGracePeriodSeconds": {
+                    "type": "string",
+                    "description": "Seconds worker pods need to terminate gracefully. Only effective with worker.enableHelmDeployment.",
+                    "default": ""
+                },
+                "lifecycleHooks": {
+                    "type": "object",
+                    "description": "for worker containers to automate configuration before or after startup. Only effective with worker.enableHelmDeployment.",
+                    "default": {}
+                },
+                "extraEnvVars": {
+                    "type": "array",
+                    "description": "Array with extra environment variables to add to worker containers. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "extraEnvVarsCM": {
+                    "type": "string",
+                    "description": "Name of existing ConfigMap containing extra env vars for worker containers. Only effective with worker.enableHelmDeployment.",
+                    "default": ""
+                },
+                "extraEnvVarsSecret": {
+                    "type": "string",
+                    "description": "Name of existing Secret containing extra env vars for worker containers. Only effective with worker.enableHelmDeployment.",
+                    "default": ""
+                },
+                "extraVolumes": {
+                    "type": "array",
+                    "description": "Optionally specify extra list of additional volumes for the worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "extraVolumeMounts": {
+                    "type": "array",
+                    "description": "Optionally specify extra list of additional volumeMounts for the worker containers. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "sidecars": {
+                    "type": "array",
+                    "description": "Add additional sidecar containers to the worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "initContainers": {
+                    "type": "array",
+                    "description": "Add additional init containers to the worker pods. Only effective with worker.enableHelmDeployment.",
+                    "default": [],
+                    "items": {}
+                },
+                "pdb": {
+                    "type": "object",
+                    "properties": {
+                        "create": {
+                            "type": "boolean",
+                            "description": "Enable/disable a Pod Disruption Budget creation. Only effective with worker.enableHelmDeployment.",
+                            "default": true
+                        },
+                        "minAvailable": {
+                            "type": "string",
+                            "description": "Minimum number/percentage of pods that should remain scheduled",
+                            "default": ""
+                        },
+                        "maxUnavailable": {
+                            "type": "string",
+                            "description": "Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `worker.pdb.minAvailable` and `worker.pdb.maxUnavailable` are empty.",
+                            "default": ""
+                        }
+                    }
+                },
+                "autoscaling": {
+                    "type": "object",
+                    "properties": {
+                        "vpa": {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "description": "Enable VPA for worker pods. Only effective with worker.enableHelmDeployment.",
+                                    "default": false
+                                },
+                                "annotations": {
+                                    "type": "object",
+                                    "description": "Annotations for VPA resource",
+                                    "default": {}
+                                },
+                                "controlledResources": {
+                                    "type": "array",
+                                    "description": "VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory",
+                                    "default": [],
+                                    "items": {}
+                                },
+                                "maxAllowed": {
+                                    "type": "object",
+                                    "description": "VPA Max allowed resources for the pod",
+                                    "default": {}
+                                },
+                                "minAllowed": {
+                                    "type": "object",
+                                    "description": "VPA Min allowed resources for the pod",
+                                    "default": {}
+                                },
+                                "updatePolicy": {
+                                    "type": "object",
+                                    "properties": {
+                                        "updateMode": {
+                                            "type": "string",
+                                            "description": "Autoscaling update policy",
+                                            "default": "Auto"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "hpa": {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "description": "Enable HPA for worker pods. Only effective with worker.enableHelmDeployment.",
+                                    "default": false
+                                },
+                                "minReplicas": {
+                                    "type": "string",
+                                    "description": "Minimum number of replicas",
+                                    "default": ""
+                                },
+                                "maxReplicas": {
+                                    "type": "string",
+                                    "description": "Maximum number of replicas",
+                                    "default": ""
+                                },
+                                "targetCPU": {
+                                    "type": "string",
+                                    "description": "Target CPU utilization percentage",
+                                    "default": ""
+                                },
+                                "targetMemory": {
+                                    "type": "string",
+                                    "description": "Target Memory utilization percentage",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                },
+                "service": {
+                    "type": "object",
+                    "properties": {
+                        "labels": {
+                            "type": "object",
+                            "description": "Extra labels for worker service. Only effective with worker.enableHelmDeployment.",
+                            "default": {}
+                        }
+                    }
+                },
                 "serviceAccount": {
                     "type": "object",
                     "properties": {
@@ -2263,6 +2692,11 @@
                             "items": {}
                         }
                     }
+                },
+                "manageAppDeployments": {
+                    "type": "boolean",
+                    "description": "Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see app.deployViaHelm).",
+                    "default": true
                 }
             }
         },
@@ -2453,6 +2887,16 @@
                     "type": "number",
                     "description": "The port that shuffle app containers will listen on for new requests. ",
                     "default": 80
+                },
+                "sdkTimeout": {
+                    "type": "number",
+                    "description": "The timeout in seconds for app actions.",
+                    "default": 300
+                },
+                "disableLogs": {
+                    "type": "boolean",
+                    "description": "Do not capture app logs. By default, app logs are captured, so that they are visible in the frontend.",
+                    "default": false
                 }
             }
         },
@@ -2793,7 +3237,7 @@
                         "repository": {
                             "type": "string",
                             "description": "OS Shell + Utility image repository",
-                            "default": "bitnami/os-shell"
+                            "default": "bitnamilegacy/os-shell"
                         },
                         "tag": {
                             "type": "string",
