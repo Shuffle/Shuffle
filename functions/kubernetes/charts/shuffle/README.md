@@ -105,6 +105,46 @@ SHUFFLE_DEFAULT_APIKEY: "72E41083-A6F6-4A1B-8538-B06B577F47F0" # Shuffle uses uu
 SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 ```
 
+## Shuffle Worker
+
+By default, Orborus creates a Kubernetes Deployment and Service for Shuffle Worker.
+The deployment can be customized to some degree using some of the `worker.*` helm variables. They are converted to Orborus env variables.
+
+If you want full control, you can also deploy Shuffle Worker using helm by enabling `worker.enableHelmDeployment`.
+This approach respects all of the `worker.*` helm variables.
+
+You can then set `orborus.manageWorkerDeployments=false` to reduce the permissions assigned to the Shuffle Orborus Kubernetes service account.
+
+## Shuffle Apps
+
+By default, Shuffle Worker is responsible for creating Kubernetes Deployments and Services for each app.
+Each app and version has their own Deployment and Service. Shuffle automatically deploys a set of apps.
+Other apps are deployed on demand, when they are first used.
+
+You can use some of the `app.*` helm variables to control some aspects of the deployment, e.g. resources and security context.
+Helm variables are converted to env variables set on Orborus. Orborus in turn passes the env variables to Worker when creating the Deployment.
+When `worker.enableHelmDeployment` is set, env variables for app configuration are set on the worker directly.
+Configuration using env variables applies to ALL deployed apps. There is no way to assign different options (e.g. resources) to different apps, or scale apps individually.
+
+If you want full control, you can deploy apps using helm. This has the following advantages:
+- full control over the deployment using helm values
+- granular control per app and version (e.g. have more replicas and resources for frequently used apps)
+- avoid problems with on-demand started apps (see https://github.com/Shuffle/Shuffle/issues/1739)
+
+To deploy apps using helm, use the `app.deployViaHelm` value:
+```yaml
+app:
+  deployViaHelm:
+    - app: shuffle-tools
+      version: 1.2.0
+      TODO
+```
+
+It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
+
+If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=true`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
+You are required to deploy all apps that are in use by your Shuffle instance manually using Helm.
+
 ## OpenSearch
 
 Shuffle uses OpenSearch as its database. This helm chart installs a single-node OpenSearch cluster using [the Bitnami Helm Chart](https://github.com/bitnami/charts/blob/main/bitnami/opensearch/values.yaml).
