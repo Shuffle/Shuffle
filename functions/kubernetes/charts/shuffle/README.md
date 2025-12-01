@@ -435,7 +435,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `orborus.image.registry`                                    | orborus image registry                                                                                                                                                                                                             | `ghcr.io`                 |
 | `orborus.image.repository`                                  | orborus image repository                                                                                                                                                                                                           | `shuffle/shuffle-orborus` |
-| `orborus.image.tag`                                         | orborus image tag (immutable tags are recommended, defaults to appVersion)                                                                                                                                                         | `nightly`                 |
+| `orborus.image.tag`                                         | orborus image tag (immutable tags are recommended, defaults to appVersion)                                                                                                                                                         | `""`                      |
 | `orborus.image.digest`                                      | orborus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)                                                                                 | `""`                      |
 | `orborus.image.pullPolicy`                                  | orborus image pull policy                                                                                                                                                                                                          | `IfNotPresent`            |
 | `orborus.image.pullSecrets`                                 | orborus image pull secrets                                                                                                                                                                                                         | `[]`                      |
@@ -776,6 +776,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
+
 
 
 

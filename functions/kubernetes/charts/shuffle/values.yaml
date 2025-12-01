@@ -960,7 +960,7 @@ orborus:
   image:
     registry: ghcr.io
     repository: shuffle/shuffle-orborus
-    tag: "nightly"
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'

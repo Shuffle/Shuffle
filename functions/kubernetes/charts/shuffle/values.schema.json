@@ -1471,7 +1471,7 @@
                         "tag": {
                             "type": "string",
                             "description": "orborus image tag (immutable tags are recommended, defaults to appVersion)",
-                            "default": "nightly"
+                            "default": ""
                         },
                         "digest": {
                             "type": "string",
