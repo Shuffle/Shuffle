@@ -48,7 +48,7 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
-            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+            matchLabels: {{ include "shuffle.workerInstance.matchLabels" . | nindent 14 }}
     {{- if .Values.orborus.networkPolicy.extraEgress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
     {{- end }}

@@ -11,7 +11,7 @@ metadata:
 spec:
   {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.app.podLabels .Values.commonLabels ) "context" . ) }}
   podSelector:
-    matchLabels: {{- include "shuffle.app.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+    matchLabels: {{- include "shuffle.appInstance.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
   policyTypes:
     - Ingress
     - Egress
@@ -48,7 +48,7 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
-            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+            matchLabels: {{ include "shuffle.workerInstance.matchLabels" . | nindent 14 }}
     {{- if .Values.app.networkPolicy.extraEgress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.app.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
     {{- end }}
@@ -64,7 +64,7 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
-            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
+            matchLabels: {{ include "shuffle.workerInstance.matchLabels" . | nindent 14 }}
       {{- end }}
     {{- if .Values.app.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.app.networkPolicy.extraIngress "context" $ ) | nindent 4 }}

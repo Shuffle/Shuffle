@@ -27,7 +27,7 @@ Return the common name for worker components
 {{- end -}}
 
 {{/*
-Return the common name for app components
+Return the common name for app components.
 */}}
 {{- define "shuffle.app.name" -}}
   {{- printf "%s-app" (include "common.names.fullname" .) | trunc 63 -}}
@@ -60,31 +60,78 @@ app.kubernetes.io/component: orborus
 {{- end -}}
 
 {{/*
-Return the common labels for worker components deployed via helm
+Return the common labels for worker components deployed via helm.
+NOTE: Worker deployments and services use shuffle.workerInstance.labels instead.
 */}}
 {{- define "shuffle.worker.labels" -}}
+{{- include "common.labels.standard" . }}
+app.kubernetes.io/component: worker
+{{- end -}}
+
+
+{{/*
+Return the labels for a specific worker instance deployed via helm.
+Usage: 
+{{ include "shuffle.workerInstance.labels" (dict "customLabels" .Values.commonLabels "context" $) -}}
+*/}}
+{{- define "shuffle.workerInstance.labels" -}}
 app.kubernetes.io/name: shuffle-worker
-helm.sh/chart: {{ include "common.names.chart" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ include "common.names.chart" .context }}
+app.kubernetes.io/instance: {{ .context.Release.Name }}
+app.kubernetes.io/managed-by: {{ .context.Release.Service }}
 app.kubernetes.io/part-of: shuffle
-{{- with .Chart.AppVersion }}
+{{- with .context.Chart.AppVersion }}
 app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
 {{- end -}}
+{{- range $key, $value := .customLabels }}
+{{ $key }}: {{ $value }}
+{{- end }}
 {{- end -}}
 
 {{/*
-Return the common labels for app components deployed via helm
+Return the common labels for app components deployed via helm.
+NOTE: App deployments and services use shuffle.appInstance.labels instead.
 */}}
 {{- define "shuffle.app.labels" -}}
-app.kubernetes.io/name: shuffle-app
-helm.sh/chart: {{ include "common.names.chart" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: shuffle
-{{- with .Chart.AppVersion }}
-app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
+{{- include "common.labels.standard" . }}
+app.kubernetes.io/component: app
 {{- end -}}
+
+{{/*
+Return the sanitized name of a shuffle app.
+Usage:
+{{ include "shuffle.appInstance.name" $app }}
+*/}}
+{{- define "shuffle.appInstance.name -}}
+{{ .name | replace "_" | "-" | lower }}
+{{- end -}}
+
+{{/*
+Return the sanitized name of a shuffle app, including the version of the app.
+Usage:
+{{ include "shuffle.appInstance.fullname" $app }}
+*/}}
+{{- define "shuffle.appInstance.fullname -}}
+{{ printf "%s-%s" .name .version | replace "_" | "-" | lower }}
+{{- end -}}
+
+{{/*
+Return the labels for a shuffle app deployed by helm.
+Usage:
+{{ include "shuffle.appInstance.labels" (dict "app" $app "customLabels" .Values.commonLabels "context" $) }}
+*/}}
+{{- define "shuffle.appInstance.labels" -}}
+app.kubernetes.io/name: shuffle-app
+app.kubernetes.io/instance: {{ include "shuffle.appInstance.fullname" .app }}
+helm.sh/chart: {{ include "common.names.chart" .context }}
+app.kubernetes.io/instance: {{ .context.Release.Name }}
+app.kubernetes.io/managed-by: {{ .context.Release.Service }}
+app.kubernetes.io/part-of: shuffle
+app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
+app.shuffler.io/version: {{ .app.version | quote }}
+{{- range $key, $value := .customLabels }}
+{{ $key }}: {{ $value }}
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -112,20 +159,20 @@ app.kubernetes.io/component: orborus
 {{- end -}}
 
 {{/*
-Return the match labels for worker components.
-These must match the labels of helm-deployed worker components (shuffle.worker.labels),
-as well as orborus-deployed worker components (deployk8sworker).
+Return the match labels for workers.
+These must match the labels of helm-deployed workers (shuffle.workerInstance.labels),
+as well as orborus-deployed workers (deployk8sworker).
 */}}
-{{- define "shuffle.worker.matchLabels" -}}
+{{- define "shuffle.workerInstance.matchLabels" -}}
 app.kubernetes.io/name: shuffle-worker
 {{- end -}}
 
 {{/*
-Return the match labels for app components.
-These must match the labels of helm-deployed app components (shuffle.app.labels),
-as well as worker-deployed app deployments (deployK8sApp).
+Return the match labels for apps.
+These must match the labels of helm-deployed apps (shuffle.appInstance.labels),
+as well as worker-deployed apps (deployK8sApp).
 */}}
-{{- define "shuffle.app.matchLabels" -}}
+{{- define "shuffle.appInstance.matchLabels" -}}
 app.kubernetes.io/name: shuffle-app
 {{- end -}}
 

@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: {{ template "shuffle.worker.name" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "shuffle.worker.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  labels: {{- include "shuffle.workerInstance.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if or .Values.worker.deploymentAnnotations .Values.commonAnnotations }}
   {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.worker.deploymentAnnotations .Values.commonAnnotations) "context" .) }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
@@ -18,13 +18,13 @@ spec:
   {{- end }}
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.worker.podLabels .Values.commonLabels) "context" .) }}
   selector:
-    matchLabels: {{- include "shuffle.worker.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+    matchLabels: {{- include "shuffle.workerInstance.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
   template:
     metadata:
       {{- if .Values.worker.podAnnotations }}
       annotations: {{- include "common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
-      labels: {{- include "shuffle.worker.labels" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+      labels: {{- include "shuffle.workerInstance.labels" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
     spec:
       {{- include "shuffle.worker.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ template "shuffle.worker.serviceAccount.name" . }}
@@ -101,6 +101,7 @@ spec:
               value: {{ .Values.app.exposedContainerPort | quote }}
             - name: WORKER_HOSTNAME
               value: {{ include "shuffle.worker.name" }}.{{ .Release.Namespace }}.svc.cluster.local
+            # TODO: If manageAppDeployments is set, we need to add some variables!
             {{- if .Values.worker.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
