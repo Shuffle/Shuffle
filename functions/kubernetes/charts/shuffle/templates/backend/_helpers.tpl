@@ -1,0 +1,32 @@
+{{/*
+Return the environment variables of shuffle-backend in the format
+KEY: VALUE
+*/}}
+{{- define "shuffle.backend.env" -}}
+RUNNING_MODE: kubernetes
+IS_KUBERNETES: "true"
+SHUFFLE_APP_HOTLOAD_FOLDER: /shuffle-apps
+SHUFFLE_FILE_LOCATION: /shuffle-files
+BACKEND_PORT: "{{ .Values.backend.containerPorts.http }}"
+{{- if .Values.shuffle.baseUrl }}
+BASE_URL: "{{ .Values.shuffle.baseUrl }}"
+SSO_REDIRECT_URL: "{{ .Values.shuffle.baseUrl }}"
+{{- else }}
+BASE_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}"
+{{- end }}
+ORG_ID: "{{ .Values.shuffle.org }}"
+SHUFFLE_APP_DOWNLOAD_LOCATION: "{{ .Values.backend.apps.downloadLocation }}"
+SHUFFLE_DOWNLOAD_AUTH_BRANCH: "{{ .Values.backend.apps.downloadBranch }}"
+SHUFFLE_APP_FORCE_UPDATE: "{{ .Values.backend.apps.forceUpdate }}"
+SHUFFLE_CHAT_DISABLED: "true"
+# Sets backend_url parameter for workflow execution to the cluster-internal shuffle-backend address
+SHUFFLE_CLOUDRUN_URL: "http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}"
+SHUFFLE_OPENSEARCH_URL: {{ include "common.tplvalues.render" (dict "value" .Values.backend.openSearch.url "context" $) }}
+SHUFFLE_OPENSEARCH_USERNAME: "{{ .Values.backend.openSearch.username }}"
+SHUFFLE_OPENSEARCH_CERTIFICATE_FILE: "{{ .Values.backend.openSearch.certificateFile }}"
+SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: "{{ .Values.backend.openSearch.skipSSLVerify }}"
+SHUFFLE_OPENSEARCH_INDEX_PREFIX: "{{ .Values.backend.openSearch.indexPrefix }}"
+SHUFFLE_RERUN_SCHEDULE: "{{ .Values.backend.cleanupSchedule }}"
+TZ: "{{ .Values.shuffle.timezone }}"
+REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}" # Used by app builder
+{{- end -}}
