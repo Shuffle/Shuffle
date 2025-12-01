@@ -27,3 +27,4 @@ rules:
     resources: ["deployments"]
     verbs: ["list"]
 {{- end }}
+{{- end }}
