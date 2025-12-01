@@ -12,6 +12,7 @@ data:
   ORG_ID: "{{ .Values.shuffle.org }}"
   TZ: "{{ .Values.shuffle.timezone }}"
   BASE_URL: {{ import "shuffle.backend.baseUrl" . | quote }}
+  KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
   REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
 
   {{- if .Values.orborus.manageWorkerDeployments }}
