@@ -99,7 +99,12 @@ IS_KUBERNETES: "true"
 KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
+
+{{- if .Values.worker.enableHelmDeployment }}
 WORKER_HOSTNAME: "{{ include "shuffle.worker.name" . }}.{{ .Release.Namespace }}.svc.cluster.local"
+{{- else }}
+WORKER_HOSTNAME: "shuffle-workers.{{ .Release.Namespace }}.svc.cluster.local"
+{{- end }}
 
 {{- if .Values.worker.manageAppDeployments }}
 # Shuffle app images
