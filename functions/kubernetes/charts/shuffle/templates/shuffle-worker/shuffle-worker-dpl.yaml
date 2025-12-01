@@ -83,25 +83,11 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
           {{- end }}
           env:
-            - name: IS_KUBERNETES
-              value: "true"
-            - name: KUBERNETES_NAMESPACE
-              value: "{{ .Release.Namespace }}"
-            - name: SHUFFLE_LOGS_DISABLED
-              value: "false" # TODO: Allow to configure. Share with orborus / apps?
-            - name: BASE_URL
-              value: {{ import "shuffle.backend.baseUrl" . | quote }}
-            - name: REGISTRY_URL # TODO: REGISTRY_URL vs. SHUFFLE_BASE_IMAGE_REGISTRY
-              value: {{ .Values.shuffle.appRegistry }}
-            - name: SHUFFLE_BASE_IMAGE_REGISTRY
-              value: {{ .Values.shuffle.appRegistry }}
-            - name: SHUFFLE_BASE_IMAGE_NAME
-              value: shuffle # TODO: Allow to configure? Use same as for orborus (shared value)
-            - name: SHUFFLE_APP_EXPOSED_PORT
-              value: {{ .Values.app.exposedContainerPort | quote }}
-            - name: WORKER_HOSTNAME
-              value: {{ include "shuffle.worker.name" }}.{{ .Release.Namespace }}.svc.cluster.local
-            # TODO: If manageAppDeployments is set, we need to add some variables!
+            {{- $env := include "shuffle.workerInstance.env" . | fromYaml }}
+            {{- range $key, $val := $env }}
+            - name: {{ $key | quote }}
+              value: {{ $val | quote }}
+            {{- end }}
             {{- if .Values.worker.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}

@@ -75,3 +75,54 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Return the environment variables of shuffle-orborus in the format
+KEY: VALUE
+*/}}
+{{- define "shuffle.orborus.env" -}}
+RUNNING_MODE: kubernetes
+IS_KUBERNETES: "true"
+ENVIRONMENT_NAME: "{{ .Values.shuffle.org }}"
+ORG_ID: "{{ .Values.shuffle.org }}"
+TZ: "{{ .Values.shuffle.timezone }}"
+BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
+KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
+SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: {{ .Values.orborus.executionConcurrency | quote }}
+
+{{- if .Values.orborus.manageWorkerDeployments }}
+# Shuffle worker configuration
+SHUFFLE_WORKER_IMAGE: {{ include "shuffle.worker.image" . | quote }}
+SHUFFLE_WORKER_SERVICE_ACCOUNT_NAME: {{ include "shuffle.worker.serviceAccount.name" . | quote  }}
+{{- if .Values.worker.podSecurityContext.enabled }}
+SHUFFLE_WORKER_POD_SECURITY_CONTEXT: {{ omit .Values.worker.podSecurityContext "enabled" | mustToJson | quote }}
+{{- end }}
+{{- if .Values.worker.containerSecurityContext.enabled }}
+SHUFFLE_WORKER_CONTAINER_SECURITY_CONTEXT: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.worker.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+{{- end }}
+
+# Shuffle worker resources
+{{- $workerResources := (.Values.worker.resources | default (include "common.resources.preset" (dict "type" .Values.worker.resourcesPreset) | fromYaml)) -}}
+{{- if and $workerResources.requests $workerResources.requests.cpu }}
+SHUFFLE_WORKER_CPU_REQUEST: {{ $workerResources.requests.cpu | quote }}
+{{- end }}
+{{- if and $workerResources.requests $workerResources.requests.memory}}
+SHUFFLE_WORKER_MEMORY_REQUEST: {{ $workerResources.requests.memory | quote }}
+{{- end }}
+{{- if and $workerResources.requests (index $workerResources.requests "ephemeral-storage") }}
+SHUFFLE_WORKER_EPHEMERAL_STORAGE_REQUEST: {{ (index $workerResources.requests "ephemeral-storage") | quote }}
+{{- end }}
+{{- if and $workerResources.limits $workerResources.limits.cpu }}
+SHUFFLE_WORKER_CPU_LIMIT: {{ $workerResources.limits.cpu | quote }}
+{{- end }}
+{{- if and $workerResources.limits $workerResources.limits.memory}}
+SHUFFLE_WORKER_MEMORY_LIMIT: {{ $workerResources.limits.memory | quote }}
+{{- end }}
+{{- if and $workerResources.limits (index $workerResources.limits "ephemeral-storage") }}
+SHUFFLE_WORKER_EPHEMERAL_STORAGE_LIMIT: {{ (index $workerResources.limits "ephemeral-storage") | quote }}
+{{- end }}
+
+# Include shuffle worker environment variables. Orborus passes them down to worker, when creating the deployment.
+{{ include "shuffle.workerInstance.env" . }}
+{{- end }}
+{{- end -}}

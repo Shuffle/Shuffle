@@ -89,3 +89,55 @@ as well as orborus-deployed workers (deployk8sworker).
 {{- define "shuffle.workerInstance.matchLabels" -}}
 app.kubernetes.io/name: shuffle-worker
 {{- end -}}
+
+{{/*
+Return the environment variables of shuffle-worker in the format
+KEY: VALUE
+*/}}
+{{- define "shuffle.workerInstance.env" -}}
+IS_KUBERNETES: "true"
+KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
+BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
+SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
+WORKER_HOSTNAME: "{{ include "shuffle.worker.name" . }}.{{ .Release.Namespace }}.svc.cluster.local"
+
+{{- if .Values.worker.manageAppDeployments }}
+# Shuffle app images
+REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
+SHUFFLE_BASE_IMAGE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"
+SHUFFLE_BASE_IMAGE_NAME: "{{ .Values.shuffle.appBaseImageName }}"
+
+# Shuffle app deployment configuration
+SHUFFLE_APP_SERVICE_ACCOUNT_NAME: {{ include "shuffle.app.serviceAccount.name" . | quote }}
+{{- if .Values.app.podSecurityContext.enabled }}
+SHUFFLE_APP_POD_SECURITY_CONTEXT: {{ omit .Values.app.podSecurityContext "enabled" | mustToJson | quote }}
+{{- end }}
+{{- if .Values.app.containerSecurityContext.enabled }}
+SHUFFLE_APP_CONTAINER_SECURITY_CONTEXT: {{ include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.app.containerSecurityContext "context" $) | fromYaml | mustToJson | quote }}
+{{- end }}
+
+# Shuffle app resources
+{{- $appResources := (.Values.app.resources | default (include "common.resources.preset" (dict "type" .Values.app.resourcesPreset) | fromYaml)) -}}
+{{- if and $appResources.requests $appResources.requests.cpu }}
+SHUFFLE_APP_CPU_REQUEST: {{ $appResources.requests.cpu | quote }}
+{{- end }}
+{{- if and $appResources.requests $appResources.requests.memory }}
+SHUFFLE_APP_MEMORY_REQUEST: {{ $appResources.requests.memory | quote }}
+{{- end }}
+{{- if and $appResources.requests (index $appResources.requests "ephemeral-storage") }}
+SHUFFLE_APP_EPHEMERAL_STORAGE_REQUEST: {{ (index $appResources.requests "ephemeral-storage") | quote }}
+{{- end }}
+{{- if and $appResources.limits $appResources.limits.cpu }}
+SHUFFLE_APP_CPU_LIMIT: {{ $appResources.limits.cpu | quote }}
+{{- end }}
+{{- if and $appResources.limits $appResources.limits.memory }}
+SHUFFLE_APP_MEMORY_LIMIT: {{ $appResources.limits.memory | quote }}
+{{- end }}
+{{- if and $appResources.limits (index $appResources.limits "ephemeral-storage") }}
+SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT: {{ (index $appResources.limits "ephemeral-storage") | quote }}
+{{- end }}
+
+# Include shuffle app environment variables. Worker passes them down to apps, when creating their deployment.
+{{ include "shuffle.appInstance.env" . }}
+{{- end }}
+{{- end -}}

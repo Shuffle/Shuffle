@@ -100,3 +100,13 @@ as well as worker-deployed apps (deployK8sApp).
 {{- define "shuffle.appInstance.matchLabels" -}}
 app.kubernetes.io/name: shuffle-app
 {{- end -}}
+
+{{/*
+Return the environment variables of shuffle apps in the format
+KEY: VALUE
+*/}}
+{{- define "shuffle.appInstance.env" -}}
+SHUFFLE_APP_SDK_TIMEOUT: {{ .Values.app.sdkTimeout | quote }}
+SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
+SHUFFLE_LOGS_DISABLED: {{ .Values.app.disableLogs | quote }}
+{{- end -}}
