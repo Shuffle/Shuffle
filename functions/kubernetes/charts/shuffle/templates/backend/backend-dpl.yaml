@@ -116,9 +116,10 @@ spec:
           {{- end }}
           env:
             {{- $env := include "shuffle.backend.env" . | fromYaml }}
-            {{- range $key, $val := range $env }}
+            {{- range $key, $val := $env }}
             - name: {{ $key | quote }}
               value: {{ $val | quote }}
+            {{- end }}
             {{- if .Values.backend.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}

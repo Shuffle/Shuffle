@@ -78,9 +78,9 @@ imagePullSecrets:
 {{- end }}
 {{- end -}}
 
-{{- define "shuffle.backend.baseUrl -}}
+{{- define "shuffle.backend.baseUrl" -}}
 http://{{ include "shuffle.backend.name" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.backend.containerPorts.http }}
-{{- end - }}
+{{- end -}}
 
 {{/*
 Return the environment variables of shuffle-backend in the format
@@ -96,7 +96,7 @@ BACKEND_PORT: "{{ .Values.backend.containerPorts.http }}"
 BASE_URL: "{{ .Values.shuffle.baseUrl }}"
 SSO_REDIRECT_URL: "{{ .Values.shuffle.baseUrl }}"
 {{- else }}
-BASE_URL: "{{ include "shuffle.backend.baseUrl .}}"
+BASE_URL: "{{ include "shuffle.backend.baseUrl" . }}"
 {{- end }}
 ORG_ID: "{{ .Values.shuffle.org }}"
 SHUFFLE_APP_DOWNLOAD_LOCATION: "{{ .Values.backend.apps.downloadLocation }}"
@@ -104,7 +104,7 @@ SHUFFLE_DOWNLOAD_AUTH_BRANCH: "{{ .Values.backend.apps.downloadBranch }}"
 SHUFFLE_APP_FORCE_UPDATE: "{{ .Values.backend.apps.forceUpdate }}"
 SHUFFLE_CHAT_DISABLED: "true"
 # Sets backend_url parameter for workflow execution to the cluster-internal shuffle-backend address
-SHUFFLE_CLOUDRUN_URL: "{{ include "shuffle.backend.baseUrl .}}"
+SHUFFLE_CLOUDRUN_URL: "{{ include "shuffle.backend.baseUrl" .}}"
 SHUFFLE_OPENSEARCH_URL: {{ include "common.tplvalues.render" (dict "value" .Values.backend.openSearch.url "context" $) }}
 SHUFFLE_OPENSEARCH_USERNAME: "{{ .Values.backend.openSearch.username }}"
 SHUFFLE_OPENSEARCH_CERTIFICATE_FILE: "{{ .Values.backend.openSearch.certificateFile }}"
