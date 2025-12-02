@@ -76,8 +76,10 @@ app.kubernetes.io/part-of: shuffle
 {{- with .context.Chart.AppVersion }}
 app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
 {{- end -}}
+{{- if .customValues }}
 {{- range $key, $value := .customLabels }}
 {{ $key }}: {{ $value }}
+{{- end }}
 {{- end }}
 {{- end -}}
 
@@ -113,6 +115,7 @@ SHUFFLE_BASE_IMAGE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"
 SHUFFLE_BASE_IMAGE_NAME: "{{ .Values.shuffle.appBaseImageName }}"
 
 # Shuffle app deployment configuration
+SHUFFLE_APP_MOUNT_TMP_VOLUME: {{ .Values.app.mountTmpVolume | quote }}
 SHUFFLE_APP_SERVICE_ACCOUNT_NAME: {{ include "shuffle.app.serviceAccount.name" . | quote }}
 {{- if .Values.app.podSecurityContext.enabled }}
 SHUFFLE_APP_POD_SECURITY_CONTEXT: {{ omit .Values.app.podSecurityContext "enabled" | mustToJson | quote }}

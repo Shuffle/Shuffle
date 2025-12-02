@@ -135,7 +135,7 @@ To deploy apps using helm, set `apps.enabled=true`. By default, this deploys the
 You can also deploy your own apps. See the following values file for an example.
 ```yaml
 app:
-  replicas: 1 # default to 1 replica per app
+  replicaCount: 1 # default to 1 replica per app
   resources: {} # default resources for apps
 # ... configure default options for all apps here
 
@@ -150,7 +150,7 @@ apps:
   http:
     enabled: true # default
 # optionally override defaults from app values:
-    replicas: 1 
+    replicaCount: 1 
     resources: {}
   
 # Deploy additional apps (e.g. opensearch)
@@ -159,13 +159,14 @@ apps:
     name: opensearch # required. The name and version must match the values of the `api.yaml` file of the app.
     version: 1.1.0 # required.
 # optionally change app configuration:
-    replicas: 3
+    replicaCount: 3
     resources: {}
 ```
 The key of an app in the `apps` map does not matter, as long as it is unique. We are not using an array here, to allow overriding values in stage-specific value files or using the command line, e.g.
 `helm upgrade ... --set apps.shuffleTools.replicas=3`.
 
-See the "Parameters to deploy apps using helm" section below for a complete list of helm values, that can be used to customize app deployments.
+You can override any value set in `app.*` (e.g. `app.image`, `app.replicaCount`, `app.resources`, `app.podSecurityContext`) for each app
+(e.g. for the `shuffle-tools` app using `apps.shuffleTools.image`, `apps.shuffleTools.replicaCount`, ...).
 
 It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
 
@@ -651,12 +652,40 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                                 | `true`                   |
 | `worker.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                    | `[]`                     |
 | `worker.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                              | `[]`                     |
-| `worker.manageAppDeployments`                              | Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see app.deployViaHelm).                                                                                   | `true`                   |
+| `worker.manageAppDeployments`                              | Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).                                                                                        | `true`                   |
 
 ### app Parameters
 
 | Name                                                    | Description                                                                                                                                                                                                            | Value            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `app.image.registry`                                    | app image registry (defaults to shuffle.appRegistry)                                                                                                                                                                   | `""`             |
+| `app.image.repository`                                  | app image repository (defaults to shuffle.appBaseImageName)                                                                                                                                                            | `""`             |
+| `app.image.tag`                                         | app image tag (defaults to the apps version)                                                                                                                                                                           | `""`             |
+| `app.image.pullPolicy`                                  | default image pull policy for app deployments. Only effective for helm-deployed apps (see apps.enabled).                                                                                                               | `IfNotPresent`   |
+| `app.image.pullSecrets`                                 | default image pull secrets for app deployments. Only effective for helm-deployed apps (see apps.enabled).                                                                                                              | `[]`             |
+| `app.replicaCount`                                      | Default number of replicas to deploy for each app. Only effective for helm-deployed apps (see apps.enabled).                                                                                                           | `1`              |
+| `app.extraContainerPorts`                               | Optionally specify extra list of additional ports for app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `[]`             |
+| `app.livenessProbe.enabled`                             | Enable livenessProbe on app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                      | `false`          |
+| `app.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                | `0`              |
+| `app.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                       | `15`             |
+| `app.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                      | `1`              |
+| `app.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                    | `4`              |
+| `app.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                    | `1`              |
+| `app.readinessProbe.enabled`                            | Enable readinessProbe on app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                     | `false`          |
+| `app.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                               | `0`              |
+| `app.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                      | `5`              |
+| `app.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                     | `1`              |
+| `app.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                   | `3`              |
+| `app.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                   | `1`              |
+| `app.startupProbe.enabled`                              | Enable startupProbe on app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                       | `false`          |
+| `app.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                 | `0`              |
+| `app.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                        | `1`              |
+| `app.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                       | `1`              |
+| `app.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                     | `60`             |
+| `app.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                     | `1`              |
+| `app.customLivenessProbe`                               | Custom livenessProbe that overrides the default one. Only effective for helm-deployed apps (see apps.enabled).                                                                                                         | `{}`             |
+| `app.customReadinessProbe`                              | Custom readinessProbe that overrides the default one. Only effective for helm-deployed apps (see apps.enabled).                                                                                                        | `{}`             |
+| `app.customStartupProbe`                                | Custom startupProbe that overrides the default one. Only effective for helm-deployed apps (see apps.enabled).                                                                                                          | `{}`             |
 | `app.resourcesPreset`                                   | Set app container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if app.resources is set (app.resources is recommended for production). | `nano`           |
 | `app.resources`                                         | Set app container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                  | `{}`             |
 | `app.podSecurityContext.enabled`                        | Enable app pods' Security Context                                                                                                                                                                                      | `true`           |
@@ -674,6 +703,49 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `app.containerSecurityContext.allowPrivilegeEscalation` | Set allowPrivilegeEscalation in app container' Security Context                                                                                                                                                        | `false`          |
 | `app.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped in app container                                                                                                                                                                    | `["ALL"]`        |
 | `app.containerSecurityContext.seccompProfile.type`      | Set seccomp profile in app container                                                                                                                                                                                   | `RuntimeDefault` |
+| `app.command`                                           | Override default app container command (useful when using custom images)                                                                                                                                               | `[]`             |
+| `app.args`                                              | Override default app container args (useful when using custom images)                                                                                                                                                  | `[]`             |
+| `app.automountServiceAccountToken`                      | Mount Service Account token in app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                     | `false`          |
+| `app.hostAliases`                                       | app pods host aliases. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                       | `[]`             |
+| `app.deploymentAnnotations`                             | Annotations for app deployment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                              | `{}`             |
+| `app.podLabels`                                         | Extra labels for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                   | `{}`             |
+| `app.podAnnotations`                                    | Annotations for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                    | `{}`             |
+| `app.podAffinityPreset`                                 | Pod affinity preset. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`. Only effective for helm-deployed apps (see apps.enabled).                                                                     | `""`             |
+| `app.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`. Only effective for helm-deployed apps (see apps.enabled).                                                                | `soft`           |
+| `app.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`. Only effective for helm-deployed apps (see apps.enabled).                                                               | `""`             |
+| `app.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `app.affinity` is set                                                                                                                                                              | `""`             |
+| `app.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `app.affinity` is set                                                                                                                                                           | `[]`             |
+| `app.affinity`                                          | Affinity for app pods assignment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                            | `{}`             |
+| `app.nodeSelector`                                      | Node labels for app pods assignment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                         | `{}`             |
+| `app.tolerations`                                       | Tolerations for app pods assignment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                         | `[]`             |
+| `app.updateStrategy.type`                               | app deployment strategy type. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                | `RollingUpdate`  |
+| `app.priorityClassName`                                 | app pods' priorityClassName. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                 | `""`             |
+| `app.topologySpreadConstraints`                         | Topology Spread Constraints for app pod assignment spread across your cluster among failure-domains. Only effective for helm-deployed apps (see apps.enabled).                                                         | `[]`             |
+| `app.schedulerName`                                     | Name of the k8s scheduler (other than default) for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                 | `""`             |
+| `app.terminationGracePeriodSeconds`                     | Seconds app pods need to terminate gracefully. Only effective for helm-deployed apps (see apps.enabled).                                                                                                               | `""`             |
+| `app.lifecycleHooks`                                    | for app containers to automate configuration before or after startup. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `{}`             |
+| `app.extraEnvVars`                                      | Array with extra environment variables to add to app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                             | `[]`             |
+| `app.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                     | `""`             |
+| `app.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `""`             |
+| `app.extraVolumes`                                      | Optionally specify extra list of additional volumes for the app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `[]`             |
+| `app.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                             | `[]`             |
+| `app.sidecars`                                          | Add additional sidecar containers to the app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                           | `[]`             |
+| `app.initContainers`                                    | Add additional init containers to the app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                              | `[]`             |
+| `app.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation. Only effective for helm-deployed apps (see apps.enabled).                                                                                                             | `true`           |
+| `app.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                         | `""`             |
+| `app.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `app.pdb.minAvailable` and `app.pdb.maxUnavailable` are empty.                                                                 | `""`             |
+| `app.autoscaling.vpa.enabled`                           | Enable VPA for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                     | `false`          |
+| `app.autoscaling.vpa.annotations`                       | Annotations for VPA resource                                                                                                                                                                                           | `{}`             |
+| `app.autoscaling.vpa.controlledResources`               | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                                                                         | `[]`             |
+| `app.autoscaling.vpa.maxAllowed`                        | VPA Max allowed resources for the pod                                                                                                                                                                                  | `{}`             |
+| `app.autoscaling.vpa.minAllowed`                        | VPA Min allowed resources for the pod                                                                                                                                                                                  | `{}`             |
+| `app.autoscaling.vpa.updatePolicy.updateMode`           | Autoscaling update policy                                                                                                                                                                                              | `Auto`           |
+| `app.autoscaling.hpa.enabled`                           | Enable HPA for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                     | `false`          |
+| `app.autoscaling.hpa.minReplicas`                       | Minimum number of replicas                                                                                                                                                                                             | `""`             |
+| `app.autoscaling.hpa.maxReplicas`                       | Maximum number of replicas                                                                                                                                                                                             | `""`             |
+| `app.autoscaling.hpa.targetCPU`                         | Target CPU utilization percentage                                                                                                                                                                                      | `""`             |
+| `app.autoscaling.hpa.targetMemory`                      | Target Memory utilization percentage                                                                                                                                                                                   | `""`             |
+| `app.service.labels`                                    | Extra labels for app service. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                | `{}`             |
 | `app.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                                                                                                                                                                   | `true`           |
 | `app.serviceAccount.name`                               | The name of the ServiceAccount to use.                                                                                                                                                                                 | `""`             |
 | `app.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                                                                                                                                                       | `{}`             |
@@ -685,12 +757,24 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `app.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                        | `true`           |
 | `app.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                           | `[]`             |
 | `app.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                     | `[]`             |
+| `app.mountTmpVolume`                                    | Whether a writable /tmp emptyDir volume should be mounted to the app.                                                                                                                                                  | `false`          |
 | `app.exposedContainerPort`                              | The port that shuffle app containers will listen on for new requests.                                                                                                                                                  | `80`             |
 | `app.sdkTimeout`                                        | The timeout in seconds for app actions.                                                                                                                                                                                | `300`            |
 | `app.disableLogs`                                       | Do not capture app logs. By default, app logs are captured, so that they are visible in the frontend.                                                                                                                  | `false`          |
-| `app.deployViaHelm`                                     | A list of apps that should be deployed using helm.                                                                                                                                                                     | `{}`             |
-| `app.deployViaHelm.MY_APP.app`                          | The name of the app (required, e.g. shuffle-tools)                                                                                                                                                                     |                  |
-| `app.deployViaHelm.MY_APP.version`                      | The version of the app (required, e.g. 1.2.0)                                                                                                                                                                          |                  |
+
+### Parameters to deploy apps using helm
+
+| Name                          | Description                                        | Value   |
+| ----------------------------- | -------------------------------------------------- | ------- |
+| `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
+| `apps.shuffleTools.enabled`   | Whether the shuffle-tools app is enabled           | `true`  |
+| `apps.shuffleTools.version`   | The version of the shuffle-tools app to deploy.    | `1.2.0` |
+| `apps.shuffleSubflow.enabled` | Whether the shuffle-subflow app is enabled         | `true`  |
+| `apps.shuffleSubflow.version` | The version of the shuffle-subflow app to deploy.  | `1.1.0` |
+| `apps.http.enabled`           | Whether the http app is enabled                    | `true`  |
+| `apps.http.version`           | The version of the http app to deploy.             | `1.4.0` |
+| `apps.MY_APP.app`             | The name of the app (required, e.g. shuffle-tools) |         |
+| `apps.MY_APP.version`         | The version of the app (required, e.g. 1.2.0)      |         |
 
 ### Traffic Exposure Parameters
 
@@ -787,6 +871,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
+
 
 
 

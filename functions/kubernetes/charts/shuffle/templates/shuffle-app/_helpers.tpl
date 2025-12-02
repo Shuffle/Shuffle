@@ -87,8 +87,10 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service }}
 app.kubernetes.io/part-of: shuffle
 app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
 app.shuffler.io/version: {{ .app.version | quote }}
+{{- if .customValues }}
 {{- range $key, $value := .customLabels }}
 {{ $key }}: {{ $value }}
+{{- end }}
 {{- end }}
 {{- end -}}
 

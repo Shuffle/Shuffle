@@ -1743,10 +1743,16 @@ worker:
 ## @section app Parameters
 ##
 app:
+  ## @param app.image.registry app image registry (defaults to shuffle.appRegistry)
+  ## @param app.image.repository app image repository (defaults to shuffle.appBaseImageName)
+  ## @param app.image.tag app image tag (defaults to the apps version)
   ## @param app.image.pullPolicy default image pull policy for app deployments. Only effective for helm-deployed apps (see apps.enabled).
   ## @param app.image.pullSecrets default image pull secrets for app deployments. Only effective for helm-deployed apps (see apps.enabled).
   ##
   image:
+    registry: ""
+    repository: ""
+    tag: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
@@ -1882,7 +1888,12 @@ app:
       drop: ["ALL"]
     seccompProfile:
       type: "RuntimeDefault"
-
+  ## @param app.command Override default app container command (useful when using custom images)
+  ##
+  command: []
+  ## @param app.args Override default app container args (useful when using custom images)
+  ##
+  args: []
   ## @param app.automountServiceAccountToken Mount Service Account token in app pods. Only effective for helm-deployed apps (see apps.enabled).
   ##
   automountServiceAccountToken: false
@@ -2109,6 +2120,9 @@ app:
     ##
     extraEgress: []
 
+  ## @param app.mountTmpVolume Whether a writable /tmp emptyDir volume should be mounted to the app.
+  ##
+  mountTmpVolume: false
   ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests. 
   ##
   exposedContainerPort: 80
@@ -2134,373 +2148,50 @@ apps:
   enabled: false
 
   shuffleTools:
-    ## @param apps.shuffleTools.enabled Whether the app is enabled
+    ## @param apps.shuffleTools.enabled Whether the shuffle-tools app is enabled
     ##
     enabled: true
-    ## app image
-    ## @param apps.shuffleTools.image.registry app image registry
-    ## @param apps.shuffleTools.image.repository app image repository
-    ## @param apps.shuffleTools.image.tag app image tag (immutable tags are recommended, defaults to appVersion)
-    ## @param apps.shuffleTools.image.digest app image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)
-    ## @param apps.shuffleTools.image.pullPolicy app image pull policy
-    ## @param apps.shuffleTools.image.pullSecrets app image pull secrets
+    ## @skip apps.shuffleTools.name
     ##
-    image:
-      registry: ghcr.io
-      repository: shuffle/shuffle-app
-      tag: ""
-      digest: ""
-      ## Specify a imagePullPolicy
-      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
-      ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
-      ##
-      pullPolicy: IfNotPresent
-      ## Optionally specify an array of imagePullSecrets.
-      ## Secrets must be manually created in the namespace.
-      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-      ## e.g:
-      ## pullSecrets:
-      ##   - myRegistryKeySecretName
-      ##
-      pullSecrets: []
-    ## @param apps.shuffleTools.replicaCount [number, nullable] Number of app replicas to deploy
+    name: shuffle-tools
+    ## @param apps.shuffleTools.version The version of the shuffle-tools app to deploy.
     ##
-    replicaCount: null
-    ## @param apps.shuffleTools.extraContainerPorts Optionally specify extra list of additional ports for app containers
-    ## e.g:
-    ## extraContainerPorts:
-    ##   - name: myservice
-    ##     containerPort: 9090
-    ##
-    extraContainerPorts: []
-    ## Configure extra options for app containers' liveness and readiness probes
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-    ## @param apps.shuffleTools.livenessProbe.enabled Enable livenessProbe on app containers
-    ## @param apps.shuffleTools.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-    ## @param apps.shuffleTools.livenessProbe.periodSeconds Period seconds for livenessProbe
-    ## @param apps.shuffleTools.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-    ## @param apps.shuffleTools.livenessProbe.failureThreshold Failure threshold for livenessProbe
-    ## @param apps.shuffleTools.livenessProbe.successThreshold Success threshold for livenessProbe
-    ##
-    livenessProbe:
-      enabled: false
-      initialDelaySeconds: 0
-      periodSeconds: 15
-      timeoutSeconds: 1
-      failureThreshold: 4
-      successThreshold: 1
-    ## @param apps.shuffleTools.readinessProbe.enabled Enable readinessProbe on app containers
-    ## @param apps.shuffleTools.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-    ## @param apps.shuffleTools.readinessProbe.periodSeconds Period seconds for readinessProbe
-    ## @param apps.shuffleTools.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-    ## @param apps.shuffleTools.readinessProbe.failureThreshold Failure threshold for readinessProbe
-    ## @param apps.shuffleTools.readinessProbe.successThreshold Success threshold for readinessProbe
-    ##
-    readinessProbe:
-      enabled: false
-      initialDelaySeconds: 0
-      periodSeconds: 5
-      timeoutSeconds: 1
-      failureThreshold: 3
-      successThreshold: 1
-    ## @param apps.shuffleTools.startupProbe.enabled Enable startupProbe on app containers
-    ## @param apps.shuffleTools.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
-    ## @param apps.shuffleTools.startupProbe.periodSeconds Period seconds for startupProbe
-    ## @param apps.shuffleTools.startupProbe.timeoutSeconds Timeout seconds for startupProbe
-    ## @param apps.shuffleTools.startupProbe.failureThreshold Failure threshold for startupProbe
-    ## @param apps.shuffleTools.startupProbe.successThreshold Success threshold for startupProbe
-    ##
-    startupProbe:
-      enabled: false
-      initialDelaySeconds: 0
-      periodSeconds: 1
-      timeoutSeconds: 1
-      failureThreshold: 60
-      successThreshold: 1
-    ## @param apps.shuffleTools.customLivenessProbe Custom livenessProbe that overrides the default one
-    ##
-    customLivenessProbe: {}
-    ## @param apps.shuffleTools.customReadinessProbe Custom readinessProbe that overrides the default one
-    ##
-    customReadinessProbe: {}
-    ## @param apps.shuffleTools.customStartupProbe Custom startupProbe that overrides the default one
-    ##
-    customStartupProbe: {}
-    ## app resource requests and limits
-    ## ref: http://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-    ## @param apps.shuffleTools.resourcesPreset Set app container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if app.resources is set (app.resources is recommended for production).
-    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
-    ## Shuffle gets OOM killed with 256M memory during startup. Up to 360MiB of memory usage were observed during testing.
-    ## The small preset grants 512M.
-    ##
-    resourcesPreset: "small"
-    ## @param apps.shuffleTools.resources Set app container requests and limits for different resources like CPU or memory (essential for production workloads)
-    ## Example:
-    ## resources:
-    ##   requests:
-    ##     cpu: 2
-    ##     memory: 512Mi
-    ##   limits:
-    ##     cpu: 3
-    ##     memory: 1024Mi
-    ##
-    resources: {}
-    ## Configure Pods Security Context
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-    ## @param apps.shuffleTools.podSecurityContext.enabled Enable app pods' Security Context
-    ## @param apps.shuffleTools.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy for app pods
-    ## @param apps.shuffleTools.podSecurityContext.sysctls Set kernel settings using the sysctl interface for app pods
-    ## @param apps.shuffleTools.podSecurityContext.supplementalGroups Set filesystem extra groups for app pods
-    ## @param apps.shuffleTools.podSecurityContext.fsGroup Set fsGroup in app pods' Security Context
-    ##
-    podSecurityContext:
-      enabled: true
-      fsGroupChangePolicy: Always
-      sysctls: []
-      supplementalGroups: []
-      fsGroup: 1001
-    ## Configure Container Security Context
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-    ## @param apps.shuffleTools.containerSecurityContext.enabled Enabled app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in app container
-    ## @param apps.shuffleTools.containerSecurityContext.runAsUser Set runAsUser in app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.runAsGroup Set runAsGroup in app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.runAsNonRoot Set runAsNonRoot in app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem in app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.privileged Set privileged in app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation in app container' Security Context
-    ## @param apps.shuffleTools.containerSecurityContext.capabilities.drop List of capabilities to be dropped in app container
-    ## @param apps.shuffleTools.containerSecurityContext.seccompProfile.type Set seccomp profile in app container
-    ##
-    containerSecurityContext:
-      enabled: true
-      seLinuxOptions: {}
-      runAsUser: 1001
-      runAsGroup: 1001
-      runAsNonRoot: true
-      readOnlyRootFilesystem: true
-      privileged: false
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
-      seccompProfile:
-        type: "RuntimeDefault"
-    ## @param apps.shuffleTools.command Override default app container command (useful when using custom images)
-    ##
-    command: []
-    ## @param apps.shuffleTools.args Override default app container args (useful when using custom images)
-    ##
-    args: []
-    ## @param apps.shuffleTools.automountServiceAccountToken Mount Service Account token in app pods
-    ## NOTE: app requires the service account credentials to be mounted
-    ##
-    automountServiceAccountToken: true
-    ## @param apps.shuffleTools.hostAliases app pods host aliases
-    ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
-    ##
-    hostAliases: []
-    ## @param apps.shuffleTools.deploymentAnnotations Annotations for app deployment
-    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-    ##
-    deploymentAnnotations: {}
-    ## @param apps.shuffleTools.podLabels Extra labels for app pods
-    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-    ##
-    podLabels: {}
-    ## @param apps.shuffleTools.podAnnotations Annotations for app pods
-    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-    ##
-    podAnnotations: {}
-    ## @param apps.shuffleTools.podAffinityPreset Pod affinity preset. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`
-    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
-    ##
-    podAffinityPreset: ""
-    ## @param apps.shuffleTools.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`
-    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
-    ##
-    podAntiAffinityPreset: soft
-    ## Node app.affinity preset
-    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-    ##
-    nodeAffinityPreset:
-      ## @param apps.shuffleTools.nodeAffinityPreset.type Node affinity preset type. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`
-      ##
-      type: ""
-      ## @param apps.shuffleTools.nodeAffinityPreset.key Node label key to match. Ignored if `app.affinity` is set
-      ##
-      key: ""
-      ## @param apps.shuffleTools.nodeAffinityPreset.values Node label values to match. Ignored if `app.affinity` is set
-      ## E.g.
-      ## values:
-      ##   - e2e-az1
-      ##   - e2e-az2
-      ##
-      values: []
-    ## @param apps.shuffleTools.affinity Affinity for app pods assignment
-    ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-    ## NOTE: `app.podAffinityPreset`, `app.podAntiAffinityPreset`, and `app.nodeAffinityPreset` will be ignored when it's set
-    ##
-    affinity: {}
-    ## @param apps.shuffleTools.nodeSelector Node labels for app pods assignment
-    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
-    ##
-    nodeSelector: {}
-    ## @param apps.shuffleTools.tolerations Tolerations for app pods assignment
-    ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-    ##
-    tolerations: []
-    ## @param apps.shuffleTools.updateStrategy.type app deployment strategy type
-    ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-    ##
-    updateStrategy:
-      ## Can be set to RollingUpdate or Recreate
-      ## app uses ReadWriteOnce volumes by default, which is incompatible with RollingUpdate
-      ##
-      type: Recreate 
-    ## @param apps.shuffleTools.priorityClassName app pods' priorityClassName
-    ##
-    priorityClassName: ""
-    ## @param apps.shuffleTools.topologySpreadConstraints Topology Spread Constraints for app pod assignment spread across your cluster among failure-domains
-    ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/#spread-constraints-for-pods
-    ##
-    topologySpreadConstraints: []
-    ## @param apps.shuffleTools.schedulerName Name of the k8s scheduler (other than default) for app pods
-    ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
-    ##
-    schedulerName: ""
-    ## @param apps.shuffleTools.terminationGracePeriodSeconds Seconds app pods need to terminate gracefully
-    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
-    ##
-    terminationGracePeriodSeconds: ""
-    ## @param apps.shuffleTools.lifecycleHooks for app containers to automate configuration before or after startup
-    ##
-    lifecycleHooks: {}
-    ## @param apps.shuffleTools.extraEnvVars Array with extra environment variables to add to app containers
-    ## e.g:
-    ## extraEnvVars:
-    ##   - name: FOO
-    ##     value: "bar"
-    ##
-    extraEnvVars: []
-    ## @param apps.shuffleTools.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for app containers
-    ##
-    extraEnvVarsCM: ""
-    ## @param apps.shuffleTools.extraEnvVarsSecret Name of existing Secret containing extra env vars for app containers
-    ##
-    extraEnvVarsSecret: ""
-    ## @param apps.shuffleTools.extraVolumes Optionally specify extra list of additional volumes for the app pods
-    ##
-    extraVolumes: []
-    ## @param apps.shuffleTools.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the app containers
-    ##
-    extraVolumeMounts: []
-    ## @param apps.shuffleTools.sidecars Add additional sidecar containers to the app pods
-    ## e.g:
-    ## sidecars:
-    ##   - name: your-image-name
-    ##     image: your-image
-    ##     imagePullPolicy: Always
-    ##     ports:
-    ##       - name: portname
-    ##         containerPort: 1234
-    ##
-    sidecars: []
-    ## @param apps.shuffleTools.initContainers Add additional init containers to the app pods
-    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
-    ## e.g:
-    ## initContainers:
-    ##  - name: your-image-name
-    ##    image: your-image
-    ##    imagePullPolicy: Always
-    ##    command: ['sh', '-c', 'echo "hello world"']
-    ##
-    initContainers: []
-    ## Pod Disruption Budget configuration
-    ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb
-    ## @param apps.shuffleTools.pdb.create Enable/disable a Pod Disruption Budget creation
-    ## @param apps.shuffleTools.pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
-    ## @param apps.shuffleTools.pdb.maxUnavailable Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `app.pdb.minAvailable` and `app.pdb.maxUnavailable` are empty.
-    ##
-    pdb:
-      create: true
-      minAvailable: ""
-      maxUnavailable: ""
-    ## Autoscaling configuration
-    ## ref: https://kubernetes.io/docs/concepts/workloads/autoscaling/
-    ##
-    autoscaling:
-      ## @param apps.shuffleTools.autoscaling.vpa.enabled Enable VPA for app pods
-      ## @param apps.shuffleTools.autoscaling.vpa.annotations Annotations for VPA resource
-      ## @param apps.shuffleTools.autoscaling.vpa.controlledResources VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory
-      ## @param apps.shuffleTools.autoscaling.vpa.maxAllowed VPA Max allowed resources for the pod
-      ## @param apps.shuffleTools.autoscaling.vpa.minAllowed VPA Min allowed resources for the pod
-      ##
-      vpa:
-        enabled: false
-        annotations: {}
-        controlledResources: []
-        maxAllowed: {}
-        minAllowed: {}
-        ## @param apps.shuffleTools.autoscaling.vpa.updatePolicy.updateMode Autoscaling update policy
-        ## Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod
-        ## Possible values are "Off", "Initial", "Recreate", and "Auto".
-        ##
-        updatePolicy:
-          updateMode: Auto
-      ## @param apps.shuffleTools.autoscaling.hpa.enabled Enable HPA for app pods
-      ## @param apps.shuffleTools.autoscaling.hpa.minReplicas Minimum number of replicas
-      ## @param apps.shuffleTools.autoscaling.hpa.maxReplicas Maximum number of replicas
-      ## @param apps.shuffleTools.autoscaling.hpa.targetCPU Target CPU utilization percentage
-      ## @param apps.shuffleTools.autoscaling.hpa.targetMemory Target Memory utilization percentage
-      ##
-      hpa:
-        enabled: false
-        minReplicas: ""
-        maxReplicas: ""
-        targetCPU: ""
-        targetMemory: ""
-
-    ## Service configuration
-    ##
-    service:
-      ## @param apps.shuffleTools.service.labels Extra labels for app service
-      ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-      ##
-      labels: {}
+    version: 1.2.0
 
   shuffleSubflow: 
+    ## @param apps.shuffleSubflow.enabled Whether the shuffle-subflow app is enabled
+    ##
     enabled: true
+    ## @skip apps.shuffleSubflow.name
+    ##
+    name: shuffle-subflow
+    ## @param apps.shuffleSubflow.version The version of the shuffle-subflow app to deploy.
+    ##
+    version: 1.1.0
 
   http:
+    ## @param apps.http.enabled Whether the http app is enabled
+    ##
     enabled: true
+    ## @skip apps.http.name
+    ##
+    name: http
+    ## @param apps.http.version The version of the http app to deploy.
+    ##
+    version: 1.4.0
    
     # replicas, image, etc.
 
   ## @extra apps.MY_APP.app [string] The name of the app (required, e.g. shuffle-tools)
   ## @extra apps.MY_APP.version [string] The version of the app (required, e.g. 1.2.0)
-  ## TODO: Add more extras
   ## Add your own apps here. The key of the app does not matter, as long as it is unique.
   ## myApp:
   ##   enabled: true
   ##   name: my-app
   ##   version: 1.0.0
-  ##   ...
-
-  # TODO: Convert sample value to @extra.
-  ## Sample value:
-  ## - app: my-app # required
-  ##   version: 1.0.0 # required
-  ##   replicas: 1 # optional, default to 1
-  ##   image: "" # optional, default to appregistry/baseimage/appname:appversion
-  ##   imagePullSecrets: null # optional, defaults to global.imagePullSecrets
-  ##   resources: null # optional, defaults to app.resources (or app.resourcePreset)
-  ##   extraVolumes: [] # optional
-  ##   extraVolumeMounts: [] # optional
-  ##   extraEnv: [] # optional
-  ##   podSecurityContext: null # optional, defaults to app.podSecurityContext
-  ##   containerSecurityContext: null # optional, defaults to app.containerSecurityContext
-  ##   TODO: allow to override resources, serviceAccount, mounts, env, security Contexts. Fall back to app defaults as defined above.
-  ##
+  ##   ... Overwrite .app.* values here, e.g.:
+  ##   replicaCount: 3
+  ##   resources: {}
 
 ## @section Traffic Exposure Parameters
 ##

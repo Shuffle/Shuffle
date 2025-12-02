@@ -1,0 +1,306 @@
+{{- if .Values.apps.enabled }}
+{{- range $key, $app := .Values.apps }}
+{{- $ignoredKeys := list "enabled" -}}
+{{- if and (not ($ignoredKeys | has $key)) $app.enabled }}
+
+{{/* Merge .Values.app into $app, giving precedence to the values defined on the app. */}}
+{{- $appValues := mustMerge $app $.Values.app -}}
+
+{{/* use shuffle.appRegistry as default image registry */}}
+{{- $_ := set $appValues.image "registry" ($appValues.image.registry | default $.Values.shuffle.appRegistry) -}}
+{{/* use shuffle.appBaseImageName as default image repository */}}
+{{- $_ := set $appValues.image "repository" ($appValues.image.repository | default (printf "%s/%s" $.Values.shuffle.appBaseImageName $appValues.name)) -}}
+{{/* use app version as default tag */}}
+{{- $_ := set $appValues.image "tag" ($appValues.image.tag | default $appValues.version) -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "shuffle.appInstance.fullname" $app }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  {{- $serviceLabels := include "common.tplvalues.merge" (dict "values" (list $appValues.service.labels $.Values.commonLabels) "context" $) }}
+  labels: {{- include "shuffle.appInstance.labels" ( dict "app" $app "customLabels" $serviceLabels "context" $ ) | nindent 4 }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{ $.Values.app.exposedContainerPort }}
+      protocol: TCP
+      appProtocol: http
+---
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
+kind: Deployment
+metadata:
+  name: {{ include "shuffle.appInstance.fullname" $app }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "shuffle.appInstance.labels" ( dict "app" $app "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or $appValues.deploymentAnnotations $.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list $appValues.deploymentAnnotations $.Values.commonAnnotations) "context" $) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not $appValues.autoscaling.hpa.enabled }}
+  replicas: {{ $appValues.replicaCount }}
+  {{- end }}
+  {{- if $appValues.updateStrategy }}
+  strategy: {{- toYaml $appValues.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $appValues.podLabels $.Values.commonLabels) "context" $) }}
+  selector:
+    matchLabels: {{- include "shuffle.appInstance.matchLabels" ( dict "app" $app "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  template:
+    metadata:
+      {{- if $appValues.podAnnotations }}
+      annotations: {{- include "common.tplvalues.render" (dict "value" $appValues.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "shuffle.appInstance.labels" ( dict "app" $app "customLabels" $podLabels "context" $ ) | nindent 8 }}
+    spec:
+      {{- include "common.images.renderPullSecrets" (dict "images" (list $appValues.image) "context" $) | nindent 6  }}
+      {{- if $appValues.serviceAccount.create }}
+      serviceAccountName: {{ default (include "shuffle.app.name" $) $appValues.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+      {{- else }}
+      serviceAccountName: {{ default "default" $appValues.serviceAccount.name }}
+      {{- end }}
+      automountServiceAccountToken: {{ $appValues.automountServiceAccountToken }}
+      {{- if $appValues.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" $appValues.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $appValues.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" $appValues.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" $appValues.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" $appValues.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" $appValues.nodeAffinityPreset.type "key" $appValues.nodeAffinityPreset.key "values" $appValues.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if $appValues.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" $appValues.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $appValues.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" $appValues.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $appValues.priorityClassName }}
+      priorityClassName: {{ $appValues.priorityClassName | quote }}
+      {{- end }}
+      {{- if $appValues.schedulerName }}
+      schedulerName: {{ $appValues.schedulerName | quote }}
+      {{- end }}
+      {{- if $appValues.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" $appValues.topologySpreadConstraints "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $appValues.podSecurityContext.enabled }}
+      securityContext: {{- omit $appValues.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if $appValues.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ $appValues.terminationGracePeriodSeconds }}
+      {{- end }}
+      initContainers:
+        {{- if $appValues.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" $appValues.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: {{ include "shuffle.appInstance.fullname" $app }}
+          image: {{ include "common.images.image" ( dict "imageRoot" $appValues.image "global" $.Values.global "chart" $.Chart ) }}
+          imagePullPolicy: {{ $appValues.image.pullPolicy }}
+          {{- if $appValues.containerSecurityContext.enabled }}
+          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $appValues.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+        {{- if $.Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" $.Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if $appValues.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" $appValues.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if $.Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" $.Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if $appValues.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" $appValues.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            {{- $env := include "shuffle.appInstance.env" $ | fromYaml }}
+            {{- range $key, $val := $env }}
+            - name: {{ $key | quote }}
+              value: {{ $val | quote }}
+            {{- end }}
+            {{- if $appValues.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" $appValues.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- if $appValues.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" $appValues.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if $appValues.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" $appValues.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- if $appValues.resources }}
+          resources: {{- toYaml $appValues.resources | nindent 12 }}
+          {{- else if ne $appValues.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" $appValues.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $appValues.exposedContainerPort }}
+            {{- if $appValues.extraContainerPorts }}
+            {{- include "common.tplvalues.render" (dict "value" $appValues.extraContainerPorts "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if not $.Values.diagnosticMode.enabled }}
+          {{- if $appValues.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" $appValues.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if $appValues.livenessProbe.enabled }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $appValues.livenessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /api/v1/health
+              port: {{ $appValues.containerPorts.http }}
+          {{- end }}
+          {{- if $appValues.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" $appValues.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if $appValues.readinessProbe.enabled }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $appValues.readinessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /api/v1/health
+              port: {{ $appValues.containerPorts.http }}
+          {{- end }}
+          {{- if $appValues.customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" $appValues.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if $appValues.startupProbe.enabled }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit $appValues.startupProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /api/v1/health
+              port: {{ $appValues.containerPorts.http }}
+          {{- end }}
+          {{- end }}
+          {{- if $appValues.lifecycleHooks }}
+          lifecycle: {{- include "common.tplvalues.render" (dict "value" $appValues.lifecycleHooks "context" $) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if $appValues.mountTmpVolume }}
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            {{- end }}
+          {{- if $appValues.extraVolumeMounts }}
+          {{- include "common.tplvalues.render" (dict "value" $appValues.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
+        {{- if $appValues.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" $appValues.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        {{- if $appValues.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" $appValues.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+
+---
+{{- if $appValues.pdb.create }}
+apiVersion: {{ include "common.capabilities.policy.apiVersion" $ }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "shuffle.appInstance.fullname" $app }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "shuffle.appInstance.labels" ( dict "app" $app "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $.Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $appValues.pdb.minAvailable }}
+  minAvailable: {{ $appValues.pdb.minAvailable }}
+  {{- end  }}
+  {{- if or $appValues.pdb.maxUnavailable ( not $appValues.pdb.minAvailable ) }}
+  maxUnavailable: {{ $appValues.pdb.maxUnavailable | default 1 }}
+  {{- end  }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list $appValues.podLabels $.Values.commonLabels ) "context" $ ) }}
+  selector:
+    matchLabels: {{- include "shuffle.appInstance.matchLabels" ( dict "app" $app "customLabels" $podLabels "context" $ ) | nindent 6 }}
+{{- end }}
+---
+{{- if $appValues.autoscaling.hpa.enabled }}
+apiVersion: {{ include "common.capabilities.hpa.apiVersion" $ }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "shuffle.appInstance.fullname" $app }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "shuffle.appInstance.labels" ( dict "app" $app "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $.Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
+    kind: Deployment
+    name: {{ include "shuffle.appInstance.fullname" $app }}
+  minReplicas: {{ $appValues.autoscaling.hpa.minReplicas }}
+  maxReplicas: {{ $appValues.autoscaling.hpa.maxReplicas }}
+  metrics:
+    {{- if $appValues.autoscaling.hpa.targetMemory }}
+    - type: Resource
+      resource:
+        name: memory
+        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" $) }}
+        targetAverageUtilization: {{ $appValues.autoscaling.hpa.targetMemory  }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ $appValues.autoscaling.hpa.targetMemory }}
+        {{- end }}
+    {{- end }}
+    {{- if $appValues.autoscaling.hpa.targetCPU }}
+    - type: Resource
+      resource:
+        name: cpu
+        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" $) }}
+        targetAverageUtilization: {{ $appValues.autoscaling.hpa.targetCPU }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ $appValues.autoscaling.hpa.targetCPU }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+---
+{{- if and ($.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") $appValues.autoscaling.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "shuffle.appInstance.fullname" $app }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "shuffle.appInstance.labels" ( dict "app" $app "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or $appValues.autoscaling.vpa.annotations $.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list $appValues.autoscaling.vpa.annotations $.Values.commonAnnotations ) "context" $ ) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: TODO
+      {{- with $appValues.autoscaling.vpa.controlledResources }}
+      controlledResources:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $appValues.autoscaling.vpa.maxAllowed }}
+      maxAllowed:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $appValues.autoscaling.vpa.minAllowed }}
+      minAllowed:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  targetRef:
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
+    kind: Deployment
+    name: {{ include "shuffle.appInstance.fullname" $app }}
+  {{- if $appValues.autoscaling.vpa.updatePolicy }}
+  updatePolicy:
+    {{- with $appValues.autoscaling.vpa.updatePolicy.updateMode }}
+    updateMode: {{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
