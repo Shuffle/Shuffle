@@ -131,30 +131,41 @@ If you want full control, you can deploy apps using helm. This has the following
 - granular control per app and version (e.g. have more replicas and resources for frequently used apps)
 - avoid problems with on-demand started apps (see https://github.com/Shuffle/Shuffle/issues/1739)
 
-To deploy apps using helm, use the `app.deployViaHelm` value. Here is an example, which deploys the shuffle-tools app and 2 versions of the opensearch app:
+To deploy apps using helm, set `apps.enabled=true`. By default, this deploys the `shuffle-tools`, `shuffle-subflow` and `http` apps.
+You can also deploy your own apps. See the following values file for an example.
 ```yaml
 app:
   replicas: 1 # default to 1 replica per app
-  deployViaHelm:
-    tools:
-      app: shuffle-tools
-      version: 1.2.0
-    opensearchOld:
-      app: opensearch
-      version: 1.0.0 # Also deploy OpenSearch version 1.0.0, because some workflows still use it.
-    opensearch:
-      app: opensearch
-      version: 1.1.0
-      replicas: 3 # use 3 replicas for OpenSearch app
-      resources: # Custom resources for OpenSearch app
-        limits:
-          memory: 512Mi
-```
-The key of an app in the `deployViaHelm` map does not matter. We are not using an array here, to allow overriding values in stage-specific value files or using the command line, e.g.
-`helm upgrade ... --set app.deployViaHelm.tools.replicas=3`.
+  resources: {} # default resources for apps
+# ... configure default options for all apps here
 
-See the app Paramters section below for a complete list of helm values, that can be used to customize app deployments.
-Take a look at the `app.deployViaHelm.MY_APP.*` parameters for a complete list of helm values that can be set on every app.
+apps:
+  enabled: true # Deploy apps using helm.
+
+# Configure default apps
+  shuffleTools:
+    enabled: true # default
+  shuffleSubflow:
+    enabled: true # default
+  http:
+    enabled: true # default
+# optionally override defaults from app values:
+    replicas: 1 
+    resources: {}
+  
+# Deploy additional apps (e.g. opensearch)
+  opensearch:
+    enabled: true # required to actually deploy the app
+    name: opensearch # required. The name and version must match the values of the `api.yaml` file of the app.
+    version: 1.1.0 # required.
+# optionally change app configuration:
+    replicas: 3
+    resources: {}
+```
+The key of an app in the `apps` map does not matter, as long as it is unique. We are not using an array here, to allow overriding values in stage-specific value files or using the command line, e.g.
+`helm upgrade ... --set apps.shuffleTools.replicas=3`.
+
+See the "Parameters to deploy apps using helm" section below for a complete list of helm values, that can be used to customize app deployments.
 
 It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
 
