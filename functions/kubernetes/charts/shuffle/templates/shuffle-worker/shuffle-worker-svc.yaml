@@ -17,5 +17,6 @@ spec:
       targetPort: 33333
       protocol: TCP
       appProtocol: http
-  selector: {{- include "shuffle.workerInstance.matchLabels" $ | nindent 4 }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
+  selector: {{- include "shuffle.workerInstance.matchLabels" (dict "customLabels" $podLabels "context" .) | nindent 4 }}
 {{- end }}

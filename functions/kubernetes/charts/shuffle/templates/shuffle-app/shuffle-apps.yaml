@@ -214,7 +214,6 @@ spec:
   {{- if or $appValues.pdb.maxUnavailable ( not $appValues.pdb.minAvailable ) }}
   maxUnavailable: {{ $appValues.pdb.maxUnavailable | default 1 }}
   {{- end  }}
-  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list $appValues.podLabels $.Values.commonLabels ) "context" $ ) }}
   selector:
     matchLabels: {{- include "shuffle.appInstance.matchLabels" ( dict "app" $app "customLabels" $podLabels "context" $ ) | nindent 6 }}
 {{- end }}

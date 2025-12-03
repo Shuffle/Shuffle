@@ -76,7 +76,7 @@ app.kubernetes.io/part-of: shuffle
 {{- with .context.Chart.AppVersion }}
 app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
 {{- end -}}
-{{- if .customValues }}
+{{- if .customLabels }}
 {{- range $key, $value := .customLabels }}
 {{ $key }}: {{ $value }}
 {{- end }}
@@ -84,12 +84,27 @@ app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
 {{- end -}}
 
 {{/*
-Return the match labels for workers.
-These must match the labels of helm-deployed workers (shuffle.workerInstance.labels),
+Return the labels to match ALL workers.
+These match the labels of helm-deployed workers (shuffle.workerInstance.labels),
 as well as orborus-deployed workers (deployk8sworker).
+*/}}
+{{- define "shuffle.worker.matchLabels" -}}
+app.kubernetes.io/name: shuffle-worker
+{{- end -}}
+
+{{/*
+Return the labels to match a helm-deployed worker.
+Usage: 
+{{ include "shuffle.workerInstance.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) -}}
 */}}
 {{- define "shuffle.workerInstance.matchLabels" -}}
 app.kubernetes.io/name: shuffle-worker
+app.kubernetes.io/instance: {{ .context.Release.Name }}
+{{- if .customLabels }}
+{{- range $key, $value := .customLabels }}
+{{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
 {{/*

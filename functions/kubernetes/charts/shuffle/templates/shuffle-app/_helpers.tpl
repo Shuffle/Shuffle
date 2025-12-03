@@ -87,7 +87,7 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service }}
 app.kubernetes.io/part-of: shuffle
 app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
 app.shuffler.io/version: {{ .app.version | quote }}
-{{- if .customValues }}
+{{- if .customLabels }}
 {{- range $key, $value := .customLabels }}
 {{ $key }}: {{ $value }}
 {{- end }}
@@ -95,12 +95,29 @@ app.shuffler.io/version: {{ .app.version | quote }}
 {{- end -}}
 
 {{/*
-Return the match labels for apps.
-These must match the labels of helm-deployed apps (shuffle.appInstance.labels),
+Return the match labels for ALL apps.
+These match the labels of helm-deployed apps (shuffle.appInstance.labels),
 as well as worker-deployed apps (deployK8sApp).
+*/}}
+{{- define "shuffle.app.matchLabels" -}}
+app.kubernetes.io/name: shuffle-app
+{{- end -}}
+
+
+{{/*
+Return the match labels of a single app, deployed via helm.
+Usage:
+{{ include "shuffle.appInstance.matchLabels" (dict "app" $app "customLabels" .Values.commonLabels "context" $) }}
 */}}
 {{- define "shuffle.appInstance.matchLabels" -}}
 app.kubernetes.io/name: shuffle-app
+app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
+app.shuffler.io/version: {{ .app.version | quote }}
+{{- if .customLabels }}
+{{- range $key, $value := .customLabels }}
+{{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
 {{/*

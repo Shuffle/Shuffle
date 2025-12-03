@@ -51,14 +51,14 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
-            matchLabels: {{ include "shuffle.workerInstance.matchLabels" . | nindent 14 }}
+            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
 
         # Allow traffic from apps
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
-            matchLabels: {{ include "shuffle.appInstance.matchLabels" . | nindent 14 }}
+            matchLabels: {{ include "shuffle.app.matchLabels" . | nindent 14 }}
       {{- end }}
     {{- if .Values.backend.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.backend.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
