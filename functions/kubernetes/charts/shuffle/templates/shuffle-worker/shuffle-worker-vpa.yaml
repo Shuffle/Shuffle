@@ -29,7 +29,6 @@ spec:
     apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
     kind: Deployment
     name: {{ include "shuffle.worker.name" . }}
-    {{- end }}
   {{- if .Values.worker.autoscaling.vpa.updatePolicy }}
   updatePolicy:
     {{- with .Values.worker.autoscaling.vpa.updatePolicy.updateMode }}

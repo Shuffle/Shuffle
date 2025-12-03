@@ -77,8 +77,8 @@ Usage:
 {{ include "shuffle.workerInstance.labels" (dict "customLabels" $podLabels "context" $) -}}
 */}}
 {{- define "shuffle.workerInstance.labels" -}}
-{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
-{{ include "common.labels.standard" (dict "customLabels" $customLabels "context" $) }}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) -}}
+{{ include "common.labels.standard" (dict "customLabels" $customLabels "context" .context) }}
 {{- end -}}
 
 {{/*
@@ -87,8 +87,8 @@ Usage:
 {{ include "shuffle.workerInstance.matchLabels" (dict "customLabels" $podLabels "context" $) -}}
 */}}
 {{- define "shuffle.workerInstance.matchLabels" -}}
-{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
-{{ include "common.labels.matchLabels" (dict "customLabels" $customLabels "context" $) }}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) -}}
+{{ include "common.labels.matchLabels" (dict "customLabels" $customLabels "context" .context) }}
 {{- end -}}
 
 {{/*
@@ -97,7 +97,7 @@ Usage:
 {{ include "shuffle.workerInstance.affinities.pods" (dict "type" "soft" "customLabels" $podLabels "context" $) -}}
 */}}
 {{- define "shuffle.workerInstance.affinities.pods" -}}
-{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") .customLabels -}}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) -}}
 {{ include "common.affinities.pods" (dict "type" .type "customLabels" $customLabels "context" .context )}}
 {{- end -}}
 

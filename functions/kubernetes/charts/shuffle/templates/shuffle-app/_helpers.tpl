@@ -89,8 +89,8 @@ Usage:
 {{ include "shuffle.appInstance.labels" (dict "app" $app "customLabels" .Values.commonLabels "context" $) }}
 */}}
 {{- define "shuffle.appInstance.labels" -}}
-{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
-{{ include "common.labels.standard" (dict "customLabels" $customLabels "context" $) }}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) -}}
+{{ include "common.labels.standard" (dict "customLabels" $customLabels "context" .context) }}
 app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
 app.shuffler.io/version: {{ .app.version | quote }}
 {{- end -}}
@@ -101,8 +101,8 @@ Usage:
 {{ include "shuffle.appInstance.matchLabels" (dict "app" $app "customLabels" .Values.commonLabels "context" $) }}
 */}}
 {{- define "shuffle.appInstance.matchLabels" -}}
-{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
-{{ include "common.labels.matchLabels" (dict "customLabels" $customLabels "context" $) }}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) -}}
+{{ include "common.labels.matchLabels" (dict "customLabels" $customLabels "context" .context) }}
 app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
 app.shuffler.io/version: {{ .app.version | quote }}
 {{- end -}}
@@ -113,8 +113,8 @@ Usage:
 {{ include "shuffle.appInstance.affinities.pods" (dict "type" "soft" "app" $app "customLabels" $podLabels "context" $) -}}
 */}}
 {{- define "shuffle.appInstance.affinities.pods" -}}
-{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") .customLabels -}}
-{{- $extraMatchLabels := dict "app.shuffler.io/name" (include "shuffle.appInstance.name" .app) "app.shuffler.io/version" (.app.version | quote) }}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) -}}
+{{- $extraMatchLabels := dict "app.shuffler.io/name" (include "shuffle.appInstance.name" .app) "app.shuffler.io/version" (.app.version) }}
 {{ include "common.affinities.pods" (dict "type" .type "customLabels" $customLabels "context" .context "extraMatchLabels" $extraMatchLabels )}}
 {{- end -}}
 
