@@ -119,7 +119,6 @@ WORKER_HOSTNAME: "shuffle-workers.{{ .Release.Namespace }}.svc.cluster.local"
 
 {{- if .Values.worker.manageAppDeployments }}
 # Shuffle app images
-REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
 SHUFFLE_BASE_IMAGE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"
 SHUFFLE_BASE_IMAGE_NAME: "{{ .Values.shuffle.appBaseImageName }}"
 
