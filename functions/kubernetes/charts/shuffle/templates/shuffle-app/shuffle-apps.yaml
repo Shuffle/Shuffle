@@ -276,7 +276,7 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: TODO
+    - containerName: app
       {{- with $appValues.autoscaling.vpa.controlledResources }}
       controlledResources:
         {{- toYaml . | nindent 8 }}
