@@ -22,6 +22,13 @@ Return the proper Shuffle worker image name
 {{- end -}}
 
 {{/*
+Return the proper Docker Image Registry Secret Names for the worker pod
+*/}}
+{{- define "shuffle.worker.imagePullSecrets" -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.worker.image) "context" $) -}}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use for Shuffle workers
 */}}
 {{- define "shuffle.worker.serviceAccount.name" -}}
