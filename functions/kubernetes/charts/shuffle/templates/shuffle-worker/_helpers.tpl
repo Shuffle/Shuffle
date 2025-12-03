@@ -115,6 +115,7 @@ KEY: VALUE
 {{- define "shuffle.workerInstance.env" -}}
 IS_KUBERNETES: "true"
 KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
+SHUFFLE_SWARM_CONFIG: "run" # Shuffle Worker requires this to be set even when using K8s instead of swarm
 BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
 
