@@ -56,6 +56,16 @@ imagePullSecrets:
 {{- end -}}
 
 {{/*
+Return the match labels for ALL apps.
+These match the labels of helm-deployed apps (shuffle.appInstance.labels),
+as well as worker-deployed apps (deployK8sApp).
+*/}}
+{{- define "shuffle.app.matchLabels" -}}
+app.kubernetes.io/name: shuffle-app
+{{- end -}}
+
+
+{{/*
 Return the sanitized name of a shuffle app.
 Usage:
 {{ include "shuffle.appInstance.name" $app }}
@@ -79,30 +89,11 @@ Usage:
 {{ include "shuffle.appInstance.labels" (dict "app" $app "customLabels" .Values.commonLabels "context" $) }}
 */}}
 {{- define "shuffle.appInstance.labels" -}}
-app.kubernetes.io/name: shuffle-app
-app.kubernetes.io/instance: {{ include "shuffle.appInstance.fullname" .app }}
-helm.sh/chart: {{ include "common.names.chart" .context }}
-app.kubernetes.io/instance: {{ .context.Release.Name }}
-app.kubernetes.io/managed-by: {{ .context.Release.Service }}
-app.kubernetes.io/part-of: shuffle
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
+{{ include "common.labels.standard" (dict "customLabels" $customLabels "context" $) }}
 app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
 app.shuffler.io/version: {{ .app.version | quote }}
-{{- if .customLabels }}
-{{- range $key, $value := .customLabels }}
-{{ $key }}: {{ $value }}
-{{- end }}
-{{- end }}
 {{- end -}}
-
-{{/*
-Return the match labels for ALL apps.
-These match the labels of helm-deployed apps (shuffle.appInstance.labels),
-as well as worker-deployed apps (deployK8sApp).
-*/}}
-{{- define "shuffle.app.matchLabels" -}}
-app.kubernetes.io/name: shuffle-app
-{{- end -}}
-
 
 {{/*
 Return the match labels of a single app, deployed via helm.
@@ -110,14 +101,21 @@ Usage:
 {{ include "shuffle.appInstance.matchLabels" (dict "app" $app "customLabels" .Values.commonLabels "context" $) }}
 */}}
 {{- define "shuffle.appInstance.matchLabels" -}}
-app.kubernetes.io/name: shuffle-app
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
+{{ include "common.labels.matchLabels" (dict "customLabels" $customLabels "context" $) }}
 app.shuffler.io/name: {{ include "shuffle.appInstance.name" .app }}
 app.shuffler.io/version: {{ .app.version | quote }}
-{{- if .customLabels }}
-{{- range $key, $value := .customLabels }}
-{{ $key }}: {{ $value }}
-{{- end }}
-{{- end }}
+{{- end -}}
+
+{{/*
+Return a podAffinity/podAntiAffinity definition.
+Usage:
+{{ include "shuffle.appInstance.affinities.pods" (dict "type" "soft" "app" $app "customLabels" $podLabels "context" $) -}}
+*/}}
+{{- define "shuffle.appInstance.affinities.pods" -}}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-app" "app.kubernetes.io/part-of" "shuffle") .customLabels -}}
+{{- $extraMatchLabels := dict "app.shuffler.io/name" (include "shuffle.appInstance.name" .app) "app.shuffler.io/version" (.app.version | quote) }}
+{{ include "common.affinities.pods" (dict "type" .type "customLabels" $customLabels "context" .context "extraMatchLabels" $extraMatchLabels )}}
 {{- end -}}
 
 {{/*

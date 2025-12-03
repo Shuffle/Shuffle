@@ -73,8 +73,8 @@ spec:
       affinity: {{- include "common.tplvalues.render" ( dict "value" $appValues.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
-        podAffinity: {{- include "common.affinities.pods" (dict "type" $appValues.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
-        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" $appValues.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAffinity: {{- include "shuffle.appInstance.affinities.pods" (dict "app" $app "type" $appValues.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "shuffle.appInstance.affinities.pods" (dict "app" $app "type" $appValues.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" $appValues.nodeAffinityPreset.type "key" $appValues.nodeAffinityPreset.key "values" $appValues.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
       {{- if $appValues.nodeSelector }}

@@ -63,27 +63,6 @@ imagePullSecrets:
 {{- end -}}
 
 {{/*
-Return the labels for a specific worker instance deployed via helm.
-Usage: 
-{{ include "shuffle.workerInstance.labels" (dict "customLabels" .Values.commonLabels "context" $) -}}
-*/}}
-{{- define "shuffle.workerInstance.labels" -}}
-app.kubernetes.io/name: shuffle-worker
-helm.sh/chart: {{ include "common.names.chart" .context }}
-app.kubernetes.io/instance: {{ .context.Release.Name }}
-app.kubernetes.io/managed-by: {{ .context.Release.Service }}
-app.kubernetes.io/part-of: shuffle
-{{- with .context.Chart.AppVersion }}
-app.kubernetes.io/version: {{ . | replace "+" "_" | quote }}
-{{- end -}}
-{{- if .customLabels }}
-{{- range $key, $value := .customLabels }}
-{{ $key }}: {{ $value }}
-{{- end }}
-{{- end }}
-{{- end -}}
-
-{{/*
 Return the labels to match ALL workers.
 These match the labels of helm-deployed workers (shuffle.workerInstance.labels),
 as well as orborus-deployed workers (deployk8sworker).
@@ -93,18 +72,33 @@ app.kubernetes.io/name: shuffle-worker
 {{- end -}}
 
 {{/*
+Return the labels for a specific worker instance deployed via helm.
+Usage: 
+{{ include "shuffle.workerInstance.labels" (dict "customLabels" $podLabels "context" $) -}}
+*/}}
+{{- define "shuffle.workerInstance.labels" -}}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
+{{ include "common.labels.standard" (dict "customLabels" $customLabels "context" $) }}
+{{- end -}}
+
+{{/*
 Return the labels to match a helm-deployed worker.
 Usage: 
-{{ include "shuffle.workerInstance.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) -}}
+{{ include "shuffle.workerInstance.matchLabels" (dict "customLabels" $podLabels "context" $) -}}
 */}}
 {{- define "shuffle.workerInstance.matchLabels" -}}
-app.kubernetes.io/name: shuffle-worker
-app.kubernetes.io/instance: {{ .context.Release.Name }}
-{{- if .customLabels }}
-{{- range $key, $value := .customLabels }}
-{{ $key }}: {{ $value }}
-{{- end }}
-{{- end }}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") $customLabels -}}
+{{ include "common.labels.matchLabels" (dict "customLabels" $customLabels "context" $) }}
+{{- end -}}
+
+{{/*
+Return a podAffinity/podAntiAffinity definition.
+Usage:
+{{ include "shuffle.workerInstance.affinities.pods" (dict "type" "soft" "customLabels" $podLabels "context" $) -}}
+*/}}
+{{- define "shuffle.workerInstance.affinities.pods" -}}
+{{- $customLabels := mustMerge (dict "app.kubernetes.io/name" "shuffle-worker" "app.kubernetes.io/part-of" "shuffle") .customLabels -}}
+{{ include "common.affinities.pods" (dict "type" .type "customLabels" $customLabels "context" .context )}}
 {{- end -}}
 
 {{/*
