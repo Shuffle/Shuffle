@@ -120,6 +120,16 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" $appValues.args "context" $) | nindent 12 }}
           {{- end }}
           env:
+            - name: AUTHORIZATION
+              value: ""
+            - name: EXECUTIONID
+              value: ""
+            - name: BASE_URL
+              value: {{ include "shuffle.worker.baseUrl" $ | quote }}
+            - name: CALLBACK_URL
+              value: {{ include "shuffle.backend.baseUrl" $ | quote }}
+            - name: SHUFFLE_SWARM_CONFIG
+              value: run # Shuffle Worker requires this to be set even when using K8s instead of swarm
             {{- $env := include "shuffle.appInstance.env" $ | fromYaml }}
             {{- range $key, $val := $env }}
             - name: {{ $key | quote }}

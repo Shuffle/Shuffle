@@ -108,6 +108,18 @@ Usage:
 {{ include "common.affinities.pods" (dict "type" .type "customLabels" $customLabels "context" .context )}}
 {{- end -}}
 
+{{- define "shuffle.worker.hostname" -}}
+{{- if .Values.worker.enableHelmDeployment -}}
+http://{{ include "shuffle.worker.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+{{- else -}}
+http://shuffle-workers.{{ .Release.Namespace }}.svc.cluster.local
+{{- end -}}
+{{- end -}}
+
+{{- define "shuffle.worker.baseUrl" -}}
+{{ include "shuffle.worker.hostname" . }}:{{ .Values.worker.containerPorts.http }}
+{{- end -}}
+
 {{/*
 Return the environment variables of shuffle-worker in the format
 KEY: VALUE
@@ -118,12 +130,7 @@ KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 SHUFFLE_SWARM_CONFIG: "run" # Shuffle Worker requires this to be set even when using K8s instead of swarm
 BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
-
-{{- if .Values.worker.enableHelmDeployment }}
-WORKER_HOSTNAME: "{{ include "shuffle.worker.name" . }}.{{ .Release.Namespace }}.svc.cluster.local"
-{{- else }}
-WORKER_HOSTNAME: "shuffle-workers.{{ .Release.Namespace }}.svc.cluster.local"
-{{- end }}
+WORKER_HOSTNAME: {{ include "shuffle.worker.hostname" . }}
 
 {{- if .Values.worker.manageAppDeployments }}
 # Shuffle app images
