@@ -1,8 +1,16 @@
 {{/*
 Return the common name for worker components
 */}}
+{{/*
+Shuffle currently hardcodes the shuffle-workers:33333 address at some places.
+Until that can be properly configured, we make sure that the worker deployment and service
+are named exactly the same as the deployment and service that orborus would create.
 {{- define "shuffle.worker.name" -}}
   {{- printf "%s-worker" (include "common.names.fullname" .) | trunc 63 -}}
+{{- end -}}
+*/}}
+{{- define "shuffle.worker.name" -}}
+shuffle-workers
 {{- end -}}
 
 {{/*
