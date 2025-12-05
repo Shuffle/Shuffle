@@ -82,6 +82,8 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.args "context" $) | nindent 12 }}
           {{- end }}
           env:
+            - name: CLEANUP
+              value: "false" # Do not remove resources when restarting orborus
             {{- $env := include "shuffle.orborus.env" . | fromYaml }}
             {{- range $key, $val := $env }}
             - name: {{ $key | quote }}

@@ -83,6 +83,8 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
           {{- end }}
           env:
+            - name: CLEANUP
+              value: "false" # Do not remove resources when restarting worker
             {{- $env := include "shuffle.workerInstance.env" . | fromYaml }}
             {{- range $key, $val := $env }}
             - name: {{ $key | quote }}
