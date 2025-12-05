@@ -2162,7 +2162,7 @@ apps:
     ##
     version: 1.2.0
 
-  shuffleSubflow: 
+  shuffleSubflow:
     ## @param apps.shuffleSubflow.enabled Whether the shuffle-subflow app is enabled
     ##
     enabled: true
@@ -2183,7 +2183,7 @@ apps:
     ## @param apps.http.version The version of the http app to deploy.
     ##
     version: 1.4.0
-   
+
     # replicas, image, etc.
 
   ## @extra apps.MY_APP.app [string] The name of the app (required, e.g. shuffle-tools)

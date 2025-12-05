@@ -4,7 +4,7 @@
 {{- if and (not ($ignoredKeys | has $key)) $app.enabled }}
 
 {{/* Merge .Values.app into $app, giving precedence to the values defined on the app. */}}
-{{- $appValues := mustMerge $app $.Values.app -}}
+{{- $appValues := mustDeepCopy (mustMerge $app $.Values.app) -}}
 
 {{/* use shuffle.appRegistry as default image registry */}}
 {{- $_ := set $appValues.image "registry" ($appValues.image.registry | default $.Values.shuffle.appRegistry) -}}
@@ -31,6 +31,8 @@ spec:
       targetPort: {{ $.Values.app.exposedContainerPort }}
       protocol: TCP
       appProtocol: http
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $appValues.podLabels $.Values.commonLabels) "context" $) }}
+  selector: {{- include "shuffle.appInstance.matchLabels" ( dict "app" $app "customLabels" $podLabels "context" $ ) | nindent 6 }}
 ---
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
 kind: Deployment
@@ -49,7 +51,6 @@ spec:
   {{- if $appValues.updateStrategy }}
   strategy: {{- toYaml $appValues.updateStrategy | nindent 4 }}
   {{- end }}
-  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $appValues.podLabels $.Values.commonLabels) "context" $) }}
   selector:
     matchLabels: {{- include "shuffle.appInstance.matchLabels" ( dict "app" $app "customLabels" $podLabels "context" $ ) | nindent 6 }}
   template:
