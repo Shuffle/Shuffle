@@ -106,6 +106,8 @@ spec:
           resources: {{- include "common.resources.preset" (dict "type" .Values.worker.resourcesPreset) | nindent 12 }}
           {{- end }}
           ports:
+            - name: http
+              containerPort: {{ .Values.worker.containerPorts.http }}
             {{- if .Values.worker.extraContainerPorts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraContainerPorts "context" $) | nindent 12 }}
             {{- end }}

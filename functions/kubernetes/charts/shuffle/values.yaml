@@ -1375,6 +1375,10 @@ worker:
   ## @param worker.replicaCount Number of worker replicas to deploy. Only effective with worker.enableHelmDeployment.
   ##
   replicaCount: 1
+  ## @param worker.containerPorts.http backend HTTP container port
+  ##
+  containerPorts:
+    http: 33333
   ## @param worker.extraContainerPorts Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.
   ## e.g:
   ## extraContainerPorts:

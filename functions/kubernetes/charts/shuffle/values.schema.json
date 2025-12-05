@@ -2120,6 +2120,16 @@
                     "description": "Number of worker replicas to deploy. Only effective with worker.enableHelmDeployment.",
                     "default": 1
                 },
+                "containerPorts": {
+                    "type": "object",
+                    "properties": {
+                        "http": {
+                            "type": "number",
+                            "description": "backend HTTP container port",
+                            "default": 33333
+                        }
+                    }
+                },
                 "extraContainerPorts": {
                     "type": "array",
                     "description": "Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.",
