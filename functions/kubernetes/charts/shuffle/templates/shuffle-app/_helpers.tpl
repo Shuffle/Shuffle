@@ -80,7 +80,7 @@ Usage:
 {{ include "shuffle.appInstance.fullname" $app }}
 */}}
 {{- define "shuffle.appInstance.fullname" -}}
-{{ printf "%s-%s" .name .version | replace "_" "-" | lower }}
+{{ printf "%s-%s" .name .version | replace "." "-" | replace "_" "-" | lower }}
 {{- end -}}
 
 {{/*
