@@ -18,7 +18,7 @@ import {
 	Collapse,
 } from '@mui/material';
 import { Context } from '../context/ContextApi.jsx';
-import {getTheme} from '../theme.jsx';
+import { getTheme } from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';
 import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
@@ -27,7 +27,7 @@ import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
 import Draggable from "react-draggable";
 
 import {
-	Storage as StorageIcon, 
+	Storage as StorageIcon,
 	FullscreenExit as FullscreenExitIcon,
 	Extension as ExtensionIcon,
 	Apps as AppsIcon,
@@ -46,7 +46,7 @@ import {
 	DragIndicator as DragIndicatorIcon,
 	RestartAlt as RestartAltIcon,
 	ArrowForward as ArrowForwardIcon,
-	KeyboardReturn as KeyboardReturnIcon, 
+	KeyboardReturn as KeyboardReturnIcon,
 	FormatIndentIncrease as FormatIndentIncreaseIcon,
 	Fullscreen as FullscreenIcon,
 } from '@mui/icons-material';
@@ -153,7 +153,7 @@ const CodeEditor = (props) => {
 		if (!content || typeof content !== 'string' || content.trim().length === 0) {
 			return content;
 		}
-		
+
 		try {
 			// Check if content looks like JSON (starts with { or [)
 			const trimmedContent = content.trim();
@@ -165,7 +165,7 @@ const CodeEditor = (props) => {
 					return IndentJsonLikeString(content, 2);
 				}
 			}
-			
+
 			// Return original content if it doesn't look like JSON
 			return content;
 		} catch (error) {
@@ -179,7 +179,7 @@ const CodeEditor = (props) => {
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
 	// const {codelang, setcodelang} = props
-	const {themeMode, supportEmail} = useContext(Context)
+	const { themeMode, supportEmail } = useContext(Context)
 	const theme = getTheme(themeMode)
 
 	const [validation, setValidation] = React.useState(false);
@@ -370,9 +370,9 @@ const CodeEditor = (props) => {
 		setMainVariables(tmpVariables)
 	}
 
-    const handleKeyDown = (event) => {
-  		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-  	  		event.preventDefault()
+	const handleKeyDown = (event) => {
+		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+			event.preventDefault()
 			const tryItButton = document.getElementById("try-it-button")
 			if (tryItButton !== undefined && tryItButton !== null) {
 				tryItButton.click()
@@ -382,7 +382,7 @@ const CodeEditor = (props) => {
 
 	// Remove the original useEffect for actionlist since we'll update on action/trigger changes
 	useEffect(() => {
-    	document.addEventListener("keydown", handleKeyDown)
+		document.addEventListener("keydown", handleKeyDown)
 		updateAvailableVariables(actionlist)
 	}, [])
 
@@ -972,7 +972,11 @@ const CodeEditor = (props) => {
 			// Resolve the child paths/variables first,
 			// So that "$a.b.c" is handled before "$a.b" and then "$a"
 			// Replace "$parent.child" before "$parent" so "$parent.child" doesn't become "parentValue.child" (which can't be matched later).
-			found.sort((a, b) => b.length - a.length)
+			console.log("FOUND PROD BEFORE SORT:", found)
+			found.sort((a, b) => {
+				return Number(b.length) - Number(a.length)
+			})
+			console.log("FOUND PROD AFTER SORT:", found)
 
 			//console.log("FOUND: ", found)
 			try {
@@ -983,19 +987,19 @@ const CodeEditor = (props) => {
 
 						var valuefound = false
 
-						  // First check if it's a workflow variable
-						  if (actionlist !== undefined && actionlist.length > 0) {
-							const workflowVar = actionlist?.find(item => 
-								item.type === "workflow_variable" && 
+						// First check if it's a workflow variable
+						if (actionlist !== undefined && actionlist.length > 0) {
+							const workflowVar = actionlist?.find(item =>
+								item.type === "workflow_variable" &&
 								`$${item.autocomplete.toLowerCase()}` === fixedVariable.toLowerCase()
 							)
-	
+
 							if (workflowVar && workflowVar.example) {
 								valuefound = true
 								try {
 									// Try to parse the example value if it's stored as a JSON string
-									if (typeof workflowVar.example === "string" && 
-									   (workflowVar.example.startsWith("[") || workflowVar.example.startsWith("{"))) {
+									if (typeof workflowVar.example === "string" &&
+										(workflowVar.example.startsWith("[") || workflowVar.example.startsWith("{"))) {
 										const parsedExample = JSON.parse(workflowVar.example)
 										input = input.replace(found[i], JSON.stringify(parsedExample), -1)
 									} else {
@@ -1029,7 +1033,7 @@ const CodeEditor = (props) => {
 							foundlocation = j
 							break
 						}
-	
+
 						// FIXME: There is something wrong here with: 
 						// $variable.#
 						// vs
@@ -1069,7 +1073,7 @@ const CodeEditor = (props) => {
 										const replacedSlice = input.slice(foundlocation, input.length).replace(fixedVariable, newvalue, 1)
 										input = input.slice(0, foundlocation) + replacedSlice
 									}
-								} 
+								}
 							} catch (e) {
 								console.log("Replace error: ", e)
 							}
@@ -1082,26 +1086,26 @@ const CodeEditor = (props) => {
 							var shouldbreak = false
 							for (var k = 0; k < actionlist.length; k++) {
 								var parsedPaths = []
-								
-								    // Handle both workflow variables and regular actions
-									if (actionlist[k].type === "workflow_variable") {
-										// Try to parse the value if it's a string that could be JSON
-										if (typeof actionlist[k].value === "string") {
-											try {
-												const parsedValue = JSON.parse(actionlist[k].value)
-												if (typeof parsedValue === "object") {
-													parsedPaths = GetParsedPaths(parsedValue, "");
-												}
-											} catch (e) {
-												// Not valid JSON, use the value directly
-												parsedPaths = GetParsedPaths(actionlist[k].value, "");
+
+								// Handle both workflow variables and regular actions
+								if (actionlist[k].type === "workflow_variable") {
+									// Try to parse the value if it's a string that could be JSON
+									if (typeof actionlist[k].value === "string") {
+										try {
+											const parsedValue = JSON.parse(actionlist[k].value)
+											if (typeof parsedValue === "object") {
+												parsedPaths = GetParsedPaths(parsedValue, "");
 											}
-										} else if (typeof actionlist[k].value === "object") {
+										} catch (e) {
+											// Not valid JSON, use the value directly
 											parsedPaths = GetParsedPaths(actionlist[k].value, "");
 										}
-									} else if (typeof actionlist[k].example === "object") {
-										parsedPaths = GetParsedPaths(actionlist[k].example, "");
-								}				
+									} else if (typeof actionlist[k].value === "object") {
+										parsedPaths = GetParsedPaths(actionlist[k].value, "");
+									}
+								} else if (typeof actionlist[k].example === "object") {
+									parsedPaths = GetParsedPaths(actionlist[k].example, "");
+								}
 
 								for (var key in parsedPaths) {
 									const fullpath = "$" + actionlist[k].autocomplete.toLowerCase() + parsedPaths[key].autocomplete.toLowerCase()
@@ -1115,22 +1119,22 @@ const CodeEditor = (props) => {
 
 									var new_input = ""
 									try {
-										const sourceData = actionlist[k].type === "workflow_variable" ? 
-										(() => {
-											// Try to parse the value if it's a JSON string
-											if (typeof actionlist[k].value === "string") {
-												try {
-													return JSON.parse(actionlist[k].value);
-												} catch (e) {
-													// If parsing fails, return the original string value
-													return actionlist[k].value;
+										const sourceData = actionlist[k].type === "workflow_variable" ?
+											(() => {
+												// Try to parse the value if it's a JSON string
+												if (typeof actionlist[k].value === "string") {
+													try {
+														return JSON.parse(actionlist[k].value);
+													} catch (e) {
+														// If parsing fails, return the original string value
+														return actionlist[k].value;
+													}
 												}
-											}
-											return actionlist[k].value;
-										})() : 
-										actionlist[k].example;
-	
-										new_input = FindJsonPath(fullpath, sourceData)	
+												return actionlist[k].value;
+											})() :
+											actionlist[k].example;
+
+										new_input = FindJsonPath(fullpath, sourceData)
 									} catch (e) {
 										console.log("ERR IN INPUT: ", e)
 									}
@@ -1437,85 +1441,85 @@ const CodeEditor = (props) => {
 
 		return (
 			<Draggable
-			  style={{
-				  position: "absolute",
-				  zIndex: 15000,
-			  }}
-			  onDrag={(e) => {
-				  e.preventDefault()
-				  // Check if inside div.ace_content
-				  if (e.srcElement.className === "ace_content") {
-					  // Input on the correct line. Each line is: 
-					  // Show some tooltip at mouse cursor that shows "Insert Action"
+				style={{
+					position: "absolute",
+					zIndex: 15000,
+				}}
+				onDrag={(e) => {
+					e.preventDefault()
+					// Check if inside div.ace_content
+					if (e.srcElement.className === "ace_content") {
+						// Input on the correct line. Each line is: 
+						// Show some tooltip at mouse cursor that shows "Insert Action"
 
-					  // Append the text to the DOM
-				  } else {
-					  //console.log("PAGEX: ", e.pageX, e.pageY)
-					  //console.log("OffsetX: ", e.offsetX, e.offsetY)
-					  //console.log("E: ", e)
-				  }
+						// Append the text to the DOM
+					} else {
+						//console.log("PAGEX: ", e.pageX, e.pageY)
+						//console.log("OffsetX: ", e.offsetX, e.offsetY)
+						//console.log("E: ", e)
+					}
 
-				  if (!dragging) {
-				  	setDragging(true)
-				  }
-			  }}
-			  onStop={(e) => {
-				  if (e.srcElement.className === "ace_content") {
-					  console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
+					if (!dragging) {
+						setDragging(true)
+					}
+				}}
+				onStop={(e) => {
+					if (e.srcElement.className === "ace_content") {
+						console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
 
-					  const usedposition = e.offsetY
-					  if (usedposition  === undefined || usedposition === null) {
-						  toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
-						  return
-					  }
+						const usedposition = e.offsetY
+						if (usedposition === undefined || usedposition === null) {
+							toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
+							return
+						}
 
-					  if (usedposition  === 0) {
-						  usedposition = 1
-					  }
+						if (usedposition === 0) {
+							usedposition = 1
+						}
 
-					  const lineheight = 15
-					  const codedatasplit = localcodedata.split('\n')
-					  if (codedatasplit === undefined || codedatasplit === null || codedatasplit.length === 0) {
-						  return
-					  }
+						const lineheight = 15
+						const codedatasplit = localcodedata.split('\n')
+						if (codedatasplit === undefined || codedatasplit === null || codedatasplit.length === 0) {
+							return
+						}
 
-					  // Int 
-					  const lineposition = parseInt(usedposition/lineheight)
+						// Int 
+						const lineposition = parseInt(usedposition / lineheight)
 
-					  // Find the correct line
-					  if (lineposition > codedatasplit.length) {
-						  codedatasplit[codedatasplit.length-1] += value
-					  } else {
-						  codedatasplit[lineposition] += value
-					  }
+						// Find the correct line
+						if (lineposition > codedatasplit.length) {
+							codedatasplit[codedatasplit.length - 1] += value
+						} else {
+							codedatasplit[lineposition] += value
+						}
 
 
-					  //e.srcElement.layerY
-					  setlocalcodedata(codedatasplit.join('\n'))
-				  }
+						//e.srcElement.layerY
+						setlocalcodedata(codedatasplit.join('\n'))
+					}
 
-				  setDragging(false)
-			  }}
-			  dragging={dragging}
-			  position={{ 
-				  x: 0, 
-				  y: 0,
-			  }}
-			  onMouseHover={() => {
-			  	setHovering(true)
-			  }}
-			  onMouseLeave={() => {
-			  	setHovering(false)
-			  }}
+					setDragging(false)
+				}}
+				dragging={dragging}
+				position={{
+					x: 0,
+					y: 0,
+				}}
+				onMouseHover={() => {
+					setHovering(true)
+				}}
+				onMouseLeave={() => {
+					setHovering(false)
+				}}
 			>
-				<div 
+				<div
 					style={{
-						cursor: dragging ? "grabbing" : "grab", 
-						minWidth: 100, 
-						border: "1px solid rgba(255,255,255,0.5)", 
-						borderRadius: theme.palette.borderRadius/2, 
-						marginRight: 10, 
-						padding: 5, 
+						cursor: dragging ? "grabbing" : "grab",
+						minWidth: 100,
+						border: "1px solid rgba(255,255,255,0.5)",
+						borderRadius: theme.palette.borderRadius / 2,
+						marginRight: 10,
+						padding: 5,
 					}}
 				>
 					{value}
@@ -1525,56 +1529,56 @@ const CodeEditor = (props) => {
 	}
 
 	const IndentJsonLikeString = (input, indentSize = 2) => {
-	  const indent = ' '.repeat(indentSize);
-	  let level = 0;
-	  let inString = false;
-	  let escapeNext = false;
-	  let result = '';
+		const indent = ' '.repeat(indentSize);
+		let level = 0;
+		let inString = false;
+		let escapeNext = false;
+		let result = '';
 
-	  for (let i = 0; i < input.length; i++) {
-		let char = input[i];
+		for (let i = 0; i < input.length; i++) {
+			let char = input[i];
 
-		if (escapeNext) {
-		  result += char;
-		  escapeNext = false;
-		  continue;
+			if (escapeNext) {
+				result += char;
+				escapeNext = false;
+				continue;
+			}
+
+			if (char === '\\') {
+				escapeNext = true;
+				result += char;
+				continue;
+			}
+
+			if (char === '"') {
+				inString = !inString;
+				result += char;
+				continue;
+			}
+
+			if (!inString) {
+				if (char === '{' || char === '[') {
+					result += char + '\n' + indent.repeat(++level);
+					continue;
+				} else if (char === '}' || char === ']') {
+					result += '\n' + indent.repeat(--level) + char;
+					continue;
+				} else if (char === ',') {
+					result += char + '\n' + indent.repeat(level);
+					continue;
+				} else if (char === ':') {
+					result += ': ';
+					continue;
+				} else if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+					// Skip whitespace characters when not in string
+					continue;
+				}
+			}
+
+			result += char;
 		}
 
-		if (char === '\\') {
-		  escapeNext = true;
-		  result += char;
-		  continue;
-		}
-
-		if (char === '"') {
-		  inString = !inString;
-		  result += char;
-		  continue;
-		}
-
-		if (!inString) {
-		  if (char === '{' || char === '[') {
-			result += char + '\n' + indent.repeat(++level);
-			continue;
-		  } else if (char === '}' || char === ']') {
-			result += '\n' + indent.repeat(--level) + char;
-			continue;
-		  } else if (char === ',') {
-			result += char + '\n' + indent.repeat(level);
-			continue;
-		  } else if (char === ':') {
-			result += ': ';
-			continue;
-		  } else if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
-			// Skip whitespace characters when not in string
-			continue;
-		  }
-		}
-
-		result += char;
-	  }
-
-	  return result;
+		return result;
 	}
 
 
@@ -1585,16 +1589,16 @@ const CodeEditor = (props) => {
 
 
 		return (
-			<div style={{minHeight: 40, marginTop: 10, }}>
+			<div style={{ minHeight: 40, marginTop: 10, }}>
 				<div style={{
-					cursor: "pointer", 
-					display: "flex", 
-					position: "relative", 
+					cursor: "pointer",
+					display: "flex",
+					position: "relative",
 				}} onClick={() => {
 					setExpanded(!expanded)
 				}}>
 					<ValueBox name={innerdata?.name} value={innerdata?.value} />
-					<Typography style={{marginTop: 5, maxWidth: 150, maxHeight: 40, overflow: "hidden", }}>
+					<Typography style={{ marginTop: 5, maxWidth: 150, maxHeight: 40, overflow: "hidden", }}>
 						{innerdata?.name}
 					</Typography>
 				</div>
@@ -1622,8 +1626,8 @@ const CodeEditor = (props) => {
 			aria-labelledby="draggable-dialog-title"
 			// disableBackdropClick={true}
 			disableEnforceFocus={true}
-			style={{ 
-				pointerEvents: "none", 
+			style={{
+				pointerEvents: "none",
 				zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 			}}
 			hideBackdrop={true}
@@ -1673,7 +1677,7 @@ const CodeEditor = (props) => {
 				</Tooltip>
 				: null}
 
-			{fullScreenModeEnabled ? null : 
+			{fullScreenModeEnabled ? null :
 				<Tooltip
 					color="primary"
 					title={`Move window`}
@@ -1747,7 +1751,7 @@ const CodeEditor = (props) => {
 				</IconButton>
 			</Tooltip>
 			<div style={{ display: "flex" }}>
-				{sourceDataOpen ? 
+				{sourceDataOpen ?
 					<div style={{ minWidth: 350, maxWidth: 350, marginLeft: 5, borderRight: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", marginRight: 10, }}>
 						<Typography variant="h6">
 							Source Data
@@ -1781,7 +1785,7 @@ const CodeEditor = (props) => {
 							};
 
 							const handleActionHover = (inside, actionId) => {
-								};
+							};
 
 							const handleMouseover = () => {
 								if (innerdata.type === "Execution Argument") {
@@ -1802,20 +1806,20 @@ const CodeEditor = (props) => {
 							var parsedPaths = [];
 							if (innerdata.type === "workflow_variable") {
 								// Try to parse the value if it's a string that could be JSON
-								  if (typeof innerdata.value === "string") {
+								if (typeof innerdata.value === "string") {
 									try {
-									  const parsedValue = JSON.parse(innerdata.value)
-									  if (typeof parsedValue === "object") {
-										parsedPaths = GetParsedPaths(parsedValue, "");
-									  }
+										const parsedValue = JSON.parse(innerdata.value)
+										if (typeof parsedValue === "object") {
+											parsedPaths = GetParsedPaths(parsedValue, "");
+										}
 									} catch (e) {
-									  // Not valid JSON, use the value directly
-									  parsedPaths = GetParsedPaths(innerdata.value, "");
+										// Not valid JSON, use the value directly
+										parsedPaths = GetParsedPaths(innerdata.value, "");
 									}
-								  } else if (typeof innerdata.value === "object") {
+								} else if (typeof innerdata.value === "object") {
 									parsedPaths = GetParsedPaths(innerdata.value, "");
-								  }
-							  } else if (typeof innerdata.example === "object") {
+								}
+							} else if (typeof innerdata.example === "object") {
 								parsedPaths = GetParsedPaths(innerdata.example, "");
 							}
 
@@ -1830,7 +1834,7 @@ const CodeEditor = (props) => {
 							)
 						})}
 					</div>
-				: null}
+					: null}
 
 				<div style={{ flex: 3, }}>
 					{isFileEditor ?
@@ -1858,7 +1862,7 @@ const CodeEditor = (props) => {
 									height: 50,
 									width: 50,
 									right: 25,
-									top: 90, 
+									top: 90,
 									zIndex: 5000,
 								}}
 								disabled={localcodedata === undefined || localcodedata === null || localcodedata.length === 0}
@@ -1902,7 +1906,7 @@ const CodeEditor = (props) => {
 								{isFileEditor || isWorkflowEditor ? null :
 									<div style={{ display: "flex", maxHeight: 40, }}>
 										<ButtonGroup style={{ borderRadius: theme.palette.borderRadius, }}>
-											{userdata !== undefined && userdata !== null && userdata.support === true ? 
+											{userdata !== undefined && userdata !== null && userdata.support === true ?
 												<Button
 													id="basic-button"
 													aria-haspopup="true"
@@ -1919,9 +1923,9 @@ const CodeEditor = (props) => {
 														setSourceDataOpen(!sourceDataOpen)
 													}}
 												>
-													<AddIcon /> Show Source Data 
+													<AddIcon /> Show Source Data
 												</Button>
-											: null}
+												: null}
 
 											<Button
 												id="basic-button"
@@ -1976,7 +1980,7 @@ const CodeEditor = (props) => {
 													setAnchorEl3(event.currentTarget);
 												}}
 											>
-												Python Examples 
+												Python Examples
 											</Button>
 											<Button
 												id="basic-button"
@@ -2012,24 +2016,24 @@ const CodeEditor = (props) => {
 											>
 												{pythonFilters.map((item, index) => {
 													return (
-														<MenuItem 
+														<MenuItem
 															style={{
 																borderTop: item.name === "Use files" || (item.name.toLowerCase().includes("run") && item.name.toLowerCase().includes("subflow")) ? "2px solid rgba(255,255,255,0.3)" : "none",
 
 															}}
 															key={index} onClick={() => {
-															if (item.disabled) {
-																toast.error("This feature may not work in your environment until you update your Shuffle Tools app.", { autoClose: 10000 })
-															}
+																if (item.disabled) {
+																	toast.error("This feature may not work in your environment until you update your Shuffle Tools app.", { autoClose: 10000 })
+																}
 
-															if (selectedAction.name !== "execute_python") {
-																var newitem = JSON.parse(JSON.stringify(item))
-																newitem.value = `{% python %}\n${item.value}\n{% endpython %}`
-																handleClick(newitem)
-															} else {
-																handleClick(item)
-															}
-														}}>{item.name}</MenuItem>
+																if (selectedAction.name !== "execute_python") {
+																	var newitem = JSON.parse(JSON.stringify(item))
+																	newitem.value = `{% python %}\n${item.value}\n{% endpython %}`
+																	handleClick(newitem)
+																} else {
+																	handleClick(item)
+																}
+															}}>{item.name}</MenuItem>
 													)
 												})}
 											</Menu>
@@ -2069,11 +2073,11 @@ const CodeEditor = (props) => {
 														) : innerdata.type === "workflow_variable" ||
 															innerdata.type === "execution_variable" ? (
 															<FavoriteBorderIcon style={{ marginRight: 10 }} />
-														) : 
-															innerdata.type === "Shuffle DB" ? 
-															<StorageIcon style={{ marginRight: 10,  }} />
-														:
-															<ScheduleIcon style={{ marginRight: 10 }} />
+														) :
+															innerdata.type === "Shuffle DB" ?
+																<StorageIcon style={{ marginRight: 10, }} />
+																:
+																<ScheduleIcon style={{ marginRight: 10 }} />
 
 													const handleExecArgumentHover = (inside) => {
 														var exec_text_field = document.getElementById(
@@ -2110,20 +2114,20 @@ const CodeEditor = (props) => {
 													var parsedPaths = [];
 													if (innerdata.type === "workflow_variable") {
 														// Try to parse the value if it's a string that could be JSON
-														  if (typeof innerdata.value === "string") {
+														if (typeof innerdata.value === "string") {
 															try {
-															  const parsedValue = JSON.parse(innerdata.value)
-															  if (typeof parsedValue === "object") {
-																parsedPaths = GetParsedPaths(parsedValue, "");
-															  }
+																const parsedValue = JSON.parse(innerdata.value)
+																if (typeof parsedValue === "object") {
+																	parsedPaths = GetParsedPaths(parsedValue, "");
+																}
 															} catch (e) {
-															  // Not valid JSON, use the value directly
-															  parsedPaths = GetParsedPaths(innerdata.value, "");
+																// Not valid JSON, use the value directly
+																parsedPaths = GetParsedPaths(innerdata.value, "");
 															}
-														  } else if (typeof innerdata.value === "object") {
+														} else if (typeof innerdata.value === "object") {
 															parsedPaths = GetParsedPaths(innerdata.value, "");
-														  }
-													  } else if (typeof innerdata.example === "object") {
+														}
+													} else if (typeof innerdata.example === "object") {
 														parsedPaths = GetParsedPaths(innerdata.example, "");
 													}
 
@@ -2381,7 +2385,7 @@ const CodeEditor = (props) => {
 						</div>
 					}
 
-					<div 
+					<div
 						style={{
 							borderRadius: theme.palette?.borderRadius,
 							position: "relative",
@@ -2393,7 +2397,7 @@ const CodeEditor = (props) => {
 						onDrop={(e) => {
 							console.log("DROP: ", e)
 						}}
-					>	
+					>
 						{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor || isWorkflowEditor ? (
 							<AceEditor
 								id="shuffle-codeeditor"
@@ -2421,7 +2425,7 @@ const CodeEditor = (props) => {
 									backgroundColor: "rgba(40,40,40,1)",
 									zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 
-									
+
 								}}
 								onLoad={(editor) => {
 									highlight_variables(localcodedata)
@@ -2465,12 +2469,12 @@ const CodeEditor = (props) => {
 				</div>
 
 				{isFileEditor || isWorkflowEditor ? null :
-					<div style={{ 
-						flex: sourceDataOpen ? 1.5 : 3, 
-						marginLeft: 5, 
-						borderLeft: "1px solid rgba(255,255,255,0.3)", 
-						paddingLeft: 5, 
-						overflow: "hidden", 
+					<div style={{
+						flex: sourceDataOpen ? 1.5 : 3,
+						marginLeft: 5,
+						borderLeft: "1px solid rgba(255,255,255,0.3)",
+						paddingLeft: 5,
+						overflow: "hidden",
 						transitions: "all 1s ease-in-out",
 					}}>
 						<div>
@@ -2486,59 +2490,59 @@ const CodeEditor = (props) => {
 									}}
 								>
 									<div>
-											{actionId === null && triggerId === null ? 
-												<div style={{display: "flex", alignItems: "center"}}>
-													{`Condition ${selectedEdge?.conditions?.findIndex(cond => cond.condition.id === conditionId) + 1 || "0"}`}
-													{/* Source node image */}
-													{selectedEdge?.source ? 
-														<img 
-															src={sourceImage || ""}
-															alt="Source"
-															style={{
-																width: 30,
-																height: 30,
-																marginRight: 10,
-																borderRadius: "50%",
-																marginLeft: 10,
-																border: conditionField === "source" ? `3px solid #FF8544` : null,
-															}}
-														/>
-														: null
-													}
+										{actionId === null && triggerId === null ?
+											<div style={{ display: "flex", alignItems: "center" }}>
+												{`Condition ${selectedEdge?.conditions?.findIndex(cond => cond.condition.id === conditionId) + 1 || "0"}`}
+												{/* Source node image */}
+												{selectedEdge?.source ?
+													<img
+														src={sourceImage || ""}
+														alt="Source"
+														style={{
+															width: 30,
+															height: 30,
+															marginRight: 10,
+															borderRadius: "50%",
+															marginLeft: 10,
+															border: conditionField === "source" ? `3px solid #FF8544` : null,
+														}}
+													/>
+													: null
+												}
 
-													  {/* Add arrow icon */}
-													{
-														selectedEdge && Object.keys(selectedEdge).length > 0 ?
-														<ArrowForwardIcon style={{ 
+												{/* Add arrow icon */}
+												{
+													selectedEdge && Object.keys(selectedEdge).length > 0 ?
+														<ArrowForwardIcon style={{
 															color: theme.palette.textPrimary,
 															fontSize: 18,
 															marginLeft: -5,
 															marginRight: -5,
 														}} />
 														: null
-													}
+												}
 
-													{/* Destination node image */}
-													{selectedEdge?.target ?
-														<img
-															src={targetImage || ""}
-															alt="Destination" 
-															style={{
-																width: 30,
-																height: 30,
-																marginLeft: 10,
-																borderRadius: "50%",
-																border: conditionField === "destination" ? `3px solid #FF8544` : null,
-															}}
-														/>
-														: null
-													}
-												</div>
-												: 
-												<span style={{ color: theme.palette.text.primary }}>
-												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
-													"Code to run" : 
-													triggerId ? 
+												{/* Destination node image */}
+												{selectedEdge?.target ?
+													<img
+														src={targetImage || ""}
+														alt="Destination"
+														style={{
+															width: 30,
+															height: 30,
+															marginLeft: 10,
+															borderRadius: "50%",
+															border: conditionField === "destination" ? `3px solid #FF8544` : null,
+														}}
+													/>
+													: null
+												}
+											</div>
+											:
+											<span style={{ color: theme.palette.text.primary }}>
+												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ?
+													"Code to run" :
+													triggerId ?
 														`Output: ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)} (${triggerField})` :
 														`Output: ${appName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + appName?.replaceAll("_", " ").slice(1)} (${fieldName})`
 												}
@@ -2570,7 +2574,7 @@ const CodeEditor = (props) => {
 											backdropFilter: "blur(8px)",
 											boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
 											transition: "all 0.2s ease",
-											paddingRight: 20, 
+											paddingRight: 20,
 											color: "#FF8544",
 											borderRadius: theme.palette?.borderRadius,
 											"&:hover": {
@@ -2592,18 +2596,18 @@ const CodeEditor = (props) => {
 											<span>
 
 												<PlayArrowIcon style={{ height: 18, width: 18, marginBottom: -4, marginLeft: 5, }} />
-											{selectedAction === undefined ? <Typography style={{color: "inherit"}}>Try it</Typography> : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"} 
-                        						<span
-                        						  style={{
-                        						    color: "#C8C8C8",
-                        						    fontSize: "12px",
-                        						    whiteSpace: "nowrap",
-													marginLeft: 5,
-														  marginRight: 10, 
-                        						  }}
-                        						>
-                        						  <kbd>Ctrl</kbd> + <kbd><KeyboardReturnIcon style={{width: 13, position: "absolute", marginLeft: 3, top: 5, }}/></kbd>
-                        						</span>
+												{selectedAction === undefined ? <Typography style={{ color: "inherit" }}>Try it</Typography> : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}
+												<span
+													style={{
+														color: "#C8C8C8",
+														fontSize: "12px",
+														whiteSpace: "nowrap",
+														marginLeft: 5,
+														marginRight: 10,
+													}}
+												>
+													<kbd>Ctrl</kbd> + <kbd><KeyboardReturnIcon style={{ width: 13, position: "absolute", marginLeft: 3, top: 5, }} /></kbd>
+												</span>
 
 											</span>
 										}
@@ -2713,7 +2717,7 @@ const CodeEditor = (props) => {
 												Output is based on the last VALID run of the node(s) you are referencing. Refresh the page to get updated Variable values.&nbsp;
 												{selectedAction?.name === "execute_python" ?
 													"For Python: exit() to stop a python script ANYWHERE."
-												: null}
+													: null}
 											</Typography>
 											<Typography variant="body2" style={{ maxHeight: 150, overflow: "auto", marginTop: 20, }}>
 												No test output yet.
@@ -2735,7 +2739,7 @@ const CodeEditor = (props) => {
 			</div>
 
 
-			<div style={{ display: 'flex', width: fullScreenModeEnabled ? "92%" : isWorkflowEditor ? "90%" : "100%",  }}>
+			<div style={{ display: 'flex', width: fullScreenModeEnabled ? "92%" : isWorkflowEditor ? "90%" : "100%", }}>
 				<Button
 					style={{
 						height: 35,
@@ -2758,7 +2762,7 @@ const CodeEditor = (props) => {
 				<Button
 					variant="contained"
 					color="primary"
-					disabled={isWorkflowEditor} 
+					disabled={isWorkflowEditor}
 					style={{
 						height: 35,
 						flex: 1,
