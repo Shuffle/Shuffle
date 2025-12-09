@@ -309,8 +309,8 @@ github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
 github.com/shuffle/opensearch-go/v4 v4.0.0 h1:Mh85CD1MwOgXiFFYlzS1llnvdqL3CztRdR1ZT/SLIjU=
 github.com/shuffle/opensearch-go/v4 v4.0.0/go.mod h1:gVLZKQE5khQWMb68XBtgKrhu78oLGL2zHwAGnFMDwC0=
-github.com/shuffle/shuffle-shared v0.9.60 h1:8NiovcsSsVX8i0UHmbFBANjUQ/u+4PDDpJXg9JfMAUo=
-github.com/shuffle/shuffle-shared v0.9.60/go.mod h1:vK6t1WY5Nfg5vOAk6taT788jIGKs6/4iN1d8Argyn4o=
+github.com/shuffle/shuffle-shared v0.9.61 h1:osyJqgRx68m9l+kssB1fpHA4pmkNXK4ZAVVEHL5dW3Q=
+github.com/shuffle/shuffle-shared v0.9.61/go.mod h1:vK6t1WY5Nfg5vOAk6taT788jIGKs6/4iN1d8Argyn4o=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=

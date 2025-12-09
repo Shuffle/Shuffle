@@ -2785,6 +2785,10 @@ func main() {
 					}
 
 				} else {
+					if debug {
+						log.Printf("[DEBUG] Passing execution ID request to normal queue: %#v", incRequest.ExecutionId)
+					}
+
 					newrequests = append(newrequests, incRequest)
 				}
 			}
@@ -4317,6 +4321,10 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		//},
 		Timeout: time.Duration(120 * time.Second),
+	}
+
+	if debug {
+		log.Printf("[DEBUG][%s] Worker request to be sent to URL: %s", workflowExecution.ExecutionId, streamUrl)
 	}
 
 	req, err := http.NewRequest(
