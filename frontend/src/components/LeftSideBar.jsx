@@ -84,7 +84,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
   const tab = params.get("tab");
   const currentPath = tab ? `${window.location.pathname}?tab=${tab}` : window.location.pathname;
   const [hoverOnAvatar, setHoverOnAvatar] = useState(false);
-  const [showProductionStatus, setShowProductionStatus] = useState(false);
   const [orgOptions, setOrgOptions] = useState(
     userdata?.orgs?.map((org) => ({
       id: org.id,
@@ -129,17 +128,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     }
   }, [userdata]);
 
-  useEffect(() => {
-  if (activeOrgData?.id?.length > 0 && typeof activeOrgData.created === "number") {
-    const nowUnix = Math.floor(Date.now() / 1000);
-
-    const THIRTY_DAYS = 30 * 24 * 60 * 60;
-    const isAfter30Days = nowUnix >= activeOrgData.created + THIRTY_DAYS;
-
-    setShowProductionStatus(isAfter30Days);
-  }
-}, [activeOrgData]);
-      
       
   
   const CustomPopper = (props) => {
@@ -1963,7 +1951,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 		  </div>
 	  }
 
-      {!isCloud && showProductionStatus? (
+      {!isCloud && activeOrgData?.old_org? (
           <div
            style={{
                       display: "flex",
