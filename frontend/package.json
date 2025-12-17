@@ -90,7 +90,7 @@
     "terser-webpack-plugin": "^4.2.3",
     "yaml": "^1.10.0",
     "yamljs": "^0.3.0",
-    "zone.js": "^0.15.1"
+    "zone.js": "^0.16.0"
   },
   "scripts": {
     "start": "HTTPS=false&&PORT=3000 GENERATE_SOURCEMAP=false react-scripts --openssl-legacy-provider start",
