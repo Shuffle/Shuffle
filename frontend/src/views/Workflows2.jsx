@@ -103,6 +103,9 @@ import {
 	Publish as PublishIcon,
 	GetApp as GetAppIcon,
 	Image as ImageIcon,
+	Shield as ShieldIcon,
+	Warning as WarningIcon,
+	ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -798,7 +801,197 @@ const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
     );
 });
 
+const ProductionBadge = ({ isProduction, onClick, themeMode }) => {
+    const [isHovered, setIsHovered] = useState(false);
 
+    const theme = {
+        light: {
+            textPrimary: '#1f2937',
+            textSecondary: '#6b7280',
+            success: '#059669',
+            successBg: 'rgba(5, 150, 105, 0.08)',
+            successBorder: 'rgba(5, 150, 105, 0.2)',
+            warning: '#f59e0b',
+            warningBg: 'rgba(245, 158, 11, 0.08)',
+            warningBorder: 'rgba(245, 158, 11, 0.2)',
+            shadow: 'rgba(0, 0, 0, 0.1)',
+        },
+        dark: {
+            textPrimary: '#e6edf3',
+            textSecondary: '#8b949e',
+            success: '#10b981',
+            successBg: 'rgba(16, 185, 129, 0.12)',
+            successBorder: 'rgba(16, 185, 129, 0.3)',
+            warning: '#f59e0b',
+            warningBg: 'rgba(245, 158, 11, 0.12)',
+            warningBorder: 'rgba(245, 158, 11, 0.3)',
+            shadow: 'rgba(0, 0, 0, 0.4)',
+        },
+    };
+
+    const colors = themeMode === "dark" ? theme.dark : theme.light;
+
+    const statusConfig = isProduction
+        ? {
+            icon: ShieldIcon,
+            text: 'Licensed',
+            subtitle: 'Full access',
+            color: colors.success,
+            bgColor: colors.successBg,
+            borderColor: colors.successBorder,
+        }
+        : {
+            icon: WarningIcon,
+            text: 'Unlicensed',
+            subtitle: 'Limited access',
+            color: colors.warning,
+            bgColor: colors.warningBg,
+            borderColor: colors.warningBorder,
+        };
+
+    const Icon = statusConfig.icon;
+
+    return (
+        <div
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 12,
+                cursor: 'pointer',
+                backgroundColor: statusConfig.bgColor,
+                border: `1.5px solid ${statusConfig.borderColor}`,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+                boxShadow: isHovered
+                    ? `0 4px 12px ${colors.shadow}, 0 0 0 3px ${statusConfig.bgColor}`
+                    : `0 2px 4px ${colors.shadow}`,
+                position: 'relative',
+                overflow: 'hidden',
+            }}
+        >
+            {/* Shine effect on hover */}
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: `linear-gradient(90deg, transparent, rgba(255,255,255,${themeMode === "dark" ? '0.1' : '0.2'}), transparent)`,
+                    transition: 'left 0.5s',
+                    left: isHovered ? '100%' : '-100%',
+                    pointerEvents: 'none',
+                }}
+            />
+
+            {/* Status indicator with pulse */}
+            <div
+                style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                <span
+                    style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: statusConfig.color,
+                        boxShadow: `0 0 8px ${statusConfig.color}`,
+                        position: 'relative',
+                        zIndex: 1,
+                    }}
+                />
+                {/* Pulse ring */}
+                <span
+                    style={{
+                        position: 'absolute',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: statusConfig.color,
+                        animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                        opacity: 0.75,
+                    }}
+                />
+            </div>
+
+            {/* Icon */}
+            <Icon
+                style={{
+                    color: statusConfig.color,
+                    flexShrink: 0,
+                    fontSize: 16,
+                }}
+            />
+
+            {/* Text content */}
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    alignItems: 'flex-start',
+                }}
+            >
+                <span
+                    style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: statusConfig.color,
+                        lineHeight: 1.2,
+                        letterSpacing: '0.2px',
+                    }}
+                >
+                    {statusConfig.text}
+                </span>
+                <span
+                    style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: statusConfig.color,
+                        opacity: 0.7,
+                        lineHeight: 1,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                    }}
+                >
+                    {statusConfig.subtitle}
+                </span>
+            </div>
+
+            {/* Arrow indicator */}
+            <ChevronRightIcon
+                style={{
+                    color: statusConfig.color,
+                    opacity: 0.6,
+                    flexShrink: 0,
+                    fontSize: 14,
+                    transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
+                    transition: 'all 0.2s',
+                }}
+            />
+
+            <style>
+                {`
+                    @keyframes ping {
+                        75%, 100% {
+                            transform: scale(2);
+                            opacity: 0;
+                        }
+                    }
+                `}
+            </style>
+        </div>
+    );
+};
 
 const Workflows2 = (props) => {
     const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
@@ -5522,46 +5715,19 @@ const Workflows2 = (props) => {
 						
 						{!isCloud && currentOrg?.old_org ? (
 						  <div
-						   	style={{
-							  display: "flex",
-							  alignItems: "center",
-							  gap: 20,
-							  padding: "4px 10px",
-							  marginLeft: "5px",
-							  marginRight: "5px",
-							  borderRadius: 20,
-							  marginBottom: "14px",
-							  background: isProdStatusOn
-								? "rgba(43, 192, 126, 0.1)"
-								: "rgba(255, 82, 82, 0.1)",
-								cursor: "pointer",
+							style={{
 							  position: "absolute",
 							  top: 20,
 							  right: 20,
 							}}
-							onClick={() => {
-							  navigate("/admin?admin_tab=billingstats")
-							}}
 						  >
-							<span
-							  style={{
-								  width: 8,
-								  height: 8,
-								  marginLeft: 10,
-								  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
-								  borderRadius: 999,
-								  display: "inline", 
+							<ProductionBadge
+							  isProduction={isProdStatusOn}
+							  themeMode={themeMode}
+							  onClick={() => {
+								navigate("/admin?admin_tab=billingstats")
 							  }}
 							/>
-							  <Typography
-								style={{
-								  fontFamily: "12px",
-								  opacity: 0.9,
-								  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
-								 }}
-							  >
-								{isProdStatusOn ? "Production" : "NOT Production"} 
-							  </Typography>
 						  </div>
 					  ) : null}
 
