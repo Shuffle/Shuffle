@@ -1,7 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Typography, ToggleButton, ToggleButtonGroup, Select, MenuItem, FormControl, InputLabel, Box } from '@mui/material';
+import { makeStyles, } from "@mui/styles";
+import { 
+	Typography, 
+	ToggleButton, 
+	ToggleButtonGroup, 
+	Select, 
+	MenuItem, 
+	FormControl, 
+	InputLabel, 
+	Box,
+	Autocomplete,
+	TextField,
+	Tooltip,
+	IconButton,
+} from '@mui/material';
 import { BarChart, BarSeries, Bar, GridlineSeries, Gridline, TooltipArea, ChartTooltip, LinearYAxis, LinearYAxisTickSeries, LinearYAxisTickLabel } from 'reaviz';
 import theme from '../theme.jsx';
+import {green, yellow, red} from "../views/AngularWorkflow.jsx"
+import {
+	OpenInNew as OpenInNewIcon,
+} from '@mui/icons-material';
 
 // Compact number formatter for axis ticks (e.g. 12,000 -> 12k, 12,000,000 -> 12M)
 function formatCompactNumber(value) {
@@ -59,20 +77,108 @@ function computeTodayValueForOrg(key, orgStats) {
   const RunsOverTimeWidget = (props) => {
     const { globalUrl, onLoadingChange, monthOverride, dummyMode, selectedOrganization, selectedOrgForStats, orgStats, orgForLimit, loadingSelectedOrgStats } = props;
   const [mode, setMode] = useState('workflows'); // 'apps' | 'workflows'
+  const [selectedStatType, setSelectedStatType] = useState({
+	  "value": 'total_workflow_executions',
+	  "label": 'Workflows',
+	  "amount": 0,
+  })
   const [series, setSeries] = useState([]);
   const [days, setDays] = useState(365); // aggregate to last 12 months by default
   const [selectedMonth, setSelectedMonth] = useState(null); // Date representing first day of target month, or null for yearly view
+  const [statTypeOptions, setStatTypeOptions] = useState([])
   const [loading, setLoading] = useState(false);
+  const useStyles = makeStyles({
+    notchedOutline: {
+      borderColor: "#FF8544 !important",
+    },
+    root: {
+      "& .MuiAutocomplete-listbox": {
+        border: "2px solid #FF8544",
+        color: theme.palette.text.primary,
+        fontSize: 18,
+        "& li:nth-child(even)": {
+          backgroundColor: "#CCC",
+        },
+        "& li:nth-child(odd)": {
+          backgroundColor: "#FFF",
+        },
+      },
+    },
+    inputRoot: {
+      color: theme.palette.text.primary,
+      "&:hover .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#f86a3e",
+      },
+    },
+  });
+  const classes = useStyles();
 
   // Helper: fetch time series for a specific statistics key
   const fetchSeriesForKey = async (key) => {
+
+	if (statTypeOptions?.length < 3) {
+		var foundkeys = {}
+		for (var key in orgStats) {
+			if (!key.startsWith("total_")) {
+				continue
+			}
+
+			// Remove total
+			foundkeys[key] = orgStats[key]
+		}
+
+		for (var foundKey in orgStats?.daily_statistics) {
+			const dailyStats = orgStats?.daily_statistics[foundKey]
+
+			for (var additionKey in dailyStats?.additions) {
+				const addition = dailyStats?.additions[additionKey];
+				if (foundkeys[addition?.key] === undefined) {
+					foundkeys[addition?.key] = addition?.value
+				} else {
+					foundkeys[addition?.key] += addition?.value
+				}
+			}
+		}
+
+		var newarray = []
+		for (var key in foundkeys) {
+			const foundkey = key
+
+			var parsedname = key
+			if (parsedname?.startsWith("total_")) {
+				parsedname = parsedname.replace("total_", "")
+			}
+
+			if (parsedname?.startsWith("categorylabel")) {
+				parsedname = parsedname.replace("categorylabel", "")
+			}
+
+			parsedname = (parsedname.charAt(0).toUpperCase() + parsedname.substring(1)).replaceAll("_", " ") 
+
+			newarray.push({
+				"value": key,
+				"label": parsedname,
+				"amount": foundkeys[key],
+			})
+		}
+
+		if (newarray.length > 0) {
+			setStatTypeOptions(newarray)
+		}
+	}
+
     try {
       // If specific org is selected and pre-fetched stats are available, use them directly
       if (selectedOrgForStats && selectedOrgForStats !== 'ALL' && orgStats && Array.isArray(orgStats?.daily_statistics)) {
+
         const dailyStats = orgStats.daily_statistics;
         const processedEntries = [];
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - days);
+
+		if (key.startsWith("total_")) {
+			key = key.replace("total_", "")
+		}
 
         for (const day of dailyStats) {
           if (!day?.date) continue;
@@ -80,13 +186,19 @@ function computeTodayValueForOrg(key, orgStats) {
           if (dayDate < cutoff) continue;
 
           let value = 0;
-          if (key === 'workflow_executions') {
-            const finished = Number(day?.workflow_executions_finished || 0);
-            const failed = Number(day?.workflow_executions_failed || 0);
-            value = finished + failed;
-          } else {
-            value = Number(day?.[key] || 0);
-          }
+
+		  if (day[key] === undefined) {
+			  for (var additionKey in day?.additions) {
+				  const addition = day?.additions[additionKey];
+				  if (addition?.key === key) {
+					  value += Number(addition?.value || 0);
+					  break
+				  }
+			  }
+		  } else {
+			  value = Number(day[key] || 0);
+		  }
+
           processedEntries.push({ date: day.date, value });
         }
 
@@ -185,7 +297,7 @@ function computeTodayValueForOrg(key, orgStats) {
   };
 
   // Load and transform into monthly aggregation for last 12 months
-  const load = async (curMode) => {
+  const loadStats = async (curMode, inputType) => {
     setLoading(true);
     try {
       // Clear current series immediately to avoid any visual overlap while switching views
@@ -203,8 +315,10 @@ function computeTodayValueForOrg(key, orgStats) {
         setSeries(dummy);
         return;
       }
-      const key = curMode === 'apps' ? 'app_executions' : 'workflow_executions';
+
+      const key = inputType !== undefined ? inputType : selectedStatType?.value?.length > 0 ? selectedStatType?.value : curMode === 'apps' ? 'app_executions' : 'workflow_executions';
       const entries = await fetchSeriesForKey(key);
+
       // Normalize variants: {Date, Value} or {date, value}
       const normalized = (entries || []).map((d) => ({
         date: d?.Date ? new Date(d.Date) : (d?.date ? new Date(d.date) : new Date()),
@@ -272,6 +386,23 @@ function computeTodayValueForOrg(key, orgStats) {
     }
   };
 
+
+  useEffect(() => {
+	  setTimeout(() => {
+		  const starterWidgetStatType = localStorage.getItem("runsOverTimeWidgetStatType")
+		  if (starterWidgetStatType) {
+			  setSelectedStatType({
+				  "value": starterWidgetStatType,
+				  "label": (starterWidgetStatType.charAt(0).toUpperCase() + starterWidgetStatType.substring(1)).replaceAll("_", " "),
+				  "amount": 0,
+			  })
+		  
+			  loadStats(mode, starterWidgetStatType)
+		  }
+      
+	  }, 1500)
+  }, [])
+
   // Apply month override (e.g. onboarding Explore Now) - consolidated with main load effect
   useEffect(() => {
     if (monthOverride instanceof Date) {
@@ -287,8 +418,9 @@ function computeTodayValueForOrg(key, orgStats) {
         setSeries([]);
         return;
       }
-      load(mode);
-    }, [mode, globalUrl, days, selectedMonth, dummyMode, selectedOrgForStats, loadingSelectedOrgStats]);
+
+      loadStats(mode);
+    }, [selectedStatType, mode, globalUrl, days, selectedMonth, dummyMode, selectedOrgForStats, loadingSelectedOrgStats]);
 
   // Notify parent on loading changes
   useEffect(() => {
@@ -341,55 +473,125 @@ function computeTodayValueForOrg(key, orgStats) {
 					}
 				/>;
 
+
+	const barColorscheme = [
+		  "#f85a3e", // anchor orange
+		  "#ff7a57", // brighter, more playful
+		  "#e14b2e", // slightly darker + redder
+		  "#ff9b6b", // soft peachy highlight
+		  "#c83f24", // deep burnt orange
+	]
 	
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography sx={{ fontSize: 18, fontWeight: 500, fontFamily: theme.typography.fontFamily, paddingLeft: 1 }}>Runs over time ({mode === "workflows" ? "Workflows" : "Apps"})</Typography>
+        <Typography sx={{ fontSize: 18, fontWeight: 500, fontFamily: theme.typography.fontFamily, paddingLeft: 1 }}>{selectedStatType?.label} ({selectedStatType?.amount})</Typography>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', justifyContent: 'center' }}>
-        <ToggleButtonGroup
-        exclusive
-        size="large"
-        value={mode}
-        onChange={(e, v) => v && setMode(v)}
-        sx={{
-          height: 37,
-          backgroundColor: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.22)',
-          borderRadius: '30px',
-          padding: '2px',
-          "& .MuiToggleButton-root": {
-            border: "none",
-            borderRadius: "30px",
-            color: "#fff",
-            padding: "6px 16px",
-            textTransform: "none",
-            fontSize: "14px",
-            "&.Mui-selected": {
-              backgroundColor: "#fff",
-              color: "#222",
-              fontWeight: "600",
-              "&:hover": {
-                backgroundColor: "#fff",
-              },
-            },
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-            },
+
+	  	<Tooltip title="Learn about custom stats" arrow>
+			<a href="/docs/API#count-stats-for-custom-key" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+				<IconButton>
+					<OpenInNewIcon style={{ color: theme.palette.text.secondary, }} />
+				</IconButton>
+			</a>
+	  	</Tooltip>
+
+        <FormControl size="small" variant="outlined" style={{ minWidth: 350, }} sx={{
+          '& .MuiInputBase-root': {
+            height: 40,
+            backgroundColor: 'rgba(255,255,255,0.06)',
+            borderRadius: '20px',
           },
-        }}
-      >
-        <ToggleButton value="workflows">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            Workflows
-          </Box>
-        </ToggleButton>
-        <ToggleButton value="apps">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            Apps
-          </Box>
-        </ToggleButton>
-      </ToggleButtonGroup>
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.22)' },
+        }}>
+			<Autocomplete
+              labelId="data-type-choice"
+              label="Select Datatype"
+              autoHighlight
+              value={selectedStatType}
+              classes={{ inputRoot: classes.inputRoot }}
+              ListboxProps={{
+                style: {
+                  backgroundColor: theme.palette.inputColor,
+                  color: theme.palette.text.primary,
+                },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  height: 40, // Adjust the input height
+                },
+                '& .MuiAutocomplete-input': {
+                  padding: '8px', // Adjust the text padding
+                },
+              }}
+              getOptionSelected={(option, value) => option.id === value.id}
+              getOptionLabel={(option) => {
+                if (
+                  option === undefined ||
+                  option === null ||
+                  option.label === undefined ||
+                  option.label === null
+                ) {
+					if (option.value !== undefined && option.value !== null) {
+                  		return option.value
+					} else {
+						return option
+					}
+                }
+
+                const newname = (
+                  option.label.charAt(0).toUpperCase() + option.label.substring(1)
+                ).replaceAll("_", " ");
+                return newname;
+              }}
+              options={statTypeOptions}
+              fullWidth
+              style={{
+                backgroundColor: theme.palette?.inputColor,
+                borderRadius: theme.palette?.borderRadius,
+              }}
+              onChange={(event, newValue) => {
+				console.log("CHANGE: ", newValue)
+              }}
+              renderOption={(props, data, state) => {
+				// Format to thousand or million
+				const formattedamount = formatCompactNumber(data?.amount)
+				const numbercolor = data?.amount >= 1000000 ? red : (data?.amount >= 100000 ? yellow : green)
+
+                return (
+                    <MenuItem
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                      }}
+                      value={data}
+                      onClick={() => {
+						  setSelectedStatType(data)
+
+						  // Set local storage for the key
+						  if (data?.value) {
+							localStorage.setItem("runsOverTimeWidgetStatType", data?.value)
+						  }
+                      }}
+                    >
+						<span style={{minWidth: 60, maxWidth: 60, color: numbercolor, }}>{formattedamount}</span> {data?.label} 
+                    </MenuItem>
+                )
+              }}
+              renderInput={(params) => {
+                return (
+				  <div style={{ display: "flex", }}>
+                    <TextField
+                      style={theme.palette.textFieldStyle}
+                      {...params}
+                      label="Find your Stat"
+                      variant="outlined"
+                    />
+				  </div>
+                )
+              }}
+            />
+          </FormControl>
+
         <FormControl size="small" variant="outlined" style={{ minWidth: 170 }} sx={{
           '& .MuiInputBase-root': {
             height: 40,
@@ -438,7 +640,7 @@ function computeTodayValueForOrg(key, orgStats) {
             key={`${mode}-${selectedMonth ? `${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}` : 'yearly'}`}
             height={300}
             data={barData}
-            series={<BarSeries tooltip={tooltip} bar={<Bar rounded={true} />} />}
+            series={<BarSeries colorScheme={barColorscheme} tooltip={tooltip} bar={<Bar rounded={true} />} />}
             gridlines={<GridlineSeries line={<Gridline direction="y" />} />}
             yAxis={
               <LinearYAxis

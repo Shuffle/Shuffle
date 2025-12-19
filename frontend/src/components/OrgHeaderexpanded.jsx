@@ -343,7 +343,7 @@ console.log("defatult in handleEditOrg", defaults)
     const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
     const data = {
       org_id: selectedOrganization?.id,
-      sso_test: true,
+      sso: true,
     };
 
     fetch(url, {

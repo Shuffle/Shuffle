@@ -633,7 +633,7 @@ const EditWorkflow = (props) => {
 										<AutoAwesomeIcon style={{ marginRight: 8 }} />
 									)}
 
-									AI Generate
+									AI Generate (beta)
 								</Button>
 								</span>
 							</Tooltip>

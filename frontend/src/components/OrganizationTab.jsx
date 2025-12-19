@@ -62,11 +62,8 @@ const OrganizationTab = (props) => {
         if (isIntegrationPartner && isChildOrg && !isGlobalUser) {
             setVisibleTabs(items.filter((item) => item !== 'Branding' && item !== 'SSO'));
         } else {
-            if (userdata && userdata.active_org && userdata.active_org.role === 'admin') {
-                setVisibleTabs(items);
-            } else {
-                setVisibleTabs(items.filter((item) => item !== 'SSO'));
-            }
+            // Show SSO tab for all users now
+            setVisibleTabs(items);
         }
 
         //if (isCloud) {

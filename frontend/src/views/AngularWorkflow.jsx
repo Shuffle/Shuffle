@@ -463,9 +463,9 @@ const AngularWorkflow = (defaultprops) => {
 
   var to_be_copied = "";
   const [firstrequest, setFirstrequest] = React.useState(true);
-  const cystyle = useMemo(() => defaultCytoscapeStyle(theme), [themeMode]);
-  // const cystyle = useMemo(() => defaultCytoscapeStyle, [themeMode]);
+  const [apps, setApps] = React.useState([]);
 
+  const cystyle = useMemo(() => defaultCytoscapeStyle(theme, apps), [themeMode, apps]);
   const [cy, setCy] = React.useState();
 
   const useStyles = makeStyles({
@@ -593,7 +593,6 @@ const AngularWorkflow = (defaultprops) => {
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [triggerActionList, setTriggerActionList] = React.useState([]);
 
-  const [apps, setApps] = React.useState([]);
   const [filteredApps, setFilteredApps] = React.useState([]);
   const [prioritizedApps, setPrioritizedApps] = React.useState([])
 
@@ -2560,7 +2559,7 @@ const AngularWorkflow = (defaultprops) => {
       
       // Center and zoom to the node with smooth animation if requested
       if (config.center) {
-        cy.animate({
+        cy.stop().animate({
           center: {
             eles: cyNode
           },
@@ -3324,7 +3323,7 @@ const AngularWorkflow = (defaultprops) => {
                   }
 
                   const animationDuration = 150
-                  foundnode.animate(
+                  foundnode.stop().animate(
                     {
                       style: parsedStyle,
                     },
@@ -3443,6 +3442,18 @@ const AngularWorkflow = (defaultprops) => {
 	} else {
 		toast.error("No previous execution found. Please run the workflow first.")
 		return
+	}
+
+	for (var i = 0; i < workflowExecutions.length; i++) {
+		const exec = workflowExecutions[i]
+		if (exec.execution_id === curAction.source_execution) {
+			if (exec?.execution_argument === undefined || exec?.execution_argument === null || exec?.execution_argument.length === 0) {
+				break
+			}
+
+			setExecutionText(exec.execution_argument)
+			break
+		}
 	}
 
 	setExecutionRunning(true)
@@ -3830,7 +3841,7 @@ const AngularWorkflow = (defaultprops) => {
               } else {
                 console.log("Closing auth modal? FAIL")
 
-                toast("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
+                toast.error("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
                 shouldClose = false
               }
             } else {
@@ -4184,7 +4195,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const animationDuration = 150
-    node.animate(
+    node.stop().animate(
       {
         style: parsedStyle,
       },
@@ -4201,7 +4212,7 @@ const AngularWorkflow = (defaultprops) => {
         "border-color": "#81c784",
       }
 
-      node.animate(
+      node.stop().animate(
         {
           style: parsedStyle,
         },
@@ -4250,7 +4261,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const animationDuration = 150
-    node.animate(
+    node.stop().animate(
       {
         style: parsedStyle,
       },
@@ -4267,7 +4278,7 @@ const AngularWorkflow = (defaultprops) => {
         "border-color": "#81c784",
       }
 
-      node.animate(
+      node.stop().animate(
         {
           style: parsedStyle,
         },
@@ -4298,7 +4309,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const animationDuration = 150
-    node.animate(
+    node.stop().animate(
       {
         style: parsedStyle,
       },
@@ -4314,7 +4325,7 @@ const AngularWorkflow = (defaultprops) => {
         "line-gradient-stop-colors": ["grey", "grey"],
       }
 
-      node.animate(
+      node.stop().animate(
         {
           style: parsedStyle,
         },
@@ -4346,7 +4357,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const animationDuration = 150
-    node.animate(
+    node.stop().animate(
       {
         style: parsedStyle,
       },
@@ -4363,7 +4374,7 @@ const AngularWorkflow = (defaultprops) => {
         "border-color": color,
       }
 
-      node.animate(
+      node.stop().animate(
         {
           style: parsedStyle,
         },
@@ -4394,7 +4405,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const animationDuration = 150
-    node.animate(
+    node.stop().animate(
       {
         style: parsedStyle,
       },
@@ -4450,7 +4461,7 @@ const AngularWorkflow = (defaultprops) => {
       }
 
       const animationDuration = 150
-      node.animate(
+      node.stop().animate(
         {
           style: parsedStyle,
         },
@@ -4484,7 +4495,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const animationDuration = 150
-    node.animate(
+    node.stop().animate(
       {
         style: parsedStyle,
       },
@@ -8627,7 +8638,7 @@ const AngularWorkflow = (defaultprops) => {
       };
     }
 
-    event.target.animate(
+    event.target.stop().animate(
       {
         style: parsedStyle,
       },
@@ -9423,7 +9434,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     if (event.target !== undefined && event.target !== null) {
-      event.target.animate(
+      event.target.stop().animate(
         {
           style: parsedStyle,
         },
@@ -9741,7 +9752,7 @@ const AngularWorkflow = (defaultprops) => {
               }
 
               const animationDuration = 150
-              foundnode.animate(
+              foundnode.stop().animate(
                 {
                   style: parsedStyle,
                 },
@@ -9910,7 +9921,7 @@ const AngularWorkflow = (defaultprops) => {
               }
 
               const animationDuration = 150
-              foundnode.animate(
+              foundnode.stop().animate(
                 {
                   style: parsedStyle,
                 },
@@ -12487,7 +12498,7 @@ const AngularWorkflow = (defaultprops) => {
               //}
               safeRefine(event.currentTarget.value)
             }}
-            limit={5}
+            limit={15}
           />
           {/*isSearchStalled ? 'My search is stalled' : ''*/}
         </form>
@@ -14360,8 +14371,7 @@ const AngularWorkflow = (defaultprops) => {
           padding: 30,
           pointerEvents: "auto",
           color: theme.palette.text.primary,
-          minWidth: isMobile ? "90%" : 650,
-          border: theme.palette.defaultBorder,
+          minWidth: isMobile ? "90%" : 750,
 
           borderRadius: theme.palette.borderRadius,
           backgroundColor: "black",
@@ -14474,18 +14484,24 @@ const AngularWorkflow = (defaultprops) => {
 						  	  <Button
 					  			variant="outlined"
 					  			color="primary"
-					  			style={{position: "sticky", top: 35, maxHeight: 40, maxWidth: 150, marginRight: 5, }}
+					  			style={{position: "sticky", top: 50, maxHeight: 40, maxWidth: 150, marginRight: 5, }}
 					  			onClick={() => {
 									setExecutionText(data)
-									executeWorkflow(data, workflow.start, lastSaved);
+									executeWorkflow(data, workflow.start, lastSaved)
 
 									setExecutionArgumentModalOpen(false)
 								}}
 					  		  >Select</Button>
 							  <ReactJson
 								src={validate.result}
-								theme={theme.palette.jsonTheme}
-								style={theme.palette.reactJsonStyle}
+								theme={"summerfruit"}
+								style={{
+									padding: 5, 
+									width: "98%",
+									borderRadius: 5,
+									border: "1px solid rgba(255,255,255,0.7)",
+									overflowX: "auto",
+								}}
 								shouldCollapse={(jsonField) => {
 								  return collapseField(jsonField)
 								}}
@@ -14499,10 +14515,11 @@ const AngularWorkflow = (defaultprops) => {
 				  }
 
                   return (
-                    <Paper style={{ padding: 10, marginTop: 10, backgroundColor: theme.palette.platformColor, maxHeight: 100, overflow: "auto", cursor: "pointer", position: "relative", }}
+                    <Paper 
+					  style={{ padding: 10, marginTop: 10, backgroundColor: theme.palette.platformColor, maxHeight: 150, overflow: "auto", position: "relative", border: `2px solid rgba(255,255,255,0.3)`, }}
                       onClick={() => {
                         setExecutionText(data)
-                        executeWorkflow(data, workflow.start, lastSaved);
+                        //executeWorkflow(data, workflow.start, lastSaved);
 
                         setExecutionArgumentModalOpen(false)
                       }}
@@ -14759,6 +14776,7 @@ const AngularWorkflow = (defaultprops) => {
           color: theme.palette.textColor,
           backgroundColor: 'inherit',
           zIndex: 10000,
+		  fontSize: 12,
         }}
       >
         <b>PS: Conditions can't be used for loops [ .# ]. Use the filters list action.{" "}</b>
@@ -15110,7 +15128,9 @@ const AngularWorkflow = (defaultprops) => {
           key={condition.condition.id}
           square
           style={paperVariableStyle}
-          onClick={() => { }}
+          onClick={() => { 
+  			setLastSaved(false)
+		  }}
         >
           <div
             style={{
@@ -15339,6 +15359,7 @@ const AngularWorkflow = (defaultprops) => {
               return
             }
 
+  			setLastSaved(false)
             setSourceValue({
               name: "source",
               value: "",
@@ -15384,17 +15405,15 @@ const AngularWorkflow = (defaultprops) => {
               // Change Direction of the branch target/source
               const foundBranch = cy.getElementById(selectedEdge.id)
               if (foundBranch !== undefined && foundBranch !== null) {
-                console.log("BRANCH: ", foundBranch)
                 const source = foundBranch.data("source")
                 const target = foundBranch.data("target")
 
                 var branchdata = JSON.parse(JSON.stringify(foundBranch.data()))
-                console.log("BEFORE: ", branchdata)
-                console.log("Start node", workflow.start)
                 const startNode = workflow.start
                 if (source === startNode) {
                   toast("Can't point to Start Node")
                 } else {
+  				  setLastSaved(false)
                   const newid = uuidv4()
                   branchdata.source = target
                   branchdata.target = source
@@ -19298,7 +19317,7 @@ const AngularWorkflow = (defaultprops) => {
 				}, 2000);
 			  }
 
-			  toast.info("Successfully changed active organisation - refreshing!");
+			  toast.success("Successfully changed active organisation - refreshing!");
 			} else {
 			  if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
 				toast(responseJson.reason);
@@ -20649,7 +20668,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const buttonHeights = 45
-    const boxSize = buttonHeights
+    const boxSize = buttonHeights+2
     const executionButton = executionRunning ? (
       <Tooltip color="primary" title="Stop execution" placement="top">
         <span>
@@ -20737,20 +20756,17 @@ const AngularWorkflow = (defaultprops) => {
             >
               <TextField
                 id="execution_argument_input_field"
-                style={{
-                  ...theme.palette.textFieldStyle,
-                  height: buttonHeights + 2,
-                }}
+				variant="outlined"
                 InputProps={{
                   style: {
                     ...theme.palette.innerTextfieldStyle,
-                    height: buttonHeights + 2,
-                    marginTop: -1,
-                    border: "none",
+                    height: buttonHeights+2,
+                    marginTop: 0,
 
 					// Remove left side borderRadius
 					borderTopLeftRadius: 0,
 					borderBottomLeftRadius: 0,
+					borderTop: "0px solid",
                   }
                 }}
                 disabled={workflow.public}
@@ -21687,7 +21703,7 @@ const AngularWorkflow = (defaultprops) => {
 
 
       return (
-        <div style={{ display: "flex" }}>
+        <div style={{ display: "flex", maxHeight: 500, overflow: "auto",}}>
           <IconButton
             style={{
               marginTop: "auto",
@@ -21749,7 +21765,7 @@ const AngularWorkflow = (defaultprops) => {
             onSelect={(select) => {
               HandleJsonCopy(validate.result, select, "exec");
             }}
-            name={false}
+            name={"$exec"}
           />
         </div>
       )
@@ -21787,7 +21803,26 @@ const AngularWorkflow = (defaultprops) => {
       )
     }
 
-    if (execution.execution_source === "authgroups") {
+    if (execution.execution_source?.startsWith("datastore")) {
+        const iconMargin = 7
+        return (
+          <div style={{
+            width: size,
+            height: size,
+            borderRadius: borderRadius,
+            backgroundColor: green,
+          }}>
+            <StorageIcon
+              style={{
+                width: size / 3 * 2,
+                height: size / 3 * 2,
+                marginLeft: iconMargin,
+                marginTop: iconMargin,
+              }}
+            />
+          </div>
+        )
+	} else if (execution.execution_source === "authgroups") {
       const iconMargin = 7
       return (
         <div style={{
@@ -22943,6 +22978,7 @@ const AngularWorkflow = (defaultprops) => {
               </Typography>
             </div>
           ) : null}
+
           {executionData.execution_source !== undefined &&
             executionData.execution_source !== null &&
             executionData.execution_source.length > 0 &&
@@ -22954,8 +22990,17 @@ const AngularWorkflow = (defaultprops) => {
               </Typography>
               <Typography variant="body1" color="textSecondary">
 
-
-                {executionData.execution_source === "authgroups" || (executionData.authgroup !== undefined && executionData.authgroup !== null && executionData.authgroup.length > 0) ?
+                {executionData?.execution_source?.startsWith("datastore") ?
+					  <a
+						rel="noopener noreferrer"
+						href={`/admin?tab=datastore${executionData.execution_source.split("|").length > 2 ? "&category="+executionData.execution_source.split("|")[1]+"&key="+executionData.execution_source.split("|")[2] : ""}`}
+						target="_blank"
+						style={{ textDecoration: "none", color: theme.palette.linkColor }}
+					  >
+						Datastore Automation
+					  </a>
+					:
+                executionData.execution_source === "authgroups" || (executionData.authgroup !== undefined && executionData.authgroup !== null && executionData.authgroup.length > 0) ?
                   <a
                     rel="noopener noreferrer"
                     href={`/admin?tab=app_auth`}
@@ -23614,7 +23659,7 @@ const AngularWorkflow = (defaultprops) => {
                             HandleJsonCopy(showResult, select, data.action.label);
                             console.log("SELECTED!: ", select);
                           }}
-                          name={"Results for " + data.action.label}
+                          name={`$${data?.action?.label?.toLowerCase()}`}
                         />
 
                       </span>

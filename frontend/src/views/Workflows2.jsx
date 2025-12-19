@@ -343,7 +343,7 @@ export const GetIconInfo = (action) => {
 				"protect",
 			],
 		},
-		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator", "hash", "ip", "url", "domain", ] },
+		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator", "hash", "ip", "url", "domain", "sha", "md5", ] },
     ];
 
     var selectedKey = ""
@@ -3346,7 +3346,7 @@ const Workflows2 = (props) => {
                                         }
                                         style={{ 
 											textDecoration: "none", 
-											color: "inherit", 
+											color: theme.palette.text.primary, 
 											overflow: "hidden", 
 											textOverflow: "ellipsis", 
 											whiteSpace: "nowrap", 
@@ -5149,7 +5149,7 @@ const Workflows2 = (props) => {
 
 								{backgroundWorkflows.length > 0 &&
 									<Tab
-										label={`Background Processes`}
+										label={`Security Bundle`}
 										value={4}
 										style={{
 											...tabStyle,

@@ -535,7 +535,7 @@ const AuthenticationOauth2 = (props) => {
 			}
 		  }
 
-		  toast("Authentication successful!")
+		  toast.info("Authentication window closed")
 
 		  // This is more a guess than anything
 		  // Should be handled in getAppAuthentication()

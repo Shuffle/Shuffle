@@ -183,7 +183,7 @@ const menuData = {
             title: "Articles",
             icon: "/images/icons/articles.svg",
             hoverIcon: "/images/icons/articles_hover.svg",
-            link: "/articles/2.0_release",
+            link: "/articles",
             gaData: {
               category: "navbar",
               action: "resources_click",

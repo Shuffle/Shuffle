@@ -1,7 +1,8 @@
 import { Box, Typography } from '@mui/material'
 import React from 'react'
 
-const PartnersArticles = () => {
+const PartnersArticles = (props) => {
+  const {tabName = "Partner's Articles"} = props;
   return (
     <Box
     sx={{
@@ -13,7 +14,7 @@ const PartnersArticles = () => {
       minHeight: "500px",
     }}
     >
-      <Typography>Partner Articles</Typography>
+      <Typography>{tabName}</Typography>
     </Box>
   )
 }

@@ -127,7 +127,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       setCurrentSelectedTheme(userdata?.theme);
     }
   }, [userdata]);
-
+      
       
   
   const CustomPopper = (props) => {
@@ -206,7 +206,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 				  setOpenAutocomplete(false)
 				}}
 			  >
-				Add suborg
+				<Button variant="outlined" startIcon={<AddIcon />} sx={{
+					textTransform: 'none',
+				}}>
+					Add suborg
+				</Button>
 			</Box>
 		</Link>
         </Popper>
