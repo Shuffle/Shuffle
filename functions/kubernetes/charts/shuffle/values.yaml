@@ -1558,15 +1558,6 @@ app:
     ##
     annotations: {}
     ## @param app.serviceAccount.automountServiceAccountToken Automount service account token for the app service account
-    ## NOTE: You likely want to allow access to cluster-proxies, e.g:
-    ## extraEgress:
-    ## - to:
-    ##     - namespaceSelector:
-    ##         matchLabels:
-    ##           kubernetes.io/metadata.name: istio-system
-    ##       podSelector:
-    ##         matchLabels:
-    ##           istio: pilot
     ##
     automountServiceAccountToken: true
     ## @param app.serviceAccount.imagePullSecrets Add image pull secrets to the app service account

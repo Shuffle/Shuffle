@@ -24,7 +24,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o shufflebackend .
 
 # Certificate build - gets required certs
 FROM alpine:latest as certs
-RUN apk add --update ca-certificates
+RUN apk add --update --no-scripts ca-certificates
 
 # Sets up the final image
 FROM alpine:3.22.2

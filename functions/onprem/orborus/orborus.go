@@ -136,9 +136,32 @@ var window = shuffle.NewTimeWindow(1 * time.Minute)
 func init() {
 	var err error
 
-	dockercli, err = dockerclient.NewEnvClient()
+	// dockercli, err = dockerclient.NewEnvClient()
+	dockercli, dockerApiVersion, err = shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
+	}
+
+	if os.Getenv("SHUFFLE_EC2_INSTANCE") == "true" {
+		log.Printf("[INFO] Detected AWS EC2 instance. Setting up Docker Swarm with AWS optimizations.")
+		containers, err := dockercli.ContainerList(context.Background(), container.ListOptions{})
+		if err == nil {
+			for _, container := range containers {
+				if strings.Contains(container.Image, "shuffle-orborus") {
+					if len(container.Names) != 0 {
+						if strings.Contains(container.Names[0], "shuffle-orborus") {
+							containerName = container.Names[0]
+							containerName = strings.TrimPrefix(containerName, "/")
+							os.Setenv("ORBORUS_CONTAINER_NAME", containerName)
+							log.Printf("[DEBUG] Found orborus container name: %s", containerName)
+							break
+						}
+					}
+				}
+			}
+		} else {
+			log.Printf("[ERROR] Failed to find orborus container: %s", err)
+		}
 	}
 
 	getThisContainerId()
@@ -1426,6 +1449,9 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
+	// worker makes authenticated requests to the k8s api to create app deployments.
+	// Therefore, it needs to have access to the service account token.
+	automountServiceAccountToken := true
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1445,9 +1471,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					Containers: []corev1.Container{
 						containerAttachment,
 					},
-					DNSPolicy:          corev1.DNSClusterFirst,
-					ServiceAccountName: workerServiceAccountName,
-					SecurityContext:    podSecurityContext,
+					DNSPolicy:                    corev1.DNSClusterFirst,
+					ServiceAccountName:           workerServiceAccountName,
+					AutomountServiceAccountToken: &automountServiceAccountToken,
+					SecurityContext:              podSecurityContext,
 				},
 			},
 		},
@@ -2411,6 +2438,7 @@ func main() {
 	}
 
 	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
+
 		if isKubernetes != "true" {
 			checkSwarmService(ctx)
 		}
@@ -2745,6 +2773,8 @@ func main() {
 								fmt.Sprintf("/detections/Sigma"),
 								org,
 								true,
+								"LOW",
+								"TENZIR_START",
 							)
 
 							if err != nil {
@@ -2755,6 +2785,10 @@ func main() {
 					}
 
 				} else {
+					if debug {
+						log.Printf("[DEBUG] Passing execution ID request to normal queue: %#v", incRequest.ExecutionId)
+					}
+
 					newrequests = append(newrequests, incRequest)
 				}
 			}
@@ -4287,6 +4321,10 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		//},
 		Timeout: time.Duration(120 * time.Second),
+	}
+
+	if debug {
+		log.Printf("[DEBUG][%s] Worker request to be sent to URL: %s", workflowExecution.ExecutionId, streamUrl)
 	}
 
 	req, err := http.NewRequest(

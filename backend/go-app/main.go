@@ -3,7 +3,7 @@ package main
 import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/shuffle/shuffle-shared"
-	"github.com/shuffle/singul/pkg"
+	singul "github.com/shuffle/singul/pkg"
 
 	"net/http/pprof"
 
@@ -44,11 +44,12 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
+	"sort"
+
 	xj "github.com/basgys/goxml2json"
 	newscheduler "github.com/carlescere/scheduler"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
-	"sort"
 
 	// Web
 	"github.com/gorilla/mux"
@@ -1312,7 +1313,9 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
 			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
-
+			if err != nil {
+				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
+			}
 			break
 		}
 
@@ -5433,7 +5436,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/users/{userID}/remove", shuffle.HandleDeleteUsersAccount).Methods("DELETE", "OPTIONS")
+	// r.HandleFunc("/api/v1/users/{userID}/remove", shuffle.HandleDeleteUsersAccount).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", shuffle.DeleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{key}/get2fa", shuffle.HandleGet2fa).Methods("GET", "OPTIONS")
@@ -5657,7 +5660,7 @@ func initHandlers() {
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSAML).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:

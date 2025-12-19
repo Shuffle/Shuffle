@@ -50,7 +50,7 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
-      - SHUFFLE_APP_REPLICAS=${SHUFFLE_APP_REPLICAS}
+      # - SHUFFLE_APP_REPLICAS=${SHUFFLE_APP_REPLICAS}
       - SHUFFLE_STATS_DISABLED=true
       - SHUFFLE_LOGS_DISABLED=true
       - SHUFFLE_SWARM_CONFIG=run
@@ -80,7 +80,7 @@ services:
         soft: -1
         hard: -1
       nofile:
-        soft: 65536 
+        soft: 65536
         hard: 65536
     volumes:
       - shuffle-database:/usr/share/opensearch/data:z
@@ -127,7 +127,7 @@ services:
 
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
-  #  container_name: docker-socket-proxy 
+  #  container_name: docker-socket-proxy
   #  hostname: docker-socket-proxy
   #  privileged: true
   #  environment:
@@ -167,4 +167,4 @@ networks:
     driver: bridge
     # driver_opts:
     #   com.docker.network.driver.mtu: 1460
-    # uncomment to set MTU for swarm mode. MTU should be whatever is your host's preferred MTU is: https://shuffler.io/docs/troubleshooting#TLS_timeout_error/Timeout_Errors/EOF_Errors 
+    # uncomment to set MTU for swarm mode. MTU should be whatever is your host's preferred MTU is: https://shuffler.io/docs/troubleshooting#TLS_timeout_error/Timeout_Errors/EOF_Errors

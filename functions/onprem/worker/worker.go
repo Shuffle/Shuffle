@@ -625,6 +625,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
+	// apps do not need access the k8s api.
+	automountServiceAccountToken := false
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -656,9 +658,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 							Resources:       buildResourcesFromEnv(),
 						},
 					},
-					DNSPolicy:          corev1.DNSClusterFirst,
-					ServiceAccountName: appServiceAccountName,
-					SecurityContext:    podSecurityContext,
+					DNSPolicy:                    corev1.DNSClusterFirst,
+					ServiceAccountName:           appServiceAccountName,
+					AutomountServiceAccountToken: &automountServiceAccountToken,
+					SecurityContext:              podSecurityContext,
 				},
 			},
 		},
@@ -1243,7 +1246,8 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 func removeContainer(containername string) error {
 	ctx := context.Background()
 
-	cli, err := dockerclient.NewEnvClient()
+	// cli, err := dockerclient.NewEnvClient()
+	cli, _, err := shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("[DEBUG] Unable to create docker client: %s", err)
 		return err
@@ -1341,7 +1345,8 @@ func getWorkerURLs() ([]string, error) {
 	}
 
 	// Create a new Docker client
-	cli, err := dockerclient.NewEnvClient()
+	// cli, err := dockerclient.NewEnvClient()
+	cli, _, err := shuffle.GetDockerClient()
 	if err != nil {
 		log.Println("[ERROR] Failed to create Docker client:", err)
 		return workerUrls, err
@@ -1458,7 +1463,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	var err error
 
 	if isKubernetes != "true" {
-		dockercli, err = dockerclient.NewEnvClient()
+		// dockercli, err = dockerclient.NewEnvClient()
+		dockercli, _, err = shuffle.GetDockerClient()
 		if err != nil {
 			log.Printf("[ERROR] Unable to create docker client (3): %s", err)
 			return
@@ -3578,7 +3584,8 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 
 	//Filters:
 	if exposedPort == -1 || redeploy {
-		dockercli, err := dockerclient.NewEnvClient()
+		// dockercli, err := dockerclient.NewEnvClient()
+		dockercli, _, err := shuffle.GetDockerClient()
 		if err != nil {
 			log.Printf("[ERROR] Unable to create docker client (2): %s", err)
 			return -1, err
@@ -3690,7 +3697,8 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 	if exposedPort >= 0 {
 		//log.Printf("[INFO] Found service %s on port %d - no need to deploy another", name, exposedPort)
 	} else {
-		dockercli, err := dockerclient.NewEnvClient()
+		// dockercli, err := dockerclient.NewEnvClient()
+		dockercli, _, err := shuffle.GetDockerClient()
 		if err != nil {
 			log.Printf("[ERROR] Unable to create docker client (2): %s", err)
 			return -1, err
@@ -3768,7 +3776,8 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 // Backups in case networks are removed
 func initSwarmNetwork() error {
 	ctx := context.Background()
-	dockercli, err := dockerclient.NewEnvClient()
+	// dockercli, err := dockerclient.NewEnvClient()
+	dockercli, _, err := shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("[ERROR] Unable to create docker client (2): %s", err)
 		return err
@@ -4074,7 +4083,8 @@ func baseDeploy() {
 	//var err error
 
 	if isKubernetes != "true" {
-		cli, err := dockerclient.NewEnvClient()
+		// cli, err := dockerclient.NewEnvClient()
+		cli, _, err := shuffle.GetDockerClient()
 		if err != nil {
 			log.Printf("[ERROR] Unable to create docker client (3): %s", err)
 			return
@@ -4815,7 +4825,8 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	client, err := dockerclient.NewEnvClient()
+	// client, err := dockerclient.NewEnvClient()
+	client, _, err := shuffle.GetDockerClient()
 	if err != nil {
 		log.Printf("[ERROR] Unable to create docker client (4): %s", err)
 		resp.WriteHeader(401)
@@ -4979,7 +4990,13 @@ func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutio
 }
 
 func scaleApps(ctx context.Context, client *dockerclient.Client, replicas uint64) error {
-	client, err := dockerclient.NewEnvClient()
+	// client, err := dockerclient.NewEnvClient()
+	client, _, err := shuffle.GetDockerClient()
+	if err != nil {
+		log.Printf("[ERROR] Unable to create docker client (scaleApps): %s", err)
+		return err
+	}
+
 	services, err := client.ServiceList(ctx, types.ServiceListOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed to find services in the swarm: %s", err)
@@ -5057,7 +5074,8 @@ func numberOfApps(ctx context.Context, dockercli *dockerclient.Client) int {
 	}
 
 	if dockercli == nil {
-		dockercli, err = dockerclient.NewEnvClient()
+		// dockercli, err = dockerclient.NewEnvClient()
+		dockercli, _, err = shuffle.GetDockerClient()
 		if err != nil {
 			log.Printf("[ERROR] Unable to create docker client (5): %s", err)
 			return 0
@@ -5144,7 +5162,13 @@ func IsServiceRunning(ctx context.Context, cli *dockerclient.Client) bool {
 }
 
 func numberOfWorkers(ctx context.Context, cli *dockerclient.Client) int {
-	cli, err := dockerclient.NewEnvClient()
+	// cli, err := dockerclient.NewEnvClient()
+	cli, _, err := shuffle.GetDockerClient()
+	if err != nil {
+		log.Printf("[ERROR] Unable to create docker client (5): %s", err)
+		return 0
+	}
+
 	service, _, err := cli.ServiceInspectWithRaw(ctx, "shuffle-workers", types.ServiceInspectOptions{})
 	if err != nil {
 		return 0

@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+
 	//"math/rand"
 	"net/http"
 	"net/url"
@@ -21,7 +22,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/image"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/h2non/filetype"
 	uuid "github.com/satori/go.uuid"
 
@@ -2997,6 +2997,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"email",
 		"shuffle-ai",
 		"shuffle-subflow",
+		"yara",
+		"sigma",
 	}
 
 	// It's here to prevent getting them in every iteration
@@ -3393,6 +3395,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 						fmt.Sprintf("/apps"),
 						orgId,
 						false,
+						"HIGH",
+						"APP_BUID",
 					)
 				}
 
@@ -3527,7 +3531,8 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 		// As it's not even Docker
 		if tmpBody.ForceUpdate {
-			dockercli, err := dockerclient.NewEnvClient()
+			// dockercli, err := dockerclient.NewEnvClient()
+			dockercli, _, err := shuffle.GetDockerClient()
 			if err == nil {
 
 				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
