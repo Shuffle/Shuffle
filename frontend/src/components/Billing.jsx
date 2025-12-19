@@ -120,7 +120,7 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
             icon: LayersIcon,
             label: 'Runtime Locations',
             licensed: `${selectedOrganization?.sync_features?.multi_env?.limit} Runtime Locations`,
-            unlicensed: '1 Runtime ocation only',
+            unlicensed: '1 Runtime Location only',
             isActive: multiEnvActive,
         },
         {

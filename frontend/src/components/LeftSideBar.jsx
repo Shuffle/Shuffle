@@ -2180,7 +2180,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               Book a Demo
             </Button>
           )}
-          {!isCloud && activeOrgData?.old_org && (
+          {!isCloud && (activeOrgData?.old_org || isProdStatusOn) && (
 
           <LicenseStatus
             expanded={expandLeftNav}

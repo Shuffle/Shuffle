@@ -5713,7 +5713,7 @@ const Workflows2 = (props) => {
                         	</div>
 						}
 						
-						{!isCloud && currentOrg?.old_org ? (
+						{!isCloud && (currentOrg?.old_org || isProdStatusOn) ? (
 						  <div
 							style={{
 							  position: "absolute",
