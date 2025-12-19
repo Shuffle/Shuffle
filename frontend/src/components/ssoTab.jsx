@@ -15,6 +15,7 @@ import theme from "../theme.jsx";
 import { toast } from "react-toastify";
 import { Context } from "../context/ContextApi.jsx";
 import { getTheme } from "../theme.jsx";
+import { red } from "../views/AngularWorkflow.jsx"
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -24,6 +25,14 @@ const useStyles = makeStyles({
 
 
 const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handleEditOrg})=>{
+
+    // Check if user is admin
+    const isAdmin = userdata?.active_org?.role === "admin" || userdata?.support === true;
+    
+    // State for tracking user SSO connection status
+    const [users, setUsers] = React.useState([]);
+    const [userSSOConnected, setUserSSOConnected] = React.useState(false);
+    const [checkingSSOStatus, setCheckingSSOStatus] = React.useState(true);
 
     const classes = useStyles();
     const [show2faSetup, setShow2faSetup] = React.useState(false);
@@ -97,6 +106,53 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	const { themeMode, supportEmail, brandColor } = useContext(Context);
 	const theme = getTheme(themeMode, brandColor);
 
+    // Function to fetch users and check current user's SSO status
+    const checkUserSSOStatus = () => {
+        setCheckingSSOStatus(true);
+        fetch(globalUrl + "/api/v1/getusers", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            credentials: "include",
+        })
+            .then((response) => {
+                if (response.status !== 200) {
+                    return;
+                }
+                return response.json();
+            })
+            .then((responseJson) => {
+                if (responseJson && Array.isArray(responseJson)) {
+                    setUsers(responseJson);
+                    
+                    // Find current user and check if they have SSO info for this org
+                    const currentUser = responseJson.find(user => user.id === userdata?.id);
+                    if (currentUser && currentUser.sso_infos && Array.isArray(currentUser.sso_infos)) {
+                        const hasSSOForThisOrg = currentUser.sso_infos.some(ssoInfo => 
+                            ssoInfo.org_id === selectedOrganization?.id && ssoInfo.sub
+                        );
+                        setUserSSOConnected(hasSSOForThisOrg);
+                    } else {
+                        setUserSSOConnected(false);
+                    }
+                }
+                setCheckingSSOStatus(false);
+            })
+            .catch((error) => {
+                console.log("Error fetching users:", error);
+                setCheckingSSOStatus(false);
+            });
+    };
+
+    // Check SSO status on component mount and when organization changes
+    useEffect(() => {
+        if (userdata?.id && selectedOrganization?.id) {
+            checkUserSSOStatus();
+        }
+    }, [userdata?.id, selectedOrganization?.id]);
+
     useEffect(()=>{
         
 		if (openidClientSecret !== selectedOrganization?.sso_config?.client_secret) {
@@ -149,7 +205,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 				disabled={
 					userdata === undefined ||
 					userdata === null ||
-					userdata.admin !== "true"
+					!isAdmin
 				}
 				onClick={() =>
 					handleEditOrg(
@@ -256,7 +312,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
 		const data = {
 			org_id: selectedOrganization?.id,
-			sso_test: true,
+			sso: true,
 		};
 		
 		fetch(url, {
@@ -309,6 +365,59 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			});
 	};
 
+	const HandleDisconnectSSO = () => {
+		const url = `${globalUrl}/api/v1/disconnect_sso`;
+		const data = {
+			org_id: selectedOrganization?.id,
+		};
+		
+		fetch(url, {
+			mode: "cors",
+			credentials: "include",
+			crossDomain: true,
+			method: "POST",
+			body: JSON.stringify(data),
+			withCredentials: true,
+			headers: {
+				"Content-Type": "application/json; charset=utf-8",
+			},
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					toast.error(
+						`Failed to disconnect SSO. Please try again later or contact ${supportEmail} if issue persists.`,
+						{ duration: 3000 }
+					);
+					return null;
+				}
+				return response.json();
+			})
+			.then((responseJson) => {
+				if (!responseJson) return;
+	
+				if (responseJson.success === true) {
+					toast.success(
+						"Successfully disconnected from SSO.",
+						{ duration: 3000 }
+					);
+					// Refresh the SSO status after disconnecting
+					checkUserSSOStatus();
+				} else {
+					toast.error(
+						responseJson.reason || "Failed to disconnect SSO.",
+						{ duration: 3000 }
+					);
+				}
+			})
+			.catch((error) => {
+				console.error("Error disconnecting SSO:", error);
+				toast.error(
+					"An error occurred while disconnecting SSO. Please try again.",
+					{ duration: 3000 }
+				);
+			});
+	};
+
     return (
         <div style={{ width: "100%", height: "100%",boxSizing: 'border-box', padding: "27px 10px 19px 27px",  backgroundColor: theme.palette.platformColor , borderRadius: '16px',  }}>
 			<div style={{ height: "100%", width: "100%", overflowX: 'hidden', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}} >
@@ -316,6 +425,81 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 			 <Typography variant="h5" style={{ width: "100%",  fontWeight: 500, fontSize: 24}}>
 					SSO Configuration
 				</Typography>
+				
+				{/* SSO Connection section - moved to top */}
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						marginTop: 20,
+						width: "100%",
+						paddingBottom: 10,
+					}}
+					>
+					<Typography variant="body2" color="textSecondary" style={{ margin: "5px 0px 5px 0px", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>
+						{checkingSSOStatus 
+							? "Checking your SSO connection status..." 
+							: userSSOConnected 
+								? "Your account is connected with this org's SSO!" 
+								: "Connect your account with this org's SSO!"
+						}
+					</Typography>
+					<Tooltip
+						title={
+						checkingSSOStatus
+							? "Checking SSO connection status..."
+							: userSSOConnected
+								? "Your account is already connected to SSO"
+								: !(
+									ssoEntrypoint?.length > 0 ||
+									ssoCertificate?.length > 0 ||
+									openidAuthorization?.length > 0 ||
+									openidClientId?.length > 0
+								)
+								? "SSO must be configured for this organization before you can connect."
+								: ""
+						}
+					>
+						<div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+							<span style={{ width: 150 }}>
+							<Button
+								variant={userSSOConnected ? "contained" : "outlined"}
+								color={userSSOConnected ? "success" : "primary"}
+								style={{ width: 150, textTransform: "none", margin: "10px 10px 10px 0px", whiteSpace: "nowrap" }}
+								disabled={
+								checkingSSOStatus ||
+								userSSOConnected ||
+								!(
+									ssoEntrypoint?.length > 0 ||
+									ssoCertificate?.length > 0 ||
+									openidAuthorization?.length > 0 ||
+									openidClientId?.length > 0
+								)
+								}
+								onClick={HandleTestSSO}
+							>
+								{checkingSSOStatus ? "Checking..." : userSSOConnected ? "Connected" : "Connect with SSO"}
+							</Button>
+							</span>
+							
+							{userSSOConnected && (
+								<Tooltip title="Disconnect your account from SSO">
+									<span style={{ width: 120 }}>
+									<Button
+										variant="outlined"
+										color="error"
+										style={{ width: 120, textTransform: "none", margin: "10px 0px 10px 0px", whiteSpace: "nowrap" }}
+										onClick={HandleDisconnectSSO}
+									>
+										Disconnect
+									</Button>
+									</span>
+								</Tooltip>
+							)}
+						</div>
+					</Tooltip>
+					</div>
+				
 				<div
 					style={{
 						display: "flex",
@@ -339,6 +523,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
                         sx={{marginBottom: 0.6, marginTop: 0.6}}
 						name="onOffSwitch"
 						color="primary"
+						disabled={!isAdmin}
 						title="Make SAML SSO or OpenID Authentication Required or Optional for Your Organization"
 						/>
 						{SSORequired ? "Required" : "Optional"}
@@ -369,7 +554,6 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
                         sx={{marginBottom: 0.6, marginTop: 0.6}}
 						name="onOffSwitch"
 						color="primary"
-						title="Disable auto-provisioning of users in SSO"
 						/>
 					</div>
 					
@@ -399,6 +583,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
                         sx={{marginBottom: 0.6, marginTop: 0.6}}
 						name="onOffSwitch"
 						color="primary"
+						disabled={!isAdmin}
 						title="Disable auto-provisioning of users in SSO"
 						/>
 					</div>
@@ -428,58 +613,12 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
                         sx={{marginBottom: 0.6, marginTop: 0.6}}
 						name="onOffSwitch"
 						color="primary"
+						disabled={!isAdmin}
 						title="Disable auto-provisioning of users in SSO"
 						/>
 					</div> 
 				</div>
 				}
-
-					<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						marginTop: 30,
-						width: "100%",
-						paddingBottom: 10,
-					}}
-					>
-					<Typography variant="body2" color="textSecondary" style={{ margin: "5px 0px 5px 0px", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>
-						You can test your SSO configuration by clicking the button below.
-						Before testing, ensure you have set Open ID Connect or SAML SSO
-						credentials.
-					</Typography>
-					<Tooltip
-						title={
-						!(
-							ssoEntrypoint?.length > 0 ||
-							ssoCertificate?.length > 0 ||
-							openidAuthorization?.length > 0 ||
-							openidClientId?.length > 0
-						)
-							? "Please ensure all SSO credentials are set before testing."
-							: ""
-						}
-					>
-						<span style={{ width: 100 }}>
-						<Button
-							variant="outlined"
-							color="primary"
-							style={{ width: 100, textTransform: "none", margin: "10px 10px 10px 0px", whiteSpace: "nowrap" }}
-							disabled={
-							!(
-								ssoEntrypoint?.length > 0 ||
-								ssoCertificate?.length > 0 ||
-								openidAuthorization?.length > 0 ||
-								openidClientId?.length > 0
-							)
-							}
-							onClick={HandleTestSSO}
-						>
-							Test SSO
-						</Button>
-						</span>
-					</Tooltip>
-					</div>
 				<Grid item xs={12} sx={{marginTop: 2}}>
 					<span style={{ display: "flex", flexDirection: "column" }}>
 						<Typography variant="h5" color="textPrimary" style={{ textAlign: "left", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 500, }}>OpenID connect</Typography>
@@ -514,6 +653,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 								onChange={(e) => setShowOpenIdCred(e.target.checked)}
 								name="showOpenIdCred"
 								color="primary"
+								disabled={!isAdmin}
 							/>
 							</div>
 					<Grid container style={{ marginTop: 8, }} spacing={2}>
@@ -536,6 +676,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									variant="outlined"
 									placeholder="The OpenID client ID from the identity provider"
 									value={showOpenIdCred ? openidClientId : openidClientId?.length > 0 ? "•".repeat(50) : ""}
+									disabled={!isAdmin}
 										onChange={(e) => setOpenidClientId(e.target.value)}
 										onFocus={(e) => setShowOpenIdCred(true)}
 										onBlur={(e) => setShowOpenIdCred(false)}
@@ -574,6 +715,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									variant="outlined"
 									placeholder="The OpenID client secret - DONT use this if dealing with implicit auth / PKCE"
 									value={showOpenIdCred ? openidClientSecret : openidClientSecret?.length > 0 ? "•".repeat(50) : ""}
+									disabled={!isAdmin}
 									onChange={(e) => {
 										setOpenidClientSecret(e.target.value);
 										}}
@@ -616,6 +758,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									rows={2}
 									placeholder="The OpenID authorization URL (usually ends with /authorize)"
 									value={showOpenIdCred ? openidAuthorization : openidAuthorization?.length > 0 ? "•".repeat(50) : ""}
+									disabled={!isAdmin}
 									onChange={(e) => {
 										setOpenidAuthorization(e.target.value)
 										}}
@@ -656,6 +799,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									rows={2}
 									placeholder="The OpenID token URL (usually ends with /token)"
 									value={showOpenIdCred ? openidToken : openidToken?.length > 0 ? "•".repeat(50) : ""}
+									disabled={!isAdmin}
 									onChange={(e) => {
 										setOpenidToken(e.target.value)
 										}}
@@ -682,8 +826,8 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 				{/*isCloud ? null : */}
 				<Grid item xs={12} sx={{ marginTop: 3.5 }} >
 					<Typography variant="h5" color="textPrimary" style={{ textAlign: "left", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 500, }}>SAML SSO (v1.1)</Typography>
-					<Typography variant="body2" color="textSecondary"  style={{  textAlign: "left", marginTop: 8, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 16, fontWeight: 400, }}>
-						IdP URL for Shuffle SAML/SSO: <Link to={`${globalUrl}/api/v1/login_sso`} target="_blank" style={{ color: theme.palette.text.secondary, textDecoration: "none" }}>{`${globalUrl}/api/v1/login_sso`}</Link>
+						<Typography variant="body2" color="textSecondary" style={{ textAlign: "left", marginTop: 4, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 16, fontWeight: 400, fontStyle: "italic", color: red }}>
+							Note: Support for SAML SSO was deprecated due to potential security issues. Please consider migrating to OpenID Connect for better compatibility and features.
 						</Typography>
 						<div style={{ display: 'flex', marginTop: 10, }}>
 							<Typography
@@ -702,6 +846,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 								onChange={(e) => setShowSamlCred(e.target.checked)}
 								name="showSamlCred"
 								color="primary"
+								disabled={!isAdmin}
 							/>
 						</div>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
@@ -725,6 +870,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									variant="outlined"
 									placeholder="The entrypoint URL from your provider"
 									value={showSamlCred ? ssoEntrypoint : ssoEntrypoint?.length > 0 ? "•".repeat(50) : ""}
+									disabled={!isAdmin}
 									onChange={(e) => {
 										setSsoEntrypoint(e.target.value);
 										}}
@@ -765,6 +911,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									rows={2}
 									placeholder="The X509 certificate to use"
 										value={showSamlCred ? ssoCertificate : ssoCertificate?.length > 0 ? "•".repeat(50) : ""}
+										disabled={!isAdmin}
 										onFocus={(e) => setShowSamlCred(true)}
 										onBlur={(e) => setShowSamlCred(false)}
 									onChange={(e) => {

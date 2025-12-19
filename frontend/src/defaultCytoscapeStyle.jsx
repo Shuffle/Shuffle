@@ -1,4 +1,6 @@
-export default function defaultCytoscapeStyle(theme) {
+import { red, } from "./views/AngularWorkflow.jsx"
+
+export default function defaultCytoscapeStyle(theme, apps) {
   return [
     {
       selector: "node",
@@ -575,7 +577,14 @@ export default function defaultCytoscapeStyle(theme) {
         height: "data(height)",
         padding: "0px",
         margin: "0px",
-        "background-color": "data(iconBackground)",
+        "background-color": function(element) {
+			const value = element.data()
+			if (value?.backgroundcolor === null || value?.backgroundcolor === undefined) {
+				return "#888888"
+			}
+
+			return element.data("backgroundcolor")
+		},
         "background-fill": "data(fillstyle)",
         "background-gradient-direction": "to-right",
         "background-gradient-stop-colors": "data(fillGradient)",
@@ -603,6 +612,48 @@ export default function defaultCytoscapeStyle(theme) {
       "width": "5px",
       "height": "5px",
       "background-color": "#f85a3e",
+      },
+    },
+    {
+      selector: `node[large_image="/images/singul_green.png"]`,
+      css: {
+		  "background-image": function(element) {
+			const nodeData = element.data()
+			if (apps === null || apps === undefined) {
+				return nodeData?.large_image
+			}
+
+			const params = nodeData["parameters"]
+			if (params === null || params === undefined) {
+				return nodeData?.large_image
+			}
+
+			var foundappname = ""
+			for (var key in params) {
+				const param = params[key]
+				if (param.name === "app_name") {
+					foundappname = param?.value.toLowerCase().replaceAll(" ", "_")
+					break
+				}
+			}
+
+			if (foundappname == "") {
+				return nodeData?.large_image
+			}
+
+			for (var key in apps) {
+				const app = apps[key]
+				const newappname = app.name.toLowerCase().replaceAll(" ", "_")
+				if (newappname == foundappname) {
+					if (app.large_image !== null && app.large_image !== undefined && app.large_image != "") {
+						element.data("large_image", app.large_image)
+						return app.large_image
+					}
+				}
+			}
+
+			return nodeData?.large_image
+		  },
       },
     },
     {

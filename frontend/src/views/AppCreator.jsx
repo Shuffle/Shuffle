@@ -563,7 +563,7 @@ const AppCreator = (defaultprops) => {
   };
   
 
-  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {

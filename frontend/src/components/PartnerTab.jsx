@@ -126,9 +126,9 @@ const PartnerTab = (props) => {
             case `apps`:
                 return <PartnersApps isCloud={isCloud} partnerData={partnerData} setPartnerData={setPartnerData} handleStatusChange={handleStatusChange} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} selectedTab={selectedTab} />;
             case 'articles' :
-                return <PartnerArticles isCloud={isCloud} partnerData={partnerData} setPartnerData={setPartnerData} handleStatusChange={handleStatusChange} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} selectedTab={selectedTab} />;
-            case `ai_agents`:
-                return <PartnerArticles isCloud={isCloud} partnerData={partnerData} setPartnerData={setPartnerData} handleStatusChange={handleStatusChange} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} selectedTab={selectedTab} />;
+                return <PartnersUsecasesTab isCloud={isCloud} partnerData={partnerData} setPartnerData={setPartnerData} handleStatusChange={handleStatusChange} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} selectedTab={selectedTab} />;
+            case `aiagents`:
+                return <PartnerArticles tabName="AI Agents, Coming Soon.." isCloud={isCloud} partnerData={partnerData} setPartnerData={setPartnerData} handleStatusChange={handleStatusChange} userdata={userdata} globalUrl={globalUrl} serverside={serverside} handleGetOrg={handleGetOrg} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization} selectedTab={selectedTab} />;
             case 'branding':
                 return <Branding
                     isCloud={isCloud}
@@ -157,8 +157,7 @@ const PartnerTab = (props) => {
             !isCloud &&
             (tabName === "Usecases" ||
             tabName === "Apps" ||
-            tabName === "AI Agents" ||
-            tabName === "Articles")
+            tabName === "AI Agents")
         ) {
             return true;
         }
@@ -166,7 +165,6 @@ const PartnerTab = (props) => {
         // Disable Apps, Articles, and AI Agents for all non-support users
         if (
             tabName === "Apps" ||
-            tabName === "Articles" ||
             tabName === "AI Agents"
         ) {
             return true;
@@ -196,7 +194,7 @@ const PartnerTab = (props) => {
     }
 
     const isSupportOnlyTab = (tabName) => {
-        return tabName === "Apps" || tabName === "Articles" || tabName === "AI Agents";
+        return tabName === "Apps" || tabName === "AI Agents";
     }
    
     return (

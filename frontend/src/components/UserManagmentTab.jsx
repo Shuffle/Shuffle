@@ -25,6 +25,7 @@ import {
     Skeleton,
     Switch,
     Box,
+	Chip,
 } from "@mui/material";
 
 import {
@@ -158,7 +159,7 @@ const UserManagmentTab = memo((props) => {
                     toast("Failed to update user");
                 } else {
                     //toast("Set the user field " + field + " to " + value);
-                    toast("Successfully updated user field " + field);
+                    toast.success(`Successfully updated user field '${field}'`)
 
                     if (field !== "suborgs") {
                         setSelectedUserModalOpen(false);
@@ -203,7 +204,7 @@ const UserManagmentTab = memo((props) => {
                             getUsers();
                         }, 1000);
 
-                        toast("Invite sent! They will show up in the list when they have accepted the invite.")
+                        toast.success("The user will show up in the list when finished.")
                     }
                 })
             )
@@ -336,6 +337,17 @@ const UserManagmentTab = memo((props) => {
             })
             .then((responseJson) => {
                 setUsers(responseJson);
+
+				if (responseJson.success !== false) {
+					for (var i = 0; i < responseJson.length; i++) {
+						const data = responseJson[i];
+						if (data?.login_type === "DELETED") {
+							//toast.info("Found lost/half-deleted users you can recover. Please contact support@shuffler.io to learn more.")
+							break
+						}
+					}
+				}
+
                 setShowLoader(false)
             })
             .catch((error) => {
@@ -364,13 +376,13 @@ const UserManagmentTab = memo((props) => {
             })
             .then((responseJson) => {
                 if (!responseJson.success && responseJson.reason !== undefined) {
-                    toast("Failed to deactivate user: " + responseJson.reason);
+                    toast.error("Failed to deactivate user: " + responseJson.reason);
                 } else if (responseJson.success === false) {
-                    toast(
+                    toast.error(
                         `Failed to deactivate user. Please contact ${supportEmail} if this persists.`,
                     );
                 } else {
-                    toast("Changed activation for user " + data.id);
+                    toast.success("Changed activation for user " + data.id);
                 }
             })
 
@@ -1529,6 +1541,7 @@ const UserManagmentTab = memo((props) => {
                                 <ListItemText
                                     primary={
                                         <Select
+											disabled={data?.login_type === "DELETED"}
                                             SelectDisplayProps={{
                                                 style: {
                                                     //   marginLeft: 10,
@@ -1611,7 +1624,30 @@ const UserManagmentTab = memo((props) => {
                                         data.login_type === undefined ||
                                             data?.login_type === null ||
                                             data?.login_type?.length === 0
-                                            ? "Normal"
+                                            ? 
+											"Normal" 
+											:
+											data?.login_type === "DELETED" ? 
+												<Chip
+												  style={{ 
+													  marginLeft: 0, 
+													  padding: 0, 
+													  marginRight: 0, 
+
+													  cursor: 'pointer',
+												  }}
+												  label={"Lost - Recover"}
+												  variant="outlined"
+												  onClick={(e) => {
+													e.preventDefault()
+													e.stopPropagation()
+
+													toast.warn("Re-adding the account to the org with 'user' role.") 
+    												inviteUser({
+														"Username": data.username,
+													})
+												  }}
+			  									/> 
                                             : data.login_type
                                     }
                                     style={{  display:'table-cell',verticalAlign: 'middle', padding: "8px",  }}
@@ -1647,6 +1683,7 @@ const UserManagmentTab = memo((props) => {
                                     ) : null}
                                 <ListItemText style={{ display:'table-cell',  textAlign: "left", verticalAlign: 'middle', padding: "8px",  }}>
                                     <IconButton
+										disabled={data?.login_type === "DELETED"}
                                         onClick={() => {
                                             setSelectedUserModalOpen(true);
                                             setSelectedUser(data);

@@ -37,11 +37,11 @@ import {
 	Pagination,
 	PaginationItem,
 	Avatar,
+	ListSubheader,
 } from "@mui/material";
 
 import { 
 	DataGrid, 
-	GridColDef,
 } from '@mui/x-data-grid';
 
 import {
@@ -138,6 +138,7 @@ const CacheView = memo((props) => {
     const [selectAllChecked, setSelectAllChecked] = React.useState(false)
   	const [renderTextBox, setRenderTextBox] = React.useState(false);
   	const [datastoreCategories, setDatastoreCategories] = React.useState(["default", "protected"]);
+	const [datastoreCategoryGroups, setDatastoreCategoryGroups] = React.useState([]);
 	const [selectedCategory, setSelectedCategory] = React.useState("default");
 	const [selectedFileId, setSelectedFileId] = React.useState("");
     const [updateToThisCategory, setUpdateToThisCategory] = useState("")
@@ -206,13 +207,13 @@ const CacheView = memo((props) => {
 		{
 			"name": "Run AI Agent",
 			"description": "Runs an AI Agent to process the updated value. Uses built-in ShuffleAI configs. Learn more: https://shuffler.io/docs/AI",
+			"type": "singul",
 			"options": [{
 				"key": "",
 				"value": "",
 			}],
 			"icon": <SmartToyIcon />,
-			"enabled": false,
-			"disabled": true,
+			"disabled": false,
 		},
 
 		{
@@ -452,7 +453,31 @@ const CacheView = memo((props) => {
 						}
 					}
 
+					var foundstartwords = {}
+					var categorygroups = [] 
+					for (var key in newcategories) {
+						const category = newcategories[key]
+						if (!category.includes("_")) {
+							continue
+						}
+
+						const startword = category.split("_")[0]
+						if (startword.length <= 2) {
+							continue
+						}
+
+						if (!foundstartwords.hasOwnProperty(startword)) {
+							foundstartwords[startword] = 1
+						} else {
+							foundstartwords[startword] += 1
+							if (foundstartwords[startword] === 2) {
+								categorygroups.push(startword)
+							}
+						}
+					}
+
 					setDatastoreCategories(newcategories)
+					setDatastoreCategoryGroups(categorygroups)
 				}
 
 				if (responseJson?.category_config !== undefined && responseJson?.category_config !== null) {
@@ -1070,7 +1095,6 @@ const CacheView = memo((props) => {
 			saveAutomation(newAutomations)
 		}
 
-		console.log("AUTO: ", automation)
 		return (
 			<Tooltip title={
 					<Typography style={{margin: 10, }}>
@@ -1094,7 +1118,7 @@ const CacheView = memo((props) => {
 								style={{ marginRight: 10, marginTop: -10, }}
 								checked={automation.enabled}
 								// Check if automation options have a value
-								disabled={automation.name !== "Enrich" && (automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === ""))}
+								disabled={automation.name !== "Enrich" && automation.name != "Run AI Agent" && (automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === ""))}
 								onChange={(e) => {
 									e.stopPropagation()
 									e.preventDefault()
@@ -1511,13 +1535,33 @@ const CacheView = memo((props) => {
 		)
 	}
 
-	const columns: GridColDef<(typeof rows)[number]>[] = [
+	const urlParams = new URLSearchParams(window?.location?.search)
+	const highlightedKey = urlParams.get("key") || "" 
+	const columns = [
 	  { 
 		  field: 'key', 
 		  headerName: 'Key', 
 		  width: 200, 
 		  filterable: true,
 		  sortable: true,
+		  renderCell: (props) => {
+			  return (
+				  <Typography 
+				  	variant="body2" 
+				  	style={{ 
+						maxWidth: 180, 
+						whiteSpace: "nowrap", 
+						overflow: "hidden", 
+						textOverflow: "ellipsis",
+						cursor: "default",
+
+						border: props.row.key === highlightedKey ? `2px solid ${theme.palette.primary.main}` : "none",
+					}}
+				  >
+				  	{props.row.key}
+				  </Typography>
+			  )
+		  }
 	  },
 	  {
 		width: 540,
@@ -1919,7 +1963,7 @@ const CacheView = memo((props) => {
 	  },
 	];
 
-
+	var previousgroup = ""
 	const isAutomating = categoryAutomations?.find((automation) => automation.enabled) !== undefined
     return (
         <div style={{
@@ -2072,56 +2116,53 @@ const CacheView = memo((props) => {
 					</Button>
 				</ButtonGroup>
 
-				<ButtonGroup style={{marginTop: 0, }}>
-				{datastoreCategories !== undefined &&
+				<ButtonGroup style={{ position: "absolute", top: -6, }}>
+				   {datastoreCategories !== undefined &&
 					datastoreCategories !== null &&
 					datastoreCategories.length > 1 ? (
 
-						<FormControl style={{ minWidth: 150, maxWidth: 150, marginTop: 8, }}>
-						    <InputLabel id="category-choice" style={{
-								color: "rgba(255, 255, 255, 0.65)",
-							}}>
-								Category
-							</InputLabel>
-							<Select
+						<FormControl style={{ minWidth: 250, maxWidth: 250, marginTop: 8, }}>
+							<Autocomplete
 								labelId="category-choice"
 								style={{
-									minWidth: 150,
-									maxWidth: 150,
-									height: 35,
-									borderRadius: "5px 0px 0px 5px",
+									minWidth: 250,
+									maxWidth: 250,
+								}}
+								ListboxProps={{
+									style: {
+										maxHeight: "70vh",
+										border: "1px solid rgba(255,255,255,0.3)",
+									}
 								}}
 								value={selectedCategory}
-								onChange={(event) => {
-									setCategoryConfig(undefined)
-									setCategoryAutomations(defaultAutomation)
-
-									//if (selectAllChecked || listCache.length > 0) {
-									if (selectAllChecked || selectedFiles.length > 0) {
-										setUpdateToThisCategory(event.target.value)
-										return
-									}
-
-
-									setSelectedCategory(event.target.value)
-									if (event.target.value === "all" || event.target.value === "default") {
-    									listOrgCache(orgId, "", 0, pageSize, page)
-									} else {
-    									listOrgCache(orgId, event.target.value, 0, pageSize, page)
-									}
-
-									// Add it to the url as a query
-									if (window.location.search.includes("category=")) {
-										const newurl = window.location.href.replace(/category=[^&]+/, `category=${event.target.value}`)
-										window.history.pushState({ path: newurl }, "", newurl)
-									} else {
-										window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${event.target.value}`)
-									}
+								options={datastoreCategories}
+								getOptionLabel={(data) => {
+									const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
+									return fixedname 
 								}}
-							>
-								{datastoreCategories.map((data, index) => {
-									// Should find the icon for things
-									// Fix uppercase at start of words
+								groupBy={(data) => {
+									if (!data.includes("_")) {
+										return undefined 
+									}
+
+									const firstword = data.split("_")[0]
+									if (datastoreCategoryGroups.includes(firstword)) {
+										return firstword.charAt(0).toUpperCase() + firstword.slice(1)
+									}
+
+									return undefined
+								}}
+								renderInput={(params) => {
+									return (
+										<TextField 
+											{...params} 
+											label="Select Category" 
+											variant="outlined" 
+											size="small"
+										/>
+									)
+								}}
+								renderOption={(props, data, state) => {
 									const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
 									const iconDetails = GetIconInfo({
 										"app_name": fixedname,
@@ -2130,12 +2171,39 @@ const CacheView = memo((props) => {
 
 									return (
 										<MenuItem
-											key={index}
+											key={data}
 											value={data}
 											style={{ 
 												color: theme.palette.textFieldStyle.color, 
 												display: "flex", 
 												borderBottom: theme.palette.defaultBorder,
+											}}
+											onClick={(e) => {
+												e.stopPropagation()
+												e.preventDefault()
+
+												setCategoryConfig(undefined)
+												setCategoryAutomations(defaultAutomation)
+
+												if (selectAllChecked || selectedFiles.length > 0) {
+													setUpdateToThisCategory(data)
+													return
+												}
+
+												setSelectedCategory(data)
+												if (data  === "all" || data === "default") {
+													listOrgCache(orgId, "", 0, pageSize, page)
+												} else {
+													listOrgCache(orgId, data, 0, pageSize, page)
+												}
+
+												// Add it to the url as a query
+												if (window.location.search.includes("category=")) {
+													const newurl = window.location.href.replace(/category=[^&]+/, `category=${data}`)
+													window.history.pushState({ path: newurl }, "", newurl)
+												} else {
+													window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${data}`)
+												}
 											}}
 										>
 											<Typography style={{display: "flex", marginTop: 5, }}>
@@ -2148,9 +2216,69 @@ const CacheView = memo((props) => {
 												{fixedname}
 											</Typography>
 										</MenuItem>
+									)
+								}}
+
+							/>
+							{/*
+								{datastoreCategories.map((data, index) => {
+									var addition = ""
+									if (data.includes("_")) {
+										const firstword = data.split("_")[0]
+										if (firstword !== previousgroup) {
+ 
+											if (datastoreCategoryGroups.includes(firstword)) {
+												previousgroup = firstword
+												addition = 
+													<ListSubheader>
+														{firstword.charAt(0).toUpperCase() + firstword.slice(1)}
+													</ListSubheader>
+											} else {
+												if (previousgroup !== "") {
+													addition = <div style={{height: 8, backgroundColor: "rgba(0,0,0,0.8)",}} />
+													previousgroup = ""
+												}
+											}
+										} 
+									} else {
+										if (previousgroup !== "") {
+											addition = <div style={{height: 8, backgroundColor: "rgba(0,0,0,0.8)",}} />
+											previousgroup = ""
+										}
+									}
+
+									// Should find the icon for things
+									// Fix uppercase at start of words
+									const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
+									const iconDetails = GetIconInfo({
+										"app_name": fixedname,
+										"name": fixedname,
+									})
+
+									return (
+										<MenuItem
+											key={data}
+											value={data}
+											style={{ 
+												color: theme.palette.textFieldStyle.color, 
+												display: "flex", 
+												borderBottom: theme.palette.defaultBorder,
+											}}
+										>
+											{addition}
+											<Typography style={{display: "flex", marginTop: 5, }}>
+												<div style={{marginRight: 10, }}>
+													{iconDetails?.originalIcon && (
+														iconDetails?.originalIcon
+													)}
+												</div>
+
+												{fixedname}
+											</Typography>
+										</MenuItem>
 									);
 								})}
-							</Select>
+							*/}
 						</FormControl>
 					) : null}
 
@@ -2159,7 +2287,7 @@ const CacheView = memo((props) => {
 						<Tooltip title={"Close"} style={{}} aria-label={""}>
 							<Button
 								style={{ 
-									height: 35, 
+									height: 40, 
 									borderRadius: 4,  
 									textTransform: 'none', 
 									fontSize: 16,
@@ -2178,14 +2306,13 @@ const CacheView = memo((props) => {
 							</Button>
 						</Tooltip>
 						:
-						<Tooltip title={"Add or find category"} style={{}} aria-label={""}>
+						<Tooltip title={"Add new category object"} style={{}} aria-label={""}>
 							<Button
 								style={{ 
 									whiteSpace: "nowrap", 
 									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? 50 : 169, 
-									height: 35, 
+									height: 40, 
 									textTransform: 'none', 
-									fontSize: 16, 
 
 									borderRadius: "0px 5px 5px 0px",
 								}}
@@ -2216,14 +2343,14 @@ const CacheView = memo((props) => {
 								
 						}}
 						style={{
-							height: 35,
+							height: 40,
 							width: 200,
 							marginTop: 0,
 						}}
 						InputProps={{
 							style: {
 								color: theme.palette.textFieldStyle.color,
-								height: 35,
+								height: 40,
 								fontSize: 16,
 								borderRadius: 4,
 								paddingTop: 0,
@@ -2408,7 +2535,7 @@ const CacheView = memo((props) => {
 												Subscribing
 											</Typography>
 											<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginBottom: 20 }}>
-												Enabling this feature will allow other organizations to subscribe to this category. This is NOT fully available yet.
+												Enabling subscriptions allows other organizations to subscribe to this category and receive updates when keys are added or modified. Makes the category searchable.
 											</Typography>
 										</div>
 									</div>

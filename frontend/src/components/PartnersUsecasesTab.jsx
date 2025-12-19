@@ -24,6 +24,7 @@ import {
 import React, { useContext, useEffect, useState } from "react";
 import { getTheme } from "../theme.jsx";
 import { Context } from "../context/ContextApi.jsx";
+import { triggers } from "../views/AngularWorkflow.jsx";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import { toast } from "react-toastify";
@@ -37,6 +38,35 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import InfoIcon from "@mui/icons-material/Info";
 import { Link, useNavigate } from "react-router-dom";
+import { grey } from "../views/AngularWorkflow.jsx"
+
+const IMAGE_UPLOAD_PLACEHOLDER = "Uploading image...";
+
+// Helper to extract the first markdown image URL from navigation content
+export const getFirstImageFromNavigation = (navigation) => {
+  if (!navigation || !Array.isArray(navigation.items)) {
+    return "";
+  }
+
+  for (const item of navigation.items) {
+    if (!item || !Array.isArray(item.content)) {
+      continue;
+    }
+
+    for (const paragraph of item.content) {
+      if (typeof paragraph !== "string") {
+        continue;
+      }
+
+      const match = paragraph.match(/!\[[^\]]*]\(([^)]+)\)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+  }
+
+  return "";
+};
 
 // Helper function to get the correct image path based on app category
 export const getCategoryImagePath = (category) => {
@@ -62,16 +92,132 @@ export const getCategoryImagePath = (category) => {
     return "/images/appCategories/intel.svg";
   } else if (lowerCategory.includes("email")) {
     return "/images/appCategories/email.svg";
+  } else if (lowerCategory.includes("webhook")) {
+    return triggers.find((trigger) => trigger?.name.toLowerCase() === "webhook")?.large_image;
+  } else if (lowerCategory.includes("schedule")) {
+    return triggers.find((trigger) => trigger?.name.toLowerCase() === "schedule")?.large_image;
+  } else if (lowerCategory.includes("pipelines")) {
+    return triggers.find((trigger) => trigger?.name.toLowerCase() === "pipelines")?.large_image;
+  } else if (lowerCategory.includes("shuffle workflow")) {
+    return triggers.find((trigger) => trigger?.name.toLowerCase() === "shuffle workflow")?.large_image;
+  } else if (lowerCategory.includes("user input")) {
+    return triggers.find((trigger) => trigger?.name.toLowerCase() === "user input")?.large_image;
   } else {
     return "/images/appCategories/other.svg";
   }
 };
 
 // Skeleton component for loading state
-const UsecaseCardSkeleton = () => {
+const UsecaseCardSkeleton = ({ isArticlesTab }) => {
   const { themeMode } = useContext(Context);
   const theme = getTheme(themeMode);
-  
+
+  // Skeleton for Articles Tab
+  if (isArticlesTab) {
+    return (
+      <Box
+        sx={{
+          textDecoration: "none",
+          backgroundColor: theme.palette.usecaseCardColor,
+          borderRadius: "16px",
+          width: {
+            xs: "230px",
+            sm: "320px",
+          },
+          minWidth: {
+            xs: "230px",
+            sm: "320px",
+          },
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Header image skeleton */}
+        <Skeleton
+          variant="rectangular"
+          height={160}
+          sx={{
+            width: "100%",
+            bgcolor:
+              themeMode === "dark"
+                ? "rgba(255, 255, 255, 0.08)"
+                : "rgba(0, 0, 0, 0.06)",
+          }}
+        />
+
+        {/* Body skeleton */}
+        <Box
+          sx={{
+            p: 2,
+            pt: 2.5,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+          }}
+        >
+          <Skeleton
+            variant="text"
+            width="80%"
+            height={26}
+            sx={{
+              bgcolor:
+                themeMode === "dark"
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.08)",
+            }}
+          />
+          <Skeleton
+            variant="text"
+            width="40%"
+            height={20}
+            sx={{
+              bgcolor:
+                themeMode === "dark"
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "rgba(0, 0, 0, 0.06)",
+            }}
+          />
+
+          <Box
+            sx={{
+              mt: "auto",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Skeleton
+              variant="rectangular"
+              width={38}
+              height={22}
+              sx={{
+                borderRadius: "12px",
+                bgcolor:
+                  themeMode === "dark"
+                    ? "rgba(255, 255, 255, 0.1)"
+                    : "rgba(0, 0, 0, 0.06)",
+              }}
+            />
+            <Skeleton
+              variant="circular"
+              width={24}
+              height={24}
+              sx={{
+                bgcolor:
+                  themeMode === "dark"
+                    ? "rgba(255, 255, 255, 0.1)"
+                    : "rgba(0, 0, 0, 0.06)",
+              }}
+            />
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Skeleton for Usecases Tab
   return (
     <Box
       sx={{
@@ -177,7 +323,8 @@ const UsecaseCardSkeleton = () => {
   );
 };
 
-const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsecase }) => {
+// Card renderer for both usecases and articles
+const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsecase, isArticlesTab, partnerData }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const { themeMode } = useContext(Context);
@@ -209,9 +356,215 @@ const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsec
     navigate(`/usecases/${usecase.id}`);
   };
 
+  // Article Card Layout
+  if (isArticlesTab) {
+    return (
+      <Box
+        sx={{
+          textDecoration: "none",
+          backgroundColor: theme.palette.usecaseCardColor,
+          borderRadius: "16px",
+          width: {
+            xs: "230px",
+            sm: "320px",
+          },
+          minWidth: {
+            xs: "230px",
+            sm: "320px",
+          },
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          "&:hover": {
+            backgroundColor: theme.palette.usecaseCardHoverColor,
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src={usecase.headerImage || "/images/no_image.png"}
+          alt={usecase.name}
+          sx={{
+            width: "100%",
+            height: 160,
+            objectFit: "cover",
+          }}
+        />
+
+        <Box
+          sx={{
+            p: 2,
+            pt: 2.5,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            height: "100%",
+          }}
+        >
+          <Typography
+            sx={{
+              color: theme.palette.text.primary,
+              fontSize: {
+                xs: "15px",
+                lg: "16px",
+              },
+              fontWeight: 600,
+              fontFamily: theme.typography.fontFamily,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {usecase.name}
+          </Typography>
+
+          {usecase.created && (
+            <Typography
+              sx={{
+                color: theme.palette.text.secondary,
+                fontSize: "13px",
+              }}
+            >
+              {new Date(usecase.created * 1000).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </Typography>
+          )}
+
+          <Box
+            sx={{
+              mt: -1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 0.5,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <OpenInNewIcon
+              fontSize="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`${window.location.origin}/partners/${partnerData?.name.toLowerCase().replaceAll(" ", "_")}/articles/${usecase.name.toLowerCase().replaceAll(" ", "_")}`, "_blank");
+              }}
+              sx={{
+                color: theme.palette.primary.main,
+                cursor: "pointer",
+              }}
+            />
+            <Switch
+              checked={usecase.public}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onChange={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleToggle(usecase.id);
+              }}
+              size="medium"
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": {
+                  color: "#4CAF50",
+                },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: "#4CAF50",
+                },
+              }}
+            />
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClick(e);
+              }}
+              size="small"
+              sx={{
+                color: theme.palette.text.primary,
+                "&:hover": {
+                  backgroundColor:
+                    themeMode === "dark"
+                      ? "rgba(255, 255, 255, 0.1)"
+                      : "rgba(0, 0, 0, 0.05)",
+                },
+              }}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleClose}
+            onClick={(e) => e.stopPropagation()}
+            PaperProps={{
+              sx: {
+                backgroundColor: theme.palette.DialogStyle.backgroundColor,
+                border: theme.palette.defaultBorder,
+                borderRadius: "8px",
+                boxShadow: theme.palette.DialogStyle.boxShadow,
+                "& .MuiMenuItem-root": {
+                  fontSize: "14px",
+                  color: theme.palette.text.primary,
+                  "&:hover": {
+                    backgroundColor:
+                      themeMode === "dark"
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "rgba(0, 0, 0, 0.05)",
+                  },
+                },
+              },
+            }}
+            transformOrigin={{ horizontal: "right", vertical: "top" }}
+            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          >
+            <MenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenDialog(usecase);
+                setAnchorEl(null);
+              }}
+            >
+              <ListItemIcon>
+                <EditIcon
+                  fontSize="small"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontFamily: theme.typography.fontFamily,
+                  }}
+                />
+              </ListItemIcon>
+              <ListItemText>Edit Article</ListItemText>
+            </MenuItem>
+            <MenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteUsecase(usecase.id);
+              }}
+            >
+              <ListItemIcon>
+                <DeleteIcon
+                  fontSize="small"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontFamily: theme.typography.fontFamily,
+                  }}
+                />
+              </ListItemIcon>
+              <ListItemText>Delete Article</ListItemText>
+            </MenuItem>
+          </Menu>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Usecase Card Layout
   return (
     <Box
-      onClick={handleCardClick}
       sx={{
         textDecoration: "none",
         backgroundColor: theme.palette.usecaseCardColor,
@@ -241,7 +594,6 @@ const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsec
           sm: "300px",
         },
         gap: "20px",
-        cursor: "pointer",
         "&:hover": {
           backgroundColor: theme.palette.usecaseCardHoverColor,
         },
@@ -302,6 +654,17 @@ const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsec
             </Tooltip>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <OpenInNewIcon
+              fontSize="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`${window.location.origin}/usecases/${usecase.name.toLowerCase().replaceAll(" ", "_")}`, "_blank");
+              }}
+              sx={{
+                color: theme.palette.primary.main,
+                cursor: "pointer",
+              }}
+            />
           <Switch
             checked={usecase.public}
             onClick={(e) => {
@@ -414,9 +777,11 @@ const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsec
   );
 };
 
-const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPartnerData }) => {
+const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPartnerData, selectedTab }) => {
   const { themeMode } = useContext(Context);
   const theme = getTheme(themeMode);
+  const isArticlesTab = selectedTab?.toLowerCase() === "articles";
+  const entityLabel = isArticlesTab ? "Article" : "Usecase";
 
   // Dialog state
   const [openDialog, setOpenDialog] = useState(false);
@@ -438,12 +803,13 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     navigation: {
       items: [
         {
-          name: "About Usecase",
+          name: `About ${entityLabel}`,
           content: [""],
         },
       ],
     },
     public: false,
+    created: null,
   });
   
   // App categories for dropdowns
@@ -458,6 +824,11 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     { value: "assets", label: "Assets" },
     { value: "intel", label: "Intel" },
     { value: "email", label: "Email" },
+    {value: "webhook", label: "Webhook"},
+    {value: "schedule", label: "Schedule"},
+    {value: "pipelines", label: "Pipelines"},
+    {value: "shuffle workflow", label: "Shuffle Workflow"},
+    {value: "user input", label: "User Input"},
     { value: "other", label: "Other" }
   ];
 
@@ -505,7 +876,9 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
             description: usecase.mainContent?.description,
             navigation: usecase.navigation || { items: [] },
             categories: usecase.mainContent?.categories || [],
-            public: usecase?.public || false,  
+            public: usecase?.public || false,
+            created: usecase?.created || null,
+            headerImage: getFirstImageFromNavigation(usecase.navigation),
           }));
           if (usecases.length > 0) {
             setUsecaseData(usecases);
@@ -526,7 +899,195 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
   // Sample categories
   const categoryOptions = ["Collect","Enrich", "Detect", "Respond", "Verify"];
 
+  // Uploading image to the public bucket
+  const handleImageUpload = async (imageData) => {
+    const folderName = "usecase_images";
+    const usecaseId = formData?.id || partnerData?.id || "usecase";
+
+    try {
+      const response = await fetch(`${globalUrl}/api/v1/image_upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          imageData,
+          folder: folderName,
+          id: usecaseId,
+        }),
+      });
+
+      // if (response.status !== 200) {
+      //   toast.error("Failed to upload image" + response?.reason);
+      //   return null;
+      // }
+
+      const responseJson = await response.json();
+      if (!responseJson?.success || !responseJson?.url) {
+        toast.error("Failed to upload image: " + responseJson?.reason);
+        return null;
+      }
+
+      return responseJson.url;
+    } catch (error) {
+      toast.error("Failed to upload image" + error?.message);
+      return null;
+    }
+  };
+
+  // This function is used to update the content with the public image url
+  const updateContentWithImageUrl = (itemIndex, contentIndex, imageUrl) => {
+    setFormData((prevData) => {
+      const newItems = [...(prevData.navigation.items || [])];
+      const item = newItems[itemIndex];
+      if (!item) {
+        return prevData;
+      }
+
+      const contents = [...(item.content || [])];
+      const existingContent = contents[contentIndex] || "";
+      const markdownImage = imageUrl ? `![image](${imageUrl})` : "";
+
+      const placeholderIndex = existingContent.indexOf(IMAGE_UPLOAD_PLACEHOLDER);
+      if (placeholderIndex !== -1) {
+        const before = existingContent.slice(0, placeholderIndex);
+        const after = existingContent.slice(
+          placeholderIndex + IMAGE_UPLOAD_PLACEHOLDER.length,
+        );
+
+        const trimmedBefore = before.replace(/\s*$/, "");
+        const needsNewline =
+          trimmedBefore.length > 0 && !trimmedBefore.endsWith("\n");
+        const separator = needsNewline ? "\n" : "";
+
+        contents[contentIndex] = `${trimmedBefore}${separator}${markdownImage}${after}`;
+      } else {
+        const needsNewline =
+          existingContent.length > 0 && !existingContent.endsWith("\n");
+        const separator = needsNewline ? "\n" : "";
+
+        contents[contentIndex] = `${existingContent}${separator}${markdownImage}`;
+      }
+
+      newItems[itemIndex] = {
+        ...item,
+        content: contents,
+      };
+
+      return {
+        ...prevData,
+        navigation: {
+          items: newItems,
+        },
+      };
+    });
+  };
+
+  // This function is used to insert the image placeholder (Uploading image...) in the content to show that the image is being uploaded
+  const insertImagePlaceholder = (itemIndex, contentIndex) => {
+    setFormData((prevData) => {
+      const newItems = [...(prevData.navigation.items || [])];
+      const item = newItems[itemIndex];
+      if (!item) {
+        return prevData;
+      }
+
+      const contents = [...(item.content || [])];
+      const existingContent = contents[contentIndex] || "";
+      const needsNewline =
+        existingContent.length > 0 && !existingContent.endsWith("\n");
+      const separator = needsNewline ? "\n" : "";
+
+      contents[contentIndex] = `${existingContent}${separator}${IMAGE_UPLOAD_PLACEHOLDER}`;
+
+      newItems[itemIndex] = {
+        ...item,
+        content: contents,
+      };
+
+      return {
+        ...prevData,
+        navigation: {
+          items: newItems,
+        },
+      };
+    });
+  };
+
+  // This function is used to process the image file and upload it to the public bucket
+  const processImageFile = (imageFile, itemIndex, contentIndex) => {
+    const reader = new FileReader();
+    reader.onload = async (loadEvent) => {
+      const imageData = loadEvent.target?.result;
+      if (!imageData) {
+        toast.error("Failed to read image");
+        updateContentWithImageUrl(itemIndex, contentIndex, "");
+        return;
+      }
+
+      const imageUrl = await handleImageUpload(imageData);
+      if (!imageUrl) {
+        // Clean up the placeholder if upload failed
+        updateContentWithImageUrl(itemIndex, contentIndex, "");
+        return;
+      }
+
+      updateContentWithImageUrl(itemIndex, contentIndex, imageUrl);
+    };
+    reader.readAsDataURL(imageFile);
+  };
+
+  // This function is used to handle the image paste event
+  const handleContentPaste = async (event, itemIndex, contentIndex) => {
+    const items = event.clipboardData?.items;
+    if (!items || items.length === 0) {
+      return;
+    }
+
+    let imageFile = null;
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        imageFile = item.getAsFile();
+        break;
+      }
+    }
+
+    if (!imageFile) {
+      return;
+    }
+
+    event.preventDefault();
+
+    insertImagePlaceholder(itemIndex, contentIndex);
+    processImageFile(imageFile, itemIndex, contentIndex);
+  };
+
+  // This function is used to handle the image drop event
+  const handleContentDrop = async (event, itemIndex, contentIndex) => {
+    event.preventDefault();
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const imageFile = Array.from(files).find((file) => file.type.startsWith("image/"));
+    if (!imageFile) {
+      toast.error("Failed to upload image, only images are supported");
+      return;
+    }
+
+    insertImagePlaceholder(itemIndex, contentIndex);
+    processImageFile(imageFile, itemIndex, contentIndex);
+  };
+
   const getUserProfileWorkflows = (orgId) => {
+    if (selectedTab === "articles") {
+      return;
+    }
     setIsWorkflowLoading(true);
 		fetch(`${globalUrl}/api/v1/partners/${orgId}/workflows`, {
 			method: "GET",
@@ -713,12 +1274,13 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
       navigation: usecase?.navigation || {
         items: [ 
           {
-            name: "About Usecase",
+            name: `About ${entityLabel}`,
             content: [""],
           },
         ],
       },
       public: usecase?.public || false,
+      created: usecase?.created || Math.floor(Date.now() / 1000),
     });
     setOpenDialog(true);
   };
@@ -753,15 +1315,15 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     const validationErrors = [];
 
     // Check for public workflow selection
-    if (!formData.mainContent.publicWorkflowId || formData.mainContent.publicWorkflowId.trim() === "") {
+    if (!isArticlesTab && (!formData.mainContent.publicWorkflowId || formData.mainContent.publicWorkflowId.trim() === "")) {
       validationErrors.push("Please select a public workflow");
     }
 
-    if (!formData.mainContent.sourceAppType || formData.mainContent.sourceAppType.trim() === "") {
+    if (!isArticlesTab && (!formData.mainContent.sourceAppType || formData.mainContent.sourceAppType.trim() === "")) {
       validationErrors.push("Source app type is required");
     }
 
-    if (!formData.mainContent.destinationAppType || formData.mainContent.destinationAppType.trim() === "") {
+    if (!isArticlesTab && (!formData.mainContent.destinationAppType || formData.mainContent.destinationAppType.trim() === "")) {
       validationErrors.push("Destination app type is required");
     }
 
@@ -783,7 +1345,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     }
 
     // Check categories
-    if (!formData.mainContent.categories || !Array.isArray(formData.mainContent.categories) || formData.mainContent.categories.length === 0) {
+    if (!isArticlesTab && (!formData.mainContent.categories || !Array.isArray(formData.mainContent.categories) || formData.mainContent.categories.length === 0)) {
       validationErrors.push("At least one category must be selected");
     }
 
@@ -846,7 +1408,6 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
       return res.json();
     })
     .then((responseData) => {
-      console.log("Response data:", responseData);
       // Reset loading state
       setIsSubmitting(false);
       
@@ -863,7 +1424,9 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
           description: formData.mainContent?.description.trim(),
           categories: formData.mainContent?.categories || [],
           navigation: formData.navigation || {},
-          public: formData?.public || false,  
+          public: formData?.public || false,
+          created: formData?.created || null,
+          headerImage: getFirstImageFromNavigation(formData.navigation),
         }
 
         setUsecaseData((prevData) => {
@@ -921,6 +1484,28 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     });
   };
 
+  // This is used to filter the usecases based on the selected tab
+  const filteredUsecases = Array.isArray(usecaseData)
+    ? usecaseData.filter((usecase) => {
+        const hasWorkflowId =
+          !!usecase.publicWorkflowId &&
+          usecase.publicWorkflowId.toString().trim() !== "";
+
+        if (selectedTab === "articles") {
+          // Articles: only items without a public workflow ID
+          return !hasWorkflowId;
+        }
+
+        if (selectedTab === "usecases") {
+          // Usecases: only items with a public workflow ID
+          return hasWorkflowId;
+        }
+
+        // Fallback: show all
+        return true;
+      })
+    : [];
+
   return (
     <Box
       sx={{
@@ -934,7 +1519,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
         justifyContent: "flex-start",
       }}
     >
-      {/* Add Usecase Button */}
+      {/* Add Usecase / Article Button */}
       <Box
         sx={{
           width: "100%",
@@ -946,13 +1531,13 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
         }}
       >
         <Typography sx={{ fontSize: 20, fontWeight: 500, color: "#FFFFFF" }}>
-          Usecases
+          {selectedTab === "usecases" && "Usecases"}
+          {selectedTab === "articles" && "Articles"}
         </Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          disabled={isWorkflowLoading}
           onClick={handleOpenDialog}
           sx={{
             px: 3,
@@ -961,11 +1546,11 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
             fontWeight: 600,
           }}
         >
-          Add Usecase
+          {isArticlesTab ? "Add Article" : "Add Usecase"}
         </Button>
       </Box>
 
-      {/* Usecases Grid */}
+      {/* Usecases / Articles Grid */}
       {isLoading ? (
         // Skeleton loading state
         <Box
@@ -981,11 +1566,11 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
         >
           {/* Display 4 skeleton cards while loading */}
           {[...Array(4)].map((_, index) => (
-            <UsecaseCardSkeleton key={index} />
+            <UsecaseCardSkeleton key={index} isArticlesTab={isArticlesTab} partnerData={partnerData} />
           ))}
         </Box>
-      ) : usecaseData.length > 0 ? (
-        // Actual data display
+      ) : filteredUsecases.length > 0 ? (
+        // Actual data display (filtered based on public workflow ID)
         <Box
           sx={{
             display: "flex",
@@ -997,13 +1582,15 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
             pt: 4,
           }}
         >
-          {usecaseData.map((usecase) => (
+          {filteredUsecases.map((usecase) => (
             <UsecaseCard
               handleOpenDialog={handleOpenDialog}
               key={usecase.id}
               usecase={usecase}
               handleToggle={handleToggle}
               handleDeleteUsecase={handleDeleteUsecase}
+              isArticlesTab={isArticlesTab}
+              partnerData={partnerData}
             />
           ))}
         </Box>
@@ -1027,7 +1614,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
               color: "#FFFFFF",
             }}
           >
-            No usecases found
+            {isArticlesTab ? "No articles found" : "No usecases found"}
           </Typography>
         </Box>
       )}
@@ -1064,7 +1651,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
           }}
         >
           <Typography sx={{ fontSize: 20, fontWeight: 500, color: theme.palette.text.primary }}>
-            {formData?.id ? "Update" : "Add New"} Usecase : {formData?.public ? "Published" : "Draft"}
+            {formData?.id ? "Update" : "Add New"} {entityLabel} : {formData?.public ? "Published" : "Draft"}
           </Typography>
           <IconButton
             onClick={handleCloseDialog}
@@ -1088,6 +1675,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
               paddingTop: 3,
             }}
           >
+            {!isArticlesTab && (
             <FormControl>
             <Box
                 sx={{
@@ -1207,9 +1795,40 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                 )}
               </Select>
             </FormControl>
+            )}
+
+	  		    {/* Other data selection (use all data types) */}
+            {!isArticlesTab && (
+            <Box sx={{ display: "flex", flexDirection: "row", gap: 2, mt: 2 }}>
+              <FormControl fullWidth>
+                <Typography
+                  sx={{
+                    color: grey,
+                    mb: 1,
+                    fontSize: "16px",
+                  }}
+                >
+	  				<b>Coming soon:</b> Files (detection)
+                </Typography>
+              </FormControl> 
+
+              <FormControl fullWidth>
+                <Typography
+                  sx={{
+                    color: grey,
+                    mb: 1,
+                    fontSize: "16px",
+                  }}
+                >
+	  				<b>Coming soon:</b> Datastore category (threatlists)	
+                </Typography>
+              </FormControl>
+            </Box>
+            )}
 
             {/* App Type Selection */}
-            <Box sx={{ display: "flex", flexDirection: "row", gap: 2, mt: 2 }}>
+            {!isArticlesTab && (
+            <Box sx={{ display: "flex", flexDirection: "row", gap: 2, mt: isArticlesTab ? 0 : 2 }}>
               <FormControl fullWidth>
                 <Typography
                   sx={{
@@ -1285,6 +1904,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                   ))}
                 </Select>
               </FormControl>
+
 
               <FormControl fullWidth>
                 <Typography
@@ -1362,6 +1982,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                 </Select>
               </FormControl>
             </Box>
+            )}
 
             <Box sx={{ mb: 2, mt: 2 }}>
               <Typography
@@ -1433,6 +2054,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                     }}
                   />
                 </FormControl>
+                {!isArticlesTab && (
                 <FormControl>
                   <Typography
                     sx={{ color: theme.palette.text.primary, mb: 1, fontSize: "14px" }}
@@ -1513,6 +2135,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                     ))}
                   </Select>
                 </FormControl>
+                )}
               </Box>
             </Box>
 
@@ -1648,7 +2271,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                     <Box key={contentIndex} sx={{ mb: 1 }}>
                       <TextField
                         multiline
-                        rows={6}
+                        rows={14}
                         value={content}
                         onChange={(e) => {
                           const newItems = [...formData.navigation.items];
@@ -1659,12 +2282,15 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                             navigation: { items: newItems },
                           });
                         }}
+                        onPaste={(event) => handleContentPaste(event, itemIndex, contentIndex)}
+                        onDrop={(event) => handleContentDrop(event, itemIndex, contentIndex)}
+                        onDragOver={(event) => event.preventDefault()}
                         placeholder="Content (Markdown supported)"
                         helperText={
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
                             <InfoIcon sx={{ fontSize: "14px", opacity: 0.7 }} />
                             <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                              Markdown syntax is supported
+                              Markdown syntax is supported and Use ### for subItem for Table of Contents. Drag and drop or paste images to the content to upload them.
                             </Typography>
                           </Box>
                         }
@@ -1708,7 +2334,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                       )}
                     </Box>
                   ))}
-
+{/* 
                   <Button
                     startIcon={<AddCircleOutlineIcon />}
                     onClick={() => {
@@ -1725,7 +2351,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
                     }}
                   >
                     Add Paragraph
-                  </Button>
+                  </Button> */}
                 </Box>
               ))}
 
@@ -1791,7 +2417,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
           >
             {isSubmitting 
               ? (formData?.id ? "Updating..." : "Adding...") 
-              : (formData?.id ? "Update Usecase" : "Add Usecase")
+              : (formData?.id ? `Update ${entityLabel}` : `Add ${entityLabel}`)
             }
           </Button>
         </DialogActions>
