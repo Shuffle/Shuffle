@@ -211,15 +211,7 @@ const AdminNavBar = (props) => {
         } else if (userdata && isOrgLoaded && isUserDataLoaded && userdata?.active_org?.role !== "admin" && !userdata?.support) {
             const queryParams = new URLSearchParams(location.search);
             const tabName = queryParams?.get('admin_tab')?.toLowerCase();
-            if (tabName === "sso") {
-                toast.info("You are not allowed to access this tab. Please contact your admin for more information. Redirecting to Organization Configuration tab.");
-                setTimeout(() => {
-                    setSelectedItem("Organization");
-                    navigate(`?admin_tab=org_config`, { replace: true });
-                    window.location.reload();
-                }
-                , 3000);
-            }
+            // SSO tab is now accessible to non-admins (removed restriction)
 
             const params = new URLSearchParams(location.search);
             const tab = params?.get('tab')?.toLowerCase();

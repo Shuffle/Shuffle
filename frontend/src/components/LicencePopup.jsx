@@ -1319,8 +1319,14 @@ const LicencePopup = (props) => {
               >
                 {`${
                   isPaidPlan ? "Next billing: " : "App runs resets on "
-                }${new Date(
-                  (localSub.enddate || localSub.Enddate) * 1000
+                }${(
+                  isPaidPlan
+                    ? new Date((localSub.enddate || localSub.Enddate) * 1000)
+                    : new Date(
+                        new Date().getFullYear(),
+                        new Date().getMonth() + 1,
+                        1
+                      )
                 ).toLocaleDateString(undefined, {
                   day: "2-digit",
                   month: "short",

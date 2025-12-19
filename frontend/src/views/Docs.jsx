@@ -62,7 +62,6 @@ const dividerColor = "rgb(225, 228, 232)";
 const hrefStyle = {
     color: "rgba(255, 255, 255, 0.8)",
     textDecoration: "none",
-    marginRight: window.location.pathname.includes("/articles/") ? "0.8em" : undefined,
 };
 
 
@@ -387,6 +386,7 @@ export const CodeHandler = (props) => {
                 minWidth: "50%",
                 maxWidth: "100%",
                 backgroundColor: theme.palette.inputColor,
+                whiteSpace: "pre-wrap",
                 overflowY: "auto",
                 // Have it inline
                 borderRadius: theme.palette?.borderRadius,
@@ -1020,7 +1020,7 @@ const Docs = (defaultprops) => {
     }
 
     const fetchDocList = (resetCache = false) => {
-        var url = `${globalUrl}/api/v1/docs`
+        var url = `${globalUrl}/api/v1/docs?resetCache=${resetCache}`
 		if (location.pathname.includes("/legal")) {
 			url = `${globalUrl}/api/v1/docs?folder=legal&resetCache=${resetCache}`
 		} else if (location.pathname.includes("/articles")) {
@@ -1047,16 +1047,16 @@ const Docs = (defaultprops) => {
             .catch((error) => { });
     };
 
-    const fetchDoc = (docId) => {
+    const fetchDoc = (docId, resetCache = false) => {
 		if (docId === undefined) {
 			return 
 		}
 
-        var url = `${globalUrl}/api/v1/docs/${docId}`
+        var url = `${globalUrl}/api/v1/docs/${docId}?resetCache=${resetCache}`
 		if (location.pathname.includes("/legal")) {
-			url = `${globalUrl}/api/v1/docs/${docId}?folder=legal`
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=legal&resetCache=${resetCache}`
 		} else if (location.pathname.includes("/articles")) {
-			url = `${globalUrl}/api/v1/docs/${docId}?folder=articles`
+			url = `${globalUrl}/api/v1/docs/${docId}?folder=articles&resetCache=${resetCache}`
 		}
 
         fetch(url, {
@@ -1082,7 +1082,7 @@ const Docs = (defaultprops) => {
                                 autoClose: 2000,
                             });
                             setTimeout(() => {
-                                navigate(`/articles/2.0_release`)
+                                navigate(`/articles`)
                             }, 2000)
                             return
                         }
@@ -1130,7 +1130,8 @@ const Docs = (defaultprops) => {
 
     const handleResetCache = () => {
         fetchDocList(true);
-        toast("Cache has been reset");
+        fetchDoc(props.match.params.key, true);
+        toast("Cache and list will be reset in a few seconds");
     }
 
     if (firstrequest) {
@@ -1344,6 +1345,21 @@ const Docs = (defaultprops) => {
         tr: TableRowRenderer,
         th: TableHeaderCellRenderer,
         td: TableCellRenderer,
+        ul: ({ children }) => (
+            <Box component="ul" sx={{ my: 0.5, fontFamily: '"Segoe UI", Inter, sans-serif', fontSize: "17.6px" }}>
+                {children}
+            </Box>
+        ),
+        ol: ({ children }) => (
+            <Box component="ol" sx={{ my: 0.5, fontFamily: '"Segoe UI", Inter, sans-serif', fontSize: "17.6px" }}>
+                {children}
+            </Box>
+        ),
+        li: ({ children }) => (
+            <Typography component="li" sx={{ my: 0.5, color: "inherit", fontFamily: '"Segoe UI", Inter, sans-serif', fontSize: "17.6px" }}>
+                {children}
+            </Typography>
+        ),
     }
 
 
@@ -1355,7 +1371,6 @@ const Docs = (defaultprops) => {
 
     const activeListItemStyle = {
         backgroundColor: "rgba(248, 106, 62, 0.08)", // Slight orange tint
-        marginRight: window.location.pathname.includes("/articles/") ? "0.8em" : undefined,
         borderLeft: "3px solid #f86a3e",
         paddingLeft: "13px", // Compensate for the border
     };
@@ -1415,6 +1430,7 @@ const Docs = (defaultprops) => {
                         <List style={{ 
                             listStyle: "none", 
                             paddingLeft: "0",
+                            paddingRight: isArticlePage ? 15 : undefined,
                             paddingTop: !isArticlePage ? "60px" : undefined,
                             paddingBottom: !isArticlePage ? "30px" : undefined,
                             display: isArticlePage ? sidebarOpen ? "block" : "none" : undefined,
@@ -1524,15 +1540,32 @@ const Docs = (defaultprops) => {
                     }
                 </div>
                 <div style={IndexBar}>
-                     {userdata?.support && isArticlePage && (
-                        <Button 
-                            variant="contained" 
-                            color="secondary" 
-                            onClick={handleResetCache}
-                            style={{marginBottom: "15px"}}
+                     {userdata?.support && (
+                        <Tooltip 
+                        title="Wait about 5 minutes after updating the file on GitHub, then click to reset the cache. (Support only) "
+                        placement="top"
+                        componentsProps={{
+                            tooltip: {
+                            sx: {
+                                backgroundColor: "rgba(33, 33, 33, 1)",
+                                color: "rgba(241, 241, 241, 1)",
+                                fontSize: 14,
+                                border: "1px solid rgba(73, 73, 73, 1)",
+                                fontFamily: theme?.typography?.fontFamily,
+                            }
+                            },
+                        }}
+                        arrow
                         >
-                            Reset Cache
-                        </Button>
+                            <Button 
+                                variant="contained" 
+                                color="secondary" 
+                                onClick={handleResetCache}
+                                style={{marginBottom: "15px"}}
+                            >
+                                Reset Cache
+                            </Button>
+                        </Tooltip>
                     )}
                     {tocLines.length > 0 ?
                         (

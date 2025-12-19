@@ -247,7 +247,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     read_time: 1,
   })
 
-  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 
   // FIXME: This is used, as useEffect() creates an issue with apps not loading at all
