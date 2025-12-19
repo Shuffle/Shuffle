@@ -1312,7 +1312,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org, user, "login")
+			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
 			if err != nil {
 				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
 			}
@@ -5660,7 +5660,7 @@ func initHandlers() {
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSAML).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
