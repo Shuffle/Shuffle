@@ -826,11 +826,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	//}
 
 	expiration := time.Now().Add(3600 * time.Second)
-	http.SetCookie(resp, &http.Cookie{
-		Name:    "session_token",
-		Value:   userInfo.Session,
-		Expires: expiration,
-	})
+	sessionCookie := shuffle.ConstructSessionCookie(userInfo.Session, expiration)
+	http.SetCookie(resp, sessionCookie)
 
 	// Updating user info if there's something wrong
 	if len(userInfo.ActiveOrg.Name) == 0 || len(userInfo.ActiveOrg.Id) == 0 {

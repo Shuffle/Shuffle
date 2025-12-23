@@ -415,7 +415,7 @@ func buildImage(tags []string, dockerfileLocation string) error {
 										MountPath: "/app/generated",
 									},
 									{
-										Name: "docker-config",
+										Name:      "docker-config",
 										MountPath: "/kaniko/.docker/",
 									},
 								},
@@ -439,8 +439,8 @@ func buildImage(tags []string, dockerfileLocation string) error {
 										SecretName: os.Getenv("SHUFFLE_REGISTRY_SECRET"),
 										Items: []corev1.KeyToPath{
 											{
-											Key: ".dockerconfigjson",
-											Path: "config.json",
+												Key:  ".dockerconfigjson",
+												Path: "config.json",
 											},
 										},
 									},
