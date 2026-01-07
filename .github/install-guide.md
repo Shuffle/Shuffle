@@ -13,6 +13,20 @@ Installation of Shuffle is currently available for [docker](https://shuffler.io/
 
 This document outlines an introduction environment which is **not** scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness and scalability. This also includes system requirements and configurations for **Docker Swarm** or **Kubernetes**. 
 
+## Deployment
+
+Shuffle can be deployed using the following cloud marketplaces:
+
+- **Google Cloud Platform (GCP)**  
+  Deploy directly from the GCP Marketplace:  
+  👉 [https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle](https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle)
+
+- **Amazon Web Services (AWS)**  
+  _Coming soon_
+
+- **Microsoft Azure**  
+  _Coming soon_
+
 # Docker - *nix
 The Docker setup is the default setup, and is ran with docker compose. This is [NOT a scalable build](https://shuffler.io/docs/configuration#production-readiness) without changes.
 
