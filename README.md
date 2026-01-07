@@ -24,6 +24,20 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
 ![Example Shuffle webhook integration](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
 
+## Deployment
+
+Shuffle can be deployed using the following cloud marketplaces:
+
+- **Google Cloud Platform (GCP)**  
+  Deploy directly from the GCP Marketplace:  
+  👉 [https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle](https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle)
+
+- **Amazon Web Services (AWS)**  
+  _Coming soon_
+
+- **Microsoft Azure**  
+  _Coming soon_
+
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
 * Cloud: Register at https://shuffler.io/register and get cooking
