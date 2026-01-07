@@ -1,0 +1,38 @@
+{{- if and (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (and .Values.worker.enableHelmDeployment .Values.worker.autoscaling.vpa.enabled) }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "shuffle.worker.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "shuffle.worker.labels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.worker.autoscaling.vpa.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.autoscaling.vpa.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: worker
+      {{- with .Values.worker.autoscaling.vpa.controlledResources }}
+      controlledResources:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.autoscaling.vpa.maxAllowed }}
+      maxAllowed:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.autoscaling.vpa.minAllowed }}
+      minAllowed:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  targetRef:
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+    kind: Deployment
+    name: {{ include "shuffle.worker.name" . }}
+  {{- if .Values.worker.autoscaling.vpa.updatePolicy }}
+  updatePolicy:
+    {{- with .Values.worker.autoscaling.vpa.updatePolicy.updateMode }}
+    updateMode: {{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}

@@ -1160,6 +1160,7 @@ func fixk8sRoles() {
 	}
 }
 
+// TODO: Check if deployment or service already exist by labels and only create if not already exists
 func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
