@@ -15,17 +15,48 @@ This document outlines an introduction environment which is **not** scalable. [R
 
 ## Deployment
 
-Shuffle can be deployed using the following cloud marketplaces:
+**Shuffle can be deployed using the following cloud marketplaces:**
 
-- **Google Cloud Platform (GCP)**  
-  Deploy directly from the GCP Marketplace:  
-  👉 [https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle](https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle)
+<ul>
+  <li style="display: flex; align-items: center;">
+    <a
+      href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
+      target="_blank"
+      style="text-decoration: none; display: flex; align-items: center; gap: 8px;"
+    >
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg"
+        height="20"
+        alt="Google Cloud Platform"
+      />
+    </a>
+  </li>
 
-- **Amazon Web Services (AWS)**  
-  _Coming soon_
+  <li style="display: flex; align-items: center; gap: 8px;">
+    <img
+      src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg"
+      height="20"
+      alt="Amazon Web Services"
+      style="opacity: 0.4;"
+    />
+    <span style="color: #6a737d; font-size: 12px;">
+      Coming soon
+    </span>
+  </li>
 
-- **Microsoft Azure**  
-  _Coming soon_
+  <li style="display: flex; align-items: center; gap: 8px;">
+    <img
+      src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg"
+      height="20"
+      alt="Microsoft Azure"
+      style="opacity: 0.4;"
+    />
+    <span style="color: #6a737d; font-size: 12px;">
+      Coming soon
+    </span>
+  </li>
+</ul>
+
 
 # Docker - *nix
 The Docker setup is the default setup, and is ran with docker compose. This is [NOT a scalable build](https://shuffler.io/docs/configuration#production-readiness) without changes.
