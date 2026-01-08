@@ -1448,6 +1448,19 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		}
 	}
 
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=shuffle-worker",
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+		return err
+	}
+
+	if len(existing.Items) > 0 {
+		log.Printf("[INFO] Found existing deployments, skipping creation")
+		return nil
+	}
+
 	replicaNumberInt32 := int32(replicaNumber)
 	// worker makes authenticated requests to the k8s api to create app deployments.
 	// Therefore, it needs to have access to the service account token.
