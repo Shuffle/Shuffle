@@ -3049,13 +3049,16 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		log.Printf("[WARNING][%s] Failed to find execution in cache requesting backend (4): %s", actionResult.ExecutionId, err)
-		workflowExecution, err = getWorkerBackendExecution(actionResult.Authorization, actionResult.ExecutionId)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
-			resp.WriteHeader(400)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
-			return
-		}
+		return
+	
+	//  This was causing the worker to take over parent execution in hybrid mode
+	//	workflowExecution, err = getWorkerBackendExecution(actionResult.Authorization, actionResult.ExecutionId)
+	//	if err != nil {
+	//		log.Printf("[ERROR] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+	//		resp.WriteHeader(400)
+	//		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
+	//		return
+	//	}
 	}
 
 	// Authorization is done here
