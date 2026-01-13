@@ -2652,6 +2652,41 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if strings.ToLower(actionResult.Action.Environment) != environment && len(environment) > 0 {
+		log.Printf("[WARNING] Got an action for %s environment forwarding it to the backend", actionResult.Action.Environment)
+
+		streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+		req, err := http.NewRequest(
+			"POST",
+			streamUrl,
+			bytes.NewBuffer([]byte(body)),
+		)
+
+		if err != nil {
+			log.Printf("[ERROR] Error building subflow (%s) request: %s", workflowExecution.ExecutionId, err)
+			return
+		}
+
+		newresp, err := topClient.Do(req)
+		if err != nil {
+			log.Printf("[ERROR] Error running subflow (%s) request: %s", workflowExecution.ExecutionId, err)
+			return
+		}
+
+		defer newresp.Body.Close()
+		if newresp.StatusCode != 200 {
+			body, err := ioutil.ReadAll(newresp.Body)
+			if err != nil {
+				log.Printf("[INFO][%s] Failed reading body after subflow request: %s", workflowExecution.ExecutionId, err)
+				return
+			} else {
+				log.Printf("[ERROR][%s] Failed forwarding subflow request of length %d\n: %s", workflowExecution.ExecutionId, len(actionResult.Result), string(body))
+			}
+		}
+
+		return
+	}
+
 	log.Printf("[DEBUG][%s] Action: Received, Label: '%s', Action: '%s', Status: %s, Run status: %s, Extra=Retry:%d", workflowExecution.ExecutionId, actionResult.Action.Label, actionResult.Action.AppName, actionResult.Status, workflowExecution.Status, retries)
 
 	// results = append(results, actionResult)
