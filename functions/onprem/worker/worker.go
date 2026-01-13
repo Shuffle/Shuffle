@@ -2652,7 +2652,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if strings.ToLower(actionResult.Action.Environment) != environment {
+	if strings.ToLower(actionResult.Action.Environment) != environment && len(environment) > 0 {
 		log.Printf("[WARNING] Got an action for %s environment forwarding it to the backend", actionResult.Action.Environment)
 
 		streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
