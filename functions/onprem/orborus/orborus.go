@@ -1453,7 +1453,6 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	})
 	if err != nil {
 		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
-		return err
 	}
 
 	if len(existing.Items) > 0 {
