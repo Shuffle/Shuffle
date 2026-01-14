@@ -2161,6 +2161,7 @@ apps:
     ## @param apps.shuffleTools.version The version of the shuffle-tools app to deploy.
     ##
     version: 1.2.0
+    # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   shuffleSubflow:
     ## @param apps.shuffleSubflow.enabled Whether the shuffle-subflow app is enabled
@@ -2172,6 +2173,7 @@ apps:
     ## @param apps.shuffleSubflow.version The version of the shuffle-subflow app to deploy.
     ##
     version: 1.1.0
+    # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   http:
     ## @param apps.http.enabled Whether the http app is enabled
@@ -2183,8 +2185,7 @@ apps:
     ## @param apps.http.version The version of the http app to deploy.
     ##
     version: 1.4.0
-
-    # replicas, image, etc.
+    # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   ## @extra apps.MY_APP.app [string] The name of the app (required, e.g. shuffle-tools)
   ## @extra apps.MY_APP.version [string] The version of the app (required, e.g. 1.2.0)
