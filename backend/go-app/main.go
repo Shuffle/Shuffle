@@ -4942,6 +4942,12 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Apidata: %s", tmpData.Apikey)
 
 	// FIXME: Path
+
+	// just in case setup/stop URL is overwritten by region url
+	if syncUrl != "https://shuffler.io" || syncUrl != "http://localhost:5002" {
+		syncUrl = "https://shuffler.io"
+	}
+
 	apiPath := "/api/v1/cloud/sync/setup"
 	if tmpData.Disable {
 		if !org.CloudSync {
