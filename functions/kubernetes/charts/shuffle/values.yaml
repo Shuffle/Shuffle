@@ -95,7 +95,7 @@ shuffle:
   timezone: Europe/Berlin
 
 ## @section backend Parameters
-## 
+##
 backend:
   ## backend image
   ## @param backend.image.registry backend image registry
@@ -321,7 +321,7 @@ backend:
     ## Can be set to RollingUpdate or Recreate
     ## Backend uses ReadWriteOnce volumes by default, which is incompatible with RollingUpdate
     ##
-    type: Recreate 
+    type: Recreate
   ## @param backend.priorityClassName backend pods' priorityClassName
   ##
   priorityClassName: ""
@@ -1328,15 +1328,15 @@ orborus:
     ##           istio: pilot
     ##
     extraEgress: []
-  
+
   ## @param orborus.executionConcurrency The maximum amount of concurrent workflow executions per worker
   ##
   executionConcurrency: 25
-  
+
   ## @param orborus.manageWorkerDeployments Whether workers are deployed and managed by orborus. When disabled, every worker is expected to be already deployed (see worker.enableHelmDeployment).
   ## This effectively removes required RBAC permissions from the shuffle-orborus service account to create deployments and services.
   ## Orborus might still attempt to create kubernetes objects, resulting in an error. There is currently no way to tell orborus, that it should not manage k8s resources.
-  ## You likely want to enable worker.enableHelmDeployment when enabling this.
+  ## You likely want to disable worker.enableHelmDeployment when enabling this.
   manageWorkerDeployments: true
 
 ## @section worker Parameters
@@ -1471,7 +1471,7 @@ worker:
     sysctls: []
     supplementalGroups: []
     fsGroup: 1001
-    
+
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
   ## @param worker.containerSecurityContext.enabled Enabled worker container' Security Context
@@ -1671,7 +1671,7 @@ worker:
       maxReplicas: ""
       targetCPU: ""
       targetMemory: ""
-  
+
   ## Service configuration
   ##
   service:
@@ -1738,7 +1738,7 @@ worker:
     ##           istio: pilot
     ##
     extraEgress: []
-  
+
   ## @param worker.manageAppDeployments Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).
   ## This effectively removes required RBAC permissions from the shuffle-worker service account to create deployments and services.
   ## The worker might still attempt to create kubernetes objects, resulting in an error. There is currently no way to tell the worker, that it should not manage k8s resources.
@@ -1865,7 +1865,7 @@ app:
     sysctls: []
     supplementalGroups: []
     fsGroup: 1001
-    
+
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
   ## @param app.containerSecurityContext.enabled Enabled app container' Security Context
@@ -1962,7 +1962,7 @@ app:
   updateStrategy:
     ## Can be set to RollingUpdate or Recreate
     ##
-    type: RollingUpdate 
+    type: RollingUpdate
   ## @param app.priorityClassName app pods' priorityClassName. Only effective for helm-deployed apps (see apps.enabled).
   ##
   priorityClassName: ""
@@ -2127,7 +2127,7 @@ app:
   ## @param app.mountTmpVolume Whether a writable /tmp emptyDir volume should be mounted to the app.
   ##
   mountTmpVolume: false
-  ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests. 
+  ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests.
   ##
   exposedContainerPort: 80
   ## @param app.sdkTimeout The timeout in seconds for app actions.
