@@ -413,6 +413,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	ctx := context.Background()
+
 	log.Printf("[DEBUG] Deploying k8s app with identifier %s to namespace %s", identifier, kubernetesNamespace)
 	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
 	if err != nil {
@@ -622,6 +624,21 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			replicaNumber = tmpInt
 
 		}
+	}
+
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app: %s", name),
+		},
+	)
+	if err != nil {
+		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+	}
+
+	if len(existing.Items) > 0 {
+		log.Printf("[INFO] Found existing deployments, skipping creation")
+		return errors.New("Found existing deployment")
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
