@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.69
+	github.com/shuffle/shuffle-shared v0.9.77
 	github.com/shuffle/singul v0.0.20
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
