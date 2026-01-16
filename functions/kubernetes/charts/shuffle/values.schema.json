@@ -3325,11 +3325,11 @@
                 "mountTmpVolume": {
                     "type": "boolean",
                     "description": "Whether a writable /tmp emptyDir volume should be mounted to the app.",
-                    "default": false
+                    "default": true
                 },
                 "exposedContainerPort": {
                     "type": "number",
-                    "description": "The port that shuffle app containers will listen on for new requests. ",
+                    "description": "The port that shuffle app containers will listen on for new requests.",
                     "default": 80
                 },
                 "sdkTimeout": {

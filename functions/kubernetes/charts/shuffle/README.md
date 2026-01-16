@@ -184,7 +184,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ## Parameters
 
-#### Global parameters
+##### Global parameters
 
 | Name                                                  | Description                                                                                                                                                                                                                                                                                                                                                         | Value   |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -194,7 +194,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `global.compatibility.openshift.adaptSecurityContext` | Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) | `auto`  |
 | `global.compatibility.omitEmptySeLinuxOptions`        | If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object                                                                                                                                                                                                                                                              | `false` |
 
-#### Common parameters
+##### Common parameters
 
 | Name                     | Description                                                                             | Value           |
 | ------------------------ | --------------------------------------------------------------------------------------- | --------------- |
@@ -210,7 +210,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `diagnosticMode.command` | Command to override all containers in the chart release                                 | `["sleep"]`     |
 | `diagnosticMode.args`    | Args to override all containers in the chart release                                    | `["infinity"]`  |
 
-#### Shared Shuffle Parameters
+##### Shared Shuffle Parameters
 
 | Name                       | Description                                                                                                                | Value           |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------- |
@@ -220,7 +220,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion> | `frikky`        |
 | `shuffle.timezone`         | The timezone used by Shuffle                                                                                               | `Europe/Berlin` |
 
-#### backend Parameters
+##### backend Parameters
 
 | Name                                                        | Description                                                                                                                                                                                                                        | Value                                        |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -335,7 +335,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `backend.apps.downloadBranch`                               | The branch from which apps should be downloaded on startup.                                                                                                                                                                        | `master`                                     |
 | `backend.apps.forceUpdate`                                  | Force an update of apps on startup.                                                                                                                                                                                                | `false`                                      |
 
-#### frontend Parameters
+##### frontend Parameters
 
 | Name                                                         | Description                                                                                                                                                                                                                           | Value                      |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
@@ -441,7 +441,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `frontend.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                          | `[]`                       |
 | `frontend.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                                    | `[]`                       |
 
-#### orborus Parameters
+##### orborus Parameters
 
 | Name                                                        | Description                                                                                                                                                                                                                        | Value                     |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
@@ -547,7 +547,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `orborus.executionConcurrency`                              | The maximum amount of concurrent workflow executions per worker                                                                                                                                                                    | `25`                      |
 | `orborus.manageWorkerDeployments`                           | Whether workers are deployed and managed by orborus. When disabled, every worker is expected to be already deployed (see worker.enableHelmDeployment).                                                                             | `true`                    |
 
-#### worker Parameters
+##### worker Parameters
 
 | Name                                                       | Description                                                                                                                                                                                                                     | Value                    |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
@@ -655,7 +655,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                              | `[]`                     |
 | `worker.manageAppDeployments`                              | Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).                                                                                        | `true`                   |
 
-#### app Parameters
+##### app Parameters
 
 | Name                                                    | Description                                                                                                                                                                                                            | Value            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -758,12 +758,121 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `app.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                        | `true`           |
 | `app.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                           | `[]`             |
 | `app.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                     | `[]`             |
-| `app.mountTmpVolume`                                    | Whether a writable /tmp emptyDir volume should be mounted to the app.                                                                                                                                                  | `false`          |
+| `app.mountTmpVolume`                                    | Whether a writable /tmp emptyDir volume should be mounted to the app.                                                                                                                                                  | `true`           |
 | `app.exposedContainerPort`                              | The port that shuffle app containers will listen on for new requests.                                                                                                                                                  | `80`             |
 | `app.sdkTimeout`                                        | The timeout in seconds for app actions.                                                                                                                                                                                | `300`            |
 | `app.disableLogs`                                       | Do not capture app logs. By default, app logs are captured, so that they are visible in the frontend.                                                                                                                  | `false`          |
 
-#### Parameters to deploy apps using helm
+##### Parameters to deploy apps using helm
+
+| Name                          | Description                                        | Value   |
+| ----------------------------- | -------------------------------------------------- | ------- |
+| `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
+| `apps.shuffleTools.enabled`   | Whether the shuffle-tools app is enabled           | `true`  |
+| `apps.shuffleTools.version`   | The version of the shuffle-tools app to deploy.    | `1.2.0` |
+| `apps.shuffleSubflow.enabled` | Whether the shuffle-subflow app is enabled         | `true`  |
+| `apps.shuffleSubflow.version` | The version of the shuffle-subflow app to deploy.  | `1.1.0` |
+| `apps.http.enabled`           | Whether the http app is enabled                    | `true`  |
+| `apps.http.version`           | The version of the http app to deploy.             | `1.4.0` |
+| `apps.MY_APP.app`             | The name of the app (required, e.g. shuffle-tools) |         |
+| `apps.MY_APP.version`         | The version of the app (required, e.g. 1.2.0)      |         |
+
+##### Traffic Exposure Parameters
+
+| Name                       | Description                                                                                           | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- | --------------- |
+| `ingress.enabled`          | Enable ingress record generation for frontend and backend                                             | `false`         |
+| `ingress.pathType`         | Ingress path type for the frontend path                                                               | `Prefix`        |
+| `ingress.backendPathType`  | Ingress path type for the backend path                                                                | `Prefix`        |
+| `ingress.apiVersion`       | Force Ingress API version (automatically detected if not set)                                         | `""`            |
+| `ingress.hostname`         | Default host for the ingress record                                                                   | `shuffle.local` |
+| `ingress.ingressClassName` | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                         | `nginx`         |
+| `ingress.path`             | Ingress path for Shuffle frontend                                                                     | `"/"`           |
+| `ingress.backendPath`      | Ingress path for Shuffle backend                                                                      | `"/api/"`       |
+| `ingress.annotations`      | Additional annotations for the Ingress resource.                                                      | `{}`            |
+| `ingress.tls`              | Enable TLS configuration for the host defined at `ingress.hostname` parameter                         | `false`         |
+| `ingress.selfSigned`       | Create a TLS secret for this ingress record using self-signed certificates generated by Helm          | `false`         |
+| `ingress.extraHosts`       | An array with additional hostname(s) to be covered with the ingress record                            | `[]`            |
+| `ingress.extraPaths`       | An array with additional arbitrary paths that may need to be added to the ingress under the main host | `[]`            |
+| `ingress.extraTls`         | TLS configuration for additional hostname(s) to be covered with this ingress record                   | `[]`            |
+| `ingress.secrets`          | Custom TLS certificates as secrets                                                                    | `[]`            |
+| `ingress.extraRules`       | Additional rules to be covered with this ingress record                                               | `[]`            |
+
+##### Istio Parameters
+
+| Name                                    | Description                                                                     | Value                    |
+| --------------------------------------- | ------------------------------------------------------------------------------- | ------------------------ |
+| `istio.enabled`                         | Enable creation of an Istio Gateway and VirtualService for frontend and backend | `false`                  |
+| `istio.apiVersion`                      | The istio apiVersion to use for Gateway and VirtualService resources            | `networking.istio.io/v1` |
+| `istio.hosts`                           | One or more hosts exposed by Istio                                              | `[]`                     |
+| `istio.gateway.annotations`             | Additional annotations for the Gateway resource                                 | `{}`                     |
+| `istio.gateway.selector`                | The selector matches the ingress gateway pod labels                             | `{ istio: ingress }`     |
+| `istio.gateway.http.enabled`            | Enable HTTP server port 80                                                      | `true`                   |
+| `istio.gateway.http.httpsRedirect`      | If set to true, a 301 redirect is send for all HTTP connections                 | `false`                  |
+| `istio.gateway.https.enabled`           | Enable HTTPS server on port 443                                                 | `false`                  |
+| `istio.gateway.https.tlsCredentialName` | The name of the secret that holds the TLS certs including the CA certificates.  | `""`                     |
+| `istio.gateway.https.tlsCipherSuites`   | If specified, only support the specified cipher list.                           | `[]`                     |
+| `istio.gateway.extraServers`            | Additional servers for the Gateway resource                                     | `[]`                     |
+| `istio.virtualService.annotations`      | Additional annotations for the VirtualService resource.                         | `{}`                     |
+| `istio.virtualService.backendHeaders`   | Header manipulation rules for backend traffic                                   | `{}`                     |
+| `istio.virtualService.frontendHeaders`  | Header manipulation rules for frontend traffic                                  | `{}`                     |
+
+##### Persistence Parameters
+
+| Name                                  | Description                                       | Value               |
+| ------------------------------------- | ------------------------------------------------- | ------------------- |
+| `persistence.enabled`                 | Enable persistence using Persistent Volume Claims | `true`              |
+| `persistence.apps.existingClaim`      | Name of an existing PVC to use                    | `""`                |
+| `persistence.apps.storageClass`       | PVC Storage Class for shuffle-apps volume         | `""`                |
+| `persistence.apps.subPath`            | The sub path used in the volume                   | `""`                |
+| `persistence.apps.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.apps.size`               | The size of the volume                            | `5Gi`               |
+| `persistence.apps.annotations`        | Annotations for the PVC                           | `{}`                |
+| `persistence.apps.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.appBuilder.storageClass` | PVC Storage Class for backend-apps-claim volume   | `""`                |
+| `persistence.appBuilder.accessModes`  | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.appBuilder.size`         | The size of the volume                            | `5Gi`               |
+| `persistence.appBuilder.annotations`  | Annotations for the PVC                           | `{}`                |
+| `persistence.appBuilder.selector`     | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.files.existingClaim`     | Name of an existing PVC to use                    | `""`                |
+| `persistence.files.storageClass`      | PVC Storage Class for shuffle-files volume        | `""`                |
+| `persistence.files.subPath`           | The sub path used in the volume                   | `""`                |
+| `persistence.files.accessModes`       | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.files.size`              | The size of the volume                            | `5Gi`               |
+| `persistence.files.annotations`       | Annotations for the PVC                           | `{}`                |
+| `persistence.files.selector`          | Selector to match an existing Persistent Volume   | `{}`                |
+
+##### Init Container Parameters
+
+| Name                                                        | Description                                                                                                                                                                                                                                         | Value                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `volumePermissions.enabled`                                 | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                                                                                                                                                     | `false`                  |
+| `volumePermissions.image.registry`                          | OS Shell + Utility image registry                                                                                                                                                                                                                   | `docker.io`              |
+| `volumePermissions.image.repository`                        | OS Shell + Utility image repository                                                                                                                                                                                                                 | `bitnamilegacy/os-shell` |
+| `volumePermissions.image.tag`                               | OS Shell + Utility image tag (immutable tags are recommended)                                                                                                                                                                                       | `12-debian-12-r30`       |
+| `volumePermissions.image.pullPolicy`                        | OS Shell + Utility image pull policy                                                                                                                                                                                                                | `IfNotPresent`           |
+| `volumePermissions.image.pullSecrets`                       | OS Shell + Utility image pull secrets                                                                                                                                                                                                               | `[]`                     |
+| `volumePermissions.resourcesPreset`                         | Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production). | `nano`                   |
+| `volumePermissions.resources`                               | Set init container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                              | `{}`                     |
+| `volumePermissions.containerSecurityContext.enabled`        | Enabled init container' Security Context                                                                                                                                                                                                            | `true`                   |
+| `volumePermissions.containerSecurityContext.seLinuxOptions` | Set SELinux options in init container                                                                                                                                                                                                               | `{}`                     |
+| `volumePermissions.containerSecurityContext.runAsUser`      | Set init container's Security Context runAsUser                                                                                                                                                                                                     | `0`                      |
+
+##### OpenSearch Parameters
+
+| Name                 | Description                                           | Value  |
+| -------------------- | ----------------------------------------------------- | ------ |
+| `opensearch.enabled` | Switch to enable or disable the opensearch helm chart | `true` |
+
+##### Vault Parameters
+
+| Name            | Description                                                                | Value |
+| --------------- | -------------------------------------------------------------------------- | ----- |
+| `vault.role`    | Specify the Vault role, which should be used to get the secret from Vault. | `""`  |
+| `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
+
+##### Other Parameters
+
 
 | Name                          | Description                                        | Value   |
 | ----------------------------- | -------------------------------------------------- | ------- |

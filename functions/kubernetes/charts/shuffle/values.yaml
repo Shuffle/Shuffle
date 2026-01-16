@@ -2126,7 +2126,7 @@ app:
 
   ## @param app.mountTmpVolume Whether a writable /tmp emptyDir volume should be mounted to the app.
   ##
-  mountTmpVolume: false
+  mountTmpVolume: true
   ## @param app.exposedContainerPort The port that shuffle app containers will listen on for new requests.
   ##
   exposedContainerPort: 80
