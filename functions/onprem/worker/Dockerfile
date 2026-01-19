@@ -28,7 +28,7 @@ RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
 ## ALPINE IMAGE
-FROM alpine:3.22.1
+FROM alpine:3.23.2
 
 ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle
