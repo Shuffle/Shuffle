@@ -638,7 +638,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	if len(existing.Items) > 0 {
 		log.Printf("[INFO] Found existing deployments, skipping creation")
-		return errors.New("Found existing deployment")
+		return nil
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
