@@ -90,7 +90,7 @@
     "shellwords": "^1.0.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.1",
-    "terser-webpack-plugin": "^4.2.3",
+    "terser-webpack-plugin": "^5.0.0",
     "yaml": "^1.10.0",
     "yamljs": "^0.3.0",
     "zone.js": "^0.15.1"
