@@ -1,11 +1,11 @@
 # Build environment
-FROM node:23 as builder
+FROM node:23 AS builder
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 RUN mkdir /usr/src/app
 WORKDIR /usr/src/app
-ENV PATH /usr/src/app/node_modules/.bin:$PATH
+ENV PATH="/usr/src/app/node_modules/.bin:$PATH"
 
 COPY package.json /usr/src/app/package.json
 COPY package-lock.json /usr/src/app/package-lock.json
@@ -14,7 +14,7 @@ RUN npm config set fetch-retries 3   # Number of retry attempts (default is 2)
 RUN npm config set fetch-retry-mintimeout 5000  # Minimum wait time before retrying (in ms, default is 10000)
 RUN npm config set fetch-retry-maxtimeout 60000 # Maximum wait time before retrying (in ms, default is 60000)
 RUN npm config set fetch-timeout 60000 # Overall fetch timeout (in ms, default is 300000)
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # copy only required files to not trigger rebuilding every time
 COPY ./certs /usr/src/app/certs/
