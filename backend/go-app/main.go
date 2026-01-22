@@ -5,7 +5,7 @@ import (
 	"github.com/shuffle/shuffle-shared"
 	singul "github.com/shuffle/singul/pkg"
 
-	"net/http/pprof"
+	//"net/http/pprof"
 
 	"archive/zip"
 	"bufio"
@@ -826,11 +826,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	//}
 
 	expiration := time.Now().Add(3600 * time.Second)
-	http.SetCookie(resp, &http.Cookie{
-		Name:    "session_token",
-		Value:   userInfo.Session,
-		Expires: expiration,
-	})
+	sessionCookie := shuffle.ConstructSessionCookie(userInfo.Session, expiration)
+	http.SetCookie(resp, sessionCookie)
 
 	// Updating user info if there's something wrong
 	if len(userInfo.ActiveOrg.Name) == 0 || len(userInfo.ActiveOrg.Id) == 0 {
@@ -1313,7 +1310,9 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
 			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
-
+			if err != nil {
+				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
+			}
 			break
 		}
 
@@ -5658,7 +5657,7 @@ func initHandlers() {
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSAML).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
@@ -5704,16 +5703,17 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
-	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
-		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
-		r.HandleFunc("/debug/pprof/", pprof.Index)
-		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
-		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	} else {
-		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
-	}
+	// Need to add auth in pprof
+//	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
+//		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
+//		r.HandleFunc("/debug/pprof/", pprof.Index)
+//		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+//		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+//		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+//		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+//	} else {
+//		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
+//	}
 
 	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)

@@ -812,6 +812,7 @@ const Workflows2 = (props) => {
     const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
     const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
+    const [currentOrg, setCurrentOrg] = useState(null);
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true") 
@@ -971,6 +972,7 @@ const Workflows2 = (props) => {
         .then((org) => {
           if (!fetched && org) {
             if (!isCloud) {
+                setCurrentOrg(org);
                 if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
                 } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
@@ -5518,7 +5520,7 @@ const Workflows2 = (props) => {
                         	</div>
 						}
 						
-						{!isCloud ? (
+						{!isCloud && currentOrg?.old_org ? (
 						  <div
 						   	style={{
 							  display: "flex",

@@ -127,6 +127,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       setCurrentSelectedTheme(userdata?.theme);
     }
   }, [userdata]);
+
+      
   
   const CustomPopper = (props) => {
     return (
@@ -1949,7 +1951,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 		  </div>
 	  }
 
-      {!isCloud ? (
+      {!isCloud && activeOrgData?.old_org? (
           <div
            style={{
                       display: "flex",
