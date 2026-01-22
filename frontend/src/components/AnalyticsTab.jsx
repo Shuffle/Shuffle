@@ -15,7 +15,7 @@ const AnalyticsTab = (props) => {
     // const [checked, setChecked] = useState(false);
     // const [selectedOption, setSelectedOption] = useState('all');
     // const [expand, setExpand] = useState(false)
-    // const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+    // const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
     
     // const handleOptionChange = (option) => {
     //     setSelectedOption(option);

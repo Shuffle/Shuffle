@@ -22,9 +22,11 @@ COPY ./public /usr/src/app/public/
 COPY ./src /usr/src/app/src/
 COPY ./*.sh /usr/src/app/
 COPY ./*.json /usr/src/app/
+COPY ./index.html /usr/src/app/index.html
+COPY ./vite.config.js /usr/src/app/vite.config.js
 
 
-RUN npm run build --loglevel verbose 2>&1
+RUN npm run build
 
 # Production environment
 FROM nginx:1.29.3

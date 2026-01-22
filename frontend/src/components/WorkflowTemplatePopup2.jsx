@@ -395,8 +395,9 @@ const WorkflowTemplatePopup = (props) => {
 		}
 
 		console.log("SRCAPP: ", srcapp, "DSTAPP: ", dstapp)
-		if (srcapp === undefined || srcapp === null) {
-			srcapp = ""
+		let effectiveSrcapp = srcapp
+		if (effectiveSrcapp === undefined || effectiveSrcapp === null) {
+			effectiveSrcapp = ""
 		}
 
 		if ((srcapp !== undefined && srcapp !== null && srcapp.includes(":default")) || (dstapp !== undefined && dstapp !== null && dstapp.includes(":default"))) {

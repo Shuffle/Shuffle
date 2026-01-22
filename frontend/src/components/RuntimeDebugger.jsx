@@ -44,7 +44,7 @@ import {
 	Send as SendIcon, 
 } from '@mui/icons-material';
 
-import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
+import { DataGrid } from '@mui/x-data-grid'
 import {
 	Search as SearchIcon,
   } from "@mui/icons-material";
@@ -335,7 +335,7 @@ const RuntimeDebugger = (props) => {
 	}
 	const imageSize = 30
 	const timenowUnix = Math.floor(Date.now() / 1000)
-	const columns: GridColDef[] = [
+	const columns = [
 		{
 			field: 'execution_source',
 			headerName: 'Source',

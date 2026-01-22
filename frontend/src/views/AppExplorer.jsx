@@ -65,7 +65,6 @@ import { Context } from "../context/ContextApi.jsx";
 
 import {
   SearchBox,
-  StaticRefinementList,
   RefinementList,
   InstantSearch,
   connectSearchBox,
@@ -247,7 +246,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     read_time: 1,
   })
 
-  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 
 
   // FIXME: This is used, as useEffect() creates an issue with apps not loading at all
@@ -454,7 +453,6 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                       rel="noopener noreferrer"
                       target="_blank"
                       href={data.url}
-                      target="_blank"
                       style={{ textDecoration: "none", color: "#f85a3e" }}
                     >
                       <Tooltip title={data.url} placement="bottom">
@@ -3106,15 +3104,13 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
           <Paper
             style={{
               flex: 6,
-              margin: 10,
+              margin: "auto",
               padding: 30,
               backgroundColor: boxStyle.backgroundColor,
               color: theme.palette.text.primary,
               textAlign: "left",
               paddingBottom: 50,
               overflow: "hidden",
-
-			  margin: "auto",
             }}
           >
             <Tabs
@@ -3137,7 +3133,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
               <Tab style={{color: theme.palette.text.primary, textTransform: "none", }} icon={appType === 0 || appType === 2 ? <OpenInNewIcon /> : <AppsIcon />} label={appType === 0 || appType === 2 ? "Try the API" : "Try it out"} />
 
               <Tab icon={<ShowChartIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} label="Stats & Downloads" />
-              <Tab icon={<PolylineIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} disabled style={{color: theme.palette.text.secondary}} label="Integrations" />
+              <Tab icon={<PolylineIcon />} style={{color: theme.palette.text.secondary, textTransform: "none", }} disabled label="Integrations" />
               <Tab icon={<PersonIcon />} disabled={userdata.support !== true} style={{color: userdata.support !== true ? theme.palette.text.secondary: theme.palette.text.primary, textTransform: "none", }} label="Creator" value={4}  />
             </Tabs>
             <div style={{ marginTop: 25 }}>
@@ -3689,7 +3685,6 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 
 											color="primary"
 											id="checkbox-search"
-											variant="body1"
 											style={{
 												backgroundColor: theme.palette.inputColor,
 												borderRadius: theme.palette?.borderRadius,
