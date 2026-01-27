@@ -79,6 +79,7 @@ type retStruct struct {
 	Reason          string                        `json:"reason"`
 	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
 	Licensed        bool                          `json:"licensed"`
+	CloudSyncUrl    string                        `json:"cloud_sync_url,omitempty"`
 }
 
 type Contact struct {
@@ -3906,6 +3907,7 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		SyncFeatures  shuffle.SyncFeatures          `json:"sync_features"`
 		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
 		Licensed      bool                          `json:"licensed"`
+		CloudSyncUrl  string                        `json:"cloud_sync_url,omitempty"`
 	}
 
 	responseData := retStruct{}
@@ -4081,6 +4083,19 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	if err != nil {
 		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
 		backupJobData = []byte{}
+	}
+
+	cloudSyncRegionUrlCacheKey := fmt.Sprintf("org_cloudsync_region_url_%s", org.Id)
+	cloudSyncRegionUrlCached, err := shuffle.GetCache(ctx, cloudSyncRegionUrlCacheKey)
+	if err == nil {
+		if cachedBytes, ok := cloudSyncRegionUrlCached.([]byte); ok && len(cachedBytes) > 0 {
+			syncUrl = string(cachedBytes)
+			log.Printf("[DEBUG] Using cached cloud sync region url for org %s: %s", org.Id, syncUrl)
+		}
+	}
+
+	if len(syncUrl) == 0 || !strings.HasPrefix(syncUrl, "http") {
+		syncUrl = "https://shuffler.io"
 	}
 
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
@@ -4927,6 +4942,12 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Apidata: %s", tmpData.Apikey)
 
 	// FIXME: Path
+
+	// just in case setup/stop URL is overwritten by region url
+	if syncUrl != "https://shuffler.io" || syncUrl != "http://localhost:5002" {
+		syncUrl = "https://shuffler.io"
+	}
+
 	apiPath := "/api/v1/cloud/sync/setup"
 	if tmpData.Disable {
 		if !org.CloudSync {
@@ -5073,6 +5094,11 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	} else {
 
 		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
+	}
+
+	if len(responseData.CloudSyncUrl) > 0 {
+		cloudSyncRegionUrlCacheKey := fmt.Sprintf("org_cloudsync_region_url_%s", org.Id)
+		shuffle.SetCache(ctx, cloudSyncRegionUrlCacheKey, []byte(responseData.CloudSyncUrl), 1800)
 	}
 
 	org.SyncConfig = shuffle.SyncConfig{
