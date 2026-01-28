@@ -2669,7 +2669,9 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if strings.EqualFold(actionResult.Action.Environment, environment) && len(environment) > 0 && len(actionResult.Action.Environment) > 0 {
+	// Not doing environment as we don't want to hook a worker to specific env. It should just not handle cloud actions
+	// limiting a worker to an env will not allow us to run multiple orborus in the same server?
+	if strings.EqualFold(actionResult.Action.Environment, "cloud") {
 		log.Printf("[WARNING] Got an action for %s environment forwarding it to the backend", actionResult.Action.Environment)
 
 		streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
