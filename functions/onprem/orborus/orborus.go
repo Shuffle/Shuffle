@@ -2278,6 +2278,7 @@ func main() {
 	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
 		log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
 
+		tenzirDisabled = false
 		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 	}
@@ -2305,6 +2306,7 @@ func main() {
 
 	// Auto enables pipelines IF they are not mentioned
 	if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
+		tenzirDisabled = false
 		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 	}
@@ -2692,7 +2694,8 @@ func main() {
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_UPDATE" {
 					log.Printf("[INFO] Handling pipeline request from backend: '%s' with argument '%s'", incRequest.Type, incRequest.ExecutionArgument)
 
-					//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 					tenzirDisabled = false
 
 					// Running NEW or editing pipelines
@@ -3110,14 +3113,14 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
-	// Disabled all pipeline features
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
-	}
-
 	// Specifically for standalone tenzir
 	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
 		return nil
+	}
+
+	// Disabled all pipeline features
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES (1)")
 	}
 
 	if isKubernetes == "true" {
@@ -3451,8 +3454,8 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 }
 
 func checkTenzirNode() error {
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "false" {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
+	if tenzirDisabled && os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "false" {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES (2)")
 	}
 
 	url := fmt.Sprintf("%s/api/v0/ping", pipelineUrl)
