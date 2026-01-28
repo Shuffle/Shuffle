@@ -20,7 +20,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -1866,6 +1865,54 @@ func getLocalIP() string {
 	return ""
 }
 
+// Get all local IPs in the system
+func getLocalIPs() ([]string, error) {
+	var ipv4s []string
+	var ipv6s []string
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, address := range addrs {
+			ipnet, ok := address.(*net.IPNet)
+			if !ok || ipnet.IP == nil {
+				continue
+			}
+
+			ip := ipnet.IP
+			if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+				continue
+			}
+
+			if ip4 := ip.To4(); ip4 != nil {
+				ipv4s = append(ipv4s, ip4.String())
+				continue
+			}
+
+			if ip.To16() != nil {
+				ipv6s = append(ipv6s, ip.String())
+			}
+		}
+	}
+
+	return append(ipv4s, ipv6s...), nil
+}
+
 func checkSwarmService(ctx context.Context) {
 	// https://docs.docker.com/engine/reference/commandline/swarm_init/
 	ip := getLocalIP()
@@ -1893,33 +1940,29 @@ func checkSwarmService(ctx context.Context) {
 
 		// Dummy message used for testing
 		//err = errors.New("Error response from daemon: could not choose an IP address to advertise since this system has multiple addresses on different interfaces (10.52.208.221 on eno1 and 192.168.122.1 on virbr0) - specify one with --advertise-addr")
+		// Update 28 Jan 2026: The error message updated and not as clear
 
-		msg := err.Error()
-
-		// Extract all IPv4 addresses from the error message
-		var ipv4Re = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
-		candidates := ipv4Re.FindAllString(msg, -1)
-		if len(candidates) > 0 {
-			// Pick the first valid candidate (or implement your own heuristic)
-
+		candidates, err := getLocalIPs()
+		if len(candidates) > 0 && err == nil {
 			for cnt, candidate := range candidates {
 				if cnt > 5 {
 					break
 				}
 
 				req.AdvertiseAddr = fmt.Sprintf("%s:2377", candidate)
-				_, err = dockercli.SwarmInit(context.Background(), req)
+				id, err = dockercli.SwarmInit(context.Background(), req)
 				if err != nil {
 					continue
 				}
 
-				break
+				log.Printf("[INFO] Swarm init ID: '%s'.", id)
+				return
 			}
-
 		}
-	}
 
-	log.Printf("[INFO] Swarm init ID: '%s'. If this is empty, there is most likely an error.", id)
+		log.Printf("[ERROR] Swarm init failed after advertise-addr retries: %s, try running swarm init manually: docker swarm init", err)
+		return
+	}
 }
 
 func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
