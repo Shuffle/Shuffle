@@ -2278,13 +2278,8 @@ func main() {
 	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
 		log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
 
-		//if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" {
-		//	os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
-		//}
-
-		//if os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
-		//	os.Setenv("SHUFFLE_PIPELINE_ENABLED", "false")
-		//}
+		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 	}
 
 	// Block until a signal is received
