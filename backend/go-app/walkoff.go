@@ -1,6 +1,7 @@
 package main
 
 import (
+
 	"github.com/shuffle/shuffle-shared"
 
 	"bytes"
@@ -14,12 +15,16 @@ import (
 
 	//"math/rand"
 	"net/http"
-	"net/url"
+
 	"os"
-	"sort"
+
 	"strconv"
 	"strings"
 	"time"
+
+	"net/url"
+
+	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/h2non/filetype"
@@ -33,7 +38,7 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
+
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
@@ -2008,132 +2013,6 @@ func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-func loadGithubWorkflows(url, username, password, userId, branch, orgId string) error {
-	fs := memfs.New()
-
-	log.Printf("Starting load of %s with branch %s", url, branch)
-	if strings.Contains(url, "github") || strings.Contains(url, "gitlab") || strings.Contains(url, "bitbucket") {
-		cloneOptions := &git.CloneOptions{
-			URL: url,
-		}
-
-		// FIXME: Better auth.
-		if len(username) > 0 && len(password) > 0 {
-			cloneOptions.Auth = &http2.BasicAuth{
-
-				Username: username,
-				Password: password,
-			}
-		}
-
-		// main is the new master
-		if len(branch) > 0 && branch != "main" && branch != "master" {
-			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
-		}
-
-		cloneOptions = checkGitProxy(cloneOptions)
-
-		storer := memory.NewStorage()
-		r, err := git.Clone(storer, fs, cloneOptions)
-		if err != nil {
-			log.Printf("[INFO] Failed loading repo %s into memory (github workflows): %s", url, err)
-			return err
-		}
-
-		dir, err := fs.ReadDir("/")
-		if err != nil {
-			log.Printf("FAiled reading folder: %s", err)
-		}
-		_ = r
-
-		log.Printf("Starting workflow folder iteration")
-		iterateWorkflowGithubFolders(fs, dir, "", "", userId, orgId)
-
-	} else if strings.Contains(url, "s3") {
-		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
-
-		//sess := session.Must(session.NewSession())
-		//downloader := s3manager.NewDownloader(sess)
-
-		//// Write the contents of S3 Object to the file
-		//storer := memory.NewStorage()
-		//n, err := downloader.Download(storer, &s3.GetObjectInput{
-		//	Bucket: aws.String(myBucket),
-		//	Key:    aws.String(myString),
-		//})
-		//if err != nil {
-		//	return fmt.Errorf("failed to download file, %v", err)
-		//}
-		//fmt.Printf("file downloaded, %d bytes\n", n)
-	} else {
-		return errors.New(fmt.Sprintf("URL %s is unsupported when downloading workflows", url))
-	}
-
-	return nil
-}
-
-func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// Just need to be logged in
-	// FIXME - should have some permissions?
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in load apps: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		log.Printf("Wrong user (%s) when downloading from github", user.Username)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Downloading remotely requires admin"}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Error with body read: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Field1 & 2 can be a lot of things..
-	type tmpStruct struct {
-		URL    string `json:"url"`
-		Field1 string `json:"field_1"`
-		Field2 string `json:"field_2"`
-		Field3 string `json:"field_3"`
-	}
-	//log.Printf("Body: %s", string(body))
-
-	var tmpBody tmpStruct
-	err = json.Unmarshal(body, &tmpBody)
-	if err != nil {
-		log.Printf("Error with unmarshal tmpBody: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Field3 = branch
-	err = loadGithubWorkflows(tmpBody.URL, tmpBody.Field1, tmpBody.Field2, user.Id, tmpBody.Field3, user.ActiveOrg.Id)
-	if err != nil {
-		log.Printf("Failed to update workflows: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-}
-
 func handleSingleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -2416,116 +2295,6 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	}
 
 	return nil
-}
-
-// Onlyname is used to
-func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname, userId, orgId string) error {
-	var err error
-	secondsOffset := 0
-
-	// sort file names
-	filenames := []string{}
-	for _, file := range dir {
-		filename := file.Name()
-		filenames = append(filenames, filename)
-	}
-	sort.Strings(filenames)
-
-	// iterate through sorted filenames
-	for _, filename := range filenames {
-		secondsOffset -= 10
-		if len(onlyname) > 0 && filename != onlyname {
-			continue
-		}
-
-		file, err := fs.Stat(filename)
-		if err != nil {
-			continue
-		}
-
-		// Folder?
-		switch mode := file.Mode(); {
-		case mode.IsDir():
-			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
-			dir, err := fs.ReadDir(tmpExtra)
-			if err != nil {
-				log.Printf("Failed to read dir: %s", err)
-				continue
-			}
-
-			// Go routine? Hmm, this can be super quick I guess
-			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "", userId, orgId)
-			if err != nil {
-				continue
-			}
-		case mode.IsRegular():
-			// Check the file
-			if strings.HasSuffix(filename, ".json") {
-				path := fmt.Sprintf("%s%s", extra, file.Name())
-				fileReader, err := fs.Open(path)
-				if err != nil {
-					log.Printf("Error reading file: %s", err)
-					continue
-				}
-
-				readFile, err := ioutil.ReadAll(fileReader)
-				if err != nil {
-					log.Printf("Error reading file: %s", err)
-					continue
-				}
-
-				var workflow shuffle.Workflow
-				err = json.Unmarshal(readFile, &workflow)
-				if err != nil {
-					continue
-				}
-
-				// rewrite owner to user who imports now
-				if userId != "" {
-					workflow.Owner = userId
-				}
-
-				workflow.ID = uuid.NewV4().String()
-				workflow.OrgId = orgId
-				workflow.ExecutingOrg = shuffle.OrgMini{
-					Id: orgId,
-				}
-
-				workflow.Org = append(workflow.Org, shuffle.OrgMini{
-					Id: orgId,
-				})
-				workflow.IsValid = false
-				workflow.Errors = []string{"Imported, not locally saved. Save before using."}
-
-				/*
-					// Find existing similar ones
-					q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id).Filter("name", workflow.name)
-					var workflows []Workflow
-					_, err = dbclient.GetAll(ctx, q, &workflows)
-					if err == nil {
-						log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
-						if len(workflows) == 0 {
-							resp.WriteHeader(200)
-							resp.Write([]byte("[]"))
-							return
-						}
-					}
-				*/
-
-				log.Printf("Import workflow from file: %s", filename)
-				ctx := context.Background()
-				err = shuffle.SetWorkflow(ctx, workflow, workflow.ID, secondsOffset)
-				if err != nil {
-					log.Printf("Failed setting (download) workflow: %s", err)
-					continue
-				}
-
-				log.Printf("Uploaded workflow %s for user %s and org %s!", filename, userId, orgId)
-			}
-		}
-	}
-
-	return err
 }
 
 func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
@@ -3506,7 +3275,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		cloneOptions = checkGitProxy(cloneOptions)
+		cloneOptions = shuffle.CheckGitProxy(cloneOptions)
 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
