@@ -39,7 +39,6 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	http2 "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 
@@ -407,52 +406,6 @@ func checkUsername(Username string) error {
 	}
 
 	return nil
-}
-
-func isGitNoProxy(rawURL string) bool {
-	noProxy := os.Getenv("NO_PROXY")
-	if noProxy == "" {
-		return false
-	}
-
-	if noProxy == "*" {
-		return true
-	}
-
-	noProxyList := strings.Split(noProxy, ",")
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return false
-	}
-	host := parsedURL.Hostname()
-
-	for _, value := range noProxyList {
-		value = strings.TrimSpace(value)
-
-		if host == value {
-			return true
-		}
-		if strings.HasPrefix(value, "*.") && strings.HasSuffix(host, value[2:]) {
-			return true
-		}
-	}
-	return false
-}
-
-func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
-	if os.Getenv("HTTP_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
-		cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-			URL: os.Getenv("HTTP_PROXY"),
-		}
-	}
-
-	if os.Getenv("HTTPS_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
-		cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-			URL: os.Getenv("HTTPS_PROXY"),
-		}
-	}
-
-	return cloneOptions
 }
 
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
@@ -4594,7 +4547,7 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
-		cloneOptions = checkGitProxy(cloneOptions)
+		cloneOptions = shuffle.CheckGitProxy(cloneOptions)
 
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
 		if len(branch) > 0 && branch != "master" && branch != "main" {
@@ -5529,7 +5482,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/rerun", checkUnfinishedExecution).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/download_remote", shuffle.LoadSpecificWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/run", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
