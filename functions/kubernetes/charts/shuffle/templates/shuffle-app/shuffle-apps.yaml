@@ -12,6 +12,43 @@
 {{- $_ := set $appValues.image "repository" ($appValues.image.repository | default (printf "%s/%s" $.Values.shuffle.appBaseImageName $appValues.name)) -}}
 {{/* use app version as default tag */}}
 {{- $_ := set $appValues.image "tag" ($appValues.image.tag | default $appValues.version) -}}
+
+{{/* Only create a service account if create is explicitly enabled on that specific app ($app not $appValues). Otherwise the shared shuffle-app service account is used. */}}
+{{- $shouldCreateDedicatedServiceAccount := and $app.serviceAccount.create $app.serviceAccount.name -}}
+{{- if $shouldCreateDedicatedServiceAccount }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $app.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "shuffle.app.labels" ( dict "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or $appValues.serviceAccount.annotations $.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list $appValues.serviceAccount.annotations $.Values.commonAnnotations) "context" $) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: {{ $appValues.serviceAccount.automountServiceAccountToken }}
+{{- include "shuffle.app.serviceAccount.imagePullSecrets" $ | nindent 0 }}
+{{- if $appValues.rbac.create }}
+---
+kind: RoleBinding
+apiVersion: {{ include "common.capabilities.rbac.apiVersion" $ }}
+metadata:
+  name: {{ $app.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "shuffle.app.labels" ( dict "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $.Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $app.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "shuffle.app.name" $ }}
+{{- end }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -28,7 +65,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: {{ $.Values.app.exposedContainerPort }}
+      targetPort: {{ $appValues.exposedContainerPort }}
       protocol: TCP
       appProtocol: http
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $appValues.podLabels $.Values.commonLabels) "context" $) }}

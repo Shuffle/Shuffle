@@ -127,12 +127,14 @@ When `worker.enableHelmDeployment` is set, env variables for app configuration a
 Configuration using env variables applies to ALL deployed apps. There is no way to assign different options (e.g. resources) to different apps, or scale apps individually.
 
 If you want full control, you can deploy apps using helm. This has the following advantages:
+
 - full control over the deployment using helm values
 - granular control per app and version (e.g. have more replicas and resources for frequently used apps)
 - avoid problems with on-demand started apps (see https://github.com/Shuffle/Shuffle/issues/1739)
 
 To deploy apps using helm, set `apps.enabled=true`. By default, this deploys the `shuffle-tools`, `shuffle-subflow` and `http` apps.
 You can also deploy your own apps. See the following values file for an example.
+
 ```yaml
 app:
   replicaCount: 1 # default to 1 replica per app
@@ -142,26 +144,27 @@ app:
 apps:
   enabled: true # Deploy apps using helm.
 
-# Configure default apps
+  # Configure default apps
   shuffleTools:
     enabled: true # default
   shuffleSubflow:
     enabled: true # default
   http:
     enabled: true # default
-# optionally override defaults from app values:
-    replicaCount: 1 
+    # optionally override defaults from app values:
+    replicaCount: 1
     resources: {}
-  
-# Deploy additional apps (e.g. opensearch)
+
+  # Deploy additional apps (e.g. opensearch)
   opensearch:
     enabled: true # required to actually deploy the app
     name: opensearch # required. The name and version must match the values of the `api.yaml` file of the app.
     version: 1.1.0 # required.
-# optionally change app configuration:
+    # optionally change app configuration:
     replicaCount: 3
     resources: {}
 ```
+
 The key of an app in the `apps` map does not matter, as long as it is unique. We are not using an array here, to allow overriding values in stage-specific value files or using the command line, e.g.
 `helm upgrade ... --set apps.shuffleTools.replicas=3`.
 
@@ -172,6 +175,34 @@ It is possible to use a hybrid approach - deploy some apps using helm, while sti
 
 If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=true`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
 You are required to deploy all apps that are in use by your Shuffle instance manually using Helm.
+
+### Shuffle App Service Accounts
+
+By default a shared `shuffle-app` service account is used for all apps.
+If you are deploying apps using helm, you can choose to have a dedicated service account per app.
+To enable it, set `apps.MY_APP.serviceAccount.create=true` and provide a name using `apps.MY_APP.serviceAccount.name`.
+You can also set `apps.MY_APP.serviceAccount.create=false` while still providing a name to use an existing service account.
+
+```yaml
+apps:
+  myAppWithCustomServiceAccount:
+    enabled: true
+    name: my-custom-service-account
+    version: 1.0.0
+    serviceAccount:
+      create: true
+      name: shuffle-app-myapp
+
+  anotherAppWithExistingServiceAccount:
+    enabled: true
+    name: another-app
+    version: 1.0.0
+    serviceAccount:
+      create: false
+      name: existing-service-account-name
+```
+
+All service accounts use the `shuffle-app` role by default.
 
 ## OpenSearch
 
@@ -873,7 +904,6 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ##### Other Parameters
 
-
 | Name                          | Description                                        | Value   |
 | ----------------------------- | -------------------------------------------------- | ------- |
 | `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
@@ -982,7 +1012,6 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 #### Other Parameters
 
-
 | Name                          | Description                                        | Value   |
 | ----------------------------- | -------------------------------------------------- | ------- |
 | `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
@@ -1090,10 +1119,3 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-
-
-
-
-
-
-
