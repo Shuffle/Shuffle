@@ -22,7 +22,7 @@ import {
     Paper,
     TextField,
     Collapse,
-    iconButton,
+    IconButton,
     Avatar,
     ButtonBase,
     InputAdornment,
@@ -33,7 +33,6 @@ import {
     ListItem,
     ListItemAvatar,
     ListItemText,
-    IconButton,
 } from '@mui/material';
 
 import { Context } from "../context/ContextApi.jsx";

@@ -47,7 +47,7 @@ const WorkflowTemplatePopup = (props) => {
 
 	const [requestSent, setRequestSent] = React.useState(false)
   	
-	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 	let navigate = useNavigate();
 	useEffect(() => {
 		if (modalOpen !== true) {

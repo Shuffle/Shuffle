@@ -413,6 +413,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	ctx := context.Background()
+
 	log.Printf("[DEBUG] Deploying k8s app with identifier %s to namespace %s", identifier, kubernetesNamespace)
 	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
 	if err != nil {
@@ -622,6 +624,21 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			replicaNumber = tmpInt
 
 		}
+	}
+
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app: %s", name),
+		},
+	)
+	if err != nil {
+		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+	}
+
+	if len(existing.Items) > 0 {
+		log.Printf("[INFO] Found existing deployments, skipping creation")
+		return nil
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
@@ -2565,7 +2582,7 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 		log.Printf("[INFO] Here is the result we got back from backend: %s", workflowExecution.Results)
 	}
 
-	setWorkflowExecution(context.Background(), *workflowExecution, false)
+	//setWorkflowExecution(context.Background(), *workflowExecution, false)
 	return workflowExecution, nil
 }
 
@@ -2650,6 +2667,43 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		if err == nil {
 			retries = val
 		}
+	}
+
+	// Not doing environment as we don't want to hook a worker to specific env. It should just not handle cloud actions
+	// limiting a worker to an env will not allow us to run multiple orborus in the same server?
+	if strings.EqualFold(actionResult.Action.Environment, "cloud") {
+		log.Printf("[WARNING] Got an action for %s environment forwarding it to the backend", actionResult.Action.Environment)
+
+		streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+		req, err := http.NewRequest(
+			"POST",
+			streamUrl,
+			bytes.NewBuffer([]byte(body)),
+		)
+
+		if err != nil {
+			log.Printf("[ERROR] Error building subflow (%s) request: %s", workflowExecution.ExecutionId, err)
+			return
+		}
+
+		newresp, err := topClient.Do(req)
+		if err != nil {
+			log.Printf("[ERROR] Error running subflow (%s) request: %s", workflowExecution.ExecutionId, err)
+			return
+		}
+
+		defer newresp.Body.Close()
+		if newresp.StatusCode != 200 {
+			body, err := ioutil.ReadAll(newresp.Body)
+			if err != nil {
+				log.Printf("[INFO][%s] Failed reading body after subflow request: %s", workflowExecution.ExecutionId, err)
+				return
+			} else {
+				log.Printf("[ERROR][%s] Failed forwarding subflow request of length %d\n: %s", workflowExecution.ExecutionId, len(actionResult.Result), string(body))
+			}
+		}
+
+		return
 	}
 
 	log.Printf("[DEBUG][%s] Action: Received, Label: '%s', Action: '%s', Status: %s, Run status: %s, Extra=Retry:%d", workflowExecution.ExecutionId, actionResult.Action.Label, actionResult.Action.AppName, actionResult.Status, workflowExecution.Status, retries)

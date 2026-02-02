@@ -39,10 +39,7 @@ import {
 	Avatar,
 } from "@mui/material";
 
-import { 
-	DataGrid, 
-	GridColDef,
-} from '@mui/x-data-grid';
+import { DataGrid } from '@mui/x-data-grid';
 
 import {
 	Link as LinkIcon,
@@ -55,7 +52,6 @@ import {
     OpenInNew as OpenInNewIcon,
     CloudDownload as CloudDownloadIcon,
     Description as DescriptionIcon,
-    Polymer as PolymerIcon,
     CheckCircle as CheckCircleIcon,
     Close as CloseIcon,
     Apps as AppsIcon,
@@ -63,7 +59,6 @@ import {
     Cached as CachedIcon,
     AccessibilityNew as AccessibilityNewIcon,
     Lock as LockIcon,
-    Eco as EcoIcon,
     Schedule as ScheduleIcon,
     Cloud as CloudIcon,
     Business as BusinessIcon,
@@ -1511,7 +1506,7 @@ const CacheView = memo((props) => {
 		)
 	}
 
-	const columns: GridColDef<(typeof rows)[number]>[] = [
+	const columns = [
 	  { 
 		  field: 'key', 
 		  headerName: 'Key', 

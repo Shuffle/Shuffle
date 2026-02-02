@@ -3363,7 +3363,6 @@ If you're interested, please let me know a time that works for you, or set up a 
                   color="primary"
                   label={"Edit value"}
                   defaultValue={props.data.limit}
-                  style={{}}
                   onChange={(event) => {
                     setNewValue(event.target.value);
                   }}
@@ -4084,7 +4083,6 @@ If you're interested, please let me know a time that works for you, or set up a 
                 selectedOrganization={selectedOrganization}
                 adminTab={adminTab}
                 billingInfo={billingInfo}
-                selectedOrganization={selectedOrganization}
                 stripeKey={props.stripeKey}
                 handleGetOrg={handleGetOrg}
               />
@@ -6822,7 +6820,6 @@ curTab === 6 ? (
                             marginTop: 10,
                             marginBottom: 10,
                             padding: 15,
-                            textAlign: "center",
                             height: 70,
                             textAlign: "left",
                             backgroundColor: theme.palette.surfaceColor,

@@ -853,14 +853,14 @@ const UsecaseListComponent = (props) => {
 																		<li {...props}>
 																			<Tooltip arrow placement="left" title={
 																				<span style={{}}>
-																					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+																					{data.image !== undefined && data.image !== null && data.image.length > 0 ?
 																						<img src={data.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
 																					: null}
 																					<Typography>
 																						Choose {newname}
 																					</Typography>
 																				</span>
-																				} placement="bottom">
+																				}>
 																				<span>
 																					<Checkbox
 																						icon={<CheckBoxOutlineBlankIcon fontSize="small" />}

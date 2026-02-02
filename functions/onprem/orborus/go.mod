@@ -10,7 +10,7 @@ require (
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.69
+	github.com/shuffle/shuffle-shared v0.9.79
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
 )
@@ -58,7 +58,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/frikky/kin-openapi v0.42.0 // indirect
-	github.com/frikky/schemaless v0.0.25 // indirect
+	github.com/frikky/schemaless v0.0.28 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect

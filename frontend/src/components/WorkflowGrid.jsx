@@ -29,7 +29,7 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b
 const AppGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, onlyResults, inputsearch } = props
 
-    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	//const [apps, setApps] = React.useState([]);

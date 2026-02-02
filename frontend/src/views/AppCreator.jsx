@@ -563,7 +563,7 @@ const AppCreator = (defaultprops) => {
   };
   
 
-  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {
@@ -791,9 +791,6 @@ const AppCreator = (defaultprops) => {
 				}
 
 				if (data.info["x-categories"] !== undefined && data.info["x-categories"].length > 0) {
-					if (typeof data.info["x-categories"] === "array") {
-					} else {
-					}
 					setNewWorkflowCategories(data.info["x-categories"]);
 				}
 			}

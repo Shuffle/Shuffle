@@ -1467,7 +1467,7 @@ const CodeEditor = (props) => {
 					if (e.srcElement.className === "ace_content") {
 						console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
 
-						const usedposition = e.offsetY
+						let usedposition = e.offsetY
 						if (usedposition === undefined || usedposition === null) {
 							toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
 							return

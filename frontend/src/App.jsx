@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 
 import { Link, Route, Routes, BrowserRouter, useNavigate } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
-import { removeCookies, useCookies } from "react-cookie";
+import { useCookies } from "react-cookie";
 
 import Workflows from "./views/Workflows.jsx";
 import GettingStarted from "./views/GettingStarted.jsx";
@@ -514,7 +514,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -530,7 +529,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -694,7 +692,6 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
-        	      cookies={cookies}
         	      userdata={userdata}
         	      {...props}
         	    />
@@ -711,7 +708,6 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
-        	      cookies={cookies}
         	      userdata={userdata}
         	      {...props}
         	    />
@@ -727,7 +723,6 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
-        	      cookies={cookies}
         	      userdata={userdata}
         	      {...props}
         	    />
@@ -938,7 +933,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -955,7 +949,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -984,7 +977,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 				  		checkLogin={checkLogin}
 						{...props}

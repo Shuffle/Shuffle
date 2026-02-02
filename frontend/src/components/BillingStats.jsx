@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {getTheme} from '../theme.jsx';
 import classNames from "classnames";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
+import { DataGrid } from '@mui/x-data-grid'
 import { toast } from "react-toastify" 
 
 import { 
@@ -602,7 +602,7 @@ const AppStats = (defaultprops) => {
 		},
 	}
 
-	const columns: GridColDef[] = [
+	const columns = [
 	    {
 			field: 'workflow.name',
 			headerName: 'Workflow Name',

@@ -4,7 +4,7 @@ import WelcomeForm2 from "../components/WelcomeForm2.jsx";
 import AppFramework from "../components/AppFramework.jsx";
 import {isMobile} from "react-device-detect";
 import {
-	ArrorForwardIos as ArrowForwardIosIcon,
+	ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 
 import { 
@@ -47,7 +47,7 @@ const Welcome = (props) => {
 		}
 	}, [activeStep])
 
-  	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+  	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 		const [steps, setSteps] = useState([
 			"Help us get to know you", 
 			"Find your Apps", 

@@ -25,7 +25,7 @@ const HealthPage = (props) => {
     const [isHealthLoading, setIsHealthLoading] = useState(false); // Loading state for HealthBarChart
     const [isLiveExecutionsLoading, setIsLiveExecutionsLoading] = useState(false); // Loading state for LiveExecutionsChart
 
-    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 
     const fetchHealthStats = useCallback(async () => {
         setIsHealthLoading(true); // Start loading for HealthBarChart
@@ -374,8 +374,8 @@ const HealthPage = (props) => {
                 <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '24hr' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '24hr' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('24hr')} disabled={isHealthLoading}>24h</Button>
                 <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '7day' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '7day' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('7day')} disabled={isHealthLoading}>7d</Button>
                 <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '30d' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '30d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('30d')} disabled={isHealthLoading}>30d</Button>
-                <Button disabled variant="contained" style={{ flex: 1, borderBottom: selectedRange === '90d' ? '2px solid #FF8444' : 'none', background: "#000000", color: false === false ? "grey" : selectedRange === '90d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('90d')} disabled={isHealthLoading}>90d</Button>
-                <Button disabled variant="contained" style={{ flex: 1, borderBottom: selectedRange === '180d' ? '2px solid #FF8444' : 'none', background: "#000000", color: false === false ? "grey" : selectedRange === '180d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('180d')} disabled={isHealthLoading}>180d</Button>
+                <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '90d' ? '2px solid #FF8444' : 'none', background: "#000000", color: "grey", textTransform: 'none' }} onClick={() => filterDataByRange('90d')} disabled>90d</Button>
+                <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '180d' ? '2px solid #FF8444' : 'none', background: "#000000", color: "grey", textTransform: 'none' }} onClick={() => filterDataByRange('180d')} disabled>180d</Button>
             </ButtonGroup>
 
             {/* Loading Bar for HealthBarChart */}
