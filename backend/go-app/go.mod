@@ -26,8 +26,8 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.79
-	github.com/shuffle/singul v0.0.20
+	github.com/shuffle/shuffle-shared v0.9.82
+	github.com/shuffle/singul v0.0.24
 	golang.org/x/crypto v0.45.0
 	google.golang.org/api v0.236.0
 	google.golang.org/grpc v1.72.2
@@ -75,10 +75,10 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/frikky/schemaless v0.0.25 // indirect
+	github.com/frikky/schemaless v0.0.28 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
