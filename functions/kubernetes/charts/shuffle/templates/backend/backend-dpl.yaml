@@ -115,20 +115,15 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.backend.args "context" $) | nindent 12 }}
           {{- end }}
           env:
-            - name: RUNNING_MODE
-              value: kubernetes
-            - name: IS_KUBERNETES
-              value: "true"
-            - name: SHUFFLE_APP_HOTLOAD_FOLDER
-              value: /shuffle-apps
-            - name: SHUFFLE_FILE_LOCATION
-              value: /shuffle-files
+            {{- $env := include "shuffle.backend.env" . | fromYaml }}
+            {{- range $key, $val := $env }}
+            - name: {{ $key | quote }}
+              value: {{ $val | quote }}
+            {{- end }}
             {{- if .Values.backend.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           envFrom:
-            - configMapRef:
-                name: {{ include "shuffle.backend.name" . }}-env
             {{- if .Values.backend.extraEnvVarsCM }}
             - configMapRef:
                 name: {{ include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVarsCM "context" $) }}
