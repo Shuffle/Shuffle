@@ -1263,7 +1263,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
+			baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org, user, "")
 			if err != nil {
 				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
 			}
@@ -5683,16 +5683,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
 	// Need to add auth in pprof
-//	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
-//		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
-//		r.HandleFunc("/debug/pprof/", pprof.Index)
-//		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
-//		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
-//		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-//		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
-//	} else {
-//		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
-//	}
+	//	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" || strings.ToLower(os.Getenv("DEBUG_MEMORY")) == "true" {
+	//		log.Printf("[DEBUG] Memory debugging is enabled on /debug/pprof")
+	//		r.HandleFunc("/debug/pprof/", pprof.Index)
+	//		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+	//		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	//		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	//		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	//	} else {
+	//		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
+	//	}
 
 	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)
