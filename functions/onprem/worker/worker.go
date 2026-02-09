@@ -1498,10 +1498,15 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		action, _ = singul.HandleSingulStartnode(workflowExecution, action, []string{})
 
 		parsedAppname := strings.Replace(strings.ToLower(action.AppName), " ", "-", -1)
+		// if strings.ToLower(parsedAppname) == "singul" {
+		// 	parsedAppname = "shuffle-ai"
+		// 	appversion = "1.0.0"
+		// 	appname = "shuffle-ai"
+		// }
+
 		if parsedAppname == "ai-agent" {
 			log.Printf("[INFO][%s] Running AI Agent action %s via backend API", workflowExecution.ExecutionId, action.ID)
 
-			// Call the backend API - it will start the agent ASYNC and return immediately
 			fullUrl := fmt.Sprintf("%s/api/v1/agent/hybrid/execute?execution_id=%s&authorization=%s",
 				baseUrl, workflowExecution.ExecutionId, workflowExecution.Authorization)
 
@@ -1545,14 +1550,14 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Printf("[ERROR][%s] Failed reading AI Agent response: %s", workflowExecution.ExecutionId, err)
-			} else {
-				log.Printf("[INFO][%s] AI Agent triggered: %s", workflowExecution.ExecutionId, string(body))
-			}
-			
-			log.Printf("[INFO][%s] Worker exiting cleanly (exit 0) - backend will requeue when agent completes", workflowExecution.ExecutionId)
+			// body, err := ioutil.ReadAll(resp.Body)
+			// if err != nil {
+			// 	log.Printf("[ERROR][%s] Failed reading AI Agent response: %s", workflowExecution.ExecutionId, err)
+			// } else {
+			// 	log.Printf("[INFO][%s] AI Agent triggered: %s", workflowExecution.ExecutionId, string(body))
+			// }
+
+			log.Printf("[INFO][%s] Worker exiting (exit 0) - backend will requeue when agent completes", workflowExecution.ExecutionId)
 			os.Exit(0)
 		}
 
