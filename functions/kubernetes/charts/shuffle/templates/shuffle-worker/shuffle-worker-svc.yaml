@@ -1,0 +1,22 @@
+{{- if .Values.worker.enableHelmDeployment }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "shuffle.worker.name" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  {{- $serviceLabels := include "common.tplvalues.merge" (dict "values" (list .Values.worker.service.labels .Values.commonLabels) "context" .) }}
+  labels: {{- include "shuffle.workerInstance.labels" (dict "customLabels" $serviceLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.worker.containerPorts.http }}
+      targetPort: http
+      protocol: TCP
+      appProtocol: http
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
+  selector: {{- include "shuffle.workerInstance.matchLabels" (dict "customLabels" $podLabels "context" .) | nindent 4 }}
+{{- end }}
