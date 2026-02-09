@@ -4530,21 +4530,11 @@ func checkStandaloneRun() {
 		// Anything else here.
 	}
 
-	// workflowExecution.Results = newResults
-	// workflowExecution.Status = "EXECUTING"
-	// workflowExecution.CompletedAt = 0
+	workflowExecution.Results = newResults
+	workflowExecution.Status = "EXECUTING"
+	workflowExecution.CompletedAt = 0
 
-	// Creating a minimal payload to force reset without sending the full execution
-	// This helps avoid validation issues and potential complexity limits
-	simpleReset := map[string]interface{}{
-		"execution_id":  executionId,
-		"authorization": authorization,
-		"status":        "EXECUTING",
-		"results":       []interface{}{},
-		"completed_at":  0,
-	}
-
-	marshalledResult, err := json.Marshal(simpleReset)
+	marshalledResult, err := json.Marshal(workflowExecution)
 	if err != nil {
 		log.Printf("[ERROR] Failed marshalling body: %s", err)
 		os.Exit(1)
