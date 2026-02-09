@@ -1498,11 +1498,63 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		action, _ = singul.HandleSingulStartnode(workflowExecution, action, []string{})
 
 		parsedAppname := strings.Replace(strings.ToLower(action.AppName), " ", "-", -1)
-		//if strings.ToLower(parsedAppname) == "singul" {
-		//	parsedAppname = "shuffle-ai"
-		//	appversion = "1.0.0"
-		//	appname = "shuffle-ai"
-		//}
+		if parsedAppname == "ai-agent" {
+			log.Printf("[INFO][%s] Running AI Agent action %s via backend API", workflowExecution.ExecutionId, action.ID)
+
+			// Call the backend API - it will start the agent ASYNC and return immediately
+			fullUrl := fmt.Sprintf("%s/api/v1/agent/hybrid/execute?execution_id=%s&authorization=%s",
+				baseUrl, workflowExecution.ExecutionId, workflowExecution.Authorization)
+
+			serverUrl := os.Getenv("SHUFFLE_BACKEND_URL")
+			if len(serverUrl) > 0 {
+				fullUrl = fmt.Sprintf("%s/api/v1/agent/hybrid/execute?execution_id=%s&authorization=%s",
+					serverUrl, workflowExecution.ExecutionId, workflowExecution.Authorization)
+			}
+
+			requestBody := map[string]interface{}{
+				"id":          action.ID,
+				"name":        action.Name,
+				"label":       action.Label,
+				"app_name":    action.AppName,
+				"app_id":      action.AppID,
+				"app_version": action.AppVersion,
+				"environment": action.Environment,
+				"parameters":  action.Parameters,
+			}
+
+			requestBodyBytes, err := json.Marshal(requestBody)
+			if err != nil {
+				log.Printf("[ERROR][%s] Failed marshalling request body: %s", workflowExecution.ExecutionId, err)
+				continue
+			}
+
+			req, err := http.NewRequest("POST", fullUrl, bytes.NewBuffer(requestBodyBytes))
+			if err != nil {
+				log.Printf("[ERROR][%s] Failed creating AI Agent request: %s", workflowExecution.ExecutionId, err)
+				continue
+			}
+
+			req.Header.Set("Content-Type", "application/json")
+
+			client := &http.Client{Timeout: 10 * time.Second}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("[ERROR][%s] Failed triggering AI Agent (timeout/error): %s", workflowExecution.ExecutionId, err)
+				log.Printf("[INFO][%s] Worker exiting (exit 0) - backend will requeue execution when agent completes", workflowExecution.ExecutionId)
+				os.Exit(0)
+			}
+
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("[ERROR][%s] Failed reading AI Agent response: %s", workflowExecution.ExecutionId, err)
+			} else {
+				log.Printf("[INFO][%s] AI Agent triggered: %s", workflowExecution.ExecutionId, string(body))
+			}
+			
+			log.Printf("[INFO][%s] Worker exiting cleanly (exit 0) - backend will requeue when agent completes", workflowExecution.ExecutionId)
+			os.Exit(0)
+		}
 
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
 		if strings.Contains(imageName, " ") {
@@ -4473,11 +4525,21 @@ func checkStandaloneRun() {
 		// Anything else here.
 	}
 
-	workflowExecution.Results = newResults
-	workflowExecution.Status = "EXECUTING"
-	workflowExecution.CompletedAt = 0
+	// workflowExecution.Results = newResults
+	// workflowExecution.Status = "EXECUTING"
+	// workflowExecution.CompletedAt = 0
 
-	marshalledResult, err := json.Marshal(workflowExecution)
+	// Creating a minimal payload to force reset without sending the full execution
+	// This helps avoid validation issues and potential complexity limits
+	simpleReset := map[string]interface{}{
+		"execution_id":  executionId,
+		"authorization": authorization,
+		"status":        "EXECUTING",
+		"results":       []interface{}{},
+		"completed_at":  0,
+	}
+
+	marshalledResult, err := json.Marshal(simpleReset)
 	if err != nil {
 		log.Printf("[ERROR] Failed marshalling body: %s", err)
 		os.Exit(1)
