@@ -5445,6 +5445,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/health/opensearch-prefix", shuffle.HandleFixOpensearchPrefix).Methods("POST", "OPTIONS")
 
 	// Make user related locations
 	// Fix user changes with org
