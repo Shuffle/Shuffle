@@ -2,7 +2,7 @@ apiVersion: v2
 name: shuffle
 description: A Helm chart for deploying Shuffle on Kubernetes
 type: application
-version: 2.1.0 # Set during publishing in GitHub actions
+version: 0.0.0 # Set during publishing in GitHub actions
 appVersion: latest # Overwritten during publishing in GitHub actions
 dependencies:
   - name: common
