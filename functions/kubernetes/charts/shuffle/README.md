@@ -105,6 +105,105 @@ SHUFFLE_DEFAULT_APIKEY: "72E41083-A6F6-4A1B-8538-B06B577F47F0" # Shuffle uses uu
 SHUFFLE_ENCRYPTION_MODIFIER: "MyShuffleEncryptionModifier"
 ```
 
+## Shuffle Worker
+
+By default, Orborus creates a Kubernetes Deployment and Service for Shuffle Worker.
+The deployment can be customized to some degree using some of the `worker.*` helm variables. They are converted to Orborus env variables.
+
+If you want full control, you can also deploy Shuffle Worker using helm by enabling `worker.enableHelmDeployment`.
+This approach respects all of the `worker.*` helm variables.
+
+You can then set `orborus.manageWorkerDeployments=false` to reduce the permissions assigned to the Shuffle Orborus Kubernetes service account.
+
+## Shuffle Apps
+
+By default, Shuffle Worker is responsible for creating Kubernetes Deployments and Services for each app.
+Each app and version has their own Deployment and Service. Shuffle automatically deploys a set of apps.
+Other apps are deployed on demand, when they are first used.
+
+You can use some of the `app.*` helm variables to control some aspects of the deployment, e.g. resources and security context.
+Helm variables are converted to env variables set on Orborus. Orborus in turn passes the env variables to Worker when creating the Deployment.
+When `worker.enableHelmDeployment` is set, env variables for app configuration are set on the worker directly.
+Configuration using env variables applies to ALL deployed apps. There is no way to assign different options (e.g. resources) to different apps, or scale apps individually.
+
+If you want full control, you can deploy apps using helm. This has the following advantages:
+
+- full control over the deployment using helm values
+- granular control per app and version (e.g. have more replicas and resources for frequently used apps)
+- avoid problems with on-demand started apps (see https://github.com/Shuffle/Shuffle/issues/1739)
+
+To deploy apps using helm, set `apps.enabled=true`. By default, this deploys the `shuffle-tools`, `shuffle-subflow` and `http` apps.
+You can also deploy your own apps. See the following values file for an example.
+
+```yaml
+app:
+  replicaCount: 1 # default to 1 replica per app
+  resources: {} # default resources for apps
+# ... configure default options for all apps here
+
+apps:
+  enabled: true # Deploy apps using helm.
+
+  # Configure default apps
+  shuffleTools:
+    enabled: true # default
+  shuffleSubflow:
+    enabled: true # default
+  http:
+    enabled: true # default
+    # optionally override defaults from app values:
+    replicaCount: 1
+    resources: {}
+
+  # Deploy additional apps (e.g. opensearch)
+  opensearch:
+    enabled: true # required to actually deploy the app
+    name: opensearch # required. The name and version must match the values of the `api.yaml` file of the app.
+    version: 1.1.0 # required.
+    # optionally change app configuration:
+    replicaCount: 3
+    resources: {}
+```
+
+The key of an app in the `apps` map does not matter, as long as it is unique. We are not using an array here, to allow overriding values in stage-specific value files or using the command line, e.g.
+`helm upgrade ... --set apps.shuffleTools.replicas=3`.
+
+You can override any value set in `app.*` (e.g. `app.image`, `app.replicaCount`, `app.resources`, `app.podSecurityContext`) for each app
+(e.g. for the `shuffle-tools` app using `apps.shuffleTools.image`, `apps.shuffleTools.replicaCount`, ...).
+
+It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
+
+If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=true`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
+You are required to deploy all apps that are in use by your Shuffle instance manually using Helm.
+
+### Shuffle App Service Accounts
+
+By default a shared `shuffle-app` service account is used for all apps.
+If you are deploying apps using helm, you can choose to have a dedicated service account per app.
+To enable it, set `apps.MY_APP.serviceAccount.create=true` and provide a name using `apps.MY_APP.serviceAccount.name`.
+You can also set `apps.MY_APP.serviceAccount.create=false` while still providing a name to use an existing service account.
+
+```yaml
+apps:
+  myAppWithCustomServiceAccount:
+    enabled: true
+    name: my-custom-service-account
+    version: 1.0.0
+    serviceAccount:
+      create: true
+      name: shuffle-app-myapp
+
+  anotherAppWithExistingServiceAccount:
+    enabled: true
+    name: another-app
+    version: 1.0.0
+    serviceAccount:
+      create: false
+      name: existing-service-account-name
+```
+
+All service accounts use the `shuffle-app` role by default.
+
 ## OpenSearch
 
 Shuffle uses OpenSearch as its database. This helm chart installs a single-node OpenSearch cluster using [the Bitnami Helm Chart](https://github.com/bitnami/charts/blob/main/bitnami/opensearch/values.yaml).
@@ -116,7 +215,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ## Parameters
 
-### Global parameters
+##### Global parameters
 
 | Name                                                  | Description                                                                                                                                                                                                                                                                                                                                                         | Value   |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -126,7 +225,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `global.compatibility.openshift.adaptSecurityContext` | Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) | `auto`  |
 | `global.compatibility.omitEmptySeLinuxOptions`        | If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object                                                                                                                                                                                                                                                              | `false` |
 
-### Common parameters
+##### Common parameters
 
 | Name                     | Description                                                                             | Value           |
 | ------------------------ | --------------------------------------------------------------------------------------- | --------------- |
@@ -142,16 +241,17 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `diagnosticMode.command` | Command to override all containers in the chart release                                 | `["sleep"]`     |
 | `diagnosticMode.args`    | Args to override all containers in the chart release                                    | `["infinity"]`  |
 
-### Shared Shuffle Parameters
+##### Shared Shuffle Parameters
 
-| Name                  | Description                                                   | Value           |
-| --------------------- | ------------------------------------------------------------- | --------------- |
-| `shuffle.baseUrl`     | The external base URL under which Shuffle is reachable.       | `""`            |
-| `shuffle.org`         | Default shuffle organization                                  | `Shuffle`       |
-| `shuffle.appRegistry` | The registry from / to which shuffle apps are pulled / pushed | `""`            |
-| `shuffle.timezone`    | The timezone used by Shuffle                                  | `Europe/Berlin` |
+| Name                       | Description                                                                                                                | Value           |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `shuffle.baseUrl`          | The external base URL under which Shuffle is reachable.                                                                    | `""`            |
+| `shuffle.org`              | Default shuffle organization                                                                                               | `Shuffle`       |
+| `shuffle.appRegistry`      | The registry from / to which shuffle apps are pulled / pushed                                                              | `docker.io`     |
+| `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion> | `frikky`        |
+| `shuffle.timezone`         | The timezone used by Shuffle                                                                                               | `Europe/Berlin` |
 
-### backend Parameters
+##### backend Parameters
 
 | Name                                                        | Description                                                                                                                                                                                                                        | Value                                        |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -266,7 +366,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `backend.apps.downloadBranch`                               | The branch from which apps should be downloaded on startup.                                                                                                                                                                        | `master`                                     |
 | `backend.apps.forceUpdate`                                  | Force an update of apps on startup.                                                                                                                                                                                                | `false`                                      |
 
-### frontend Parameters
+##### frontend Parameters
 
 | Name                                                         | Description                                                                                                                                                                                                                           | Value                      |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
@@ -372,7 +472,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `frontend.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                          | `[]`                       |
 | `frontend.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                                    | `[]`                       |
 
-### orborus Parameters
+##### orborus Parameters
 
 | Name                                                        | Description                                                                                                                                                                                                                        | Value                     |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
@@ -475,15 +575,44 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `orborus.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                                    | `true`                    |
 | `orborus.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                       | `[]`                      |
 | `orborus.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                                 | `[]`                      |
+| `orborus.executionConcurrency`                              | The maximum amount of concurrent workflow executions per worker                                                                                                                                                                    | `25`                      |
+| `orborus.manageWorkerDeployments`                           | Whether workers are deployed and managed by orborus. When disabled, every worker is expected to be already deployed (see worker.enableHelmDeployment).                                                                             | `true`                    |
 
-### worker Parameters
+##### worker Parameters
 
 | Name                                                       | Description                                                                                                                                                                                                                     | Value                    |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `worker.enableHelmDeployment`                              | Deploy worker via helm. By default, workers are deployed by Orborus.                                                                                                                                                            | `false`                  |
 | `worker.image.registry`                                    | worker image registry                                                                                                                                                                                                           | `ghcr.io`                |
 | `worker.image.repository`                                  | worker image repository                                                                                                                                                                                                         | `shuffle/shuffle-worker` |
 | `worker.image.tag`                                         | worker image tag (immutable tags are recommended, defaults to appVersion)                                                                                                                                                       | `""`                     |
 | `worker.image.digest`                                      | worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended)                                                                               | `""`                     |
+| `worker.image.pullPolicy`                                  | worker image pull policy. Only effective with worker.enableHelmDeployment.                                                                                                                                                      | `IfNotPresent`           |
+| `worker.image.pullSecrets`                                 | worker image pull secrets. Only effective with worker.enableHelmDeployment.                                                                                                                                                     | `[]`                     |
+| `worker.replicaCount`                                      | Number of worker replicas to deploy. Only effective with worker.enableHelmDeployment.                                                                                                                                           | `1`                      |
+| `worker.containerPorts.http`                               | backend HTTP container port                                                                                                                                                                                                     | `33333`                  |
+| `worker.extraContainerPorts`                               | Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.                                                                                                       | `[]`                     |
+| `worker.livenessProbe.enabled`                             | Enable livenessProbe on worker containers. Only effective with worker.enableHelmDeployment.                                                                                                                                     | `false`                  |
+| `worker.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                         | `0`                      |
+| `worker.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                                | `15`                     |
+| `worker.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                               | `1`                      |
+| `worker.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                             | `4`                      |
+| `worker.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                             | `1`                      |
+| `worker.readinessProbe.enabled`                            | Enable readinessProbe on worker containers. Only effective with worker.enableHelmDeployment.                                                                                                                                    | `false`                  |
+| `worker.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                        | `0`                      |
+| `worker.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                               | `5`                      |
+| `worker.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                              | `1`                      |
+| `worker.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                            | `3`                      |
+| `worker.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                            | `1`                      |
+| `worker.startupProbe.enabled`                              | Enable startupProbe on worker containers. Only effective with worker.enableHelmDeployment.                                                                                                                                      | `false`                  |
+| `worker.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                          | `0`                      |
+| `worker.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                                 | `1`                      |
+| `worker.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                                | `1`                      |
+| `worker.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                              | `60`                     |
+| `worker.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                              | `1`                      |
+| `worker.customLivenessProbe`                               | Custom livenessProbe that overrides the default one. Only effective with worker.enableHelmDeployment.                                                                                                                           | `{}`                     |
+| `worker.customReadinessProbe`                              | Custom readinessProbe that overrides the default one. Only effective with worker.enableHelmDeployment.                                                                                                                          | `{}`                     |
+| `worker.customStartupProbe`                                | Custom startupProbe that overrides the default one. Only effective with worker.enableHelmDeployment.                                                                                                                            | `{}`                     |
 | `worker.resourcesPreset`                                   | Set worker container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if worker.resources is set (worker.resources is recommended for production). | `nano`                   |
 | `worker.resources`                                         | Set worker container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                        | `{}`                     |
 | `worker.podSecurityContext.enabled`                        | Enable worker pods' Security Context                                                                                                                                                                                            | `true`                   |
@@ -501,6 +630,49 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.containerSecurityContext.allowPrivilegeEscalation` | Set allowPrivilegeEscalation in worker container' Security Context                                                                                                                                                              | `false`                  |
 | `worker.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped in worker container                                                                                                                                                                          | `["ALL"]`                |
 | `worker.containerSecurityContext.seccompProfile.type`      | Set seccomp profile in worker container                                                                                                                                                                                         | `RuntimeDefault`         |
+| `worker.command`                                           | Override default worker container command (useful when using custom images). Only effective with worker.enableHelmDeployment.                                                                                                   | `[]`                     |
+| `worker.args`                                              | Override default worker container args (useful when using custom images). Only effective with worker.enableHelmDeployment.                                                                                                      | `[]`                     |
+| `worker.automountServiceAccountToken`                      | Mount Service Account token in worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                                    | `true`                   |
+| `worker.hostAliases`                                       | worker pods host aliases. Only effective with worker.enableHelmDeployment.                                                                                                                                                      | `[]`                     |
+| `worker.deploymentAnnotations`                             | Annotations for worker deployment. Only effective with worker.enableHelmDeployment.                                                                                                                                             | `{}`                     |
+| `worker.podLabels`                                         | Extra labels for worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                                                  | `{}`                     |
+| `worker.podAnnotations`                                    | Annotations for worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                                                   | `{}`                     |
+| `worker.podAffinityPreset`                                 | Pod affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.                                                                                    | `""`                     |
+| `worker.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.                                                                               | `soft`                   |
+| `worker.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`. Only effective with worker.enableHelmDeployment.                                                                              | `""`                     |
+| `worker.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `worker.affinity` is set                                                                                                                                                                    | `""`                     |
+| `worker.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `worker.affinity` is set                                                                                                                                                                 | `[]`                     |
+| `worker.affinity`                                          | Affinity for worker pods assignment. Only effective with worker.enableHelmDeployment.                                                                                                                                           | `{}`                     |
+| `worker.nodeSelector`                                      | Node labels for worker pods assignment. Only effective with worker.enableHelmDeployment.                                                                                                                                        | `{}`                     |
+| `worker.tolerations`                                       | Tolerations for worker pods assignment. Only effective with worker.enableHelmDeployment.                                                                                                                                        | `[]`                     |
+| `worker.updateStrategy.type`                               | worker deployment strategy type. Only effective with worker.enableHelmDeployment.                                                                                                                                               | `RollingUpdate`          |
+| `worker.priorityClassName`                                 | worker pods' priorityClassName. Only effective with worker.enableHelmDeployment.                                                                                                                                                | `""`                     |
+| `worker.topologySpreadConstraints`                         | Topology Spread Constraints for worker pod assignment spread across your cluster among failure-domains. Only effective with worker.enableHelmDeployment.                                                                        | `[]`                     |
+| `worker.schedulerName`                                     | Name of the k8s scheduler (other than default) for worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                | `""`                     |
+| `worker.terminationGracePeriodSeconds`                     | Seconds worker pods need to terminate gracefully. Only effective with worker.enableHelmDeployment.                                                                                                                              | `""`                     |
+| `worker.lifecycleHooks`                                    | for worker containers to automate configuration before or after startup. Only effective with worker.enableHelmDeployment.                                                                                                       | `{}`                     |
+| `worker.extraEnvVars`                                      | Array with extra environment variables to add to worker containers. Only effective with worker.enableHelmDeployment.                                                                                                            | `[]`                     |
+| `worker.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for worker containers. Only effective with worker.enableHelmDeployment.                                                                                                    | `""`                     |
+| `worker.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for worker containers. Only effective with worker.enableHelmDeployment.                                                                                                       | `""`                     |
+| `worker.extraVolumes`                                      | Optionally specify extra list of additional volumes for the worker pods. Only effective with worker.enableHelmDeployment.                                                                                                       | `[]`                     |
+| `worker.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the worker containers. Only effective with worker.enableHelmDeployment.                                                                                            | `[]`                     |
+| `worker.sidecars`                                          | Add additional sidecar containers to the worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                          | `[]`                     |
+| `worker.initContainers`                                    | Add additional init containers to the worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                             | `[]`                     |
+| `worker.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation. Only effective with worker.enableHelmDeployment.                                                                                                                               | `true`                   |
+| `worker.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                                  | `""`                     |
+| `worker.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `worker.pdb.minAvailable` and `worker.pdb.maxUnavailable` are empty.                                                                    | `""`                     |
+| `worker.autoscaling.vpa.enabled`                           | Enable VPA for worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                                                    | `false`                  |
+| `worker.autoscaling.vpa.annotations`                       | Annotations for VPA resource                                                                                                                                                                                                    | `{}`                     |
+| `worker.autoscaling.vpa.controlledResources`               | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                                                                                  | `[]`                     |
+| `worker.autoscaling.vpa.maxAllowed`                        | VPA Max allowed resources for the pod                                                                                                                                                                                           | `{}`                     |
+| `worker.autoscaling.vpa.minAllowed`                        | VPA Min allowed resources for the pod                                                                                                                                                                                           | `{}`                     |
+| `worker.autoscaling.vpa.updatePolicy.updateMode`           | Autoscaling update policy                                                                                                                                                                                                       | `Auto`                   |
+| `worker.autoscaling.hpa.enabled`                           | Enable HPA for worker pods. Only effective with worker.enableHelmDeployment.                                                                                                                                                    | `false`                  |
+| `worker.autoscaling.hpa.minReplicas`                       | Minimum number of replicas                                                                                                                                                                                                      | `""`                     |
+| `worker.autoscaling.hpa.maxReplicas`                       | Maximum number of replicas                                                                                                                                                                                                      | `""`                     |
+| `worker.autoscaling.hpa.targetCPU`                         | Target CPU utilization percentage                                                                                                                                                                                               | `""`                     |
+| `worker.autoscaling.hpa.targetMemory`                      | Target Memory utilization percentage                                                                                                                                                                                            | `""`                     |
+| `worker.service.labels`                                    | Extra labels for worker service. Only effective with worker.enableHelmDeployment.                                                                                                                                               | `{}`                     |
 | `worker.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                                                                                                                                                                            | `true`                   |
 | `worker.serviceAccount.name`                               | The name of the ServiceAccount to use.                                                                                                                                                                                          | `""`                     |
 | `worker.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                                                                                                                                                                | `{}`                     |
@@ -512,11 +684,40 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                                 | `true`                   |
 | `worker.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                    | `[]`                     |
 | `worker.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                              | `[]`                     |
+| `worker.manageAppDeployments`                              | Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).                                                                                        | `true`                   |
 
-### app Parameters
+##### app Parameters
 
 | Name                                                    | Description                                                                                                                                                                                                            | Value            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `app.image.registry`                                    | app image registry (defaults to shuffle.appRegistry)                                                                                                                                                                   | `""`             |
+| `app.image.repository`                                  | app image repository (defaults to shuffle.appBaseImageName)                                                                                                                                                            | `""`             |
+| `app.image.tag`                                         | app image tag (defaults to the apps version)                                                                                                                                                                           | `""`             |
+| `app.image.pullPolicy`                                  | default image pull policy for app deployments. Only effective for helm-deployed apps (see apps.enabled).                                                                                                               | `IfNotPresent`   |
+| `app.image.pullSecrets`                                 | default image pull secrets for app deployments. Only effective for helm-deployed apps (see apps.enabled).                                                                                                              | `[]`             |
+| `app.replicaCount`                                      | Default number of replicas to deploy for each app. Only effective for helm-deployed apps (see apps.enabled).                                                                                                           | `1`              |
+| `app.extraContainerPorts`                               | Optionally specify extra list of additional ports for app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `[]`             |
+| `app.livenessProbe.enabled`                             | Enable livenessProbe on app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                      | `false`          |
+| `app.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                | `0`              |
+| `app.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                       | `15`             |
+| `app.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                      | `1`              |
+| `app.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                    | `4`              |
+| `app.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                    | `1`              |
+| `app.readinessProbe.enabled`                            | Enable readinessProbe on app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                     | `false`          |
+| `app.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                               | `0`              |
+| `app.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                      | `5`              |
+| `app.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                     | `1`              |
+| `app.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                   | `3`              |
+| `app.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                   | `1`              |
+| `app.startupProbe.enabled`                              | Enable startupProbe on app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                       | `false`          |
+| `app.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                 | `0`              |
+| `app.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                        | `1`              |
+| `app.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                       | `1`              |
+| `app.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                     | `60`             |
+| `app.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                     | `1`              |
+| `app.customLivenessProbe`                               | Custom livenessProbe that overrides the default one. Only effective for helm-deployed apps (see apps.enabled).                                                                                                         | `{}`             |
+| `app.customReadinessProbe`                              | Custom readinessProbe that overrides the default one. Only effective for helm-deployed apps (see apps.enabled).                                                                                                        | `{}`             |
+| `app.customStartupProbe`                                | Custom startupProbe that overrides the default one. Only effective for helm-deployed apps (see apps.enabled).                                                                                                          | `{}`             |
 | `app.resourcesPreset`                                   | Set app container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if app.resources is set (app.resources is recommended for production). | `nano`           |
 | `app.resources`                                         | Set app container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                  | `{}`             |
 | `app.podSecurityContext.enabled`                        | Enable app pods' Security Context                                                                                                                                                                                      | `true`           |
@@ -534,6 +735,49 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `app.containerSecurityContext.allowPrivilegeEscalation` | Set allowPrivilegeEscalation in app container' Security Context                                                                                                                                                        | `false`          |
 | `app.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped in app container                                                                                                                                                                    | `["ALL"]`        |
 | `app.containerSecurityContext.seccompProfile.type`      | Set seccomp profile in app container                                                                                                                                                                                   | `RuntimeDefault` |
+| `app.command`                                           | Override default app container command (useful when using custom images)                                                                                                                                               | `[]`             |
+| `app.args`                                              | Override default app container args (useful when using custom images)                                                                                                                                                  | `[]`             |
+| `app.automountServiceAccountToken`                      | Mount Service Account token in app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                     | `false`          |
+| `app.hostAliases`                                       | app pods host aliases. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                       | `[]`             |
+| `app.deploymentAnnotations`                             | Annotations for app deployment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                              | `{}`             |
+| `app.podLabels`                                         | Extra labels for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                   | `{}`             |
+| `app.podAnnotations`                                    | Annotations for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                    | `{}`             |
+| `app.podAffinityPreset`                                 | Pod affinity preset. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`. Only effective for helm-deployed apps (see apps.enabled).                                                                     | `""`             |
+| `app.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`. Only effective for helm-deployed apps (see apps.enabled).                                                                | `soft`           |
+| `app.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `app.affinity` is set. Allowed values: `soft` or `hard`. Only effective for helm-deployed apps (see apps.enabled).                                                               | `""`             |
+| `app.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `app.affinity` is set                                                                                                                                                              | `""`             |
+| `app.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `app.affinity` is set                                                                                                                                                           | `[]`             |
+| `app.affinity`                                          | Affinity for app pods assignment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                            | `{}`             |
+| `app.nodeSelector`                                      | Node labels for app pods assignment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                         | `{}`             |
+| `app.tolerations`                                       | Tolerations for app pods assignment. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                         | `[]`             |
+| `app.updateStrategy.type`                               | app deployment strategy type. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                | `RollingUpdate`  |
+| `app.priorityClassName`                                 | app pods' priorityClassName. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                 | `""`             |
+| `app.topologySpreadConstraints`                         | Topology Spread Constraints for app pod assignment spread across your cluster among failure-domains. Only effective for helm-deployed apps (see apps.enabled).                                                         | `[]`             |
+| `app.schedulerName`                                     | Name of the k8s scheduler (other than default) for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                 | `""`             |
+| `app.terminationGracePeriodSeconds`                     | Seconds app pods need to terminate gracefully. Only effective for helm-deployed apps (see apps.enabled).                                                                                                               | `""`             |
+| `app.lifecycleHooks`                                    | for app containers to automate configuration before or after startup. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `{}`             |
+| `app.extraEnvVars`                                      | Array with extra environment variables to add to app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                             | `[]`             |
+| `app.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                     | `""`             |
+| `app.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `""`             |
+| `app.extraVolumes`                                      | Optionally specify extra list of additional volumes for the app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                        | `[]`             |
+| `app.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the app containers. Only effective for helm-deployed apps (see apps.enabled).                                                                             | `[]`             |
+| `app.sidecars`                                          | Add additional sidecar containers to the app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                           | `[]`             |
+| `app.initContainers`                                    | Add additional init containers to the app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                              | `[]`             |
+| `app.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation. Only effective for helm-deployed apps (see apps.enabled).                                                                                                             | `true`           |
+| `app.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                         | `""`             |
+| `app.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `app.pdb.minAvailable` and `app.pdb.maxUnavailable` are empty.                                                                 | `""`             |
+| `app.autoscaling.vpa.enabled`                           | Enable VPA for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                     | `false`          |
+| `app.autoscaling.vpa.annotations`                       | Annotations for VPA resource                                                                                                                                                                                           | `{}`             |
+| `app.autoscaling.vpa.controlledResources`               | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                                                                         | `[]`             |
+| `app.autoscaling.vpa.maxAllowed`                        | VPA Max allowed resources for the pod                                                                                                                                                                                  | `{}`             |
+| `app.autoscaling.vpa.minAllowed`                        | VPA Min allowed resources for the pod                                                                                                                                                                                  | `{}`             |
+| `app.autoscaling.vpa.updatePolicy.updateMode`           | Autoscaling update policy                                                                                                                                                                                              | `Auto`           |
+| `app.autoscaling.hpa.enabled`                           | Enable HPA for app pods. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                     | `false`          |
+| `app.autoscaling.hpa.minReplicas`                       | Minimum number of replicas                                                                                                                                                                                             | `""`             |
+| `app.autoscaling.hpa.maxReplicas`                       | Maximum number of replicas                                                                                                                                                                                             | `""`             |
+| `app.autoscaling.hpa.targetCPU`                         | Target CPU utilization percentage                                                                                                                                                                                      | `""`             |
+| `app.autoscaling.hpa.targetMemory`                      | Target Memory utilization percentage                                                                                                                                                                                   | `""`             |
+| `app.service.labels`                                    | Extra labels for app service. Only effective for helm-deployed apps (see apps.enabled).                                                                                                                                | `{}`             |
 | `app.serviceAccount.create`                             | Specifies whether a ServiceAccount should be created                                                                                                                                                                   | `true`           |
 | `app.serviceAccount.name`                               | The name of the ServiceAccount to use.                                                                                                                                                                                 | `""`             |
 | `app.serviceAccount.annotations`                        | Additional Service Account annotations (evaluated as a template)                                                                                                                                                       | `{}`             |
@@ -545,7 +789,240 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `app.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                        | `true`           |
 | `app.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                           | `[]`             |
 | `app.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)                                                                                                                                     | `[]`             |
+| `app.mountTmpVolume`                                    | Whether a writable /tmp emptyDir volume should be mounted to the app.                                                                                                                                                  | `true`           |
 | `app.exposedContainerPort`                              | The port that shuffle app containers will listen on for new requests.                                                                                                                                                  | `80`             |
+| `app.sdkTimeout`                                        | The timeout in seconds for app actions.                                                                                                                                                                                | `300`            |
+| `app.disableLogs`                                       | Do not capture app logs. By default, app logs are captured, so that they are visible in the frontend.                                                                                                                  | `false`          |
+
+##### Parameters to deploy apps using helm
+
+| Name                          | Description                                        | Value   |
+| ----------------------------- | -------------------------------------------------- | ------- |
+| `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
+| `apps.shuffleTools.enabled`   | Whether the shuffle-tools app is enabled           | `true`  |
+| `apps.shuffleTools.version`   | The version of the shuffle-tools app to deploy.    | `1.2.0` |
+| `apps.shuffleSubflow.enabled` | Whether the shuffle-subflow app is enabled         | `true`  |
+| `apps.shuffleSubflow.version` | The version of the shuffle-subflow app to deploy.  | `1.1.0` |
+| `apps.http.enabled`           | Whether the http app is enabled                    | `true`  |
+| `apps.http.version`           | The version of the http app to deploy.             | `1.4.0` |
+| `apps.MY_APP.app`             | The name of the app (required, e.g. shuffle-tools) |         |
+| `apps.MY_APP.version`         | The version of the app (required, e.g. 1.2.0)      |         |
+
+##### Traffic Exposure Parameters
+
+| Name                       | Description                                                                                           | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- | --------------- |
+| `ingress.enabled`          | Enable ingress record generation for frontend and backend                                             | `false`         |
+| `ingress.pathType`         | Ingress path type for the frontend path                                                               | `Prefix`        |
+| `ingress.backendPathType`  | Ingress path type for the backend path                                                                | `Prefix`        |
+| `ingress.apiVersion`       | Force Ingress API version (automatically detected if not set)                                         | `""`            |
+| `ingress.hostname`         | Default host for the ingress record                                                                   | `shuffle.local` |
+| `ingress.ingressClassName` | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                         | `nginx`         |
+| `ingress.path`             | Ingress path for Shuffle frontend                                                                     | `"/"`           |
+| `ingress.backendPath`      | Ingress path for Shuffle backend                                                                      | `"/api/"`       |
+| `ingress.annotations`      | Additional annotations for the Ingress resource.                                                      | `{}`            |
+| `ingress.tls`              | Enable TLS configuration for the host defined at `ingress.hostname` parameter                         | `false`         |
+| `ingress.selfSigned`       | Create a TLS secret for this ingress record using self-signed certificates generated by Helm          | `false`         |
+| `ingress.extraHosts`       | An array with additional hostname(s) to be covered with the ingress record                            | `[]`            |
+| `ingress.extraPaths`       | An array with additional arbitrary paths that may need to be added to the ingress under the main host | `[]`            |
+| `ingress.extraTls`         | TLS configuration for additional hostname(s) to be covered with this ingress record                   | `[]`            |
+| `ingress.secrets`          | Custom TLS certificates as secrets                                                                    | `[]`            |
+| `ingress.extraRules`       | Additional rules to be covered with this ingress record                                               | `[]`            |
+
+##### Istio Parameters
+
+| Name                                    | Description                                                                     | Value                    |
+| --------------------------------------- | ------------------------------------------------------------------------------- | ------------------------ |
+| `istio.enabled`                         | Enable creation of an Istio Gateway and VirtualService for frontend and backend | `false`                  |
+| `istio.apiVersion`                      | The istio apiVersion to use for Gateway and VirtualService resources            | `networking.istio.io/v1` |
+| `istio.hosts`                           | One or more hosts exposed by Istio                                              | `[]`                     |
+| `istio.gateway.annotations`             | Additional annotations for the Gateway resource                                 | `{}`                     |
+| `istio.gateway.selector`                | The selector matches the ingress gateway pod labels                             | `{ istio: ingress }`     |
+| `istio.gateway.http.enabled`            | Enable HTTP server port 80                                                      | `true`                   |
+| `istio.gateway.http.httpsRedirect`      | If set to true, a 301 redirect is send for all HTTP connections                 | `false`                  |
+| `istio.gateway.https.enabled`           | Enable HTTPS server on port 443                                                 | `false`                  |
+| `istio.gateway.https.tlsCredentialName` | The name of the secret that holds the TLS certs including the CA certificates.  | `""`                     |
+| `istio.gateway.https.tlsCipherSuites`   | If specified, only support the specified cipher list.                           | `[]`                     |
+| `istio.gateway.extraServers`            | Additional servers for the Gateway resource                                     | `[]`                     |
+| `istio.virtualService.annotations`      | Additional annotations for the VirtualService resource.                         | `{}`                     |
+| `istio.virtualService.backendHeaders`   | Header manipulation rules for backend traffic                                   | `{}`                     |
+| `istio.virtualService.frontendHeaders`  | Header manipulation rules for frontend traffic                                  | `{}`                     |
+
+##### Persistence Parameters
+
+| Name                                  | Description                                       | Value               |
+| ------------------------------------- | ------------------------------------------------- | ------------------- |
+| `persistence.enabled`                 | Enable persistence using Persistent Volume Claims | `true`              |
+| `persistence.apps.existingClaim`      | Name of an existing PVC to use                    | `""`                |
+| `persistence.apps.storageClass`       | PVC Storage Class for shuffle-apps volume         | `""`                |
+| `persistence.apps.subPath`            | The sub path used in the volume                   | `""`                |
+| `persistence.apps.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.apps.size`               | The size of the volume                            | `5Gi`               |
+| `persistence.apps.annotations`        | Annotations for the PVC                           | `{}`                |
+| `persistence.apps.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.appBuilder.storageClass` | PVC Storage Class for backend-apps-claim volume   | `""`                |
+| `persistence.appBuilder.accessModes`  | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.appBuilder.size`         | The size of the volume                            | `5Gi`               |
+| `persistence.appBuilder.annotations`  | Annotations for the PVC                           | `{}`                |
+| `persistence.appBuilder.selector`     | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.files.existingClaim`     | Name of an existing PVC to use                    | `""`                |
+| `persistence.files.storageClass`      | PVC Storage Class for shuffle-files volume        | `""`                |
+| `persistence.files.subPath`           | The sub path used in the volume                   | `""`                |
+| `persistence.files.accessModes`       | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.files.size`              | The size of the volume                            | `5Gi`               |
+| `persistence.files.annotations`       | Annotations for the PVC                           | `{}`                |
+| `persistence.files.selector`          | Selector to match an existing Persistent Volume   | `{}`                |
+
+##### Init Container Parameters
+
+| Name                                                        | Description                                                                                                                                                                                                                                         | Value                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `volumePermissions.enabled`                                 | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                                                                                                                                                     | `false`                  |
+| `volumePermissions.image.registry`                          | OS Shell + Utility image registry                                                                                                                                                                                                                   | `docker.io`              |
+| `volumePermissions.image.repository`                        | OS Shell + Utility image repository                                                                                                                                                                                                                 | `bitnamilegacy/os-shell` |
+| `volumePermissions.image.tag`                               | OS Shell + Utility image tag (immutable tags are recommended)                                                                                                                                                                                       | `12-debian-12-r30`       |
+| `volumePermissions.image.pullPolicy`                        | OS Shell + Utility image pull policy                                                                                                                                                                                                                | `IfNotPresent`           |
+| `volumePermissions.image.pullSecrets`                       | OS Shell + Utility image pull secrets                                                                                                                                                                                                               | `[]`                     |
+| `volumePermissions.resourcesPreset`                         | Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production). | `nano`                   |
+| `volumePermissions.resources`                               | Set init container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                              | `{}`                     |
+| `volumePermissions.containerSecurityContext.enabled`        | Enabled init container' Security Context                                                                                                                                                                                                            | `true`                   |
+| `volumePermissions.containerSecurityContext.seLinuxOptions` | Set SELinux options in init container                                                                                                                                                                                                               | `{}`                     |
+| `volumePermissions.containerSecurityContext.runAsUser`      | Set init container's Security Context runAsUser                                                                                                                                                                                                     | `0`                      |
+
+##### OpenSearch Parameters
+
+| Name                 | Description                                           | Value  |
+| -------------------- | ----------------------------------------------------- | ------ |
+| `opensearch.enabled` | Switch to enable or disable the opensearch helm chart | `true` |
+
+##### Vault Parameters
+
+| Name            | Description                                                                | Value |
+| --------------- | -------------------------------------------------------------------------- | ----- |
+| `vault.role`    | Specify the Vault role, which should be used to get the secret from Vault. | `""`  |
+| `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
+
+##### Other Parameters
+
+| Name                          | Description                                        | Value   |
+| ----------------------------- | -------------------------------------------------- | ------- |
+| `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
+| `apps.shuffleTools.enabled`   | Whether the shuffle-tools app is enabled           | `true`  |
+| `apps.shuffleTools.version`   | The version of the shuffle-tools app to deploy.    | `1.2.0` |
+| `apps.shuffleSubflow.enabled` | Whether the shuffle-subflow app is enabled         | `true`  |
+| `apps.shuffleSubflow.version` | The version of the shuffle-subflow app to deploy.  | `1.1.0` |
+| `apps.http.enabled`           | Whether the http app is enabled                    | `true`  |
+| `apps.http.version`           | The version of the http app to deploy.             | `1.4.0` |
+| `apps.MY_APP.app`             | The name of the app (required, e.g. shuffle-tools) |         |
+| `apps.MY_APP.version`         | The version of the app (required, e.g. 1.2.0)      |         |
+
+#### Traffic Exposure Parameters
+
+| Name                       | Description                                                                                           | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- | --------------- |
+| `ingress.enabled`          | Enable ingress record generation for frontend and backend                                             | `false`         |
+| `ingress.pathType`         | Ingress path type for the frontend path                                                               | `Prefix`        |
+| `ingress.backendPathType`  | Ingress path type for the backend path                                                                | `Prefix`        |
+| `ingress.apiVersion`       | Force Ingress API version (automatically detected if not set)                                         | `""`            |
+| `ingress.hostname`         | Default host for the ingress record                                                                   | `shuffle.local` |
+| `ingress.ingressClassName` | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                         | `nginx`         |
+| `ingress.path`             | Ingress path for Shuffle frontend                                                                     | `"/"`           |
+| `ingress.backendPath`      | Ingress path for Shuffle backend                                                                      | `"/api/"`       |
+| `ingress.annotations`      | Additional annotations for the Ingress resource.                                                      | `{}`            |
+| `ingress.tls`              | Enable TLS configuration for the host defined at `ingress.hostname` parameter                         | `false`         |
+| `ingress.selfSigned`       | Create a TLS secret for this ingress record using self-signed certificates generated by Helm          | `false`         |
+| `ingress.extraHosts`       | An array with additional hostname(s) to be covered with the ingress record                            | `[]`            |
+| `ingress.extraPaths`       | An array with additional arbitrary paths that may need to be added to the ingress under the main host | `[]`            |
+| `ingress.extraTls`         | TLS configuration for additional hostname(s) to be covered with this ingress record                   | `[]`            |
+| `ingress.secrets`          | Custom TLS certificates as secrets                                                                    | `[]`            |
+| `ingress.extraRules`       | Additional rules to be covered with this ingress record                                               | `[]`            |
+
+#### Istio Parameters
+
+| Name                                    | Description                                                                     | Value                    |
+| --------------------------------------- | ------------------------------------------------------------------------------- | ------------------------ |
+| `istio.enabled`                         | Enable creation of an Istio Gateway and VirtualService for frontend and backend | `false`                  |
+| `istio.apiVersion`                      | The istio apiVersion to use for Gateway and VirtualService resources            | `networking.istio.io/v1` |
+| `istio.hosts`                           | One or more hosts exposed by Istio                                              | `[]`                     |
+| `istio.gateway.annotations`             | Additional annotations for the Gateway resource                                 | `{}`                     |
+| `istio.gateway.selector`                | The selector matches the ingress gateway pod labels                             | `{ istio: ingress }`     |
+| `istio.gateway.http.enabled`            | Enable HTTP server port 80                                                      | `true`                   |
+| `istio.gateway.http.httpsRedirect`      | If set to true, a 301 redirect is send for all HTTP connections                 | `false`                  |
+| `istio.gateway.https.enabled`           | Enable HTTPS server on port 443                                                 | `false`                  |
+| `istio.gateway.https.tlsCredentialName` | The name of the secret that holds the TLS certs including the CA certificates.  | `""`                     |
+| `istio.gateway.https.tlsCipherSuites`   | If specified, only support the specified cipher list.                           | `[]`                     |
+| `istio.gateway.extraServers`            | Additional servers for the Gateway resource                                     | `[]`                     |
+| `istio.virtualService.annotations`      | Additional annotations for the VirtualService resource.                         | `{}`                     |
+| `istio.virtualService.backendHeaders`   | Header manipulation rules for backend traffic                                   | `{}`                     |
+| `istio.virtualService.frontendHeaders`  | Header manipulation rules for frontend traffic                                  | `{}`                     |
+
+#### Persistence Parameters
+
+| Name                                  | Description                                       | Value               |
+| ------------------------------------- | ------------------------------------------------- | ------------------- |
+| `persistence.enabled`                 | Enable persistence using Persistent Volume Claims | `true`              |
+| `persistence.apps.existingClaim`      | Name of an existing PVC to use                    | `""`                |
+| `persistence.apps.storageClass`       | PVC Storage Class for shuffle-apps volume         | `""`                |
+| `persistence.apps.subPath`            | The sub path used in the volume                   | `""`                |
+| `persistence.apps.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.apps.size`               | The size of the volume                            | `5Gi`               |
+| `persistence.apps.annotations`        | Annotations for the PVC                           | `{}`                |
+| `persistence.apps.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.appBuilder.storageClass` | PVC Storage Class for backend-apps-claim volume   | `""`                |
+| `persistence.appBuilder.accessModes`  | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.appBuilder.size`         | The size of the volume                            | `5Gi`               |
+| `persistence.appBuilder.annotations`  | Annotations for the PVC                           | `{}`                |
+| `persistence.appBuilder.selector`     | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.files.existingClaim`     | Name of an existing PVC to use                    | `""`                |
+| `persistence.files.storageClass`      | PVC Storage Class for shuffle-files volume        | `""`                |
+| `persistence.files.subPath`           | The sub path used in the volume                   | `""`                |
+| `persistence.files.accessModes`       | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.files.size`              | The size of the volume                            | `5Gi`               |
+| `persistence.files.annotations`       | Annotations for the PVC                           | `{}`                |
+| `persistence.files.selector`          | Selector to match an existing Persistent Volume   | `{}`                |
+
+#### Init Container Parameters
+
+| Name                                                        | Description                                                                                                                                                                                                                                         | Value                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `volumePermissions.enabled`                                 | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                                                                                                                                                     | `false`                  |
+| `volumePermissions.image.registry`                          | OS Shell + Utility image registry                                                                                                                                                                                                                   | `docker.io`              |
+| `volumePermissions.image.repository`                        | OS Shell + Utility image repository                                                                                                                                                                                                                 | `bitnamilegacy/os-shell` |
+| `volumePermissions.image.tag`                               | OS Shell + Utility image tag (immutable tags are recommended)                                                                                                                                                                                       | `12-debian-12-r30`       |
+| `volumePermissions.image.pullPolicy`                        | OS Shell + Utility image pull policy                                                                                                                                                                                                                | `IfNotPresent`           |
+| `volumePermissions.image.pullSecrets`                       | OS Shell + Utility image pull secrets                                                                                                                                                                                                               | `[]`                     |
+| `volumePermissions.resourcesPreset`                         | Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production). | `nano`                   |
+| `volumePermissions.resources`                               | Set init container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                              | `{}`                     |
+| `volumePermissions.containerSecurityContext.enabled`        | Enabled init container' Security Context                                                                                                                                                                                                            | `true`                   |
+| `volumePermissions.containerSecurityContext.seLinuxOptions` | Set SELinux options in init container                                                                                                                                                                                                               | `{}`                     |
+| `volumePermissions.containerSecurityContext.runAsUser`      | Set init container's Security Context runAsUser                                                                                                                                                                                                     | `0`                      |
+
+#### OpenSearch Parameters
+
+| Name                 | Description                                           | Value  |
+| -------------------- | ----------------------------------------------------- | ------ |
+| `opensearch.enabled` | Switch to enable or disable the opensearch helm chart | `true` |
+
+#### Vault Parameters
+
+| Name            | Description                                                                | Value |
+| --------------- | -------------------------------------------------------------------------- | ----- |
+| `vault.role`    | Specify the Vault role, which should be used to get the secret from Vault. | `""`  |
+| `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
+
+#### Other Parameters
+
+| Name                          | Description                                        | Value   |
+| ----------------------------- | -------------------------------------------------- | ------- |
+| `apps.enabled`                | Whether apps should be deployed using helm.        | `false` |
+| `apps.shuffleTools.enabled`   | Whether the shuffle-tools app is enabled           | `true`  |
+| `apps.shuffleTools.version`   | The version of the shuffle-tools app to deploy.    | `1.2.0` |
+| `apps.shuffleSubflow.enabled` | Whether the shuffle-subflow app is enabled         | `true`  |
+| `apps.shuffleSubflow.version` | The version of the shuffle-subflow app to deploy.  | `1.1.0` |
+| `apps.http.enabled`           | Whether the http app is enabled                    | `true`  |
+| `apps.http.version`           | The version of the http app to deploy.             | `1.4.0` |
+| `apps.MY_APP.app`             | The name of the app (required, e.g. shuffle-tools) |         |
+| `apps.MY_APP.version`         | The version of the app (required, e.g. 1.2.0)      |         |
 
 ### Traffic Exposure Parameters
 
@@ -614,19 +1091,19 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ### Init Container Parameters
 
-| Name                                                        | Description                                                                                                                                                                                                                                         | Value              |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `volumePermissions.enabled`                                 | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                                                                                                                                                     | `false`            |
-| `volumePermissions.image.registry`                          | OS Shell + Utility image registry                                                                                                                                                                                                                   | `docker.io`        |
-| `volumePermissions.image.repository`                        | OS Shell + Utility image repository                                                                                                                                                                                                                 | `bitnami/os-shell` |
-| `volumePermissions.image.tag`                               | OS Shell + Utility image tag (immutable tags are recommended)                                                                                                                                                                                       | `12-debian-12-r30` |
-| `volumePermissions.image.pullPolicy`                        | OS Shell + Utility image pull policy                                                                                                                                                                                                                | `IfNotPresent`     |
-| `volumePermissions.image.pullSecrets`                       | OS Shell + Utility image pull secrets                                                                                                                                                                                                               | `[]`               |
-| `volumePermissions.resourcesPreset`                         | Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production). | `nano`             |
-| `volumePermissions.resources`                               | Set init container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                              | `{}`               |
-| `volumePermissions.containerSecurityContext.enabled`        | Enabled init container' Security Context                                                                                                                                                                                                            | `true`             |
-| `volumePermissions.containerSecurityContext.seLinuxOptions` | Set SELinux options in init container                                                                                                                                                                                                               | `{}`               |
-| `volumePermissions.containerSecurityContext.runAsUser`      | Set init container's Security Context runAsUser                                                                                                                                                                                                     | `0`                |
+| Name                                                        | Description                                                                                                                                                                                                                                         | Value                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `volumePermissions.enabled`                                 | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                                                                                                                                                     | `false`                  |
+| `volumePermissions.image.registry`                          | OS Shell + Utility image registry                                                                                                                                                                                                                   | `docker.io`              |
+| `volumePermissions.image.repository`                        | OS Shell + Utility image repository                                                                                                                                                                                                                 | `bitnamilegacy/os-shell` |
+| `volumePermissions.image.tag`                               | OS Shell + Utility image tag (immutable tags are recommended)                                                                                                                                                                                       | `12-debian-12-r30`       |
+| `volumePermissions.image.pullPolicy`                        | OS Shell + Utility image pull policy                                                                                                                                                                                                                | `IfNotPresent`           |
+| `volumePermissions.image.pullSecrets`                       | OS Shell + Utility image pull secrets                                                                                                                                                                                                               | `[]`                     |
+| `volumePermissions.resourcesPreset`                         | Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production). | `nano`                   |
+| `volumePermissions.resources`                               | Set init container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                              | `{}`                     |
+| `volumePermissions.containerSecurityContext.enabled`        | Enabled init container' Security Context                                                                                                                                                                                                            | `true`                   |
+| `volumePermissions.containerSecurityContext.seLinuxOptions` | Set SELinux options in init container                                                                                                                                                                                                               | `{}`                     |
+| `volumePermissions.containerSecurityContext.runAsUser`      | Set init container's Security Context runAsUser                                                                                                                                                                                                     | `0`                      |
 
 ### OpenSearch Parameters
 
@@ -642,6 +1119,3 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-
-
-

@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"github.com/shuffle/shuffle-shared"
 
 	"bytes"
@@ -1266,7 +1265,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// Check for "wait" query if it's true
 		wait, waitok := request.URL.Query()["wait"]
 		if waitok && wait[0] == "true" {
-			returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+			returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, 15)
 			returnBytes, err := json.Marshal(returnBody)
 			if err != nil {
 				log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
@@ -2728,7 +2727,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		actionId = workflowExecution.Workflow.Actions[0].ID
 	}
 
-	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, actionId)
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, 15, actionId)
 	returnBytes, err := json.Marshal(returnBody)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
