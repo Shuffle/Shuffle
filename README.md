@@ -3,6 +3,19 @@
 [![Shuffle Logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
 
 Shuffle Automation
+  <div>
+    <a
+    href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
+    target="_blank"
+    style="text-decoration: none; display: flex; align-items: center; gap: 8px;"
+  >
+    <img
+      src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg"
+      height="20"
+      alt="Google Cloud Platform"
+    />
+  </a>
+  </div>
 
 </h1><h4 align="center">
 
@@ -27,46 +40,6 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 ## Deployment
 
 **Shuffle can be deployed using the following cloud marketplaces:**
-
-<ul>
-  <li style="display: flex; align-items: center;">
-    <a
-      href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
-      target="_blank"
-      style="text-decoration: none; display: flex; align-items: center; gap: 8px;"
-    >
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg"
-        height="20"
-        alt="Google Cloud Platform"
-      />
-    </a>
-  </li>
-
-  <li style="display: flex; align-items: center; gap: 8px;">
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg"
-      height="20"
-      alt="Amazon Web Services"
-      style="opacity: 0.4;"
-    />
-    <span style="color: #6a737d; font-size: 12px;">
-      Coming soon
-    </span>
-  </li>
-
-  <li style="display: flex; align-items: center; gap: 8px;">
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg"
-      height="20"
-      alt="Microsoft Azure"
-      style="opacity: 0.4;"
-    />
-    <span style="color: #6a737d; font-size: 12px;">
-      Coming soon
-    </span>
-  </li>
-</ul>
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
