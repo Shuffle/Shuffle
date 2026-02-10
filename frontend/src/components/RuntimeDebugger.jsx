@@ -44,7 +44,7 @@ import {
 	Send as SendIcon, 
 } from '@mui/icons-material';
 
-import { DataGrid, GridValueGetterParams } from '@mui/x-data-grid'
+import { DataGrid } from '@mui/x-data-grid'
 import {
 	Search as SearchIcon,
   } from "@mui/icons-material";

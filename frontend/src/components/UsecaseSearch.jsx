@@ -349,7 +349,7 @@ const UsecaseSearch = (props) => {
   const [selectedAction, setSelectedAction] = React.useState({});
   const [firstRequest, setFirstRequest] = React.useState(true);
 
-  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   //const alert = useAlert()
 
 	useEffect(() => {

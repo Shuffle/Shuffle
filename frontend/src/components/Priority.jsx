@@ -25,7 +25,7 @@ const Priority = (props) => {
   	const { globalUrl, clickedFromOrgTab,userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, appFramework, } = props;
 	const { themeMode, supportEmail } = useContext(Context);
 	const theme = getTheme(themeMode);
-  	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 
 	if (window.location.pathname === "/workflows") {

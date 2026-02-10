@@ -70,7 +70,6 @@ import {
 	Cached as CachedIcon,
 	DirectionsRun as DirectionsRunIcon,
 	Add as AddIcon,
-	Polymer as PolymerIcon,
 	FormatListNumbered as FormatListNumberedIcon,
 	Create as CreateIcon,
 	PlayArrow as PlayArrowIcon,
