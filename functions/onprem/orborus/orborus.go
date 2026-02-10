@@ -3684,11 +3684,11 @@ func updatePipelineState(command, pipelineId, action string) (string, error) {
 		forwardData,
 	)
 	if err != nil {
-		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		log.Printf("[ERROR] Failed to update HTTP request: %s", err)
 		return "", err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -3740,7 +3740,7 @@ func deletePipeline(pipelineId string) error {
 		forwardData,
 	)
 	if err != nil {
-		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		log.Printf("[ERROR] Failed to delete HTTP request: %s", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
