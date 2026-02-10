@@ -4,22 +4,8 @@
 
 Shuffle Installation
 
-</h1>
-
-Installation of Shuffle is currently available for [docker](https://shuffler.io/docs/configuration#production-readiness) and [kubernetes](https://shuffler.io/docs/configuration#Kubernetes). 
-
-- Looking to run workflows onprem, but don't want to run the entire stack? Looks into [Environments & Orborus hosting Onprem](https://shuffler.io/docs/organizations#Environments)
-- Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
-
-This document outlines an introduction environment which is **not** scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness and scalability. This also includes system requirements and configurations for **Docker Swarm** or **Kubernetes**. 
-
-## Deployment
-
-**Shuffle can be deployed using the following cloud marketplaces:**
-
-<ul>
-  <li style="display: flex; align-items: center;">
-    <a
+<div> 
+  <a
       href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
       target="_blank"
       style="text-decoration: none; display: flex; align-items: center; gap: 8px;"
@@ -30,32 +16,16 @@ This document outlines an introduction environment which is **not** scalable. [R
         alt="Google Cloud Platform"
       />
     </a>
-  </li>
+</div>
 
-  <li style="display: flex; align-items: center; gap: 8px;">
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg"
-      height="20"
-      alt="Amazon Web Services"
-      style="opacity: 0.4;"
-    />
-    <span style="color: #6a737d; font-size: 12px;">
-      Coming soon
-    </span>
-  </li>
+</h1>
 
-  <li style="display: flex; align-items: center; gap: 8px;">
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg"
-      height="20"
-      alt="Microsoft Azure"
-      style="opacity: 0.4;"
-    />
-    <span style="color: #6a737d; font-size: 12px;">
-      Coming soon
-    </span>
-  </li>
-</ul>
+Installation of Shuffle is currently available for [docker](https://shuffler.io/docs/configuration#production-readiness) and [kubernetes](https://shuffler.io/docs/configuration#Kubernetes). 
+
+- Looking to run workflows onprem, but don't want to run the entire stack? Looks into [Environments & Orborus hosting Onprem](https://shuffler.io/docs/organizations#Environments)
+- Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
+
+This document outlines an introduction environment which is **not** scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness and scalability. This also includes system requirements and configurations for **Docker Swarm** or **Kubernetes**. 
 
 
 # Docker - *nix
