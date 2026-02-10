@@ -22,7 +22,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/go-git/go-billy/v5 v5.6.2
-	github.com/go-git/go-git/v5 v5.16.1
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
