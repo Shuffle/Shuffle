@@ -54,7 +54,7 @@ const documentationIcon = "/icons/documentation.svg";
 const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 
 
-const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
+const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_VERSION }) => {
 
   const navigate = useNavigate();
   const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, updateOrg, setUpdateOrg, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
@@ -683,7 +683,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
           Version: <a href="https://github.com/Shuffle/Shuffle/releases" style={{ color: theme.palette.text.primary, textDecoration: "underline" }} target="_blank" rel="noreferrer"> 
-	  		2.1.2
+	  		{SHUFFLE_VERSION}
 	  		</a>
         </Typography>
       </Menu>
