@@ -177,6 +177,7 @@ export const getTheme = (themeMode, brandColor) =>
         surfaceColor: themeMode === "dark" ? "#27292d" : "#EFEFEF",
         platformColor: themeMode === "dark" ? "#212121" : "#ffffff",
         backgroundColor: themeMode === "dark" ? "#1a1a1a" : "#f1f1f1",
+        cytoscapeBackgroundColor: themeMode === "dark" ? "#161616" : "#f5f5f5",
         distributionColor: themeMode === "dark" ? "#40E0D0" : "#008080",
         cardBackgroundColor: themeMode === "dark" ? "#1e1e1e" : "#eaeaea",
         cardHoverColor: themeMode === "dark" ? "#323232" : "#F0F0F0", 
@@ -188,6 +189,8 @@ export const getTheme = (themeMode, brandColor) =>
         green: themeMode === "dark" ? "#5cc879" : "#008000",
         defaultBorder: themeMode === "dark" ? '1px solid #494949' : '1px solid #CCCCCC',
         linkColor: brandColor === "#ff8544" ? "#f86a3e" : brandColor,
+        slateGrayColor: themeMode === "dark" ? "#494949" : "#CCCCCC",
+        parsedAppPaperColor: themeMode === "dark" ? "#2f2f2f" : "#CCCCCC",
 
         borderRadius: 10,
         loaderColor: themeMode === "dark" ? "#1a1a1a" : "#E0E0E0",
@@ -213,6 +216,13 @@ export const getTheme = (themeMode, brandColor) =>
         jsonCollapseStringsAfterLength: 100,
         drawer: {
           backgroundColor: themeMode === "dark" ? "#262626" : "#f9f9f9"
+        },
+        actionSidebarField: {
+          backgroundColor: themeMode === "dark" ? "#2F2F2F" : "#F1F1F1",
+          color: themeMode === "dark" ? "#ffffff" : "#000000",
+          borderRadius: 8,
+          height: 40,
+          border: "none",
         },
         reactJsonStyle: {
           padding: 5,
@@ -258,7 +268,7 @@ export const getTheme = (themeMode, brandColor) =>
         defaultImage: "/images/no_image.png",
         singulOrange: "/images/singul_orange.png",
         singulGreen: "/images/singul_green.png",
-        singulBlackWhite: "/images/singul_black_white.png",
+        singulBlackWhite: "/icons/workflow-page/shuffle_agent.png",
         scrollbarColor: themeMode === "dark" ? "#494949 #2f2f2f": "#c1c1c1 #f1f1f1",
         scrollbarColorTransparent: themeMode === "dark" ? '#494949 transparent': "#c1c1c1 transparent",
       },
@@ -337,6 +347,7 @@ export const getTheme = (themeMode, brandColor) =>
                 borderRadius: '4px',
                 whiteSpace: "nowrap",
 		            textWrap: "normal",
+                transition: 'background-color 0.2s ease-in-out',
                 '&:hover': {
                   fontWeight: 600,
                   backgroundColor: themeMode === 'dark' ? brandColor || "#ff955c" : brandColor || '#FF8D4F',
@@ -352,6 +363,7 @@ export const getTheme = (themeMode, brandColor) =>
                 borderRadius: '4px',
                 boxShadow: 'none',
                 whiteSpace: "nowrap",
+                transition: 'all 0.2s ease-in-out',
 		            textWrap: "normal",
                 '&:hover': {
                   fontWeight: 600,
@@ -523,3 +535,4 @@ export const getTheme = (themeMode, brandColor) =>
         },
       },
     });
+

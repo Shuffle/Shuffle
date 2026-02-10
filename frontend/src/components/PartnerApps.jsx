@@ -13,7 +13,7 @@ const PartnerApps = () => {
       minHeight: "500px",
     }}
     >
-      <Typography>Partner Apps</Typography>
+      <Typography>Partner's Apps</Typography>
     </Box>
   )
 }

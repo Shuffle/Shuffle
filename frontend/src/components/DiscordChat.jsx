@@ -223,14 +223,14 @@ const DiscordChat = props => {
 						</Button>
 						<Typography style={{color: "white"}} variant="body2">{formMessage}</Typography>
 					</div>
-				<span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: 120, }}>
+				{/* <span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: 120, }}>
 					<Typography variant="body2" color="textSecondary" style={{}}>
 						Search by 
 					</Typography>
 					<a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
 						<img src={"/images/logo-algolia-nebula-blue-full.svg"} alt="Algolia logo" style={{height: 17, marginLeft: 5, marginTop: 3,}} />
 					</a>
-				</span>
+				</span> */}
         </div>
     );
 };

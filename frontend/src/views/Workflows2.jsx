@@ -103,6 +103,9 @@ import {
 	Publish as PublishIcon,
 	GetApp as GetAppIcon,
 	Image as ImageIcon,
+	Shield as ShieldIcon,
+	Warning as WarningIcon,
+	ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 
 // Additional Components
@@ -120,6 +123,7 @@ import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 
 import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/AngularWorkflow.jsx"
+import Licensed from "../components/Licensed.jsx";
 
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
@@ -255,6 +259,18 @@ export const handleReactJsonClipboard = (copy) => {
 // Takes an action in Shuffle and
 // Returns information about the icon, the color etc to be used
 // This can be used for actions of all types
+// PARSED ICON PROPERTIES:
+//   icon            - SVG <path> d attribute string
+//   iconColor       - path fill/stroke color (used in cytoscape node SVGs; "white" on colored bg)
+//   iconBackgroundColor - solid bg color for the node
+//   fillGradient    - [color1, color2] for gradient bg; if set, fillstyle = "linear-gradient"
+//   originalIcon    - React <svg> element (22x22, currentColor) used in ParsedActionNew dropdown
+//   svgViewBox      - viewBox for the SVG; "0 0 48 48" for 48-coord paths, defaults to "0 0 24 24"
+//   dropdownViewBox - tighter crop viewBox for dropdown rendering (auto: "10 10 28 28" for 48x48)
+//   useStroke       - true → render path with stroke (no fill); for outline-style icons
+//   useFill         - true + useStroke → render with BOTH fill and stroke
+//   fillRule        - "evenodd" for complex filled shapes (e.g. filter); default "nonzero"
+//
 export const GetIconInfo = (action) => {
     // Finds the icon based on the action. Should be verbs.
     const iconList = [
@@ -263,6 +279,7 @@ export const GetIconInfo = (action) => {
         { key: "cache_get", values: ["get_cache"] },
         { key: "filter", values: ["filter"] },
         { key: "merge", values: ["join", "merge", "route", "router"] },
+        {key: "get_file_value", values: ["get_file_value"]},
         {
             key: "search",
             values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate", "siem", ],
@@ -343,7 +360,7 @@ export const GetIconInfo = (action) => {
 				"protect",
 			],
 		},
-		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator", "hash", "ip", "url", "domain", ] },
+		{ key: "intel", values: ["intel", "feed", "threat intel", "threat intelligence", "ti", "t.i.", "t.i", "ti.", "rule", "technique", "tactic", "techniques", "tactics", "ioc", "indicator", "hash", "ip", "url", "domain", "sha", "md5",] },
     ];
 
     var selectedKey = ""
@@ -392,57 +409,132 @@ export const GetIconInfo = (action) => {
             originalIcon: "",
             fillGradient: ["#8acc3f", "#459622"],
         },
-        cache_add: {
-            icon: "M11 3C6.58 3 3 4.79 3 7C3 9.21 6.58 11 11 11C15.42 11 19 9.21 19 7C19 4.79 15.42 3 11 3ZM3 9V12C3 14.21 6.58 16 11 16C15.42 16 19 14.21 19 12V9C19 11.21 15.42 13 11 13C6.58 13 3 11.21 3 9ZM3 14V17C3 19.21 6.58 21 11 21C12.41 21 13.79 20.81 15 20.46V17.46C13.79 17.81 12.41 18 11 18C6.58 18 3 16.21 3 14ZM20 14V17H17V19H20V22H22V19H25V17H22V14",
+        // cache_add: {
+        //     icon: "M11 3C6.58 3 3 4.79 3 7C3 9.21 6.58 11 11 11C15.42 11 19 9.21 19 7C19 4.79 15.42 3 11 3ZM3 9V12C3 14.21 6.58 16 11 16C15.42 16 19 14.21 19 12V9C19 11.21 15.42 13 11 13C6.58 13 3 11.21 3 9ZM3 14V17C3 19.21 6.58 21 11 21C12.41 21 13.79 20.81 15 20.46V17.46C13.79 17.81 12.41 18 11 18C6.58 18 3 16.21 3 14ZM20 14V17H17V19H20V22H22V19H25V17H22V14",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#8acc3f",
+        //     originalIcon: "",
+        //     fillGradient: ["#8acc3f", "#459622"],
+        // },
+        get_file_value: {
+            icon: "M25.8332 14.8335H18.4998C18.0136 14.8335 17.5473 15.0267 17.2035 15.3705C16.8597 15.7143 16.6665 16.1806 16.6665 16.6668V31.3335C16.6665 31.8197 16.8597 32.286 17.2035 32.6299C17.5473 32.9737 18.0136 33.1668 18.4998 33.1668H29.4998C29.9861 33.1668 30.4524 32.9737 30.7962 32.6299C31.14 32.286 31.3332 31.8197 31.3332 31.3335V20.3335L25.8332 14.8335Z M25.8335 14.8335V20.3335H31.3335 M24 29.5V24 M21.25 26.75H26.75",
             iconColor: "white",
-            iconBackgroundColor: "#8acc3f",
+            iconBackgroundColor: "rgba(43, 189, 160, 1)",
             originalIcon: "",
-            fillGradient: ["#8acc3f", "#459622"],
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
+            fillGradient: ["rgba(43, 189, 160, 1)", "rgba(43, 189, 160, 1)"],
         },
-        cache_get: {
-            icon: "M12 2C7.58 2 4 3.79 4 6C4 8.06 7.13 9.74 11.15 9.96C12.45 8.7 14.19 8 16 8C16.8 8 17.59 8.14 18.34 8.41C19.37 7.74 20 6.91 20 6C20 3.79 16.42 2 12 2ZM4 8V11C4 12.68 6.08 14.11 9 14.71C9.06 13.7 9.32 12.72 9.77 11.82C6.44 11.34 4 9.82 4 8ZM15.93 9.94C14.75 9.95 13.53 10.4 12.46 11.46C8.21 15.71 13.71 22.5 18.75 19.17L23.29 23.71L24.71 22.29L20.17 17.75C22.66 13.97 19.47 9.93 15.93 9.94ZM15.9 12C17.47 11.95 19 13.16 19 15C19 15.7956 18.6839 16.5587 18.1213 17.1213C17.5587 17.6839 16.7956 18 16 18C13.33 18 12 14.77 13.88 12.88C14.47 12.29 15.19 12 15.9 12ZM4 13V16C4 18.05 7.09 19.72 11.06 19.95C10.17 19.07 9.54 17.95 9.22 16.74C6.18 16.17 4 14.72 4 13Z",
+        cache_add: {
+            icon: "M24 20.6667C28.1421 20.6667 31.5 19.5475 31.5 18.1667C31.5 16.786 28.1421 15.6667 24 15.6667C19.8579 15.6667 16.5 16.786 16.5 18.1667C16.5 19.5475 19.8579 20.6667 24 20.6667Z M31.5 24C31.5 25.3833 28.1667 26.5 24 26.5C19.8333 26.5 16.5 25.3833 16.5 24 M16.5 18.1667V29.8334C16.5 31.2167 19.8333 32.3334 24 32.3334C28.1667 32.3334 31.5 31.2167 31.5 29.8334V18.1667 M32 35C34.2091 35 36 33.2091 36 31C36 28.7909 34.2091 27 32 27C29.7909 27 28 28.7909 28 31C28 33.2091 29.7909 35 32 35Z M32 29V33 M30 31H34",
             iconColor: "white",
-            iconBackgroundColor: "#8acc3f",
+            iconBackgroundColor: "rgba(43, 189, 160, 1)",
+            fillGradient: ["rgba(43, 189, 160, 1)", "rgba(43, 189, 160, 1)"],
             originalIcon: "",
-            fillGradient: ["#8acc3f", "#459622"],
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
+        },
+        // cache_get: {
+        //     icon: "M12 2C7.58 2 4 3.79 4 6C4 8.06 7.13 9.74 11.15 9.96C12.45 8.7 14.19 8 16 8C16.8 8 17.59 8.14 18.34 8.41C19.37 7.74 20 6.91 20 6C20 3.79 16.42 2 12 2ZM4 8V11C4 12.68 6.08 14.11 9 14.71C9.06 13.7 9.32 12.72 9.77 11.82C6.44 11.34 4 9.82 4 8ZM15.93 9.94C14.75 9.95 13.53 10.4 12.46 11.46C8.21 15.71 13.71 22.5 18.75 19.17L23.29 23.71L24.71 22.29L20.17 17.75C22.66 13.97 19.47 9.93 15.93 9.94ZM15.9 12C17.47 11.95 19 13.16 19 15C19 15.7956 18.6839 16.5587 18.1213 17.1213C17.5587 17.6839 16.7956 18 16 18C13.33 18 12 14.77 13.88 12.88C14.47 12.29 15.19 12 15.9 12ZM4 13V16C4 18.05 7.09 19.72 11.06 19.95C10.17 19.07 9.54 17.95 9.22 16.74C6.18 16.17 4 14.72 4 13Z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#8acc3f",
+        //     originalIcon: "",
+        //     fillGradient: ["#8acc3f", "#459622"],
+        // },
+        cache_get: {
+            icon: "M22.25 14C24.379 14 26.3377 14.2865 27.79 14.7705C28.5123 15.0113 29.1516 15.3144 29.625 15.6875C30.09 16.054 30.5 16.5766 30.5 17.25V25.0889C30.4172 25.0848 30.3338 25.083 30.25 25.083C29.8184 25.083 29.3995 25.1374 29 25.2402V25.0537C28.6427 25.2475 28.2369 25.4175 27.7998 25.5635C26.3499 26.0475 24.3907 26.333 22.25 26.333C20.1093 26.333 18.1501 26.0475 16.7002 25.5635C16.2631 25.4175 15.8573 25.2475 15.5 25.0537V28.917C15.5002 28.9389 15.5137 29.0744 15.8018 29.3027C16.085 29.5272 16.542 29.7623 17.1748 29.9736C18.4332 30.3937 20.2243 30.667 22.25 30.667C23.3382 30.667 24.3581 30.5844 25.2646 30.4463C25.3016 30.9605 25.4159 31.4527 25.5967 31.9121C24.5747 32.0741 23.4408 32.167 22.25 32.167C20.1092 32.167 18.1502 31.8805 16.7002 31.3965C15.9791 31.1558 15.342 30.8524 14.8701 30.4785C14.4059 30.1106 14.0002 29.5883 14 28.917V17.25C14 16.5766 14.41 16.054 14.875 15.6875C15.3484 15.3144 15.9877 15.0113 16.71 14.7705C18.1623 14.2865 20.121 14 22.25 14ZM29 19.2168C28.64 19.4118 28.2306 19.5826 27.79 19.7295C26.3377 20.2135 24.379 20.5 22.25 20.5C20.121 20.5 18.1623 20.2135 16.71 19.7295C16.2694 19.5826 15.86 19.4118 15.5 19.2168V23.083C15.5001 23.1039 15.5122 23.2403 15.8018 23.4697C16.0851 23.6941 16.5421 23.9294 17.1748 24.1406C18.4332 24.5607 20.2243 24.833 22.25 24.833C24.2757 24.833 26.0668 24.5607 27.3252 24.1406C27.9579 23.9294 28.4149 23.6941 28.6982 23.4697C28.9878 23.2403 28.9999 23.1039 29 23.083V19.2168ZM22.25 15.5C20.2371 15.5 18.4456 15.7727 17.1836 16.1934C16.5488 16.405 16.0893 16.6412 15.8037 16.8662C15.5099 17.0978 15.5 17.2331 15.5 17.25C15.5001 17.2679 15.5111 17.4032 15.8037 17.6338C16.0893 17.8588 16.5488 18.095 17.1836 18.3066C18.4456 18.7273 20.2371 19 22.25 19C24.2628 19 26.0544 18.7273 27.3164 18.3066C27.9512 18.095 28.4107 17.8588 28.6963 17.6338C28.9889 17.4032 28.9999 17.2679 29 17.25C29 17.2331 28.9901 17.0978 28.6963 16.8662C28.4107 16.6412 27.9512 16.405 27.3164 16.1934C26.0544 15.7727 24.2629 15.5 22.25 15.5Z M29.9166 32.4164C31.3893 32.4164 32.5831 31.2225 32.5831 29.7497C32.5831 28.2769 31.3893 27.083 29.9166 27.083C28.4439 27.083 27.25 28.2769 27.25 29.7497C27.25 31.2225 28.4439 32.4164 29.9166 32.4164Z M33.2505 33.0828L31.8005 31.6328",
+            iconColor: "white",
+            iconBackgroundColor: "rgba(43, 189, 160, 1)",
+            fillGradient: ["rgba(43, 189, 160, 1)", "rgba(43, 189, 160, 1)"],
+            originalIcon: "",
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
         },
         repeat: {
-            icon: "M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z",
+            icon: "M7.417 8.667V11.167H9.917 M16.583 15.333V12.833H14.083 M15.538 10.75C15.326 10.153 14.967 9.619 14.494 9.198C14.020 8.777 13.448 8.483 12.830 8.343C12.212 8.204 11.569 8.223 10.960 8.399C10.352 8.575 9.798 8.902 9.350 9.35L7.417 11.167M16.583 12.833L14.650 14.65C14.202 15.098 13.648 15.425 13.040 15.601C12.431 15.777 11.788 15.796 11.170 15.657C10.552 15.517 9.980 15.223 9.507 14.802C9.033 14.381 8.674 13.847 8.463 13.25",
             iconColor: "white",
-            iconBackgroundColor: defaultColor,
+            iconBackgroundColor: "rgba(242, 101, 59, 1)",
+            fillGradient: ["rgba(242, 101, 59, 1)", "rgba(242, 101, 59, 1)"],
             originalIcon: <CachedIcon />,
+            useStroke: true,
+            dropdownViewBox: "5 7 14 10",
         },
+        // repeat: {
+        //     icon: "M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: defaultColor,
+        //     originalIcon: <CachedIcon />,
+        // },
+
         add: {
             icon: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
             iconColor: "white",
             iconBackgroundColor: defaultColor,
             originalIcon: <AddIcon />,
         },
+        // edit: {
+        //     icon: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: defaultColor,
+        //     originalIcon: <EditIcon />,
+        // },
         edit: {
-            icon: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+            icon: "M27.75 17.25C27.947 17.053 28.1808 16.8967 28.4382 16.7901C28.6956 16.6835 28.9714 16.6287 29.25 16.6287C29.5286 16.6287 29.8044 16.6835 30.0618 16.7901C30.3192 16.8967 30.553 17.053 30.75 17.25C30.947 17.447 31.1032 17.6808 31.2098 17.9382C31.3165 18.1956 31.3713 18.4714 31.3713 18.75C31.3713 19.0286 31.3165 19.3044 31.2098 19.5618C31.1032 19.8191 30.947 20.053 30.75 20.25L20.625 30.375L16.5 31.5L17.625 27.375L27.75 17.25Z",
             iconColor: "white",
-            iconBackgroundColor: defaultColor,
+            iconBackgroundColor: "rgba(242, 101, 59, 1)",
+            fillGradient: ["rgba(242, 101, 59, 1)", "rgba(242, 101, 59, 1)"],
             originalIcon: <EditIcon />,
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
         },
-        filter: {
-            icon: "M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z",
+        // filter: {
+        //     icon: "M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#f5515f",
+        //     originalIcon: "",
+        //     fillGradient: ["#f5515f", "#a1051d"],
+        // },
+            filter: {
+            icon: "M31.25 17C31.25 16.8619 31.1381 16.75 31 16.75H17C16.8619 16.75 16.75 16.8619 16.75 17V18.5859C16.75 18.6522 16.7764 18.7158 16.8232 18.7627L21.2373 23.1768C21.5655 23.5049 21.75 23.95 21.75 24.4141V30.958L26.25 29.459V24.4141C26.25 23.95 26.4345 23.5049 26.7627 23.1768L31.1768 18.7627C31.2236 18.7158 31.25 18.6522 31.25 18.5859V17ZM32.75 18.5859C32.75 19.05 32.5655 19.4951 32.2373 19.8232L27.8232 24.2373C27.7764 24.2842 27.75 24.3478 27.75 24.4141V29.6396C27.75 30.1769 27.4066 30.6558 26.8955 30.8262L21.8955 32.4922C21.0874 32.7615 20.2509 32.1611 20.25 31.3076V24.4141C20.25 24.3478 20.2236 24.2842 20.1768 24.2373L15.7627 19.8232C15.4345 19.4951 15.25 19.05 15.25 18.5859V17C15.25 16.0335 16.0335 15.25 17 15.25H31C31.9665 15.25 32.75 16.0335 32.75 17V18.5859Z",
             iconColor: "white",
-            iconBackgroundColor: "#f5515f",
+            iconBackgroundColor: "rgba(217, 56, 136, 1)",
             originalIcon: "",
-            fillGradient: ["#f5515f", "#a1051d"],
-        },
+            fillGradient: ["rgba(217, 56, 136, 1)", "rgba(217, 56, 136, 1)"],
+            fillRule: "evenodd",
+            svgViewBox: "0 0 48 48",
+            },
+        // merge: {
+        //     icon: "M17 20.41 18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#f5515f",
+        //     originalIcon: "",
+        //     fillGradient: ["#f5515f", "#a1051d"],
+        // },
         merge: {
-            icon: "M17 20.41 18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z",
+            icon: "M23.4692 16.2696C23.7621 15.9768 24.2369 15.9769 24.5298 16.2696L29.3032 21.0421C29.5961 21.335 29.5961 21.8107 29.3032 22.1036C29.0103 22.3963 28.5345 22.3964 28.2417 22.1036L24.7495 18.6104V23.0802C24.7497 23.0867 24.7505 23.0932 24.7505 23.0997V24.0001C24.7507 28.0592 28.0409 31.3497 32.1001 31.3497C32.5141 31.3498 32.85 31.6857 32.8501 32.0997C32.8501 32.5138 32.5142 32.8496 32.1001 32.8497C28.4809 32.8497 25.3708 30.6766 23.9995 27.5645C22.6281 30.6765 19.519 32.8497 15.8999 32.8497C15.4857 32.8497 15.1499 32.5139 15.1499 32.0997C15.15 31.6856 15.4858 31.3497 15.8999 31.3497C19.9591 31.3497 23.2493 28.0592 23.2495 24.0001V18.6104L19.7573 22.1036C19.4644 22.3963 18.9886 22.3964 18.6958 22.1036C18.4032 21.8108 18.4032 21.3349 18.6958 21.0421L23.4692 16.2696Z",
             iconColor: "white",
-            iconBackgroundColor: "#f5515f",
+            iconBackgroundColor: "rgba(217, 56, 136, 1)",
             originalIcon: "",
-            fillGradient: ["#f5515f", "#a1051d"],
+            fillGradient: ["rgba(217, 56, 136, 1)", "rgba(217, 56, 136, 1)"],
+            useStroke: false,
+            useFill: true,
+            svgViewBox: "0 0 48 48",
         },
+        // compare: {
+        //     icon: "M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: defaultColor,
+        //     originalIcon: <CompareIcon />,
+        // },
         compare: {
-            icon: "M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z",
+            icon: "M19 15.75H23.7832V32.25H19C17.7574 32.25 16.75 31.2426 16.75 30V18C16.75 16.8352 17.6352 15.8771 18.7695 15.7617L19 15.75Z M26.667 16.125H29.0003C30.6572 16.125 32.0003 17.4681 32.0003 19.125V28.875C32.0003 30.5319 30.6572 31.875 29.0003 31.875H26.667",
             iconColor: "white",
-            iconBackgroundColor: defaultColor,
-            originalIcon: <CompareIcon />,
+            iconBackgroundColor: "rgba(242, 101, 59, 1)",
+            originalIcon: "",
+            fillGradient: ["rgba(242, 101, 59, 1)", "rgba(242, 101, 59, 1)"],
+            useStroke: true,
+            useFill: true,
+            svgViewBox: "0 0 48 48",
         },
         extract: {
             icon: "M3 3h18v2H3z",
@@ -462,18 +554,36 @@ export const GetIconInfo = (action) => {
             iconBackgroundColor: defaultColor,
             originalIcon: <TocIcon />,
         },
+        // execute: {
+        //     icon: "M8 5v14l11-7z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: defaultColor,
+        //     originalIcon: <PlayArrowIcon />,
+        // },
         execute: {
-            icon: "M8 5v14l11-7z",
+            icon: "M17.3335 28.1667L22.3335 23.1667L17.3335 18.1667 M24 29.8333H30.6667",
             iconColor: "white",
-            iconBackgroundColor: defaultColor,
+            iconBackgroundColor: "rgba(242, 101, 59, 1)",
+            fillGradient: ["rgba(242, 101, 59, 1)", "rgba(242, 101, 59, 1)"],
             originalIcon: <PlayArrowIcon />,
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
         },
+        // delete: {
+        //     icon: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#03030e",
+        //     originalIcon: <DeleteIcon />,
+        //     fillGradient: ["#03030e", "#205d66"],
+        // },
         delete: {
-            icon: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+            icon: "M15 18.5H33C31.5955 18.5 30.8933 18.5 30.3889 18.8371C30.1705 18.983 29.983 19.1705 29.8371 19.3889C29.5 19.8933 29.5 20.5955 29.5 22V27.5C29.5 29.3856 29.5 30.3284 28.9142 30.9142C28.3284 31.5 27.3856 31.5 25.5 31.5H22.5C20.6144 31.5 19.6716 31.5 19.0858 30.9142C18.5 30.3284 18.5 29.3856 18.5 27.5V22C18.5 20.5955 18.5 19.8933 18.1629 19.3889C18.017 19.1705 17.8295 18.983 17.6111 18.8371C17.1067 18.5 16.4045 18.5 15 18.5Z M21.5 15.5002C21.5 15.5002 22 14.5 24 14.5C26 14.5 26.5 15.5 26.5 15.5",
             iconColor: "white",
-            iconBackgroundColor: "#03030e",
-            originalIcon: <DeleteIcon />,
-            fillGradient: ["#03030e", "#205d66"],
+            iconBackgroundColor: "rgba(98, 98, 98, 1)",
+            originalIcon: "",
+            fillGradient: ["rgba(98, 98, 98, 1)", "rgba(98, 98, 98, 1)"],
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
         },
         close: {
             icon: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
@@ -482,19 +592,37 @@ export const GetIconInfo = (action) => {
             originalIcon: <CloseIcon />,
             fillGradient: ["#03030e", "#205d66"],
         },
+        // send: {
+        //     icon: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#0373da",
+        //     originalIcon: <SendIcon />,
+        //     fillGradient: ["#0bc8bf", "#0373da"],
+        // },
         send: {
-            icon: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z",
+            icon: "M31.3332 16.6667L22.1665 25.8334 M31.3332 16.6667L25.4998 33.3334L22.1665 25.8334L14.6665 22.5001L31.3332 16.6667Z",
             iconColor: "white",
-            iconBackgroundColor: "#0373da",
-            originalIcon: <SendIcon />,
-            fillGradient: ["#0bc8bf", "#0373da"],
+            iconBackgroundColor: "rgba(128, 107, 255, 1)",
+            originalIcon: "",
+            fillGradient: ["rgba(128, 107, 255, 1)", "rgba(128, 107, 255    , 1)"],
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
         },
+        // download: {
+        //     icon: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+        //     iconColor: "white",
+        //     iconBackgroundColor: "#0373da",
+        //     originalIcon: <GetAppIcon />,
+        //     fillGradient: ["#0bc8bf", "#0373da"],
+        // },
         download: {
-            icon: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+            icon: "M18 22L24 28M24 28L30 22M24 28L24 16 M17 33H31",
             iconColor: "white",
-            iconBackgroundColor: "#0373da",
-            originalIcon: <GetAppIcon />,
-            fillGradient: ["#0bc8bf", "#0373da"],
+            iconBackgroundColor: "rgba(128, 107, 255, 1)",
+            originalIcon: "",
+            fillGradient: ["rgba(128, 107, 255, 1)", "rgba(128, 107, 255, 1)"],
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
         },
         search: {
             icon: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
@@ -537,7 +665,7 @@ export const GetIconInfo = (action) => {
 			iconColor: "white",
 			iconBackgroundColor: "green",
 			originalIcon: <LockIcon />,
-		}
+		},
     }
 
 		/*
@@ -568,26 +696,57 @@ export const GetIconInfo = (action) => {
     }
 
     if (
-        (selectedItem.originalIcon === undefined ||
-            selectedItem.originalIcon === "") &&
         selectedItem.icon !== "" &&
         selectedItem.icon !== undefined
     ) {
-        const svg_pin = (
-            <svg
-                width={svgSize}
-                height={svgSize}
-                viewBox={`0 0 ${svgSize} ${svgSize}`}
-                version="1.1"
-                xmlns="http://www.w3.org/2000/svg"
-            >
-                <path d={selectedItem.icon} fill={selectedItem.iconColor}></path>
-            </svg>
-        );
+        const iconViewBox = selectedItem.svgViewBox || `0 0 ${svgSize} ${svgSize}`;
+        // Use a tighter viewBox for dropdown icons so 48x48 centered content appears larger
+        const dropdownViewBox = selectedItem.dropdownViewBox || (iconViewBox === "0 0 48 48" ? "10 10 28 28" : iconViewBox);
+        const strokeW = iconViewBox === "0 0 48 48" ? "1.5" : "1";
+        // Build dropdown React SVG using the same stroke/fill logic as buildIconSvgPath
+        var svg_pin;
+        if (selectedItem.useStroke && selectedItem.useFill) {
+            svg_pin = (
+                <svg width={22} height={22} viewBox={dropdownViewBox} version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <path d={selectedItem.icon} fill="currentColor" stroke="currentColor" strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round"></path>
+                </svg>
+            );
+        } else if (selectedItem.useStroke) {
+            svg_pin = (
+                <svg width={22} height={22} viewBox={dropdownViewBox} version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <path d={selectedItem.icon} fill="none" stroke="currentColor" strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round"></path>
+                </svg>
+            );
+        } else {
+            svg_pin = (
+                <svg width={22} height={22} viewBox={dropdownViewBox} version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <path d={selectedItem.icon} fill="currentColor" fillRule={selectedItem.fillRule || "nonzero"}></path>
+                </svg>
+            );
+        }
         selectedItem.originalIcon = svg_pin;
     }
 
     return selectedItem;
+};
+
+// Builds the SVG <path .../> string for an icon with the proper fill/stroke attributes.
+// color: the fill/stroke color (e.g. "white" for cytoscape nodes, "currentColor" for React)
+// Returns an SVG path element string ready to embed inside an <svg> tag.
+export const buildIconSvgPath = (iconInfo, color) => {
+    const iconViewBox = iconInfo.svgViewBox || "0 0 24 24";
+    // For stroke icons: use proportional stroke width (0.75 for 24x24, 1.5 for 48x48)
+    // This ensures consistent visual appearance across different viewBox sizes
+    const strokeW = iconInfo.useStroke
+        ? (iconViewBox === "0 0 48 48" ? "1.5" : "0.75")
+        : (iconInfo.useFill ? "0" : "1.5");
+    if (iconInfo.useStroke && iconInfo.useFill) {
+        return `<path d="${iconInfo.icon}" fill="${color}" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    } else if (iconInfo.useStroke) {
+        return `<path d="${iconInfo.icon}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    } else {
+        return `<path d="${iconInfo.icon}" fill="${color}"${iconInfo.fillRule ? ` fill-rule="${iconInfo.fillRule}"` : ""}/>`;
+    }
 };
 
 export const collapseField = (field, inputdata) => {
@@ -625,7 +784,7 @@ export const validateJson = (showResult) => {
     if (showResult === undefined || showResult === null) {
         return {
             valid: false,
-            result: "",
+            result: showResult,
         }
     }
 
@@ -638,7 +797,10 @@ export const validateJson = (showResult) => {
     }
 
     if (typeof showResult === "object" || typeof showResult === "array") {
-        return {
+		//console.log("Valid!: ", showResult)
+		// FIXME: Not returning as we want to recurse.
+        
+		return {
             valid: true,
             result: showResult,
         }
@@ -720,64 +882,85 @@ export const validateJson = (showResult) => {
     }
 
     // This is where we start recursing
+	// Problem: Loops aren't recursed properly.
     if (jsonvalid) {
         // Check fields if they can be parsed too 
         try {
             for (const [key, value] of Object.entries(result)) {
-                if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-                    //console.log("CHECKING STRING: ", value)
+				if (value === null || value === undefined) {
+					continue
+				}
 
-                    const inside_result = validateJson(value)
-                    if (inside_result.valid) {
-                        //console.log("INSIDE RESULT: ", inside_result.result)
+				try {
+					if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+						//console.log("CHECKING STRING: ", value)
 
-                        if (typeof inside_result.result === "string") {
-                            const newres = JSON.parse(inside_result.result)
+						const inside_result = validateJson(value)
+						if (inside_result.valid) {
+							if (typeof inside_result.result === "string") {
+								const newres = JSON.parse(inside_result.result)
 
-                            result[key] = newres
-                        } else {
-                            result[key] = inside_result.result
-                        }
-                    }
-                } else {
+								result[key] = newres
+							} else {
+								result[key] = inside_result.result
+							}
+						}
+					} else {
+						// Usually only reaches here if raw array > dict > value
+						if (typeof showResult !== "array") {
+							for (const [subkey, subvalue] of Object.entries(value)) {
+								if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
+									const inside_result = validateJson(subvalue)
+									if (inside_result.valid) {
+										if (typeof inside_result.result === "string") {
+											const newres = JSON.parse(inside_result.result)
+											result[key][subkey] = newres
+										} else {
+											result[key][subkey] = inside_result.result
+										}
+									}
+								}
 
-                    // Usually only reaches here if raw array > dict > value
-                    if (typeof showResult !== "array") {
-                        for (const [subkey, subvalue] of Object.entries(value)) {
-                            if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
-                                const inside_result = validateJson(subvalue)
-                                if (inside_result.valid) {
-                                    if (typeof inside_result.result === "string") {
-                                        const newres = JSON.parse(inside_result.result)
-                                        result[key][subkey] = newres
-                                    } else {
-                                        result[key][subkey] = inside_result.result
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-                }
+							}
+						} else {
+							console.log("Skip array: ", value)
+						}
+					}
+				} catch (e) {
+					console.log(`Failed to parse '${key}': '${value}': `, e, JSON.stringify(result))
+				}
             }
         } catch (e) {
-            //console.log("Failed parsing inside json subvalues: ", e)
+            console.log("Failed parsing inside json subvalues: ", e, result)
         }
     }
 
-    return {
-        valid: jsonvalid,
+	//console.log("Result: ", result)
+
+	try { 
+		const stringified = JSON.stringify(result)
+		if ((stringified.startsWith("{") && stringified.endsWith("}")) || (stringified.startsWith("[") && stringified.endsWith("]"))) {
+			result = JSON.parse(stringified)
+			jsonvalid = true
+		}
+	} catch(e) {
+		jsonvalid = false
+	}
+
+	const toReturn = {
         result: result,
-    };
+        valid: jsonvalid,
+    }
+
+    return toReturn
 };
 
 //Custom hook for handling styling of the dropzone
 const useDropzoneStyles = () => {
-    const { leftSideBarOpenByClick } = useContext(Context);
-    const { themeMode, brandColor } = useContext(Context);
+    const { leftSideBarOpenByClick, themeMode, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
 
-    return {
+    return React.useMemo(() => ({
         paddingTop: 70,
         // minHeight: 1000,
         backgroundColor: theme.palette.backgroundColor,
@@ -785,7 +968,7 @@ const useDropzoneStyles = () => {
         // maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
         paddingLeft: leftSideBarOpenByClick ? 200 : 0,
         transition: "padding-left 0.3s ease",
-    };
+    }), [leftSideBarOpenByClick, theme]);
 };
 
 //Wrapper for the dropzone component
@@ -797,8 +980,6 @@ const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
         </Dropzone>
     );
 });
-
-
 
 const Workflows2 = (props) => {
     const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
@@ -891,7 +1072,7 @@ const Workflows2 = (props) => {
     const [field1, setField1] = React.useState("");
     const [field2, setField2] = React.useState("");
     const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/shuffle/workflows")
-    const [downloadBranch, setDownloadBranch] = React.useState("master");
+    const [downloadBranch, setDownloadBranch] = React.useState("main");
     const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] =
         React.useState(false);
     const [exportModalOpen, setExportModalOpen] = React.useState(false);
@@ -2903,7 +3084,7 @@ const Workflows2 = (props) => {
         const [open, setOpen] = React.useState(false);
         const [anchorEl, setAnchorEl] = React.useState(null);
 
-        var boxColor = "#FECC00";
+        var boxColor = "#FFC633";
         if (data.is_valid) {
             boxColor = "#86c142";
         }
@@ -3346,7 +3527,7 @@ const Workflows2 = (props) => {
                                         }
                                         style={{ 
 											textDecoration: "none", 
-											color: "inherit", 
+											color: theme.palette.text.primary, 
 											overflow: "hidden", 
 											textOverflow: "ellipsis", 
 											whiteSpace: "nowrap", 
@@ -3891,7 +4072,7 @@ const Workflows2 = (props) => {
                     renderCell: (params) => {
                         const data = params.row.record;
 
-                        var boxColor = "#FECC00";
+                        var boxColor = "#FFC633";
                         if (data.is_valid) {
                             boxColor = "#86c142";
                         }
@@ -5097,7 +5278,7 @@ const Workflows2 = (props) => {
                         margin: "auto",
                     }}>
                         <Typography variant="h4" color="textPrimary" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme.typography?.fontFamily }}>
-							{currTab === 0 ? "Org" : currTab === 1 ?  "Your" : "Discover"} Workflows
+							{currTab === 0 ? "Org" : currTab === 1 ? "Your" : currTab === 2 ? "Discover" : "Security Bundle" } Workflows
                         </Typography>
 
                         <div style={{ borderBottom: themeMode === "dark" ? "1px solid #808080" : theme.palette.defaultBorder, marginBottom: 30 }}>
@@ -5149,7 +5330,7 @@ const Workflows2 = (props) => {
 
 								{backgroundWorkflows.length > 0 &&
 									<Tab
-										label={`Background Processes`}
+										label={`Security Bundle`}
 										value={4}
 										style={{
 											...tabStyle,
@@ -5491,13 +5672,22 @@ const Workflows2 = (props) => {
 
                         	            <Tooltip title={`Download ALL workflows (${workflows.length})`} placement="top">
                         	                <IconButton
-                        	                    style={(isCloud || currTab === 2) ? iconButtonDisabledStyle : { ...iconButtonStyle, cursor: "pointer" }}
-                        	                    disabled={isCloud || currTab === 2}
+                        	                    style={(currTab === 2) ? iconButtonDisabledStyle : { ...iconButtonStyle, cursor: "pointer" }}
+                        	                    disabled={currTab === 2}
                         	                    onClick={() => exportAllWorkflows(workflows)}
                         	                >
                         	                    <GetAppIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
                         	                </IconButton>
                         	            </Tooltip>
+                                        <Tooltip title="Import workflows from URL" placement="top">
+                                            <IconButton
+                                                style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
+                                                onClick={() => setLoadWorkflowsModalOpen(true)}
+                                                disabled={currTab === 2}
+                                            >
+                                                <CloudDownloadIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1}} />
+                                            </IconButton>
+                                        </Tooltip>
                         	        </div>
                         	        <Button
                         	            variant="contained"
@@ -5520,48 +5710,18 @@ const Workflows2 = (props) => {
                         	</div>
 						}
 						
-						{!isCloud && currentOrg?.old_org ? (
+						{!isCloud && (currentOrg?.old_org || isProdStatusOn) ? (
 						  <div
-						   	style={{
-							  display: "flex",
-							  alignItems: "center",
-							  gap: 20,
-							  padding: "4px 10px",
-							  marginLeft: "5px",
-							  marginRight: "5px",
-							  borderRadius: 20,
-							  marginBottom: "14px",
-							  background: isProdStatusOn
-								? "rgba(43, 192, 126, 0.1)"
-								: "rgba(255, 82, 82, 0.1)",
-								cursor: "pointer",
+							style={{
 							  position: "absolute",
 							  top: 20,
 							  right: 20,
 							}}
-							onClick={() => {
-							  navigate("/admin?admin_tab=billingstats")
-							}}
 						  >
-							<span
-							  style={{
-								  width: 8,
-								  height: 8,
-								  marginLeft: 10,
-								  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
-								  borderRadius: 999,
-								  display: "inline", 
-							  }}
+							<Licensed
+							  licensed={isProdStatusOn}
+                              showBadge={true}
 							/>
-							  <Typography
-								style={{
-								  fontFamily: "12px",
-								  opacity: 0.9,
-								  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
-								 }}
-							  >
-								{isProdStatusOn ? "Production" : "NOT Production"} 
-							  </Typography>
 						  </div>
 					  ) : null}
 
@@ -5812,15 +5972,15 @@ const Workflows2 = (props) => {
 
         const parsedData = {
             url: url,
-            field_3: downloadBranch || "master",
+            branch: downloadBranch || "master",
         };
 
         if (field1.length > 0) {
-            parsedData["field_1"] = field1;
+            parsedData["username"] = field1;
         }
 
         if (field2.length > 0) {
-            parsedData["field_2"] = field2;
+            parsedData["password"] = field2;
         }
 
         toast("Getting specific workflows from your URL.");
@@ -5867,17 +6027,28 @@ const Workflows2 = (props) => {
             open={loadWorkflowsModalOpen}
             onClose={() => { }}
             PaperProps={{
-                style: {
-                    backgroundColor: theme.palette.surfaceColor,
-                    color: "white",
-                    minWidth: "800px",
-                    minHeight: "320px",
-                },
+                sx: {
+                      borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                      border: theme?.palette?.DialogStyle?.border,
+                      minWidth: '440px',
+                      fontFamily: theme?.typography?.fontFamily,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      zIndex: 1000,
+                      '& .MuiDialogContent-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      },
+                      '& .MuiDialogTitle-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      },
+                      '& .MuiDialogActions-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                       },
+                }
             }}
         >
             <DialogTitle>
-                <div style={{ color: "rgba(255,255,255,0.9)" }}>
-                    Load workflows from github repo
+                <div style={{ color: theme.palette.text.primary }}>
+                    Load workflows from a remote repository
                     <div style={{ float: "right" }}>
                         <Tooltip color="primary" title={"Import manually"} placement="top">
                             <Button
@@ -5892,17 +6063,17 @@ const Workflows2 = (props) => {
                     </div>
                 </div>
             </DialogTitle>
-            <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
-                Repository (supported: github, gitlab, bitbucket)
+            <DialogContent style={{ color: theme.palette.text.primary }}>
+                Repository (supported: github, gitlab, bitbucket, azure devops):
                 <TextField
-                    style={{ backgroundColor: theme.palette.inputColor }}
+                    style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.textFieldStyle.color, borderRadius: theme.palette.textFieldStyle.borderRadius, height: theme.palette.textFieldStyle.height, border: theme.palette.textFieldStyle.border, }}
                     variant="outlined"
                     margin="normal"
                     defaultValue={downloadUrl}
                     InputProps={{
                         style: {
-                            color: "white",
-                            height: "50px",
+                            color: theme.palette.textFieldStyle.color,
+                            height: theme.palette.textFieldStyle.height,
                             fontSize: "1em",
                         },
                     }}
@@ -5915,34 +6086,36 @@ const Workflows2 = (props) => {
                 </span>
                 <div style={{ display: "flex" }}>
                     <TextField
-                        style={{ backgroundColor: theme.palette.inputColor }}
+                        style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.textFieldStyle.color, borderRadius: theme.palette.textFieldStyle.borderRadius, height: theme.palette.textFieldStyle.height, border: theme.palette.textFieldStyle.border, }}
                         variant="outlined"
                         margin="normal"
                         defaultValue={downloadBranch}
                         InputProps={{
                             style: {
-                                color: "white",
-                                height: "50px",
+                                color: theme.palette.textFieldStyle.color,
+                                height: theme.palette.textFieldStyle.height,
+                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                 fontSize: "1em",
                             },
                         }}
                         onChange={(e) => setDownloadBranch(e.target.value)}
-                        placeholder="master"
+                        placeholder="main"
                         fullWidth
                     />
                 </div>
                 <span style={{ marginTop: 10 }}>
-                    Authentication (optional - private repos etc):
+                    Authentication for private repositories (optional):
                 </span>
                 <div style={{ display: "flex" }}>
                     <TextField
-                        style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+                        style={{ flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.textFieldStyle.color, borderRadius: theme.palette.textFieldStyle.borderRadius, height: theme.palette.textFieldStyle.height, border: theme.palette.textFieldStyle.border, }}
                         variant="outlined"
                         margin="normal"
                         InputProps={{
                             style: {
-                                color: "white",
-                                height: "50px",
+                                color: theme.palette.textFieldStyle.color,
+                                height: theme.palette.textFieldStyle.height,
+                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                                 fontSize: "1em",
                             },
                         }}
@@ -5952,13 +6125,13 @@ const Workflows2 = (props) => {
                         fullWidth
                     />
                     <TextField
-                        style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+                        style={{ flex: 1, backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.textFieldStyle.color, borderRadius: theme.palette.textFieldStyle.borderRadius, height: theme.palette.textFieldStyle.height, border: theme.palette.textFieldStyle.border, }}
                         variant="outlined"
                         margin="normal"
                         InputProps={{
                             style: {
-                                color: "white",
-                                height: "50px",
+                                color: theme.palette.textFieldStyle.color   ,
+                                height: theme.palette.textFieldStyle.height,
                                 fontSize: "1em",
                             },
                         }}
@@ -5978,12 +6151,12 @@ const Workflows2 = (props) => {
                     Cancel
                 </Button>
                 <Button
-                    style={{ borderRadius: "0px" }}
+                    variant="contained"
+                    color="primary"
                     disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")}
                     onClick={() => {
                         handleGithubValidation();
                     }}
-                    color="primary"
                 >
                     Submit
                 </Button>

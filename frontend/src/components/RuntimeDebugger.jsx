@@ -44,7 +44,7 @@ import {
 	Send as SendIcon, 
 } from '@mui/icons-material';
 
-import { DataGrid } from '@mui/x-data-grid'
+import { DataGrid, GridValueGetterParams } from '@mui/x-data-grid'
 import {
 	Search as SearchIcon,
   } from "@mui/icons-material";
@@ -78,7 +78,7 @@ const RuntimeDebugger = (props) => {
 	const [ignoreOrg, setIgnoreOrg] = useState(false)
 	const [searchLoading, setSearchLoading] = useState(false)
 	const [rowCursor, setCursor] = useState("")
-	const [rowsPerPage, setRowsPerPage] = useState(10)
+	const [rowsPerPage, setRowsPerPage] = useState(20)
 	const [maxExecutionCount, setMaxExecutionCount] = useState(50)
 	const [resultRows, setResultRows] = useState([])
 	const [selectedWorkflowExecutions, setSelectedWorkflowExecutions] = useState([])
@@ -218,6 +218,10 @@ const RuntimeDebugger = (props) => {
 						data.runs[key].endTimestamp = endTimestamp.toISOString().slice(0, 19).replace('T', ' ')
 						if (data.runs[key].completed_at === 0 || data.runs[key].completed_at === null) {
 							data.runs[key].endTimestamp = ""
+						}
+
+						if (data.runs[key]?.workflow_id === data.runs[key]?.execution_id && data.runs[key].type === "AGENT") {
+							data.runs[key].workflow.name = "Agent Execution"
 						}
 					}
 
@@ -359,6 +363,8 @@ const RuntimeDebugger = (props) => {
 				} else if (source === "single_action" || source == "single_api" || source === "direct_api") { 
 					foundSource = <SendIcon color="secondary" style={{height: imageSize-5, }} />
 					source = "Single API call"
+				} else if (params?.row?.type === "AGENT") {
+					foundSource = <img src={theme.palette.singulBlackWhite} alt="agent" style={{borderRadius: theme.palette?.borderRadius, height: imageSize, width: imageSize, }} />
 				} else {
 					source = "manual"
 				}
@@ -626,19 +632,28 @@ const RuntimeDebugger = (props) => {
 				return (
 					<div style={{display: "flex", }}>
 					  <Tooltip arrow placement="left" title={
-						  <Typography variant="body2" style={{whiteSpace: "pre-line", padding: 10, }}>
-							Workflow result: {errorReason}<br/><br/>
-							{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
-							  params.row.result
-							  : 
-							  null
-							}
-						  </Typography>
+						  params.row.type === "AGENT" ? 
+						  	"See agent result" 
+						  :
+							  <Typography variant="body2" style={{whiteSpace: "pre-line", padding: 10, }}>
+								Workflow result: {errorReason}<br/><br/>
+								{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
+								  params.row.result
+								  : 
+								  null
+								}
+							  </Typography>
 					  }>
 						<span style={{backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.45)", display: "flex", }}>
-						  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
-							<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
-						  </Link>
+						  {params.row.type === "AGENT" ? 
+							  <Link href={`/agents?execution_id=${params.row.execution_id}&authorization=${params.row.authorization}`} target="_blank" rel="noopener noreferrer">
+								<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
+							  </Link>
+							: 
+							  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
+								<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
+							  </Link>
+						  }
 						</span>
 						</Tooltip>
 						<Tooltip arrow title={`Force continue workflow. Only workflows for workflows in EXECUTING state. This is NOT a rerun, but way for Shuffle to figure out the next steps automatically. If the execution doesn't finish even after trying this, please contact ${supportEmail}`}> 
@@ -1069,7 +1084,10 @@ const RuntimeDebugger = (props) => {
 					).replaceAll("_", " ");
 					return newname;
 				  }}
-				  options={workflows}
+				  options={[{
+					  "name": "Agent Runs",
+					  "id": "AGENT",
+				  }].concat(workflows)}
 				  fullWidth
 				  style={{
 					backgroundColor: theme.palette.backgroundColor,

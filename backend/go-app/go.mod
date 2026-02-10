@@ -22,12 +22,12 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/go-git/go-billy/v5 v5.6.2
-	github.com/go-git/go-git/v5 v5.16.1
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.9.83
-	github.com/shuffle/singul v0.0.25
+	github.com/shuffle/shuffle-shared v0.9.84
+	github.com/shuffle/singul v0.0.26
 	golang.org/x/crypto v0.45.0
 	google.golang.org/api v0.236.0
 	google.golang.org/grpc v1.72.2
