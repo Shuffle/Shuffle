@@ -319,8 +319,8 @@ github.com/shuffle/opensearch-go/v4 v4.0.0 h1:Mh85CD1MwOgXiFFYlzS1llnvdqL3CztRdR
 github.com/shuffle/opensearch-go/v4 v4.0.0/go.mod h1:gVLZKQE5khQWMb68XBtgKrhu78oLGL2zHwAGnFMDwC0=
 github.com/shuffle/shuffle-shared v0.9.84 h1:b77E386LUk63k9dTN735/hcRuH2XY1cNgTvxpx3qS/s=
 github.com/shuffle/shuffle-shared v0.9.84/go.mod h1:AkXajlWWB16WfWjCw9K7y38L8JKABJzVxcX6KI/J1H4=
-github.com/shuffle/singul v0.0.24 h1:e+roPArxMOtO6C45F438O4bDNztECz/mFIhFbI77B6w=
-github.com/shuffle/singul v0.0.24/go.mod h1:JkJB6KfllouSklwIAC02t2Sl2awVH9lC8UtP3axUIWw=
+github.com/shuffle/singul v0.0.26 h1:P2uZ8YIYQUN4qNfQujoW3Lhod91X6TAfrRHGWiUPNI8=
+github.com/shuffle/singul v0.0.26/go.mod h1:S8GszXL+fT2mTnh7j57V0r/tY5Y/mSW8QowQEnADs3k=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
