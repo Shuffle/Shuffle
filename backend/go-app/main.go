@@ -4191,7 +4191,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	foundEnvironment := "default"
+	foundEnvironment := "Shuffle"
 	if len(foundRequest.Params.Environment) > 0 {
 		foundEnvironment = foundRequest.Params.Environment
 	}
