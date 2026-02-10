@@ -1507,24 +1507,33 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		if parsedAppname == "ai-agent" {
 			log.Printf("[INFO][%s] Running AI Agent action %s via backend API", workflowExecution.ExecutionId, action.ID)
 
-			fullUrl := fmt.Sprintf("%s/api/v1/agent/hybrid/execute?execution_id=%s&authorization=%s",
-				baseUrl, workflowExecution.ExecutionId, workflowExecution.Authorization)
+			fullUrl := fmt.Sprintf("%s/api/v1/agent?execution_id=%s&authorization=%s&action_id=%s",
+				baseUrl, workflowExecution.ExecutionId, workflowExecution.Authorization, action.ID)
 
 			serverUrl := os.Getenv("SHUFFLE_BACKEND_URL")
 			if len(serverUrl) > 0 {
-				fullUrl = fmt.Sprintf("%s/api/v1/agent/hybrid/execute?execution_id=%s&authorization=%s",
-					serverUrl, workflowExecution.ExecutionId, workflowExecution.Authorization)
+				fullUrl = fmt.Sprintf("%s/api/v1/agent?execution_id=%s&authorization=%s&action_id=%s",
+					serverUrl, workflowExecution.ExecutionId, workflowExecution.Authorization, action.ID)
+			}
+
+			inputParamValue := ""
+			for _, param := range action.Parameters {
+				if strings.ToLower(param.Name) == "input" {
+					inputParamValue = param.Value
+					break
+				}
 			}
 
 			requestBody := map[string]interface{}{
-				"id":          action.ID,
-				"name":        action.Name,
-				"label":       action.Label,
-				"app_name":    action.AppName,
-				"app_id":      action.AppID,
-				"app_version": action.AppVersion,
-				"environment": action.Environment,
-				"parameters":  action.Parameters,
+				"id": action.ID,
+				"params": map[string]interface{}{
+					"tool_name":   action.AppName,
+					"tool_id":     action.AppID,
+					"environment": action.Environment,
+					"input": map[string]interface{}{
+						"text": inputParamValue,
+					},
+				},
 			}
 
 			requestBodyBytes, err := json.Marshal(requestBody)
@@ -1545,8 +1554,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			resp, err := client.Do(req)
 			if err != nil {
 				log.Printf("[ERROR][%s] Failed triggering AI Agent (timeout/error): %s", workflowExecution.ExecutionId, err)
-				log.Printf("[INFO][%s] Worker exiting (exit 0) - backend will requeue execution when agent completes", workflowExecution.ExecutionId)
-				os.Exit(0)
+				log.Printf("[INFO][%s] Exiting execution handler - backend will requeue when agent completes", workflowExecution.ExecutionId)
+				return
 			}
 
 			defer resp.Body.Close()
@@ -1557,8 +1566,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			// 	log.Printf("[INFO][%s] AI Agent triggered: %s", workflowExecution.ExecutionId, string(body))
 			// }
 
-			log.Printf("[INFO][%s] Worker exiting (exit 0) - backend will requeue when agent completes", workflowExecution.ExecutionId)
-			os.Exit(0)
+			log.Printf("[INFO][%s] AI Agent triggered successfully - exiting execution handler, backend will requeue when agent completes", workflowExecution.ExecutionId)
+			return
 		}
 
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
