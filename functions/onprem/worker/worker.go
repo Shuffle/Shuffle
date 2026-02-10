@@ -1505,6 +1505,40 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// }
 
 		if parsedAppname == "ai-agent" {
+			parsedAppname = "shuffle-ai"
+			appversion = "1.0.0"
+			appname = "shuffle-ai"
+
+			action.Name = "run_agent"
+
+			inputParamValue := ""
+			allowedActions := ""
+			for _, param := range action.Parameters {
+				if strings.ToLower(param.Name) == "input" {
+					inputParamValue = param.Value
+				} else if strings.ToLower(param.Name) == "action" {
+					param.Value = strings.ReplaceAll("Nothing,", " ", "")
+					param.Value = strings.ReplaceAll("Nothing", " ", "")
+					inputParamValue = param.Value
+				}
+			}
+
+			// Rewriting them
+			action.Parameters = []shuffle.WorkflowAppActionParameter{
+				shuffle.WorkflowAppActionParameter{
+					Name: "input_data",
+					Value: inputParamValue,
+				},
+				shuffle.WorkflowAppActionParameter{
+					Name: "actions",
+					Value: allowedActions,
+				},
+			}
+
+			//log.Printf("PARAMS: %#v", action.Parameters)
+			//os.Exit(3)
+
+			/*
 			log.Printf("[INFO][%s] Running AI Agent action %s via backend API", workflowExecution.ExecutionId, action.ID)
 
 			fullUrl := fmt.Sprintf("%s/api/v1/agent?execution_id=%s&authorization=%s&action_id=%s",
@@ -1516,13 +1550,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					serverUrl, workflowExecution.ExecutionId, workflowExecution.Authorization, action.ID)
 			}
 
-			inputParamValue := ""
-			for _, param := range action.Parameters {
-				if strings.ToLower(param.Name) == "input" {
-					inputParamValue = param.Value
-					break
-				}
-			}
 
 			requestBody := map[string]interface{}{
 				"id": action.ID,
@@ -1568,6 +1595,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 			log.Printf("[INFO][%s] AI Agent triggered successfully - exiting execution handler, backend will requeue when agent completes", workflowExecution.ExecutionId)
 			return
+			*/
 		}
 
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
