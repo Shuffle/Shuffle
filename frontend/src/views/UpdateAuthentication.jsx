@@ -25,7 +25,7 @@ const SetAuthentication = (props) => {
   const [loadFail, setLoadFail] = useState("");
   const [appAuthentication, setAppAuthentication] = React.useState([]);
 
-  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   //const alert = useAlert();
 
   const parseIncomingOpenapiData = (data) => {

@@ -47,7 +47,7 @@ const Welcome = (props) => {
 		}
 	}, [activeStep])
 
-  	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 		const [steps, setSteps] = useState([
 			"Help us get to know you", 
 			"Find your Apps", 

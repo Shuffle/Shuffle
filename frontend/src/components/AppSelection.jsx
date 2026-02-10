@@ -64,7 +64,8 @@ const AppSelection = props => {
   	document.title = "Choose your apps"
     const ref = useRef()
     let navigate = useNavigate();
-    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
+
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
     useEffect(() => {
         if (newSelectedApp === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID.length === 0) {

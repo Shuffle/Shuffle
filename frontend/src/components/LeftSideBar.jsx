@@ -120,7 +120,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
       setCurrentSelectedTheme(userdata?.theme);
     }
   }, [userdata]);
-
+      
       
   
   const CustomPopper = (props) => {

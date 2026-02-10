@@ -30,7 +30,7 @@ const EditOrgTab = (props) => {
     const [organizationFeatures, setOrganizationFeatures] = React.useState({});
     const [users, setUsers] = React.useState([]);
     const [orgRequest, setOrgRequest] = React.useState(true);
-    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
     useEffect(() => { 
         if(users.length === 0) {
             getUsers();

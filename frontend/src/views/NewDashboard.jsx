@@ -109,8 +109,8 @@ const NewDashboard = (props) => {
   const STATIC_TIME_PERCENT = 'TBD'
   const STATIC_MONEY_PERCENT = 'TBD'
   const kpis = [
-    { value: timeFmt.display, title: timeFmt.title, label: 'Time saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_TIME_PERCENT, color: '#5cc879', disabled: true},
-    { value: formatCurrencyCompact(totals.moneySavedDollars), label: 'Money saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_MONEY_PERCENT, color: '#5cc879', disabled: true, },
+    //{ value: timeFmt.display, title: timeFmt.title, label: 'Time saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_TIME_PERCENT, color: '#5cc879', disabled: true},
+    //{ value: formatCurrencyCompact(totals.moneySavedDollars), label: 'Money saved', icon: <TrendingUpIcon sx={{ color: '#5cc879', fontSize: 34 }} />, percentage: STATIC_MONEY_PERCENT, color: '#5cc879', disabled: true, },
     { value: String(unreadCount), label: 'Total errors', icon: <ErrorOutlineIcon sx={{ color: '#f87171', fontSize: 34, opacity: 0.9 }} />, percentage: "", color: '#f87171' },
     { value: String(readCount), label: 'Errors resolved', icon: <TaskAltIcon sx={{ color: '#5cc879', fontSize: 34, opacity: 0.9 }} />, percentage: "", color: '#5cc879' },
   ];
@@ -131,12 +131,12 @@ const NewDashboard = (props) => {
 
   useEffect(() => {
     const anyLoading =
-      loadingSfw ||
-      loadingRot ||
+      //loadingSfw ||
+      //loadingRot ||
       loadingNoti ||
-      loadingSelectedOrgStats ||
+      loadingSelectedOrgStats //||
       !selectedOrganization ||
-      !selectedOrgForStats;
+      //!selectedOrgForStats;
     setShowOverlay(anyLoading);
   }, [
     loadingSfw,
@@ -397,6 +397,7 @@ const NewDashboard = (props) => {
         headerSubtitle="Complete these steps to start seeing insights."
       />
       )}
+
       {showOverlay && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,17,17,0.6)', backdropFilter: 'blur(2px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -405,6 +406,7 @@ const NewDashboard = (props) => {
           </div>
         </div>
       )}
+
       {/* Header / Greeting */}
       <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0 16px 0' }}>
         <Typography variant="h5">{`${getGreeting()}, ${displayName ?? 'User'}!`}</Typography>

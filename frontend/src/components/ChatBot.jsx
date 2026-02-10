@@ -43,6 +43,8 @@ const ChatBot = (props) => {
 	const [appname, setAppname] = useState("");
 	const [threadId, setThreadId] = useState("");
 	const [runId, setRunId] = useState("");
+	const [responseId, setResponseId] = useState("");
+	const [conversationId, setConversationId] = useState("");
 	
 	// New state for thread management
 	const [isLoadingThread, setIsLoadingThread] = useState(false);
@@ -54,7 +56,7 @@ const ChatBot = (props) => {
 	const [showAppSearch, setShowAppSearch] = useState(false);
 
 	// Get thread ID from URL params
-	const { threadId: urlThreadId } = useParams();
+	const { conversationId: urlConversationId } = useParams();
 	let navigate = useNavigate();
 
 	const waitingMsg = "Processing..."
@@ -93,24 +95,24 @@ const ChatBot = (props) => {
 		}
 	}, [appname])
 
-	// Load existing thread if threadId is in URL
+	// Load existing conversation if conversationId is in URL
 	useEffect(() => {
-		if (urlThreadId && urlThreadId !== threadId) {
-			loadExistingThread(urlThreadId);
+		if (urlConversationId && urlConversationId !== conversationId) {
+			loadExistingThread(urlConversationId);
 		}
-	}, [urlThreadId]);
+	}, [urlConversationId]);
 
-	const loadExistingThread = (threadIdToLoad) => {
+	const loadExistingThread = (conversationIdToLoad) => {
 		setIsLoadingThread(true);
 		setThreadError("");
 		
-		fetch(`${globalUrl}/api/v1/conversation/thread`, {
+		fetch(`${globalUrl}/api/v1/conversation/history`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
 			credentials: "include",
-			body: JSON.stringify({ thread_id: threadIdToLoad }),
+			body: JSON.stringify({ conversation_id: conversationIdToLoad }),
 		})
 		.then((response) => {
 			if (response.status === 403) {
@@ -138,22 +140,22 @@ const ChatBot = (props) => {
 				return;
 			}
 
-			// Set thread data - this is crucial for continuing the conversation
-			setThreadId(data.thread_id);
-			console.log("Loaded existing thread:", data.thread_id);
+			// Set conversation data - this is crucial for continuing the conversation
+			setConversationId(data.conversation_id);
 			
 			// Transform API message format to UI format
 			const transformedMessages = (data.messages || []).map((msg, index) => ({
-				id: `${data.thread_id}_${index}`,
+				id: `${data.conversation_id}_${index}`,
 				status: msg.role === "user" ? "sent" : "received",
 				message: msg.content,
 				timestamp: msg.timestamp
 			}));
 			
 			setMessages(transformedMessages);
-			setThreadOrgId(data.thread_org_id);
+			setThreadOrgId(data.org_id);
 			setIsActiveOrg(data.is_active_org);
 
+			// Disable chat if not in active org
 			if (!data.is_active_org) {
 				setChatDisabled(true);
 			} else {
@@ -260,11 +262,8 @@ const ChatBot = (props) => {
 		const sentId = uuidv4();
 		var parsedData = {
 			"query": inputmsg,
-			"thread_id": threadId,
-			"run_id": runId,
+			"conversation_id": conversationId,
 		}
-
-		console.log("Sending message with thread_id:", threadId);
 
 		if (appname !== undefined && appname !== null && appname !== "") {
 			parsedData["app_name"] = appname
@@ -315,169 +314,125 @@ const ChatBot = (props) => {
 
 		setMessages(newmessages);
 
-		//fetch(`http://localhost:8080/api/v1/conversation`, {
-		fetch(`${globalUrl}/api/v1/conversation`, {
+		// Use streaming endpoint
+		fetch(`${globalUrl}/api/v1/conversation/stream`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
+				"Accept": "text/event-stream",
 			},
 			credentials: "include",
 			body: JSON.stringify(parsedData),
 		})
-		.then((res) => res.text())
-		.then((resText) => {
-			setLoading(false)
-			var data = {}
-
-			// JSON parse
-			try {	
-				data = JSON.parse(resText);
-			} catch (e) {
-				console.log("Error parsing response as JSON: ", e);
-
-				newmessages = newmessages.filter((msg) => msg.message !== waitingMsg);
-				newmessages.push({
-					"status": "received",
-					"message": resText,
-					"id": uuidv4(),
-				});
-
-				setMessages(newmessages);
-
-				return;
+		.then(async (response) => {
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(`Server returned status ${response.status}: ${errorText}`);
 			}
 
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = "";
+			let streamedText = "";
+			let newConversationId = "";
 
-			if (data.run_id !== undefined && data.run_id !== null && data.run_id !== "") {
-				setRunId(data.run_id)
-			}
+			// Keep waiting message until first chunk arrives
+			const streamMessageId = uuidv4();
+			let firstChunkReceived = false;
 
-			if (data.thread_id !== undefined && data.thread_id !== null && data.thread_id !== "") {
-				setThreadId(data.thread_id)
+			while (true) {
+				const { done, value } = await reader.read();
 				
-				// Update URL if this is a new thread (not already in URL)
-				if (!urlThreadId && data.thread_id !== threadId) {
-					console.log("Navigating to new thread URL:", data.thread_id);
-					navigate(`/chat/${data.thread_id}`, { replace: true });
+				if (done) {
+					setLoading(false);
+					break;
 				}
-			}
 
-			if (data.success === undefined) {
-				newmessages = newmessages.filter((msg) => msg.message !== waitingMsg);
-				newmessages.push({
-					"status": "received",
-					"message": resText,	
-					"id": uuidv4(),
-				});
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
-				setMessages(newmessages);
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						const jsonStr = line.replace('data: ', '');
+						try {
+							const data = JSON.parse(jsonStr);
+							const eventType = data.type;
 
-				return;
-			}
+							if (eventType === "chunk") {
+								// On first chunk, remove waiting message and add streaming message
+								if (!firstChunkReceived) {
+									newmessages = newmessages.filter((msg) => msg.message !== waitingMsg);
+									newmessages.push({
+										"id": streamMessageId,
+										"status": "received",
+										"message": "",
+									});
+									firstChunkReceived = true;
+								}
 
-			// authentication for app
-			// app validation (choose one)
-			const defaultMessage = `Default output. The feature you're interacting with may not have been implemented yet. Contact ${supportEmail} with a screenshot of this and your input please.`
-				
-			var outputmessage = defaultMessage;
-			var status = "received";
-			var action = ""
-			if (data.success === false) {
-				if (data.reason !== undefined) {
-					outputmessage = data.reason
-				} 
+								// Append chunk to streamed text
+								streamedText += data.chunk || "";
+								
+								// Update the message with accumulated text
+								newmessages = newmessages.map(msg => 
+									msg.id === streamMessageId 
+										? { ...msg, message: streamedText }
+										: msg
+								);
+								setMessages([...newmessages]);
 
-				status = "error"
-			} else {
-				if (data.reason !== undefined) {
-					outputmessage = data.reason
-				}
-			}
+							} else if (eventType === "done") {
+								// Capture conversation ID for next turn
+								newConversationId = data.data;
+								if (newConversationId) {
+									setConversationId(newConversationId);
+									
+									// Update URL if this is a new conversation
+									if (!urlConversationId && newConversationId !== conversationId) {
+										navigate(`/chat/${newConversationId}`, { replace: true });
+									}
+								}
 
-			if (data.action !== undefined) {
-				//console.log("Action is defined: ", data.action);
-				action = data.action
-
-				if (data.action === "app_authentication") {
-					// If success & app auth -> say auth success and show available labels
-					// If !success & app auth -> do authentication
-					if (data.success === true) {
-						newmessages = newmessages.filter((msg) => msg.message !== waitingMsg);
-						// No action for this.
-						// "action": action,
-						var appname = ""
-						if (data.apps !== undefined && data.apps !== null && data.apps.length > 0) {
-							appname = data.apps[0].name.replaceAll("_", " ")
-						}
-
-						var outputmessage = `**Please specify which ${appname} action you want to use**: \n`
-						if (data.available_labels !== undefined && data.available_labels !== null && data.available_labels.length > 0) {
-							for (var i = 0; i < data.available_labels.length; i++) {
-								outputmessage += "* " + data.available_labels[i] + "\n"
+							} else if (eventType === "error") {
+								// Handle error event
+								const errorMsg = data.data || "An error occurred";
+								console.error("[Stream Error]:", errorMsg);
+								
+								newmessages = newmessages.map(msg => 
+									msg.id === streamMessageId 
+										? { ...msg, status: "error", message: errorMsg }
+										: msg
+								);
+								setMessages([...newmessages]);
+								setLoading(false);
+								return;
 							}
-							outputmessage += "* Reauthenticate ([see auth](/admin?tab=app_auth))"
-						}
-						//Some opavailable actions: " + data.apps.map((app) => app.name).join(", ")
-						const parsedmessage = {
-							"status": status,
-							"message": outputmessage,
-							"id": uuidv4(),
-							"category": data.category,
 
-							"thread_id": data.thread_id,
-							"run_id": data.run_id,
-						}
-						newmessages.push(parsedmessage);
-						setMessages(newmessages);
-
-						return
-
-					} else {
-						if (data.apps !== undefined) {
-							setInputAuth(data.apps)
-
-							setMessage(inputmsg);
-
-							setForceReauthentication(true)
+						} catch (e) {
+							console.error("[ERROR] Failed to parse SSE data:", e, jsonStr);
 						}
 					}
-				} else if (data.action === "select_category" || data.action === "select_app") {
-					console.log("[DEBUG] APP SELECTION! Should help them choose an app to use")
-					// Show a search field
-					setShowAppSearch(true)
 				}
 			}
 
-			newmessages = newmessages.filter((msg) => msg.message !== waitingMsg);
-			const parsedmessage = {
-				"status": status,
-				"message": outputmessage,
-				"id": uuidv4(),
-				"action": action,
-				"category": data.category,
-
-				"thread_id": data.thread_id,
-				"run_id": data.run_id,
-			}
-			newmessages.push(parsedmessage);
-			setMessages(newmessages);
-			console.log("New message: ", parsedmessage)
+			setLoading(false);
 		})
 		.catch((err) => {
 			setLoading(false)
 			console.log("Problem: ", err);
 
-			setMessage(message);
+			setMessage(inputmsg);
 			newmessages = newmessages.filter((msg) => msg.message !== waitingMsg);
 
-			// Find the message with the sentId and change the status to error
+			// Add error message
 			newmessages.push({
 				"status": "error",
-				"message": message,
-				"error_message": "Failed to send: "+err,
+				"message": inputmsg,
+				"error_message": "Failed to send: "+err.message,
 				"id": sentId,
 			});
-			setMessages(newmessages);
+			setMessages([...newmessages]);
 		});
 	};
 
@@ -654,21 +609,21 @@ const ChatBot = (props) => {
 			<Card style={{backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette?.borderRadius,}}>
 				<CardContent>
 					<Typography variant="h6">
-						How many incidents did we get last week?
+						What is the difference between a trigger and an action?
 					</Typography>
 				</CardContent>
 			</Card>
 			<Card style={{backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette?.borderRadius, marginTop: 10, }}>
 				<CardContent>
 					<Typography variant="h6">
-						Answer the last email from Jim about the new project, and say we're on it
+						How do I create a new workflow?
 					</Typography>
 				</CardContent>
 			</Card>
 			<Card style={{backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette?.borderRadius, marginTop: 10, }}>
 				<CardContent>
 					<Typography variant="h6">
-						Is the IP 1.2.3.4 blocked? If not, block it.
+						Is there a way to mass abort executions of a specific workflow?
 					</Typography>
 				</CardContent>
 			</Card>
@@ -1006,9 +961,9 @@ const ChatBot = (props) => {
 						padding: "0 20px"
 					}}>
 						{[
-							"How many incidents did we get last week?",
-							"Answer the last email from Jim about the new project",
-							"Is the IP 1.2.3.4 blocked? If not, block it."
+							"What is the difference between a trigger and an action?",
+							"How do I create a new workflow?",
+							"Is there a way to mass abort executions of a specific workflow?"
 						].map((sample, index) => (
 							<Card key={index} style={{
 								backgroundColor: theme.palette.surfaceColor,

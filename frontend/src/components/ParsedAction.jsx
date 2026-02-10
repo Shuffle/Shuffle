@@ -1910,7 +1910,7 @@ const ParsedAction = (props) => {
 								<Tooltip
 									title={
 										<Typography variant="body2" style={{margin: 3, }}>
-											Rerun this action with results from previous executions. Built for testing individual actions in the middle of workflows.
+											Rerun this action with results from your previously selected workflow run. Allows testing individual action changes without rerunning the full workflow.
 										</Typography>
 									}
 									placement="top"
@@ -1922,8 +1922,8 @@ const ParsedAction = (props) => {
 											marginTop: "auto",
 											marginBottom: "auto",
 											height: 30,
-											marginLeft: 98,
 											textTransform: "none",
+											marginLeft: 115,
 										}}
 										disabled={autoCompleting}
 										onClick={() => {
@@ -1934,7 +1934,7 @@ const ParsedAction = (props) => {
 											}
 										}}
 									>
-										<PlayArrowIcon style={{marginRight: 5, }}/>
+										<CachedIcon style={{marginRight: 5, }}/>
 										Rerun	
 									</Button>
 								</Tooltip>
@@ -2813,6 +2813,8 @@ const ParsedAction = (props) => {
 							style: {
 								backgroundColor: theme.palette.platformColor,
 								color: theme.palette.textColor,
+								border: "1px solid rgba(255,255,255,0.3)",
+								paddingRight: 20, 
 							},
 						}}
 						filterOptions={(options, { inputValue }) => {
@@ -3091,6 +3093,14 @@ const ParsedAction = (props) => {
 											</div>
 
 											{apps.map((app, appIndex) => {
+												// Forces it into every category (for now)
+												// This is to make it possible to "use" shuffle for Singul natively
+												if (app.name === "Shuffle Tools") {
+													if (actionname == "Intel" || actionname == "Intel") { 
+														app.categories = [actionname]
+													}
+												}
+
 												if (app.categories === undefined || app.categories === null || app.categories.length === 0) {
 													return null
 												}
@@ -3176,7 +3186,7 @@ const ParsedAction = (props) => {
 																	marginRight: 5,
 																	borderRadius: 5,
 																	cursor: "pointer",
-																	border: isAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
+																	border: isAppSelected ? "5px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
 																}} />
 														</Tooltip>
 													</div>
