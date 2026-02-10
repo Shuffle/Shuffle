@@ -1500,13 +1500,13 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		parsedAppname := strings.Replace(strings.ToLower(action.AppName), " ", "-", -1)
 		// if strings.ToLower(parsedAppname) == "singul" {
 		// 	parsedAppname = "shuffle-ai"
-		// 	appversion = "1.0.0"
+		// 	appversion = "1.1.0"
 		// 	appname = "shuffle-ai"
 		// }
 
 		if parsedAppname == "ai-agent" {
 			parsedAppname = "shuffle-ai"
-			appversion = "1.0.0"
+			appversion = "1.1.0"
 			appname = "shuffle-ai"
 
 			action.Name = "run_agent"
