@@ -3,7 +3,11 @@
 [![Shuffle Logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
 
 Shuffle Automation
+
+</h1><h4 align="center">
+
   <div>
+    <p>Deploy<p/>
     <a
     href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
     target="_blank"
@@ -17,7 +21,6 @@ Shuffle Automation
   </a>
   </div>
 
-</h1><h4 align="center">
 
 [Shuffle](https://shuffler.io) is an open source automation platform, built for and by the security professionals. Security operations is complex, but it doesn't have to be. Built to work well with MSSP's and other service providers in mind.
 
