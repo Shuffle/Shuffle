@@ -117,6 +117,7 @@ var autoDeploy = map[string]string{
 	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
 	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
 	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"shuffle-ai:1.1.0":      "frikky/shuffle:shuffle-ai_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -1528,11 +1529,11 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			// Rewriting them
 			action.Parameters = []shuffle.WorkflowAppActionParameter{
 				shuffle.WorkflowAppActionParameter{
-					Name: "input_data",
+					Name:  "input_data",
 					Value: inputParamValue,
 				},
 				shuffle.WorkflowAppActionParameter{
-					Name: "actions",
+					Name:  "actions",
 					Value: allowedActions,
 				},
 			}
@@ -3734,7 +3735,7 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 			}
 
 			if redeploy {
-				log.Printf("Found it! Service: %s with image %s on port %d", name, image, exposedPort)
+				log.Printf("[INFO] Found to redeploy! Service: %s with image %s on port %d", name, image, exposedPort)
 				// Remove the service and redeploy it.
 				// There are cases where the service doesn't update properly
 				// Check when the last update happened. If it was within the last few minutes, skip
