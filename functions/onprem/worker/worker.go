@@ -121,9 +121,6 @@ var autoDeploy = map[string]string{
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
-//"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
-//fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
-
 // New Worker mappings
 // visited, appendActions, nextActions, notFound, queueNodes, toRemove, executed, env
 var portMappings map[string]int
@@ -4041,6 +4038,19 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 
 	if isKubernetes == "true" {
 		appName = strings.Replace(appName, "_", "-", -1)
+	}
+
+	// Shitty hardcoded fix for now
+	if strings.Contains(appName, "1.0.0") {
+		appName = strings.Replace(appName, "1.0.0", "1-0-0", 1)
+	} else if strings.Contains(appName, "1.1.0") {
+		appName = strings.Replace(appName, "1.1.0", "1-1-0", 1)
+	} else if strings.Contains(appName, "1.2.0") {
+		appName = strings.Replace(appName, "1.2.0", "1-2-0", 1)
+	} else if strings.Contains(appName, "1.4.0") {
+		appName = strings.Replace(appName, "1.4.0", "1-4-0", 1)
+	} else if strings.Contains(appName, "2.0.0") {
+		appName = strings.Replace(appName, "2.0.0", "2-0-0", 1)
 	}
 
 	streamUrl := fmt.Sprintf("http://%s:%d/api/v1/run", appName, port)
