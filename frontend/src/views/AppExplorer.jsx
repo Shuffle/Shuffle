@@ -65,6 +65,7 @@ import { Context } from "../context/ContextApi.jsx";
 
 import {
   SearchBox,
+  StaticRefinementList,
   RefinementList,
   InstantSearch,
   connectSearchBox,
@@ -1452,11 +1453,12 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     const index = searchClient.initIndex("appsearch");
 
     console.log("Running appsearch for: ", appname);
-	if (appname === "integration") {
+	if (appname === "integration" || appname == "singul") {
 		// Redirect to https://singul.io
 		window.location.href = "https://singul.io"
-	} else if (appname === "shuffle_agent") {
+	} else if (appname === "shuffle_agent" || appname === "agent" || appname === "agents" || appname == "shuffle-agent") {
 		navigate("/agents")
+		return
 	}
 
     index

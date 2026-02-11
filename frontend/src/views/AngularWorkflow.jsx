@@ -25249,7 +25249,7 @@ const AngularWorkflow = (defaultprops) => {
               elements={elements}
               minZoom={0.35}
               maxZoom={2.0}
-              wheelSensitivity={0.25}
+              userZoomingEnabled={false}
               style={{
                 width: workflow?.public && !isLoggedIn ? cytoscapeWidth + 50 : cytoscapeWidth,
                 height: workflow?.public && !isLoggedIn ? (bodyHeight - 50) : bodyHeight - 2,
@@ -25264,6 +25264,33 @@ const AngularWorkflow = (defaultprops) => {
                 // FIXME: There's something specific loading when
                 // you do the first hover of a node. Why is this different?
 
+                // Custom wheel handler for sensitivity for same zoom in and zoom out effect with mouse and touch pad
+                const container = incy.container();
+                if (container && !container._customWheelHandler) {
+                  container._customWheelHandler = true;
+                  container.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const sensitivity = 0.25;
+                    
+                    const zoomFactor = Math.pow(10, -e.deltaY * sensitivity / 500);
+                    const currentZoom = incy.zoom();
+                    let newZoom = currentZoom * zoomFactor;
+                    
+                    newZoom = Math.max(0.35, Math.min(2.0, newZoom));
+                    
+                    // Zoom towards cursor position
+                    const rect = container.getBoundingClientRect();
+                    const position = {
+                      x: e.clientX - rect.left,
+                      y: e.clientY - rect.top
+                    };
+                    
+                    incy.zoom({
+                      level: newZoom,
+                      renderedPosition: position
+                    });
+                  }, { passive: false });
+                }
 
                 setCy(incy);
               }}

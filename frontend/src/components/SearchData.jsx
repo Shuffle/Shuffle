@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 
 import {getTheme} from '../theme.jsx';
-import { useNavigate, Link, useParams } from "react-router-dom";
+import { useNavigate, Link, useParams, useLocation } from "react-router-dom";
 import { toast } from "react-toastify" 
 
 import {
@@ -102,7 +102,8 @@ const SearchData = props => {
                 // setModalOpen(false);
                 const trimmedValue = inputValue.trim();
                 if (trimmedValue !== '') {
-                    navigate(`/search?q=${trimmedValue}`, { state: trimmedValue, replace: true });
+                    // Navigate to the search page (keep modal open by passing state)
+                    navigate(`/search`, { state: trimmedValue, replace: true });
                     setSearchBarModalOpen(false);
                 }
             }
@@ -916,7 +917,7 @@ const SearchData = props => {
                 </List>
             </Grid>
             <Grid style={{ textAlign: "end", width: "100%", textTransform: 'capitalize', }}>
-				<Link to="/search" style={{ textDecoration: "none", color: "#f85a3e" }}>	
+                <Link to="/search" onClick={handleLinkClick} style={{ textDecoration: "none", color: "#f85a3e" }}> 	
                 	<Button style={{ textAlign: "center", textTransform: 'capitalize' }}>
                     	See More
                 	</Button>
