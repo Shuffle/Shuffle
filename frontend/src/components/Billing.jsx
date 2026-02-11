@@ -50,6 +50,15 @@ import {
 	Search as SearchIcon,
 	CheckCircle as CheckCircleIcon, 
 	Cancel as CancelIcon,
+	Shield as ShieldIcon,
+	Cancel as XCircleIcon,
+	FlashOn as ZapIcon,
+	People as UsersIcon,
+	FmdGoodOutlined as FmdGoodOutlinedIcon,
+	Palette as PaletteIcon,
+	Info as InfoIcon,
+	Email as MailIcon,
+	ArrowForward as ArrowRightIcon,
 } from "@mui/icons-material";
 
 //import { useAlert 
@@ -70,51 +79,301 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
     } else {
         isProdStatusOn = false;
     }
-    const rows = [
-        { label: 'Licensed', ok: isProdStatusOn },
-        { label: 'Multi-Tenant', ok: isProdStatusOn },
-        { label: 'High Availability', ok: isProdStatusOn },
-        { label: 'Robust Infrastructure', ok: isProdStatusOn },
+
+    const themeMode = theme.palette.mode;
+	const workflowActive = selectedOrganization?.sync_features?.workflow_executions?.active;
+	const multiTenantActive = selectedOrganization?.sync_features?.multi_tenant?.active;
+	const multiEnvActive = selectedOrganization?.sync_features?.multi_env?.active;
+	const brandingActive = selectedOrganization?.sync_features?.branding?.active;
+    const colors = {
+        textPrimary: theme.palette.text.primary,
+        textSecondary: theme.palette.text.secondary,
+        textMuted: themeMode === "dark" ? '#6e7681' : '#9ca3af',
+        border: themeMode === "dark" ? '#30363d' : '#e1e4e8',
+        divider: themeMode === "dark" ? '#21262d' : '#e5e7eb',
+        success: themeMode === "dark" ? '#10b981' : '#059669',
+        successBg: themeMode === "dark" ? 'rgba(16, 185, 129, 0.12)' : 'rgba(5, 150, 105, 0.08)',
+        warning: '#f59e0b',
+        warningBg: themeMode === "dark" ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.08)',
+        disabled: themeMode === "dark" ? '#6e7681' : '#d1d5db',
+        disabledBg: themeMode === "dark" ? 'rgba(110, 118, 129, 0.1)' : 'rgba(156, 163, 175, 0.08)',
+        accent: '#f85a3e',
+        cardBg: theme.palette.surfaceColor,
+    };
+
+    const features = [
+        {
+            icon: ZapIcon,
+            label: 'Workflow Executions',
+            licensed: `${selectedOrganization?.sync_features?.workflow_executions?.limit}/month limit`,
+            unlicensed: '10,000/month limit',
+            isActive: workflowActive,
+        },
+        {
+            icon: UsersIcon,
+            label: 'Multi-Tenant',
+            licensed: `${selectedOrganization?.sync_features?.multi_tenant?.limit} tenants`,
+            unlicensed: '3 tenants maximum',
+            isActive: multiTenantActive,
+        },
+        {
+            icon: FmdGoodOutlinedIcon,
+            label: 'Runtime Locations',
+            licensed: `${selectedOrganization?.sync_features?.multi_env?.limit} Runtime Locations`,
+            unlicensed: '1 Runtime Location only',
+            isActive: multiEnvActive,
+        },
+        {
+            icon: PaletteIcon,
+            label: 'Custom Branding',
+            licensed: `${brandingActive ? "Full branding control" : "Branding not available"}`,
+            unlicensed: 'Branding not available',
+            isActive: brandingActive,
+        },
+        {
+            icon: ShieldIcon,
+            label: 'High Availability',
+            licensed: 'Enterprise SLA guarantee',
+            unlicensed: 'Standard availability',
+            isActive: isProdStatusOn, // High availability is tied to license status
+        },
     ];
 
     return (
-        <div style={{ width: '100%', maxWidth: 800, padding: '0px 24px 24px 0px', height: 445 , display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
-                <Typography variant="h5" style={{ fontWeight: 600, fontFamily: theme.typography.fontFamily }}>Production Status</Typography>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 16, background: isProdStatusOn ? 'rgba(43,192,126,0.1)' : 'rgba(253,76,98,0.1)' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 999, background: isProdStatusOn ? '#2BC07E' : '#FD4C62' }} />
-                    <Typography variant="caption" style={{ color: isProdStatusOn ? '#2BC07E' : '#FD4C62', fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{isProdStatusOn ? "ON" : "OFF"}</Typography>
-                </div>
+        <div
+            style={{
+                width: '100%',
+                maxWidth: 800,
+				padding: "0px 24px 24px 0px",
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: theme.typography.fontFamily,
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <Typography variant="h5" style={{ fontWeight: 600, margin: 0 }}>
+                    License Status
+                </Typography>
+
+                <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 16px',
+                borderRadius: 20,
+                background: isProdStatusOn ? colors.successBg : colors.warningBg,
+                border: `2px solid ${isProdStatusOn ? colors.success : colors.warning}`,
+                boxShadow: isProdStatusOn
+                  ? `0 2px 8px ${colors.success}30`
+                  : `0 2px 8px ${colors.warning}30`,
+				  height: 12,
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: isProdStatusOn ? colors.success : colors.warning,
+                  boxShadow: `0 0 10px ${isProdStatusOn ? colors.success : colors.warning}`,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: isProdStatusOn ? colors.success : colors.warning,
+                  letterSpacing: '0.5px',	
+                }}
+              >
+                {isProdStatusOn ? 'Licensed' : 'Unlicensed'}
+              </span>
             </div>
-            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 18, fontFamily: theme.typography.fontFamily }}>
-                Monitor your production status to stay informed about available features.
-            </Typography>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {rows.map((row) => (
-                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: theme.typography.fontFamily }}>
-                        {row.ok ? (
-                            <CheckCircleIcon style={{ color: '#2BC07E' }} />
-                        ) : (
-                            <CancelIcon style={{ color: '#FD4C62' }} />
-                        )}
-                        <Typography variant="body1" style={{ fontWeight: 400, fontFamily: theme.typography.fontFamily }}>{row.label}</Typography>
-                    </div>
-                ))}
             </div>
 
-			<Divider style={{
-				width: '100%',
-				marginTop: 32,
-				marginBottom: 16,
-				borderColor: theme.palette.defaultBorder,
-			 
-			}} /> 
-			<Typography variant="body1" color="textPrimary" style={{ marginTop: 24, fontFamily: theme.typography.fontFamily }}>
-				Shuffle Enterprise is designed for organizations that require scalability, high availability, dedicated support and more to run mission-critical workflows in production environments.
-			</Typography>
-			<Typography variant="body1" color="textSecondary" style={{ marginTop: 24, fontFamily: theme.typography.fontFamily }}>
-				More about upgrading below. If you want to know more, please contact <a href="mailto:support@shuffler.io?subject=Tell%20me%20about%20Production%20readiness" style={{ color: '#f85a3e', textDecoration: 'none' }}>support@shuffler.io</a> directly.
-			</Typography>
+            {/* Subtitle */}
+            <Typography
+                variant="body2"
+                color="textSecondary"
+                style={{
+                    margin: '0 0 24px 0',
+                    lineHeight: 1.5,
+                }}
+            >
+                {isProdStatusOn
+                    ? 'Your organization has full access to all enterprise features and capabilities.'
+                    : 'View your current limits and available features. Upgrade to unlock enterprise capabilities.'}
+            </Typography>
+
+            {/* Features Grid */}
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                    marginBottom: 32,
+                }}
+            >
+                {features
+                    .sort((a, b) => {
+                        const aActive = isProdStatusOn && a.isActive;
+                        const bActive = isProdStatusOn && b.isActive;
+                        return bActive - aActive;
+                    })
+                    .map((feature, index) => {
+                    const Icon = feature.icon;
+                    const isAvailable = isProdStatusOn && feature.isActive;
+                    const statusColor = isAvailable ? colors.success : colors.disabled;
+                    const bgColor = isAvailable ? themeMode === "dark" ? "#212121" : "#ffffff" : colors.disabledBg;
+
+                    return (
+                        <div
+                            key={index}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 14,
+                                padding: '14px 16px',
+                                borderRadius: 10,
+                                background: bgColor,
+                                border: `1px solid ${isAvailable ? colors.success + '40' : colors.border}`,
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            {/* Icon */}
+                            <div
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 8,
+                                    background: isAvailable ? colors.success + '20' : colors.disabledBg,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <Icon style={{ color: statusColor, fontSize: 20 }} />
+                            </div>
+
+                            {/* Content */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                    style={{
+                                        fontSize: 15,
+                                        fontWeight: 600,
+                                        color: colors.textPrimary,
+                                        marginBottom: 4,
+                                    }}
+                                >
+                                    {feature.label}
+                                </div>
+                                <div
+                                    style={{
+                                        fontSize: 13,
+                                        color: colors.textSecondary,
+                                        lineHeight: 1.4,
+                                    }}
+                                >
+                                    {isProdStatusOn ? feature.licensed : feature.unlicensed}
+                                </div>
+                            </div>
+
+                            {isAvailable ? (
+                                <CheckCircleIcon
+                                    style={{ color: colors.success, fontSize: 20, flexShrink: 0 }}
+                                />
+                            ) : (
+                                <XCircleIcon
+                                    style={{ color: colors.disabled, fontSize: 20, flexShrink: 0 }}
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div
+                style={{
+                    width: '100%',
+                    height: 1,
+                    background: colors.divider,
+                    margin: '8px 0 24px 0',
+                }}
+            />
+
+            {!isProdStatusOn && (
+				<div
+                style={{
+                    padding: 20,
+                    borderRadius: 12,
+                    background: themeMode == "dark" ? "#212121" : "#ffffff",
+                    border: `1px solid ${colors.border}`,
+                    marginBottom: 20,
+                }}
+            >
+                <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                    <InfoIcon style={{ color: colors.accent, flexShrink: 0, marginTop: 2, fontSize: 20 }} />
+                    <div>
+                        <Typography variant="h6" style={{ fontWeight: 600, margin: '0 0 8px 0' }}>
+                            About Shuffle Enterprise
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            style={{
+                                margin: 0,
+                                lineHeight: 1.6,
+                            }}
+                        >
+                            Shuffle Enterprise is designed for organizations that require scalability, high
+                            availability, dedicated support, and robust infrastructure to run mission-critical
+                            workflows in production environments. <a href="https://shuffler.io/articles/Shuffle_Open_Source" target="_blank" rel="noreferrer" style={{color: "#FF8544" }}>learn more</a>
+                        </Typography>
+                    </div>
+                </div>
+            </div>)}
+
+            {/* CTA Section */}
+            {!isProdStatusOn && (
+                <div
+                    style={{
+                        padding: 20,
+                        borderRadius: 12,
+                        background: `linear-gradient(135deg, #FF854415 0%, #FF854408 100%)`,
+                        border: `1px solid #FF854440`,
+						marginBottom: 24,
+                    }}
+                >
+                    <div style={{ marginBottom: 16 }}>
+                        <Typography variant="h6" style={{ fontWeight: 600, margin: '0 0 8px 0' }}>
+                            Ready to upgrade?
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            style={{
+                                margin: 0,
+                                lineHeight: 1.6,
+                            }}
+                        >
+                            Contact our team to learn more about enterprise features and pricing.
+                        </Typography>
+                    </div>
+                    <Button
+						href="https://shuffler.io/contact?category=talk_to_sales"
+						target="_blank"
+						rel="noreferrer"
+						variant="contained"
+						color="primary"
+						startIcon={<MailIcon sx={{ fontSize: 16}} />}
+						endIcon={<ArrowRightIcon sx={{ fontSize: 16 }} />}
+					>
+					Contact Sales
+					</Button>
+                </div>
+            )}
         </div>
     );
 };
@@ -2143,14 +2402,14 @@ const Billing = memo((props) => {
 
 	return (
 		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
-			<div style={{  width: "100%", padding: 24, }}>
+			<div style={{  width: "100%", padding: 24, paddingTop: 0}}>
 				<div style={{ width: "100%", maxWidth: 800, }}>
 
 				{isCloud ? null : <ProductionStatus selectedOrganization={selectedOrganization} userdata={userdata} isCloud={isCloud} theme={theme} />}
 
 				{addDealModal}
 				{clickedFromOrgTab ?
-					<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, marginTop: 24, }}>Billing & Licensing</Typography> 
+					<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, }}>Billing & Licensing</Typography> 
 						:
 						<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
 						Billing	& Licensing

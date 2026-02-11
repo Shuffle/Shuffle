@@ -4,7 +4,7 @@ import WelcomeForm2 from "../components/WelcomeForm2.jsx";
 import AppFramework from "../components/AppFramework.jsx";
 import {isMobile} from "react-device-detect";
 import {
-	ArrorForwardIos as ArrowForwardIosIcon,
+	ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 
 import { 

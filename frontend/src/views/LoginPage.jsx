@@ -812,7 +812,7 @@ const LoginPage = props => {
 						width: "max-content",
 					}}
 				>
-					<form onSubmit={onSubmit} style={{ margin: 15, width: isMobile ? "100%" : "360px", width: "max-content", overflow: "hidden", textAlign: "center", }}>
+					<form onSubmit={onSubmit} style={{ margin: 15, width: "max-content", overflow: "hidden", textAlign: "center", }}>
 						<img
 							style={{
 								height: isMobile ? 44 : 60,

@@ -22,7 +22,7 @@ import {
 import aa from 'search-insights'
 const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const Appsearch = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp, inputHeight, }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp, inputHeight, apps, }  = props
 	const { themeMode } = useContext(Context)
 	const theme = getTheme(themeMode)
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
@@ -75,7 +75,7 @@ const Appsearch = props => {
 					color="primary"
 					defaultValue={defaultSearch}
 					// placeholder={`Find ${defaultSearch} Apps...`}
-					placeholder= {defaultSearch ? `${defaultSearch}` : "Search Cases "}
+					placeholder= {defaultSearch ? `${defaultSearch}` : "Search Apps "}
 					id="shuffle_workflow_search_field"
 					onChange={(event) => {
 						refine(event.currentTarget.value)
@@ -91,6 +91,30 @@ const Appsearch = props => {
 	const Hits = ({ hits }) => {
 		const [mouseHoverIndex, setMouseHoverIndex] = useState(-1) 
 		var counted = 0
+
+		if (hits?.length < 20 && apps !== undefined && apps !== null && apps?.length > 0) {
+			// Find the textbox html
+			const findId = "shuffle_workflow_search_field"
+			const searchField = document.getElementById(findId)
+			const searchValue = searchField === null || searchField === undefined ? "" : searchField?.value
+			if (searchValue?.length > 0) {
+				const parsedsearch = searchValue.toLowerCase().replaceAll(" ", "")
+				for (var appkey in apps) {
+					const app = apps[appkey]
+					const parsedAppname = app?.name?.toLowerCase().replaceAll(" ", "")
+					if (parsedAppname.includes(parsedsearch)) { 
+						hits.push({
+							objectID: app.id,
+							id: app.id,
+							name: app.name,
+							image_url: app.large_image,
+						})
+					}
+				}
+			} else {
+				console.log("No value in textfield: ", searchValue)
+			}
+		}
 
 		return (
 			<Grid container spacing={0} style={{border: "1px solid rgba(255,255,255,0.2)", maxHeight: parsedInputHeight, minHeight: parsedInputHeight, overflowY: "auto", overflowX: "hidden", }}>

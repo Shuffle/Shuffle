@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 
 import { Link, Route, Routes, BrowserRouter, useNavigate } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
-import { removeCookies, useCookies } from "react-cookie";
+import { useCookies } from "react-cookie";
 
 import Workflows from "./views/Workflows.jsx";
 import GettingStarted from "./views/GettingStarted.jsx";
@@ -71,6 +71,9 @@ import AppExplorer from "./views/AppExplorer.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
+
+// Change the Shuffle version on UI from here
+const SHUFFLE_VERSION = "2.2.0"
 
 // CORS used for testing purposes. Should only happen with specific port and http
 if (window.location.port === "3000") {
@@ -350,6 +353,7 @@ const App = (message, props) => {
 						{...props}
 						/> */}
 						<Navbar
+						SHUFFLE_VERSION={SHUFFLE_VERSION}
 						notifications={notifications}
 						setNotifications={setNotifications}
 						userdata={userdata}
@@ -365,7 +369,7 @@ const App = (message, props) => {
 					</div>
 					) : (
 						<div style={{ position: 'fixed', top: 32, left: 10, zIndex: 100000 }}>
-						  <LeftSideBar checkLogin={checkLogin} userdata={userdata} globalUrl={globalUrl} notifications={notifications} />
+						  <LeftSideBar SHUFFLE_VERSION={SHUFFLE_VERSION} checkLogin={checkLogin} userdata={userdata} globalUrl={globalUrl} notifications={notifications} />
 						</div>
 					) }
 		
@@ -514,7 +518,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -530,7 +533,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -694,7 +696,6 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
-        	      cookies={cookies}
         	      userdata={userdata}
         	      {...props}
         	    />
@@ -711,7 +712,6 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
-        	      cookies={cookies}
         	      userdata={userdata}
         	      {...props}
         	    />
@@ -727,7 +727,6 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
-        	      cookies={cookies}
         	      userdata={userdata}
         	      {...props}
         	    />
@@ -938,7 +937,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -955,7 +953,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 						{...props}
 					/>
@@ -984,7 +981,6 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						cookies={cookies}
 						userdata={userdata}
 				  		checkLogin={checkLogin}
 						{...props}
@@ -992,6 +988,20 @@ const App = (message, props) => {
 				}
 			/>
 
+			<Route
+				exact
+				path="/agent"
+				element={
+					<AgentUI
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+				/>
 			<Route
 				exact
 				path="/agents"

@@ -1050,7 +1050,7 @@ const AppAuthTab = memo((props) => {
                 
                 <ListItem style={{ width: "100%", paddingTop: 10, paddingBottom: 10, paddingRight: 10,  borderBottom: theme.palette.defaultBorder, display: 'table-row'}}>
                     
-                {["Valid", "Label", "App Name", "Workflows", "Fields", "Edited", "Actions", "Distribution"].map((header, index) => (
+                {["Logo", "Valid", "Label", "App Name", "Fields", "Edited", "Actions", "Distribute"].map((header, index) => (
                         <ListItemText
                             key={index}
                             primary={header}
@@ -1145,9 +1145,33 @@ const AppAuthTab = memo((props) => {
                       }
                       return (
                         <ListItem key={index} style={{ backgroundColor: bgColor, borderBottomLeftRadius: authentication?.length - 1 === index ? 8 : 0, borderBottomRightRadius: authentication?.length - 1 === index ? 8 : 0, display: 'table-row' }}>
+
                               <ListItemText
                                   primary= {(
-                                    <Tooltip title={data.validation !== null && data.validation !== undefined && data.validation.valid === true ? "Valid. Click to explore." : "Configuration failed. Click to learn why"} placement="top">
+                                    <Tooltip title={`Auth for ${data.app.name}. Click to explore.`} placement="top">
+                                          <IconButton>
+									  		<img
+									  			style={{height: 30, width: 30, borderRadius: theme.palette?.borderRadius }}
+									  			src={data.app.large_image ? data.app.large_image : '/images/no_image.png'}
+									  		/>
+                                          </IconButton>
+                                      </Tooltip>
+                                  )}
+                                  style={{ display: "table-cell", verticalAlign: 'middle', minWidth: 60 }}
+                                  primaryTypographyProps={{
+                                    style: {
+                                      padding: "8px 8px 8px 15px",
+                                    }
+                                  }}
+                                  onClick={() => {
+                                      const url = `/apps/${data.app.id}`
+                                      window.open(url, "_blank")
+                                  }}
+                              />
+
+                              <ListItemText
+                                  primary= {(
+                                    <Tooltip title={data.validation !== null && data.validation !== undefined && data.validation.valid === true ? `Last Valid ${new Date(data?.validation?.last_valid).toISOString()}. Click to explore.` : "Configuration failed. Click to learn why"} placement="top">
                                           <IconButton>
                                               {validIcon}
                                           </IconButton>
@@ -1202,22 +1226,7 @@ const AppAuthTab = memo((props) => {
                                   }}
                                   style={{ marginLeft: 10, display: "table-cell", textAlign: 'center', verticalAlign: 'middle', padding: 8 }}
                               />
-                              <ListItemText
-                                  primary={
-                                      data.workflow_count === null ? 0 : data.workflow_count
-                                  }
-                                  primaryTypographyProps={{
-                                    style: {
-                                      padding: 8
-                                    }
-                                  }}
-                                  style={{
-                                      display: "table-cell",
-                                      textAlign: "center",
-                                      overflow: "hidden",
-                                      verticalAlign: 'middle',
-                                  }}
-                              />
+
                               <ListItemText
                                   primary={
                                       data.fields === null || data.fields === undefined
@@ -1239,6 +1248,7 @@ const AppAuthTab = memo((props) => {
                                       verticalAlign: 'middle'
                                   }}
                               />
+
                               <ListItemText
                                   style={{
                                       overflow: "hidden",

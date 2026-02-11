@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
 import {  validateJson, handleReactJsonClipboard,  GetIconInfo, } from "../views/Workflows2.jsx";
-import { red } from "../views/AngularWorkflow.jsx";
+import { green, red } from "../views/AngularWorkflow.jsx";
 import CollectIngestModal from "../components/CollectIngestModal.jsx";
 import CorrelationGraph from "../components/CorrelationGraph.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -55,7 +55,6 @@ import {
     OpenInNew as OpenInNewIcon,
     CloudDownload as CloudDownloadIcon,
     Description as DescriptionIcon,
-    Polymer as PolymerIcon,
     CheckCircle as CheckCircleIcon,
     Close as CloseIcon,
     Apps as AppsIcon,
@@ -63,7 +62,6 @@ import {
     Cached as CachedIcon,
     AccessibilityNew as AccessibilityNewIcon,
     Lock as LockIcon,
-    Eco as EcoIcon,
     Schedule as ScheduleIcon,
     Cloud as CloudIcon,
     Business as BusinessIcon,
@@ -71,6 +69,7 @@ import {
     VisibilityOff as VisibilityOffIcon,
 	Clear as ClearIcon,
 	Add as AddIcon,
+	Remove as RemoveIcon,
 	Rocket as RocketIcon, 
 	Webhook as WebhookIcon, 
 	Air as AirIcon, 
@@ -81,6 +80,8 @@ import {
 	FilterAlt as FilterAltIcon,
 	CompareArrows as CompareArrowsIcon, 
 	Hub as HubIcon,
+	Key as KeyIcon, 
+	FlashOn as FlashOnIcon,
 } from "@mui/icons-material";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -170,6 +171,18 @@ const CacheView = memo((props) => {
     var to_be_copied = "";
 	const defaultAutomation = [
 		{
+			"name": "Security Rules",
+			"description": "Describes security rules that are validated BEFORE an update occurs. This is in order for bad writes to be avoided. Control: allow, deny, merge, overwrite. Logic: if, or, and. Functions: same_shape, is_superset, has_deleted_field",
+			"options": [{
+				"key": "rule",
+				"value": "",
+			}],
+			"icon": <KeyIcon />, 
+			"beta": true,
+			"disabled": false,
+			"enabled": false,
+		},
+		{
 			"name": "Run workflow",
 			"description": "Runs one or more workflows with the updated value as runtime argument",
 			"options": [{
@@ -206,12 +219,14 @@ const CacheView = memo((props) => {
 
 		{
 			"name": "Run AI Agent",
-			"description": "Runs an AI Agent to process the updated value. Uses built-in ShuffleAI configs. Learn more: https://shuffler.io/docs/AI",
+			"description": "Runs an AI Agent to process the updated value. Controllable based on your 'action' input, where the full updated value is added on the end. All actions run in order, meaning it needs to finish the previous one before the next is ran. Uses built-in ShuffleAI configs. Learn more: https://shuffler.io/docs/AI",
 			"type": "singul",
 			"options": [{
-				"key": "",
+				"key": "action-1",
+				"description": "Describe the action to perform on this item", 
 				"value": "",
 			}],
+			"beta": true,
 			"icon": <SmartToyIcon />,
 			"disabled": false,
 		},
@@ -224,21 +239,9 @@ const CacheView = memo((props) => {
 				"key": "",
 				"value": "",
 			}],
+			"beta": true,
 			"icon": "/images/logos/singul.svg",
 			"disabled": false,
-		},
-
-		{
-			"name": "Send message",
-			"description": "",
-			"type": "singul",
-			"options": [{
-				"key": "app",
-				"value": "",
-			}],
-			"icon": <SendIcon />,
-			"disabled": true,
-			"enabled": false,
 		},
 	]
 
@@ -323,8 +326,21 @@ const CacheView = memo((props) => {
 
 		var chosenCategory = selectedCategory 
 		const urlParams = new URLSearchParams(window.location.search)
-		const categoryParam = urlParams.get("category")
+		var categoryParam = urlParams.get("category")
 		if (categoryParam && categoryParam !== undefined && categoryParam !== "default" && categoryParam !== "") {
+
+			// In order to make linking weird urls from workflow page work.
+			if (urlParams.get("src") == "workflow") {
+				if (categoryParam?.toLowerCase().startsWith("list")) {
+					const newParam = categoryParam.substring(5).replaceAll("%20", "_")
+
+					// Replace the url param. There may be more params.
+					urlParams.set("category", newParam)
+					window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`)
+					categoryParam = newParam
+				}
+			}
+
 			chosenCategory = categoryParam
 			setSelectedCategory(categoryParam)
 		}
@@ -493,6 +509,8 @@ const CacheView = memo((props) => {
 							//if (responseJson.category_config.automations[key].icon === undefined || responseJson.category_config.automations[key].icon === null || responseJson.category_config.automations[key].icon === "") {
 							const foundItem = defaultAutomation.find((automation) => automation.name === responseJson.category_config.automations[key].name)
 							if (foundItem) {
+								responseJson.category_config.automations[key].description = foundItem.description
+								responseJson.category_config.automations[key].beta = foundItem.beta
 								responseJson.category_config.automations[key].disabled = foundItem.disabled
 								responseJson.category_config.automations[key].icon = foundItem.icon
 								responseJson.category_config.automations[key].type = foundItem?.type
@@ -572,6 +590,7 @@ const CacheView = memo((props) => {
 			key: dataValue.key, 
 			value: value,
 			category: selectedCategory,
+			tags: dataValue?.tags || [],
 		}
 
 		if (dataValue?.category !== undefined && dataValue?.category !== "" && dataValue?.category !== "default") {
@@ -588,7 +607,9 @@ const CacheView = memo((props) => {
 
         setCacheInput([entry]);
 
-        fetch(globalUrl + `/api/v1/orgs/${orgId}/set_cache`, {
+		//entry = [entry]
+		const parsedUrl = `${globalUrl}/api/v2/datastore`
+        fetch(parsedUrl, {
 
             method: "POST",
             headers: {
@@ -809,6 +830,37 @@ const CacheView = memo((props) => {
 							<Typography variant="body2" color="textSecondary" style={{ }}>
 								Category: {dataValue.category}
 							</Typography>
+						: null}
+						{dataValue?.tags !== undefined && dataValue?.tags !== null && dataValue?.tags?.length > 0 ?  
+							<div style={{display: "flex", marginTop: 12, }}>
+								<Typography variant="body2" color="textSecondary" style={{ marginRight: 10, marginTop: 4, }}>
+									Tags
+								</Typography>
+									
+								{dataValue.tags?.map((tag, index) => {
+									return (
+										<Chip
+											key={index}
+											label={tag}
+											style={{ marginRight: 5, }}
+											onDelete={() => {
+												var newTags = dataValue.tags.filter((t) => t !== tag)
+												if (newTags.length === 0) {
+													newTags = ["none"]
+												} else if (newTags.length > 1) {
+													newTags = newTags.filter((t) => t !== "none")
+												}
+
+												setDataValue({
+													...dataValue,
+													tags: newTags,
+												})
+
+											}}
+										/>
+									)
+								})}
+							</div>
 						: null}
 
 					</div>
@@ -1169,6 +1221,19 @@ const CacheView = memo((props) => {
 							}}>
 								{automation.name}
 							</Typography>
+							{automation?.beta !== true ? null : 
+								<Chip
+									label="Beta"
+									size="small"
+									style={{ 
+										marginLeft: 10, 
+										height: 20,
+										fontSize: 12,
+										border: `1px solid ${green}`,
+										color: "rgba(255,255,255,0.7)",
+									}}
+								/>
+							}
 						</div>
 
 						{automation?.disabled !== true ? 
@@ -1195,8 +1260,9 @@ const CacheView = memo((props) => {
 						: null}
 					</div>
 
-					{showOptions && (
-						updatedAutomation.options.map((option, optionIndex) => {
+					{showOptions && 
+						<div style={{ marginTop: 20, marginBottom: 20, }}>
+						{updatedAutomation.options.map((option, optionIndex) => {
 							if (option?.key === "datastore_categories") {
 								if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
 									return (
@@ -1475,6 +1541,87 @@ const CacheView = memo((props) => {
 										}}
 									/>
 								)
+							} else if (updatedAutomation?.name === "Run AI Agent") { 
+								return (
+									<ButtonGroup style={{display: "flex", }}>
+										<TextField
+											key={optionIndex}
+											fullWidth
+											disabled={option?.disabled === true}
+											style={theme.palette.textFieldStyle}
+											InputProps={{
+											  disableUnderline: true,
+											  style: {
+												backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+												color: theme.palette.textFieldStyle.color,
+												height: 40,
+											  },
+											}}
+											label={option.key}
+											defaultValue={option.value}
+											onBlur={(e) => {
+												if (e.target.value === "") {
+													updatedAutomation.enabled = false 
+												} else {
+													updatedAutomation.enabled = true 
+												}
+
+												updatedAutomation.options[optionIndex].value = e.target.value;
+												setUpdatedAutomation(updatedAutomation)
+												setUpdated(true)
+											}}
+										/>
+
+										{optionIndex === updatedAutomation.options.length - 1 ?
+											<Button color="secondary" variant="outlined" style={{
+												height: 40, 
+												maxWidth: 40, 
+											}} 
+											disabled={option?.value?.length < 20} 
+											onClick={() => {
+
+												var newindex = optionIndex + 2
+												if (updatedAutomation.options.length > 0) {
+													const lastOption = updatedAutomation.options[updatedAutomation.options.length - 1]
+													const lastIndex = parseInt(lastOption.key.split("-")[1])
+													if (!isNaN(lastIndex)) {
+														newindex = lastIndex + 1
+													}
+												}
+
+												updatedAutomation.options.push({
+													"key": `action-${newindex}`,
+													"description": "Describe the action to perform on this item", 
+													"value": "",
+												})
+
+												setUpdatedAutomation(updatedAutomation)
+												setUpdate(Math.random()) 
+											}}>
+												<AddIcon/>
+											</Button>
+										: 
+											<Tooltip title={option?.disabled !== true ? "Disable action (won't run until re-enabled)" : "Re-Enable action (runs on all new edits)"} placement="top"> 
+												<Button color="secondary" variant="outlined" style={{
+													height: 40, 
+													maxWidth: 40, 
+												}} onClick={() => {
+													if (option?.disabled === true) {
+														updatedAutomation.options[optionIndex].disabled = false
+													} else {
+														updatedAutomation.options[optionIndex].disabled = true 
+													}
+
+													setUpdatedAutomation(updatedAutomation)
+													setUpdate(Math.random()) 
+												}}>
+													{option?.disabled !== true ? <RemoveIcon /> : <FlashOnIcon />}
+												</Button>
+											</Tooltip>
+										}
+										
+									</ButtonGroup>
+								)
 							}
 
 							return (
@@ -1507,8 +1654,9 @@ const CacheView = memo((props) => {
 									}}
 								/>
 							)
-						})
-					)}
+						})}
+						</div>
+					}
 				</div>
 			</Tooltip>
 		)
@@ -1601,8 +1749,10 @@ const CacheView = memo((props) => {
 								backgroundColor: theme.palette.platformColor,
 								border: theme.palette.defaultBorder,
 								padding: 5,
+								maxWidth: 500, 
 								minWidth: 500, 
 								maxHeight: 500,
+								overflowX: "auto", 
 								overflowY: "auto",
 							}}
 							collapsed={true}
@@ -1784,6 +1934,7 @@ const CacheView = memo((props) => {
 											"created": data.created,
 											"workflow_id": data.workflow_id,
 											"category": data.category,
+											"tags": data.tags,
 										})
 										setValue(newvalue)
 										setModalOpen(true)
@@ -2377,7 +2528,7 @@ const CacheView = memo((props) => {
 									height: 35, 
 									textTransform: 'none', 
 
-									border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
+									border: isAutomating ? `1px solid ${green}` : null,
 								}}
 								variant="contained"
 								color="secondary"
@@ -2391,8 +2542,8 @@ const CacheView = memo((props) => {
 									setShowAutomationMenu(true)
 								}}
 							>
-								{isAutomating ? <RocketLaunchIcon style={{color: theme.palette.primary.main, marginRight: 10 }}/> : <RocketIcon style={{marginRight: 10, color: theme.palette.secondary.main, }} />}
-								Automate (beta) 
+								{isAutomating ? <RocketLaunchIcon style={{color: green, marginRight: 10 }}/> : <RocketIcon style={{marginRight: 10, color: theme.palette.secondary.main, }} />}
+								Automate
 							</Button>
 						</span>
 					</Tooltip> 

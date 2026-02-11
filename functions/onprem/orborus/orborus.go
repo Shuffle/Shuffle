@@ -20,7 +20,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -1160,6 +1159,7 @@ func fixk8sRoles() {
 	}
 }
 
+// TODO: Check if deployment or service already exist by labels and only create if not already exists
 func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
@@ -1446,6 +1446,18 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 			replicaNumber = tmpInt
 
 		}
+	}
+
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=shuffle-worker",
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+	}
+
+	if len(existing.Items) > 0 {
+		log.Printf("[INFO] Found existing deployments, skipping creation")
+		return nil
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
@@ -1854,6 +1866,54 @@ func getLocalIP() string {
 	return ""
 }
 
+// Get all local IPs in the system
+func getLocalIPs() ([]string, error) {
+	var ipv4s []string
+	var ipv6s []string
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, address := range addrs {
+			ipnet, ok := address.(*net.IPNet)
+			if !ok || ipnet.IP == nil {
+				continue
+			}
+
+			ip := ipnet.IP
+			if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+				continue
+			}
+
+			if ip4 := ip.To4(); ip4 != nil {
+				ipv4s = append(ipv4s, ip4.String())
+				continue
+			}
+
+			if ip.To16() != nil {
+				ipv6s = append(ipv6s, ip.String())
+			}
+		}
+	}
+
+	return append(ipv4s, ipv6s...), nil
+}
+
 func checkSwarmService(ctx context.Context) {
 	// https://docs.docker.com/engine/reference/commandline/swarm_init/
 	ip := getLocalIP()
@@ -1881,33 +1941,29 @@ func checkSwarmService(ctx context.Context) {
 
 		// Dummy message used for testing
 		//err = errors.New("Error response from daemon: could not choose an IP address to advertise since this system has multiple addresses on different interfaces (10.52.208.221 on eno1 and 192.168.122.1 on virbr0) - specify one with --advertise-addr")
+		// Update 28 Jan 2026: The error message updated and not as clear
 
-		msg := err.Error()
-
-		// Extract all IPv4 addresses from the error message
-		var ipv4Re = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
-		candidates := ipv4Re.FindAllString(msg, -1)
-		if len(candidates) > 0 {
-			// Pick the first valid candidate (or implement your own heuristic)
-
+		candidates, err := getLocalIPs()
+		if len(candidates) > 0 && err == nil {
 			for cnt, candidate := range candidates {
 				if cnt > 5 {
 					break
 				}
 
 				req.AdvertiseAddr = fmt.Sprintf("%s:2377", candidate)
-				_, err = dockercli.SwarmInit(context.Background(), req)
+				id, err = dockercli.SwarmInit(context.Background(), req)
 				if err != nil {
 					continue
 				}
 
-				break
+				log.Printf("[INFO] Swarm init ID: '%s'.", id)
+				return
 			}
-
 		}
-	}
 
-	log.Printf("[INFO] Swarm init ID: '%s'. If this is empty, there is most likely an error.", id)
+		log.Printf("[ERROR] Swarm init failed after advertise-addr retries: %s, try running swarm init manually: docker swarm init", err)
+		return
+	}
 }
 
 func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
@@ -2266,13 +2322,9 @@ func main() {
 	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
 		log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
 
-		//if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" {
-		//	os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
-		//}
-
-		//if os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
-		//	os.Setenv("SHUFFLE_PIPELINE_ENABLED", "false")
-		//}
+		tenzirDisabled = false
+		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 	}
 
 	// Block until a signal is received
@@ -2298,6 +2350,7 @@ func main() {
 
 	// Auto enables pipelines IF they are not mentioned
 	if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
+		tenzirDisabled = false
 		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
 		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 	}
@@ -2685,7 +2738,8 @@ func main() {
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_UPDATE" {
 					log.Printf("[INFO] Handling pipeline request from backend: '%s' with argument '%s'", incRequest.Type, incRequest.ExecutionArgument)
 
-					//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+					os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
 					tenzirDisabled = false
 
 					// Running NEW or editing pipelines
@@ -3103,14 +3157,14 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
-	// Disabled all pipeline features
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
-	}
-
 	// Specifically for standalone tenzir
 	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
 		return nil
+	}
+
+	// Disabled all pipeline features
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES (1)")
 	}
 
 	if isKubernetes == "true" {
@@ -3444,8 +3498,8 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 }
 
 func checkTenzirNode() error {
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "false" {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
+	if tenzirDisabled && os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "false" {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES (2)")
 	}
 
 	url := fmt.Sprintf("%s/api/v0/ping", pipelineUrl)
@@ -3631,11 +3685,11 @@ func updatePipelineState(command, pipelineId, action string) (string, error) {
 		forwardData,
 	)
 	if err != nil {
-		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		log.Printf("[ERROR] Failed to update HTTP request: %s", err)
 		return "", err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -3687,7 +3741,7 @@ func deletePipeline(pipelineId string) error {
 		forwardData,
 	)
 	if err != nil {
-		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		log.Printf("[ERROR] Failed to delete HTTP request: %s", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")

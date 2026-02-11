@@ -1,6 +1,10 @@
 # Worker
 A worker implementation in Golang. This runs ALL Shuffle workflows onprem. In general receives jobs from Orborus.
 
+## Standalone run (testing)
+
+`go run worker.go standalone <executionid> <authorization> <optional:url>`
+
 ## Development
 The ideal way to test the Worker is with a single workflow execution, standalone. Here are some environment variables you can use:
 

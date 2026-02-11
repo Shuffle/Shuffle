@@ -117,11 +117,9 @@ var autoDeploy = map[string]string{
 	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
 	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
 	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"shuffle-ai:1.1.0":      "frikky/shuffle:shuffle-ai_1.1.0",
 	// "shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
-
-//"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
-//fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
 
 // New Worker mappings
 // visited, appendActions, nextActions, notFound, queueNodes, toRemove, executed, env
@@ -413,6 +411,8 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		kubernetesNamespace = "default"
 	}
 
+	ctx := context.Background()
+
 	log.Printf("[DEBUG] Deploying k8s app with identifier %s to namespace %s", identifier, kubernetesNamespace)
 	deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
 	if err != nil {
@@ -622,6 +622,21 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			replicaNumber = tmpInt
 
 		}
+	}
+
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app: %s", name),
+		},
+	)
+	if err != nil {
+		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+	}
+
+	if len(existing.Items) > 0 {
+		log.Printf("[INFO] Found existing deployments, skipping creation")
+		return nil
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
@@ -1481,11 +1496,45 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		action, _ = singul.HandleSingulStartnode(workflowExecution, action, []string{})
 
 		parsedAppname := strings.Replace(strings.ToLower(action.AppName), " ", "-", -1)
-		//if strings.ToLower(parsedAppname) == "singul" {
-		//	parsedAppname = "shuffle-ai"
-		//	appversion = "1.0.0"
-		//	appname = "shuffle-ai"
-		//}
+		// if strings.ToLower(parsedAppname) == "singul" {
+		// 	parsedAppname = "shuffle-ai"
+		// 	appversion = "1.1.0"
+		// 	appname = "shuffle-ai"
+		// }
+
+		if parsedAppname == "ai-agent" {
+			parsedAppname = "shuffle-ai"
+			appversion = "1.1.0"
+			appname = "shuffle-ai"
+
+			action.AppVersion = "1.1.0"
+			action.AppName = "shuffle-ai"
+			action.Name = "run_agent"
+
+			inputParamValue := ""
+			allowedActions := ""
+			for _, param := range action.Parameters {
+				if strings.ToLower(param.Name) == "input" {
+					inputParamValue = param.Value
+				} else if strings.ToLower(param.Name) == "action" {
+					param.Value = strings.ReplaceAll("Nothing,", " ", "")
+					param.Value = strings.ReplaceAll("Nothing", " ", "")
+					allowedActions = param.Value
+				}
+			}
+
+			// Rewriting them
+			action.Parameters = []shuffle.WorkflowAppActionParameter{
+				shuffle.WorkflowAppActionParameter{
+					Name:  "input_data",
+					Value: inputParamValue,
+				},
+				shuffle.WorkflowAppActionParameter{
+					Name:  "actions",
+					Value: allowedActions,
+				},
+			}
+		}
 
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
 		if strings.Contains(imageName, " ") {
@@ -2565,7 +2614,7 @@ func getWorkerBackendExecution(auth string, executionId string) (*shuffle.Workfl
 		log.Printf("[INFO] Here is the result we got back from backend: %s", workflowExecution.Results)
 	}
 
-	setWorkflowExecution(context.Background(), *workflowExecution, false)
+	//setWorkflowExecution(context.Background(), *workflowExecution, false)
 	return workflowExecution, nil
 }
 
@@ -2650,6 +2699,43 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		if err == nil {
 			retries = val
 		}
+	}
+
+	// Not doing environment as we don't want to hook a worker to specific env. It should just not handle cloud actions
+	// limiting a worker to an env will not allow us to run multiple orborus in the same server?
+	if strings.EqualFold(actionResult.Action.Environment, "cloud") {
+		log.Printf("[WARNING] Got an action for %s environment forwarding it to the backend", actionResult.Action.Environment)
+
+		streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+		req, err := http.NewRequest(
+			"POST",
+			streamUrl,
+			bytes.NewBuffer([]byte(body)),
+		)
+
+		if err != nil {
+			log.Printf("[ERROR] Error building subflow (%s) request: %s", workflowExecution.ExecutionId, err)
+			return
+		}
+
+		newresp, err := topClient.Do(req)
+		if err != nil {
+			log.Printf("[ERROR] Error running subflow (%s) request: %s", workflowExecution.ExecutionId, err)
+			return
+		}
+
+		defer newresp.Body.Close()
+		if newresp.StatusCode != 200 {
+			body, err := ioutil.ReadAll(newresp.Body)
+			if err != nil {
+				log.Printf("[INFO][%s] Failed reading body after subflow request: %s", workflowExecution.ExecutionId, err)
+				return
+			} else {
+				log.Printf("[ERROR][%s] Failed forwarding subflow request of length %d\n: %s", workflowExecution.ExecutionId, len(actionResult.Result), string(body))
+			}
+		}
+
+		return
 	}
 
 	log.Printf("[DEBUG][%s] Action: Received, Label: '%s', Action: '%s', Status: %s, Run status: %s, Extra=Retry:%d", workflowExecution.ExecutionId, actionResult.Action.Label, actionResult.Action.AppName, actionResult.Status, workflowExecution.Status, retries)
@@ -3646,7 +3732,7 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 			}
 
 			if redeploy {
-				log.Printf("Found it! Service: %s with image %s on port %d", name, image, exposedPort)
+				log.Printf("[INFO] Found to redeploy! Service: %s with image %s on port %d", name, image, exposedPort)
 				// Remove the service and redeploy it.
 				// There are cases where the service doesn't update properly
 				// Check when the last update happened. If it was within the last few minutes, skip
@@ -3954,6 +4040,19 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		appName = strings.Replace(appName, "_", "-", -1)
 	}
 
+	// Shitty hardcoded fix for now
+	if strings.Contains(appName, "1.0.0") {
+		appName = strings.Replace(appName, "1.0.0", "1-0-0", 1)
+	} else if strings.Contains(appName, "1.1.0") {
+		appName = strings.Replace(appName, "1.1.0", "1-1-0", 1)
+	} else if strings.Contains(appName, "1.2.0") {
+		appName = strings.Replace(appName, "1.2.0", "1-2-0", 1)
+	} else if strings.Contains(appName, "1.4.0") {
+		appName = strings.Replace(appName, "1.4.0", "1-4-0", 1)
+	} else if strings.Contains(appName, "2.0.0") {
+		appName = strings.Replace(appName, "2.0.0", "2-0-0", 1)
+	}
+
 	streamUrl := fmt.Sprintf("http://%s:%d/api/v1/run", appName, port)
 	// log.Printf("[DEBUG][%s] Worker URL: %s, Backend URL: %s, Target App: %s", workflowExecution.ExecutionId, parsedRequest.BaseUrl, parsedRequest.Url, streamUrl)
 	req, err := http.NewRequest(
@@ -3998,6 +4097,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		}
 	}
 
+	// Content type required
+	req.Header.Set("Content-Type", "application/json")
+
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Another timeout issue here somewhere
@@ -4019,7 +4121,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		}
 
 		if strings.Contains(fmt.Sprintf("%s", err), "no such host") {
-			log.Printf("[DEBUG] SHOULD be Removing references to location for app %s as to be rediscovered", action.AppName)
+			log.Printf("[ERROR] Should be removing references to location for app '%s' as to be rediscovered. URL: %s. Error: %s", action.AppName, streamUrl, err)
 
 			//for k, v := range portMappings {
 			//	if strings.Contains(strings.ToLower(strings.ReplaceAll(action.AppName, " ", "_"))) {
@@ -4079,7 +4181,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 // Has some issues with loading when running multiple workers and such.
 func baseDeploy() {
 
-	//var cli *dockerclient.Client
+	var cli *dockerclient.Client
 	//var err error
 
 	if isKubernetes != "true" {
@@ -4146,9 +4248,12 @@ func baseDeploy() {
 		log.Printf("[DEBUG] Deploying app with identifier %s to ensure basic apps are available from the get-go", identifier)
 
 		//findAppInfo("frikky/shuffle:http_1.4.0", "http_1-4-0", true)
-		go findAppInfo(value, identifier, false)
+		// go findAppInfo(value, identifier, false)
 
-		//go deployApp(cli, value, identifier, env, workflowExecution, action)
+		// findAppInfo leads to the following error:
+		// Unable to list services: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running? (may continue anyway?)
+		// Replaced with deployApp again. See https://github.com/Shuffle/Shuffle/issues/1817.
+		go deployApp(cli, value, identifier, env, workflowExecution, action)
 		//err := deployApp(cli, value, identifier, env, workflowExecution, action)
 		//if err != nil {
 		//	log.Printf("[DEBUG] Failed deploying app %s: %s", value, err)

@@ -23,8 +23,6 @@ import {
 	TrendingUp as TrendingUpIcon,
 	TrendingDown as TrendingDownIcon,
 	TaskAlt as TaskAltIcon,
-	SuccessFailed as SuccessFailedIcon,
-	RunsOverTime as RunsOverTimeIcon,
 	ErrorOutline as ErrorOutlineIcon,
 } from '@mui/icons-material';
 

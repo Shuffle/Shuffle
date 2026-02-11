@@ -73,14 +73,14 @@ import {
   Index,
 } from "react-instantsearch-dom";
 import AppStats from "../components/AppStats.jsx";
-import ParsedAction from "../components/ParsedAction.jsx";
+import ParsedAction from "../components/ParsedActionNew.jsx";
 import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import { base64_decode, appCategories } from "../views/AppCreator.jsx";
 import { triggers as workflowTriggers } from "../views/AngularWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
 import { CodeHandler, Img, OuterLink, CopyToClipboard, } from "../views/Docs.jsx";
-import { useStyles, } from "../components/ParsedAction.jsx";
+import { useStyles, } from "../components/ParsedActionNew.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 
 import { v4 as uuidv4 } from "uuid";
@@ -241,6 +241,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
   const [triggers, setTriggers] = useState([])
   const [selectedOrganization, setSelectedOrganization] = React.useState(undefined)
   const [selectedValidationAction, setSelectedValidationAction] = React.useState({})
+  const [settingValidationAction, setSettingValidationAction] = React.useState(false)
 
   const [selectedMeta, setSelectedMeta] = React.useState({
     link: "https://github.com/Shuffle/openapi-apps/new/master/docs",
@@ -1165,8 +1166,8 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 			if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
 				// Check if there are commas in it then loop and find the correct one
 				// Should ignore 'No Label' and 'No label'
-				var correctlabel = "" 
-				const labels = methodvalue["x-label"].split(",")
+				const labels = typeof methodvalue["x-label"] === 'object' || Array.isArray(methodvalue["x-label"]) ? methodvalue["x-label"] : methodvalue["x-label"].split(",")
+				var correctlabels = []
 				for (let labelkey in labels) {
 					var label = labels[labelkey].trim()
 					if (label.toLowerCase() === "no label") {
@@ -1180,12 +1181,14 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 					//label = label.replace("_", " ", -1)
 					//label = label.charAt(0).toUpperCase() + label.slice(1)
 
-					correctlabel = label
-					break
+					correctlabels.push(label)
+					if (label === "app_validation") {
+						setSelectedValidationAction(newaction)
+					}
 				}
 
 				// FIX: Map labels only if they're actually in the category list
-				newaction.action_label = correctlabel
+				newaction.action_label = correctlabels
 			}
 
 			if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
@@ -1450,11 +1453,12 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     const index = searchClient.initIndex("appsearch");
 
     console.log("Running appsearch for: ", appname);
-	if (appname === "integration") {
+	if (appname === "integration" || appname == "singul") {
 		// Redirect to https://singul.io
 		window.location.href = "https://singul.io"
-	} else if (appname === "shuffle_agent") {
+	} else if (appname === "shuffle_agent" || appname === "agent" || appname === "agents" || appname == "shuffle-agent") {
 		navigate("/agents")
+		return
 	}
 
     index
@@ -2933,7 +2937,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
   }
 
 	const ActionSelectOption = (actionprops) => {
-		const { option, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
+		const { option, newActionname, newActiondescription, useIcon, extraDescription, selected, } = actionprops;
   		const [hover, setHover] = React.useState(false);
 
 		return (
@@ -2947,14 +2951,18 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 					padding: 8, 
 					paddingLeft: 14, 
 					paddingBottom: 4,
-					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+					backgroundColor: selected === true ? theme.palette.platformColor : hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+					border: selected === true ? `2px solid ${theme.palette.platformColor}` : `2px solid ${theme.palette.inputColor}`,
 				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
 				onClick={(event) => {
 					console.log("Clicked on action: ", option)
 
 
 					if (option !== undefined && option !== null) { 
+						// FIXME: Add removal of app_validation from others
 						setSelectedValidationAction(option)
+						toast.info(`Selecting validation action...`)
+						setSettingValidationAction(true)
 
 						const labelData = {
 							"app_id": app.id,
@@ -2975,12 +2983,20 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 						})
 						.then((response) => response.json())
 						.then((responseJson) => {
-							if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
-								toast(responseJson.reason)
+							setSettingValidationAction(false)
+
+							if (responseJson.success === true) {
+								toast.success("Validation action selected")
+							} else if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+								toast.error(responseJson.reason)
+							} else {
+								toast.error("Failed selecting validation action")
 							}
 						})
 						.catch((error) => {
 							console.log("Error: ", error)
+							setSettingValidationAction(false)
+							toast.error("Failed selecting validation action")
 						})
 
 						// Update the app itself?
@@ -3485,223 +3501,280 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 				  			The validation action is the action that is used to validate the app. This is used both when a user wants to validate their auth, as well as when Shuffle runs automatic tests of the app. It is recommended that the action should be a GET request. Validation is decided based on whether the action is ran successfully in a workflow.
 						</Typography> 
 
-						<Autocomplete
-							id="action_search"
-							value={selectedValidationAction}
-							classes={{ inputRoot: classes.inputRoot }}
-							groupBy={(option) => {
-								// Most popular
-								// Is categorized
-								// Uncategorized
-								return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
-							}}
-							renderGroup={(params) => {
+				  		<div style={{display: "flex", }}>
+							<Autocomplete
+								id="action_search"
+								value={selectedValidationAction}
+								classes={{ inputRoot: classes.inputRoot }}
+								groupBy={(option) => {
+									// Most popular
+									// Is categorized
+									// Uncategorized
+									return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
+								}}
+								renderGroup={(params) => {
 
-								return (
-									<li key={params.key}>
-										<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
-										<Typography variant="body2">{params.children}</Typography>
-									</li>
-								)	
-							}}
-							options={renderedActionOptions}
-							ListboxProps={{
-							  style: {
-								backgroundColor: theme.palette.surfaceColor,
-								color: "white",
-							  },
-							}}
-							filterOptions={(options, { inputValue }) => {
-								const lowercaseValue = inputValue === null ? "" : inputValue.toLowerCase()
-								options = options.filter((x) => {
-									if (x.name === undefined || x.name === null) {
-										x.name = ""
-									}
-
-									if (x.description === undefined || x.description === null) {
-										x.description = ""
-									}
-
-									if (x.method !== "GET") {
-										return null
-									}
-
-									return x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue)
-								})
-
-								return options
-							}}
-							getOptionLabel={(option) => {
-							  if (option === undefined || option === null || option.name === undefined || option.name === null ) {
-								return null;
-							  }
-
-							  const newname = (
-								option.name.charAt(0).toUpperCase() + option.name.substring(1)
-							  ).replaceAll("_", " ");
-
-							  return newname;
-							}}
-							fullWidth
-							style={{
-							  backgroundColor: theme.palette.inputColor,
-							  height: 50,
-							  borderRadius: theme.palette?.borderRadius,
-							}}
-							onChange={(event, newValue) => {
-							  // Workaround with event lol
-							  console.log("Changed to: ", event, newValue)
-							  toast("Changed validation action") 
-							  if (newValue !== undefined && newValue !== null) {
-								/*
-								setNewSelectedAction({ 
-									target: { 
-										value: newValue.name 
-									} 
-								})
-								*/
-							  }
-							}}
-							renderOption={(props, option, state) => {
-							  var newActionname = option.name;
-							  if (option.label !== undefined && option.label !== null && option.label.length > 0) {
-								newActionname = option.label;
-							  }
-
-							  var newActiondescription = option.description;
-							  //console.log("DESC: ", newActiondescription)
-							  if (option.description === undefined || option.description === null) {
-								newActiondescription = "Description: No description defined for this action"
-							  } else {
-								newActiondescription = "Description: "+newActiondescription
-							  }
-
-							  const iconInfo = GetIconInfo({ name: option.name });
-							  const useIcon = iconInfo.originalIcon;
-
-							  if (newActionname === undefined || newActionname === null) {
-								  newActionname = "No name"
-								  option.name = "No name"
-								  option.label = "No name"
-							  }
-
-							  newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
-
-								var method = ""
-								var extraDescription = ""
-								if (option.name.includes("get_")) {
-									method = "GET"
-								} else if (option.name.includes("post_")) {
-									method = "POST"
-								} else if (option.name.includes("put_")) {
-									method = "PUT"
-								} else if (option.name.includes("patch_")) {
-									method = "PATCH"
-								} else if (option.name.includes("delete_")) {
-									method = "DELETE"
-								} else if (option.name.includes("options_")) {
-									method = "OPTIONS"
-								} else if (option.name.includes("connect_")) {
-									method = "CONNECT"
-								}
-
-								// FIXME: Should it require a base URL?
-								if (method.length > 0 && option.description !== undefined && option.description !== null && option.description.includes("http")) {
-									var extraUrl = ""
-									const descSplit = option.description.split("\n")
-									// Last line of descSplit
-									if (descSplit.length > 0) {
-										extraUrl = descSplit[descSplit.length-1]
-									} 
-
-									if (extraUrl.length > 0) {
-										if (extraUrl.includes(" ")) {
-											extraUrl = extraUrl.split(" ")[0]
+									return (
+										<li key={params.key}>
+											<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
+											<Typography variant="body2">{params.children}</Typography>
+										</li>
+									)	
+								}}
+								options={renderedActionOptions}
+								ListboxProps={{
+								  style: {
+									backgroundColor: theme.palette.surfaceColor,
+									color: "white",
+								  },
+								}}
+								filterOptions={(options, { inputValue }) => {
+									const lowercaseValue = inputValue === null ? "" : inputValue.toLowerCase()
+									options = options.filter((x) => {
+										if (x.name === undefined || x.name === null) {
+											x.name = ""
 										}
 
-										if (extraUrl.includes("#")) {
-											extraUrl = extraUrl.split("#")[0]
+										if (x.description === undefined || x.description === null) {
+											x.description = ""
 										}
 
-										extraDescription = `${method} ${extraUrl}`
-									} else {
-										//console.log("No url found. Check again :)")
-									}
-								}
+										if (x.method !== "GET") {
+											return null
+										}
 
-							  return (
-								<ActionSelectOption
-								  {...props}
-									option={option}
-									newActiondescription={newActiondescription}
-									useIcon={useIcon}
-									newActionname={newActionname}
-									extraDescription={extraDescription}
-								/>
-							  );
-							}}
-							renderInput={(params) => {
-								if (params.inputProps?.value) {
-									const prefixes = ["Post", "Put", "Patch"];
-									for (let prefix of prefixes) {
-										if (params.inputProps.value.startsWith(prefix)) {
-											let newValue = params.inputProps.value.replace(prefix + " ", "");
-											if (newValue.length > 1) {
-												newValue = newValue.charAt(0).toUpperCase() + newValue.substring(1);
+										return x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue)
+									})
+
+									return options
+								}}
+								getOptionLabel={(option) => {
+								  if (option === undefined || option === null || option.name === undefined || option.name === null ) {
+									return null;
+								  }
+
+								  const newname = (
+									option.name.charAt(0).toUpperCase() + option.name.substring(1)
+								  ).replaceAll("_", " ");
+
+								  return newname;
+								}}
+								fullWidth
+								style={{
+								  backgroundColor: theme.palette.inputColor,
+								  height: 50,
+								  borderRadius: theme.palette?.borderRadius,
+								}}
+								onChange={(event, newValue) => {
+								  // Workaround with event lol
+								  console.log("Changed to: ", event, newValue)
+								  toast("Changed validation action") 
+								  if (newValue !== undefined && newValue !== null) {
+									/*
+									setNewSelectedAction({ 
+										target: { 
+											value: newValue.name 
+										} 
+									})
+									*/
+								  }
+								}}
+								renderOption={(props, option, state) => {
+								  var newActionname = option.name;
+								  if (option.label !== undefined && option.label !== null && option.label.length > 0) {
+									newActionname = option.label;
+								  }
+
+								  var newActiondescription = option.description;
+								  //console.log("DESC: ", newActiondescription)
+								  if (option.description === undefined || option.description === null) {
+									newActiondescription = "Description: No description defined for this action"
+								  } else {
+									newActiondescription = "Description: "+newActiondescription
+								  }
+
+								  const iconInfo = GetIconInfo({ name: option.name });
+								  const useIcon = iconInfo.originalIcon;
+
+								  if (newActionname === undefined || newActionname === null) {
+									  newActionname = "No name"
+									  option.name = "No name"
+									  option.label = "No name"
+								  }
+
+								  newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
+
+									var method = ""
+									var extraDescription = ""
+									if (option.name.includes("get_")) {
+										method = "GET"
+									} else if (option.name.includes("post_")) {
+										method = "POST"
+									} else if (option.name.includes("put_")) {
+										method = "PUT"
+									} else if (option.name.includes("patch_")) {
+										method = "PATCH"
+									} else if (option.name.includes("delete_")) {
+										method = "DELETE"
+									} else if (option.name.includes("options_")) {
+										method = "OPTIONS"
+									} else if (option.name.includes("connect_")) {
+										method = "CONNECT"
+									}
+
+									// FIXME: Should it require a base URL?
+									if (method.length > 0 && option.description !== undefined && option.description !== null && option.description.includes("http")) {
+										var extraUrl = ""
+										const descSplit = option.description.split("\n")
+										// Last line of descSplit
+										if (descSplit.length > 0) {
+											extraUrl = descSplit[descSplit.length-1]
+										} 
+
+										if (extraUrl.length > 0) {
+											if (extraUrl.includes(" ")) {
+												extraUrl = extraUrl.split(" ")[0]
 											}
-											// Set the new value without mutating inputProps
-											params = { ...params, inputProps: { ...params.inputProps, value: newValue } };
-											break;
+
+											if (extraUrl.includes("#")) {
+												extraUrl = extraUrl.split("#")[0]
+											}
+
+											extraDescription = `${method} ${extraUrl}`
+										} else {
+											//console.log("No url found. Check again :)")
 										}
 									}
-									// Check if it starts with "Get List" and method is "Get"
-									if (params.inputProps.value.startsWith("Get List")) {
-										console.log("Get List")
-									}
-								}
 
-								const actionDescription = ""
-								const isIntegration = false
+								  const isSelected = selectedValidationAction !== undefined && selectedValidationAction !== null && selectedValidationAction?.name === option.name
 
 								  return (
-									  <Tooltip title={actionDescription}
-										placement="right" 
-										open={false}
-										PopperProps={{
-											sx: {
-											'& .MuiTooltip-tooltip': {
-												backgroundColor: 'transparent',
-												boxShadow: 'none',
-											},
-											'& .MuiTooltip-arrow': {
-												color: 'transparent',
-											},
-											},
-										}}
-										>
-											<TextField
-											{...params}
+									<ActionSelectOption
+									  {...props}
+										option={option}
+										newActiondescription={newActiondescription}
+										useIcon={useIcon}
+										newActionname={newActionname}
+										extraDescription={extraDescription}
 
-											data-lpignore="true"
-											autocomplete="off"
-											dataLPIgnore="true"
-											autoComplete="off"
-
-											color="primary"
-											id="checkbox-search"
-											variant="body1"
-											style={{
-												backgroundColor: theme.palette.inputColor,
-												borderRadius: theme.palette?.borderRadius,
-											}}
-											label={"Select Validation Action"}
-											variant="outlined"
-											name={`disable_autocomplete_${Math.random()}`}
-											/>	
-										</Tooltip>
-								  )
+									  	selected={isSelected}
+									/>
+								  );
 								}}
-						/>
+								renderInput={(params) => {
+									if (params.inputProps?.value) {
+										const prefixes = ["Post", "Put", "Patch"];
+										for (let prefix of prefixes) {
+											if (params.inputProps.value.startsWith(prefix)) {
+												let newValue = params.inputProps.value.replace(prefix + " ", "");
+												if (newValue.length > 1) {
+													newValue = newValue.charAt(0).toUpperCase() + newValue.substring(1);
+												}
+												// Set the new value without mutating inputProps
+												params = { ...params, inputProps: { ...params.inputProps, value: newValue } };
+												break;
+											}
+										}
+										// Check if it starts with "Get List" and method is "Get"
+										if (params.inputProps.value.startsWith("Get List")) {
+											console.log("Get List")
+										}
+									}
+
+									const actionDescription = ""
+									const isIntegration = false
+
+									  return (
+										  <Tooltip title={actionDescription}
+											placement="right" 
+											open={false}
+											PopperProps={{
+												sx: {
+												'& .MuiTooltip-tooltip': {
+													backgroundColor: 'transparent',
+													boxShadow: 'none',
+												},
+												'& .MuiTooltip-arrow': {
+													color: 'transparent',
+												},
+												},
+											}}
+											>
+												<TextField
+												{...params}
+
+												data-lpignore="true"
+												autocomplete="off"
+												dataLPIgnore="true"
+												autoComplete="off"
+
+												color="primary"
+												id="checkbox-search"
+												variant="body1"
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													borderRadius: theme.palette?.borderRadius,
+												}}
+												label={"Select Validation Action"}
+												variant="outlined"
+												name={`disable_autocomplete_${Math.random()}`}
+												/>	
+											</Tooltip>
+									  )
+									}}
+							/>
+				  			<Button
+				  				disabled={selectedValidationAction === null || selectedValidationAction === undefined || executing || settingValidationAction}
+								onClick={() => {
+									if (app === null || app === undefined || app.id === undefined || app.name === undefined) {
+										toast.error("App not found");
+										return;
+									}
+
+									// Check if validation action is selected
+									if (selectedValidationAction === null || selectedValidationAction === undefined) {
+										toast.error("Please select a validation action first");
+										return;
+									}
+
+									setExecuting(true);
+									fetch(`${globalUrl}/api/v1/apps/${app.id}/test`, {
+										method: "POST",
+										headers: {
+											"Content-Type": "application/json",
+											Accept: "application/json",
+										},
+										credentials: "include",
+									})
+									.then((response) => {
+										return response.json();
+									})
+									.then((responseJson) => {
+										if (responseJson.success === true) {
+											toast.success("Test executed successfully");
+										} else {
+											if (responseJson.reason && responseJson.reason.includes("No validation action found")) {
+												toast.error("No validation action found. Please select a validation action from the dropdown above and try again.");
+											} else {
+												toast.error(responseJson.reason || "Test failed");
+											}
+										}
+										setExecuting(false);
+									})
+									.catch((error) => {
+										console.log("Error:", error);
+										toast.error("Request failed");
+										setExecuting(false);
+									});
+								}}
+				  				variant="outlined"
+				  				style={{
+									marginLeft: 20, 
+								}}
+				  			>
+				  				{executing ? "Testing..." : "Run Test"}
+				  			</Button>
+				  		</div>
 
 				  		<Divider style={{marginTop: 30, marginBottom: 10, }}/>
 				  		<Typography variant="h6" style={{marginTop: 20, marginBottom: 10, }}>

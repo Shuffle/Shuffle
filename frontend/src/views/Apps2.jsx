@@ -1360,6 +1360,13 @@ const Apps2 = (props) => {
             console.log("Failed to set apps in localstorage: ", e)
           }
         }
+
+        const userId = userdata?.id;
+        if (userId !== undefined && userId !== null) {
+          const filteredUserApps = privateapps.filter((app) => app.owner === userId);
+          setUserApps(filteredUserApps);
+        }
+
       })
       .catch((error) => {
 		console.log("Failed to get apps: ", error.toString());
@@ -1367,6 +1374,14 @@ const Apps2 = (props) => {
         setIsLoading(false);
       });
   };
+
+  useEffect(() => {
+    const userId = userdata?.id;
+    if (userId !== undefined && userId !== null && userId.length > 0 && apps.length > 0) {
+      const filteredUserApps = apps.filter((app) => app.owner === userId);
+      setUserApps(filteredUserApps);
+    }
+  }, [userdata, apps]);
 
   // Locally hotloads app from folder
   const hotloadApps = () => {
