@@ -72,6 +72,9 @@ import AppExplorer from "./views/AppExplorer.jsx";
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
 
+// Change the Shuffle version on UI from here
+const SHUFFLE_VERSION = "2.2.0"
+
 // CORS used for testing purposes. Should only happen with specific port and http
 if (window.location.port === "3000") {
   globalUrl = "http://localhost:5001";
@@ -350,6 +353,7 @@ const App = (message, props) => {
 						{...props}
 						/> */}
 						<Navbar
+						SHUFFLE_VERSION={SHUFFLE_VERSION}
 						notifications={notifications}
 						setNotifications={setNotifications}
 						userdata={userdata}
@@ -365,7 +369,7 @@ const App = (message, props) => {
 					</div>
 					) : (
 						<div style={{ position: 'fixed', top: 32, left: 10, zIndex: 100000 }}>
-						  <LeftSideBar checkLogin={checkLogin} userdata={userdata} globalUrl={globalUrl} notifications={notifications} />
+						  <LeftSideBar SHUFFLE_VERSION={SHUFFLE_VERSION} checkLogin={checkLogin} userdata={userdata} globalUrl={globalUrl} notifications={notifications} />
 						</div>
 					) }
 		
