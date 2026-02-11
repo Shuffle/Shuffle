@@ -4087,6 +4087,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		}
 	}
 
+	// Content type required
+	req.Header.Set("Content-Type", "application/json")
+
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Another timeout issue here somewhere
@@ -4108,7 +4111,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		}
 
 		if strings.Contains(fmt.Sprintf("%s", err), "no such host") {
-			log.Printf("[DEBUG] SHOULD be Removing references to location for app %s as to be rediscovered", action.AppName)
+			log.Printf("[ERROR] Should be removing references to location for app '%s' as to be rediscovered. URL: %s. Error: %s", action.AppName, streamUrl, err)
 
 			//for k, v := range portMappings {
 			//	if strings.Contains(strings.ToLower(strings.ReplaceAll(action.AppName, " ", "_"))) {
