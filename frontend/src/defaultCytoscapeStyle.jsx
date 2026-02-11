@@ -87,11 +87,12 @@ export default function defaultCytoscapeStyle(theme, apps) {
       selector: `node[type="ACTION"]`,
       css: {
         shape: "roundrectangle",
-        "background-color": "#213243",
-        "border-color": "#81c784",
+        "background-color": theme.palette.cytoscapeBackgroundColor,
+        "border-width": "2px",
+        "border-color": "#02CB70",
         "background-width": "100%",
         "background-height": "100%",
-        "border-radius": "5px",
+        "corner-radius": 12,
         "z-index": 5001,
       },
     },
@@ -170,7 +171,9 @@ export default function defaultCytoscapeStyle(theme, apps) {
         "background-width": "100%",
         "background-height": "100%",
   
-        "background-color": "data(iconBackground)",
+        "background-color": function(element) {
+          return element.data("iconBackground") || undefined;
+        },
         "background-fill": "data(fillstyle)",
         "background-gradient-direction": "to-bottom-right",
         "background-gradient-stop-colors": "data(fillGradient)",
@@ -187,7 +190,9 @@ export default function defaultCytoscapeStyle(theme, apps) {
         "font-size": "0px",
         "background-width": "75%",
         "background-height": "75%",
-        "background-color": "data(iconBackground)",
+        "background-color": function(element) {
+          return element.data("iconBackground") || undefined;
+        },
         "background-fill": "data(fillstyle)",
         "background-gradient-direction": "to-right",
         "background-gradient-stop-colors": "data(fillGradient)",
@@ -214,6 +219,8 @@ export default function defaultCytoscapeStyle(theme, apps) {
       css: {
         "background-image": "data(large_image)",
         "text-halign": "right",
+        "background-width": "85%",
+        "background-height": "85%",
       },
     },
     {
@@ -269,7 +276,9 @@ export default function defaultCytoscapeStyle(theme, apps) {
         "font-size": "0px",
         border: "1px solid rgba(255,255,255,0.9)",
         "background-image": "data(icon)",
-        "background-color": "data(iconBackground)",
+        "background-color": function(element) {
+          return element.data("iconBackground") || null;
+        } || "null",
       },
     },
     {
@@ -330,43 +339,6 @@ export default function defaultCytoscapeStyle(theme, apps) {
       },
     },
     {
-      selector: `node[app_id="shuffle_agent"]`,
-      css: {
-      "shape": function(element) {
-            return "roundrectangle"
-      },
-      "height": "74px",
-          "width": "222px",
-        "background-image": "data(large_image)",
-          "label": function(element) {
-        var elementname = element.data("label")
-        if (elementname === null || elementname === undefined) {
-          return ""
-        } 
-  
-        elementname = elementname.replaceAll("_", " ", -1)
-  
-        if (elementname.length > 15) {
-          elementname = elementname.substring(0, 15) + ".."
-        }
-  
-        return elementname
-      },
-      "background-width": "65px",
-      "background-height": "65px",
-      "background-position-x": "20px", 
-      "background-repeat": "no-repeat",
-      "background-opacity": "0.5",
-  
-      "font-size": "14px",
-      "text-halign": "center",
-      "text-valign": "center",
-          "text-margin-x": "20px",
-          "text-margin-y": "0px",
-      
-      },
-    },
-    {
       selector: "node[!is_valid]",
       css: {
         "border-color": "#f53434",
@@ -384,9 +356,9 @@ export default function defaultCytoscapeStyle(theme, apps) {
     {
       selector: ".skipped-highlight",
       css: {
-        "background-color": "grey",
+        "background-color": "transparent",
         "border-color": "grey",
-        "border-width": "8px",
+        "border-width": "3px",
         "transition-property": "background-color",
         "transition-duration": "0.5s",
       },
@@ -435,7 +407,7 @@ export default function defaultCytoscapeStyle(theme, apps) {
       selector: ".executing-highlight",
       css: {
         //"background-color": "#ffef47",
-        "border-color": "#FECC00",
+        "border-color": "#FFC633",
         "border-width": "8px",
         "transition-property": "border-width",
         "transition-duration": "0.25s",
@@ -477,8 +449,8 @@ export default function defaultCytoscapeStyle(theme, apps) {
       selector: "edge.executing-highlight",
       css: {
         width: "5px",
-        "target-arrow-color": "#FECC00",
-        "line-color": "#FECC00",
+        "target-arrow-color": "#FFC633",
+        "line-color": "#FFC633",
         "transition-property": "line-color, width",
         "transition-duration": "0.25s",
       },
@@ -535,6 +507,8 @@ export default function defaultCytoscapeStyle(theme, apps) {
     {
       selector: ".eh-preview, .eh-ghost-edge",
       style: {
+        "curve-style": "unbundled-bezier",
+        "control-point-step-size": 60,
         "background-color": "#337ab7",
         "line-color": "#337ab7",
         "target-arrow-color": "#337ab7",
@@ -602,8 +576,26 @@ export default function defaultCytoscapeStyle(theme, apps) {
     {
       selector: "node:selected",
       css: {
-        "border-color": "#f86a3e",
-        "border-width": "7px",
+        "border-color": "#FF8444",
+        "border-width": "3px",
+        "background-color": "transparent",
+      },
+    },
+    {
+      // This is to show the underlay orange effect on action on selection
+      selector: 'node[type="ACTION"]:selected',
+      css: {
+        "underlay-color": "rgba(255, 132, 68, 0.15)",
+        "underlay-padding": 10,
+        "underlay-opacity": 0.3,
+        "underlay-corner-radius": 16,
+      },
+    },
+    {
+      // For the startNode
+      selector: 'node[?isStartNode][app_id != "shuffle_agent"]:selected',
+      css: {
+        "underlay-shape": "ellipse",
       },
     },
     {
@@ -654,6 +646,78 @@ export default function defaultCytoscapeStyle(theme, apps) {
 
 			return nodeData?.large_image
 		  },
+      },
+    },
+    {
+      selector: 'node[flowOrientation = "horizontal"][?small_image], node[flowOrientation = "horizontal"][?large_image]',
+      css: {
+        "text-halign": "center",
+        "text-valign": "bottom",
+        "text-margin-x": "0px",
+        "text-margin-y": "12px",
+      },
+    },
+    {
+      selector: 'node[flowOrientation = "vertical"][?small_image], node[flowOrientation = "vertical"][?large_image]',
+      css: {
+        "text-halign": "right",
+        "text-valign": "center",
+        "text-margin-x": "15px",
+        "text-margin-y": "0px",
+      },
+    },
+    {
+      selector: 'node[?isStartNode], node[?isStartNode][flowOrientation = "vertical"]',
+      css: {
+        "text-halign": "right",
+        "text-valign": "center",
+        "text-margin-x": "15px",
+        "text-margin-y": "0px",
+      },
+    },
+    {
+      selector: 'node[?isStartNode][flowOrientation = "horizontal"]',
+      css: {
+        "text-halign": "center",
+        "text-valign": "bottom",
+        "text-margin-x": "0px",
+        "text-margin-y": "12px",
+      },
+    },
+    {
+      selector: `node[app_id="shuffle_agent"]`,
+      css: {
+      "shape": function(element) {
+            return "roundrectangle"
+      },
+      "height": "74px",
+          "width": "222px",
+        "background-image": "data(large_image)",
+          "label": function(element) {
+        var elementname = element.data("label")
+        if (elementname === null || elementname === undefined) {
+          return ""
+        } 
+  
+        elementname = elementname.replaceAll("_", " ", -1)
+  
+        if (elementname.length > 15) {
+          elementname = elementname.substring(0, 15) + ".."
+        }
+  
+        return elementname
+      },
+      "background-width": "65px",
+      "background-height": "65px",
+      "background-position-x": "20px", 
+      "background-repeat": "no-repeat",
+      "background-color": "#212121",
+      "font-size": "14px",
+      "text-halign": "center",
+      "text-valign": "center",
+          "text-margin-x": "20px",
+          "text-margin-y": "0px",
+      
       },
     },
     {

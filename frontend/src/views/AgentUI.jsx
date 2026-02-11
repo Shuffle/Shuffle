@@ -475,7 +475,7 @@ const AgentUI = (props) => {
 		getAppAuth() 
 	}, [])
 
-	const maxTimelineWidth = 380 
+	const maxTimelineWidth = 375 
 
 	const submitQuestions = (decisionId, questionAnswers, isContinuation) => {
 		console.log("Submitting questions: ", decisionId, questionAnswers)
@@ -504,6 +504,13 @@ const AgentUI = (props) => {
 
 		} else {
 			for (var key in questionAnswers) {
+				// Special handler for continuation of normal actions
+				// Approves/denies continuation
+				if (key === "approve") {
+					newArgument[key] = questionAnswers[key]
+					break
+				}
+
 				const answer = questionAnswers[key]
 				newArgument["question_"+(answer.index)] = answer.value
 			}
@@ -643,6 +650,7 @@ const AgentUI = (props) => {
 			item.label = item?.details?.reason || item.label
 
 		} else if (item?.category === "ask" || item?.details?.action === "ask") { 
+			console.log("IN HERE?: ", item)
 
 			item.type = "question"
 			item.category = "ask"
@@ -662,6 +670,8 @@ const AgentUI = (props) => {
 		} else if (item?.details?.action === "api" && item?.details?.tool?.length > 0) {
 			item.label = item?.details?.reason || item.label
 		}
+
+		console.log("ITEM: ", item, questions)
 
 		var parsedCategory = item.category === "singul" ?
 			<Tooltip title="Singul" placement="top">
@@ -683,7 +693,14 @@ const AgentUI = (props) => {
 		if (item?.details?.tool !== undefined && item?.details?.tool !== null && item?.details?.tool?.length > 0 && item?.details?.tool !== "singul" && item?.details?.tool !== item?.details?.action) {
 
 			// Find the app and inject the image
-			const toolName = item.details.tool.toLowerCase().replaceAll(" ", "_").replaceAll("-", "_")
+			var toolName = item?.details?.tool?.toLowerCase().replaceAll(" ", "_").replaceAll("-", "_")
+			if (toolName.includes("app:")) {
+				const toolNameSplit = toolName.split(":")
+				if (toolNameSplit.length >= 2) {
+					toolName = toolNameSplit[2]
+				}
+			}
+
 			for (var appKey in apps) {
 				const app = apps[appKey]
 
@@ -748,10 +765,17 @@ const AgentUI = (props) => {
 							if (item?.details === undefined || item?.details === null || item?.details?.input === undefined || item?.details?.input === null) {
 								toast.error("No decision details found to rerun. Cannot proceed. Please go back to your workflow or /agents to start over.")
 							} else {
+								if (item?.details?.original_input !== undefined && item?.details?.original_input !== null && item?.details?.original_input !== "") {
+									setActionInput(item?.details?.original_input)
+									setDisableButtons(true)
+									submitInput(item?.details?.original_input)
+									return
+								}
+
 								//console.log("DETAILS: ", item?.details)
 								for (var messagekey in item?.details?.input?.messages) {
 									const message = item?.details?.input?.messages[messagekey]
-									if (message.role === "user") {
+									if (message.role === "user" && !message?.role?.includes("USER CONTEXT")) {
 										setActionInput(message.content)
 										setDisableButtons(true)
 
@@ -871,6 +895,9 @@ const AgentUI = (props) => {
 					<div style={{
 						minWidth: 300, 
 						maxWidth: 300, 
+						maxHeight: 150, 
+						overflowX: "hidden", 
+						overflowY: "auto", 
 						paddingTop: defaultTopPadding, 
 						paddingBottom: defaultTopPadding,
 					}}>
@@ -894,6 +921,7 @@ const AgentUI = (props) => {
 							minWidth: maxTimelineWidth, 
 							maxWidth: maxTimelineWidth, 
 							paddingTop: defaultTopPadding*1.5, 
+							marginLeft: 5, 
 						}}>
 							{currentDuration != 0 && !isNaN(timelineMarginLeft) && !isNaN(timelineWidth) && timelineWidth > 0 ?
 								<div style={{
@@ -921,40 +949,6 @@ const AgentUI = (props) => {
 						{item.category === "ask" ? 
 							<span style={{display: "flex", }}>
 								{rerunButton} 
-								{/*
-								<Tooltip title="Approve" placement="left">
-									<span>
-										<IconButton
-											disabled={disableButtons}
-											style={{marginLeft: 20, }}
-											onClick={(e) => {
-												e.preventDefault()
-												e.stopPropagation()
-
-												toast.info("Approving this step.")
-											}}
-										>
-											<CheckIcon style={{color: green, }} />
-										</IconButton>
-									</span>
-								</Tooltip>
-								<Tooltip title="Deny" placement="left">
-									<span>
-										<IconButton
-											disabled={item.type !== "decision" || disableButtons}
-											style={{marginLeft: 0, }}
-											onClick={(e) => {
-												e.preventDefault()
-												e.stopPropagation()
-
-												toast.info("Stopping on this step.")
-											}}
-										>
-											<CloseIcon style={{color: red, }} />
-										</IconButton>
-									</span>
-								</Tooltip>
-								*/}
 
 								<Tooltip title="Answer in the Form UI" placement="left">
 									<span>
@@ -980,6 +974,60 @@ const AgentUI = (props) => {
 								rerunAgentButton
 							:
 							item?.type === "decision" ?
+								item?.details?.run_details?.status === "WAITING" ? 
+									agentRequestLoading ? null : 
+									<div>
+										<Button
+											style={{
+												maxHeight: 30, 
+												minHeight: 30,
+												minWidth: 75,
+												maxWidth: 75, 
+												marginTop: 5, 
+											}}
+											color="primary"
+											variant="contained"
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+
+												// FIXME: How do we approve it? Hmm
+												toast.info("Approving this step.")
+
+												// Keeping it as string to make it simple
+												const newAnswers = {
+													"approve": "true",
+												}
+												submitQuestions(item?.details?.run_details?.id, newAnswers)
+											}}
+										>
+											Approve
+										</Button>
+										<Button
+											style={{
+												maxHeight: 30, 
+												minHeight: 30,
+												minWidth: 75,
+												maxWidth: 75, 
+												marginTop: 3, 
+											}}
+											variant="outlined"
+											color="secondary"
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+
+												// Keeping it as string to make it simple
+												const newAnswers = {
+													"approve": "false",
+												}
+												submitQuestions(item?.details?.run_details?.id, newAnswers)
+											}}
+										>
+											Deny
+										</Button>
+									</div>
+								:
 								<div style={{display: "flex", }}>
 									{rerunButton}
 									<Tooltip title="Explore/debug app run" placement="left">
@@ -1025,7 +1073,7 @@ const AgentUI = (props) => {
 				</div>
 					
 				{showAuthentication && selectedApp.id !== undefined ?
-					<div style={{minWidth: 300, maxWidth: 300, margin: "auto", marginTop: 25, }}>
+					<div style={{minWidth: 300, maxWidth: 300, margin: "auto", marginTop: 0, marginBottom: 25, }}>
 						<AuthenticationModal 
 							globalUrl={globalUrl}
 							userdata={userdata}
@@ -1036,7 +1084,7 @@ const AgentUI = (props) => {
 					</div>
 				: null}
 
-				{questions?.length > 0 && item?.status === "RUNNING" ? 
+				{questions?.length > 0 && item?.status === "RUNNING" || item?.status === "WAITING" ? 
 					<div>
 						{questions.map((q, questionIndex) => {
 							return (
@@ -1094,7 +1142,7 @@ const AgentUI = (props) => {
 							}}
 						>
 							{agentRequestLoading ? 
-								<CircularProgress size={20} style={{marginRight: 10, }} /> 
+								<CircularProgress size={20} style={{marginRight: 3, }} /> 
 									: 
 								"Submit"
 							}
@@ -1259,6 +1307,7 @@ const AgentUI = (props) => {
 			}
 
 			if (nextItem.start_time - currentItem.end_time > 1) {
+				/*
 				timelineItems?.push({
 					label: "",
 					type: "processing",
@@ -1267,6 +1316,7 @@ const AgentUI = (props) => {
 					start_time: currentItem.end_time,
 					end_time: nextItem.start_time,
 				})
+				*/
 			}
 		}
 		timelineItems.sort((a, b) => a.start_time - b.start_time)
@@ -1333,7 +1383,7 @@ const AgentUI = (props) => {
 						}}
 					>
 						{finishAnswer !== "" ?
-							<div style={{marginTop: 50, textAlign: "left", }}>
+							<div style={{marginTop: 50, overflowX: "hidden", textAlign: "left", }}>
 								<Markdown
 									components={markdownComponents}
 									id="markdown_wrapper"
@@ -1586,6 +1636,14 @@ const AgentUI = (props) => {
 
 							<div />
 
+							<img
+								src={theme.palette.singulBlackWhite}
+								style={{
+									width: 100,
+									height: 100,
+									borderRadius: theme.palette.borderRadius,
+								}}
+							/>
 							<Typography variant="h2" style={{marginTop: 30, }}>
 								What do you want to do?
 							</Typography>
@@ -1593,14 +1651,18 @@ const AgentUI = (props) => {
 								label="Get my emails for today and summarise them"
 								variant="outlined"
 								disabled={agentRequestLoading}
-								style={{width: 500, marginTop: 30, }}
+								style={{width: 650, marginTop: 30, }}
 								multiline
 								minRows={1}
+								maxRows={20}
 								defaultValue={actionInput || ""}
 								onChange={(e) => {
 									setActionInput(e.target.value)
 								}}
 								InputProps={{
+									style: {
+										borderRadius: 30,
+									},
 									endAdornment: (
 										agentRequestLoading ?
 											<CircularProgress size={24} style={{marginRight: 10, }} />
@@ -1616,8 +1678,8 @@ const AgentUI = (props) => {
 								}}
 							/>
 
-							<div style={{display: "flex", margin: "auto", paddingTop: 30, minWidth: 300, maxWidth: 300, justifyContent: "center", overflowWrap: "wrap", }}>
-								<div>
+							<div style={{display: "flex", margin: "auto", marginTop: 30, minWidth: 300, maxWidth: 300, justifyContent: "center", overflowWrap: "wrap", }}>
+								<div style={{}}>
 									<Chip 
 										id="add_app_chip"
 										icon={<AddIcon />} label="Select Apps / MCPs"  
@@ -1642,14 +1704,19 @@ const AgentUI = (props) => {
 												defaultSearch={""}
 												newSelectedApp={newSelectedApp}
 												setNewSelectedApp={setNewSelectedApp}
-												inputHeight={200}
+												inputHeight={250}
+												apps={apps}
 											/>
 									</Popover>
 								</div>
 								
 								{chosenApps.map((app, index) => {
-									const chosenName = (app?.name?.charAt(0).toUpperCase() + app?.name?.slice(1))?.replaceAll("_", " ").replaceAll("-", " ")
-									const chosenImagePath = app?.image
+									var chosenName = (app?.name?.charAt(0).toUpperCase() + app?.name?.slice(1))?.replaceAll("_", " ").replaceAll("-", " ")
+									if (chosenName === "API") {
+										chosenName = "default"
+									}
+
+									const chosenImagePath = app?.image === undefined || app?.image === null || app?.image === "" ? app?.large_image === undefined || app?.large_image === null || app?.large_image === "" ? theme.palette.singulBlackWhite : app.large_image : app.image
 									const chosenImage = <img src={chosenImagePath} style={{width: 24, height: 24, borderRadius: 20, marginRight: 1, }} />
 
 									return ( 
@@ -1731,7 +1798,7 @@ const AgentUI = (props) => {
 													<Avatar 
 														key={index}
 														alt={app?.name} 
-														src={app?.large_image} 
+														src={app?.large_image ? app.large_image : app?.image ? app.image : theme.palette.singulBlackWhite}
 														onClick={() => {
 															window.open(`/apps/${app.id}`, '_blank', 'noopener,noreferrer');
 														}}

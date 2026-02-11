@@ -972,7 +972,7 @@ const GettingStarted = (props) => {
     const [open, setOpen] = React.useState(false);
     const [anchorEl, setAnchorEl] = React.useState(null);
 
-    var boxColor = "#FECC00";
+    var boxColor = "#FFC633";
     if (data.is_valid) {
       boxColor = "#86c142";
     }
@@ -1562,7 +1562,7 @@ const GettingStarted = (props) => {
           renderCell: (params) => {
             const data = params.row.record;
 
-            var boxColor = "#FECC00";
+            var boxColor = "#FFC633";
             if (data.is_valid) {
               boxColor = "#86c142";
             }

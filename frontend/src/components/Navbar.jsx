@@ -748,7 +748,7 @@ const Navbar = (props) => {
     // isMobile,
     serverside,
     billingInfo,
-
+    SHUFFLE_VERSION,
     notifications,
   } = props;
 
@@ -2624,7 +2624,7 @@ const Navbar = (props) => {
                                 margin: 0
                               }}
                             >
-                              Version 2.0.2
+                              Version {SHUFFLE_VERSION}
                             </Typography>
                           </Box>
                         </Menu>

@@ -82,16 +82,17 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.orborus.args "context" $) | nindent 12 }}
           {{- end }}
           env:
-            - name: RUNNING_MODE
-              value: kubernetes
-            - name: IS_KUBERNETES
-              value: "true"
+            - name: CLEANUP
+              value: "false" # Do not remove resources when restarting orborus
+            {{- $env := include "shuffle.orborus.env" . | fromYaml }}
+            {{- range $key, $val := $env }}
+            - name: {{ $key | quote }}
+              value: {{ $val | quote }}
+            {{- end }}
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           envFrom:
-            - configMapRef:
-                name: {{ include "shuffle.orborus.name" . }}-env
             {{- if .Values.orborus.extraEnvVarsCM }}
             - configMapRef:
                 name: {{ include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVarsCM "context" $) }}

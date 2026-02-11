@@ -699,20 +699,20 @@ const AppCreator = (defaultprops) => {
   // This is the data FROM the database, not what's being saved
   const parseIncomingOpenapiData = (data) => {
 	
-		var parsedDecoded = ""
-		try { 
-			const decoded = base64_decode(data.openapi)
-			parsedDecoded = decoded
+	var parsedDecoded = ""
+	try { 
+		const decoded = base64_decode(data.openapi)
+		parsedDecoded = decoded
     } catch (e) {
-			console.log("Failed JSON parsing: ", e)
-			parsedDecoded = data
-		}
+		console.log("Failed JSON parsing: ", e)
+		parsedDecoded = data
+	}
 
-		if (data.openapi === null)  {
-			toast("Failed to load OpenAPI for app. Please contact support if this persists.")
-    		setIsAppLoaded(true);
-			return
-		}
+	if (data.openapi === null)  {
+		toast("Failed to load OpenAPI for app. Please contact support if this persists.")
+		setIsAppLoaded(true);
+		return
+	}
 
 		//console.log("Decoded: ", parsedDecoded)
     const parsedapp =
@@ -916,36 +916,41 @@ const AppCreator = (defaultprops) => {
               body: "",
               errors: [],
               example_response: "",
-		      action_label: "No Label",
+		      action_label: ["No Label"],
 		      required_bodyfields: [],
             };
 
 			if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
-				console.log("LABEL: ", methodvalue["x-label"])
+				const labels = typeof methodvalue["x-label"] === 'object' || Array.isArray(methodvalue["x-label"]) ? methodvalue["x-label"] : (typeof methodvalue["x-label"] === 'string' ? methodvalue["x-label"].split(",") : [])
 		
-				var correctlabel = "" 
-				const labels = methodvalue["x-label"].split(",")
+				var correctlabels = []
+				console.log("LABEL1: ", methodvalue["x-label"])
 				for (let labelkey in labels) {
-					var label = labels[labelkey].trim()
-					if (label.toLowerCase() === "no label") {
+					var label = labels[labelkey]?.trim()
+					if (label?.toLowerCase() === "no label") {
 						continue
 					}
 
 					// Remove quotes and escapes
-					label = label.replace(/['"]+/g, '')
-					label = label.replace(/\\/g, '')
+					label = label?.replace(/['"]+/g, '')
+					label = label?.replace(/\\/g, '')
 
-					//label = label.replace("_", " ", -1)
-					//label = label.charAt(0).toUpperCase() + label.slice(1)
+					// Uppercase first
+					if (label === undefined || label === null || label?.length === 0 || label?.toLowerCase().replaceAll(" ", "_") === "no_label") {
+						label = "No Label"
+					}
 
-					correctlabel = label
-					break
+					label = label?.replace("_", " ")
+					label = label?.charAt(0).toUpperCase() + label?.slice(1)
+
+					correctlabels?.push(label)
 				}
 
-				console.log("LABEL: ", correctlabel)
+				console.log("LABEL: ", correctlabels)
+
 				// FIX: Map labels only if they're actually in the category list
 				//newaction.action_label = methodvalue["x-label"]
-				newaction.action_label = correctlabel
+				newaction.action_label = correctlabels
 			}
 
 			if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
@@ -1681,7 +1686,7 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-					//newaction.action_label = "No Label"
+					//newaction.action_label = ["No Label"]
           newActions.push(newaction);
         }
       }
@@ -1964,9 +1969,9 @@ const AppCreator = (defaultprops) => {
     setProjectCategories(all_categories);
 
 	// Rearrange them by which has action_label
-	const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
+	const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label[0] !== "No Label")
 	console.log("First actions: ", firstActions)
-	const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
+	const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label[0] === "No Label")
 	newActions = firstActions.concat(secondActions)
     setActions(newActions);
 		//data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
@@ -2117,17 +2122,16 @@ const AppCreator = (defaultprops) => {
         },
       };
 
-			if (item.action_label !== undefined && item.action_label !== "" && item.action_label !== "No Label") {
-				//console.log("Action label: ", item.action_label)
-				data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
-			}
+		if (item.action_label !== undefined && item.action_label !== "" && item.action_label[0] !== "No Label") {
+			data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
+		}
 
-			if (item.required_bodyfields !== undefined && item.required_bodyfields !== null && item.required_bodyfields.length > 0) {
-				console.log("Required bodyfields: ", item.required_bodyfields)
-				data.paths[item.url][item.method.toLowerCase()]["x-required-fields"] = item.required_bodyfields
-			}
+		if (item.required_bodyfields !== undefined && item.required_bodyfields !== null && item.required_bodyfields.length > 0) {
+			console.log("Required bodyfields: ", item.required_bodyfields)
+			data.paths[item.url][item.method.toLowerCase()]["x-required-fields"] = item.required_bodyfields
+		}
 
-      //console.log("ACTION: ", item)
+  //console.log("ACTION: ", item)
 
       if (item.example_response !== undefined && item.example_response !== null && item.example_response.length > 0) {
 
@@ -3451,7 +3455,7 @@ const AppCreator = (defaultprops) => {
 			errors: [],
 			example_response: "",
 			method: actionNonBodyRequest[0],
-			action_label: "No Label",
+			action_label: ["No Label"],
 			required_bodyfields: [],
 		});
 
@@ -4453,6 +4457,31 @@ const AppCreator = (defaultprops) => {
 		const url = data.url;
 		const hasFile = (data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
 			
+		if (data?.action_label[0] !== 'No Label') {
+			console.log("Action label: ", data?.name, data?.action_label)
+		}
+
+		var currentActionLabels = JSON.parse(JSON.stringify(actionLabels))
+		for (var labelKey in data?.action_label) {
+			const label = data?.action_label[labelKey]
+			if (label.toLowerCase().replaceAll(" ", "_") === "no_label") { 
+				continue
+			}
+
+			var found = false
+			for (var acatKey in currentActionLabels) {
+				const acat = currentActionLabels[acatKey]
+				if (acat === label) {
+					found = true
+					break
+				}
+			}
+
+			if (!found) {
+				console.log(`Not found: '${label}' in ${currentActionLabels}`)
+				currentActionLabels.push(data?.action_label[labelKey])
+			}
+		}
 				
 		return (
 			<Paper key={index} style={actionListStyle}>
@@ -4535,23 +4564,38 @@ const AppCreator = (defaultprops) => {
 			*/}
 
 				{/* From 2023: Example of handling action labels */}
-				{actionLabels.length > 0 && newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 && categories.length > 0 ? 
+				{currentActionLabels.length > 0 && newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 && categories.length > 0 ? 
 						<Select
+							multiple={true}
 							fullWidth
 							onChange={(e) => {
-								console.log("Should change: ", e.target.value, " Index: ", index)
+								if (e.target.value === undefined || e.target.value === null) {
+									return
+								}
+
+								if (e.target.value.length === 0) {
+									e.target.value = ["No Label"]
+								}
 
 								const foundIndex = actions.findIndex((action) => action.name === data.name)
-								console.log("Found index: ", foundIndex)
 								if (foundIndex !== undefined && foundIndex !== null && foundIndex >= 0) {
+									if (e.target.value.includes("no_label") || e.target.value.includes("No_Label") || e.target.value.includes("No Label")) {
+										actions[foundIndex].action_label = ["No Label"]
+										setActions(actions)
+										setUpdate(Math.random())
+
+										return
+									}
+
+									console.log("Should change: ", e.target.value, " Index: ", index)
 									actions[foundIndex].action_label = e.target.value
 									setActions(actions)
 									setUpdate(Math.random())
 								}
 							}}
-							value={data?.action_label?.replace(" ", "_").toLowerCase()}
+							value={data?.action_label}
 							style={{
-								border: data.action_label === undefined || data.action_label === "No Label" ? "" : `2px solid ${bgColor}`,
+								border: data.action_label === undefined || data.action_label[0] === "No Label" ? "" : `2px solid ${bgColor}`,
 								borderRadius: theme.shape.borderRadius,
 								backgroundColor: theme.palette.backgroundColor,
 								paddingLeft: 10,
@@ -4566,12 +4610,15 @@ const AppCreator = (defaultprops) => {
 								name: "Method",
 								id: "method-option",
 							}}
+							onClick={(e) => {
+								console.log("Current labels: ", data?.action_label)
+							}}
 						>
-							{actionLabels.map((label, labelindex) => {
+							{currentActionLabels.map((label, labelindex) => {
 								return (
 									<MenuItem
 										key={labelindex}
-										value={label.replace(" ", "_").toLowerCase()}
+										value={label}
 										style={{ 
 										}}
 									>
@@ -4636,7 +4683,7 @@ const AppCreator = (defaultprops) => {
                 body: "",
                 errors: [],
                 method: actionNonBodyRequest[0],
-				action_label: "No Label",
+				action_label: ["No Label"],
 				required_bodyfields: [],
               });
               setActionsModalOpen(true);
@@ -5388,15 +5435,15 @@ const AppCreator = (defaultprops) => {
                 body: "",
                 errors: [],
                 method: actionNonBodyRequest[0],
-								action_label: "No Label",
-								required_bodyfields: [],
+				action_label: ["No Label"],
+				required_bodyfields: [],
               });
 
-							console.log("Added: ", actions)
+			  console.log("Added: ", actions)
               setActions(actions)
-							setFilteredActions(actions)
+			  setFilteredActions(actions)
               setActionAmount(50);
-    					setUpdate(Math.random());
+    		  setUpdate(Math.random());
             }}
           >
             New action
@@ -5420,7 +5467,7 @@ const AppCreator = (defaultprops) => {
               //  body: "",
               //  errors: [],
               //  method: actionNonBodyRequest[0],
-							//	action_label: "No Label",
+							//	action_label: ["No Label"],
 							//	required_bodyfields: [],
               //})
 							//setActions(actions)

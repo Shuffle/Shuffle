@@ -107,7 +107,7 @@ const SetAuthentication = (props) => {
 			// Set the orgsession to be a cookie for __session cookie
 
 			setTimeout(() => {
-				document.cookie = "__session=" + orgsession + "; path=/; max-age=1800"; // Cookie expires in 30 min 
+				document.cookie = "__session=" + orgsession + "; path=/; max-age=1800; SameSite=Lax"; // Cookie expires in 30 min 
 			}, 1000)
 		}
 

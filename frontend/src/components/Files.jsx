@@ -110,7 +110,11 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 
 			return (
 				<Tooltip 
-					title={params.row.filename} 
+					title={<Typography variant="b1">
+						{params?.row?.filename}<br/>
+						{params?.row?.tags}
+						</Typography>
+					} 
 					placement="left" 
 					arrow
 				>
@@ -1580,8 +1584,8 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 						columns={columns} 
 						checkboxSelection
 						disableRowSelectionOnClick
-						selectionModel={selectedRows}
-						onSelectionModelChange={(newSelection) => {
+						rowSelectionModel={selectedRows}
+						onRowSelectionModelChange={(newSelection) => {
 							setSelectedRows(newSelection);
 						}}
 						sx={{

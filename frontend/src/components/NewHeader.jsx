@@ -1450,7 +1450,6 @@ const Header = (props) => {
         color="transparent"
         elevation={0}
         style={{
-          backgroundColor: "transparent",
           boxShadow: "none",
           minHeight: 68,
           maxHeight: 68,

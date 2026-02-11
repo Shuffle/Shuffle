@@ -29,4 +29,4 @@ shuffle-database/nodes
 shuffle-database/performance_analyzer_enabled.conf
 shuffle-database/rca_enabled.conf
 
-*/package-lock.json
+#*/package-lock.json

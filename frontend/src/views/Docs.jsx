@@ -1279,7 +1279,6 @@ const Docs = (defaultprops) => {
             overflow: "hidden",
             paddingBottom: 100,
             marginLeft: mobile ? 0 : 50,
-            marginTop: 50,
             textAlign: "center",
             margin: "auto",
             marginTop: 50,

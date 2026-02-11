@@ -3407,7 +3407,7 @@ const Workflows = (props) => {
           {userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0 && userdata.priorities[0].name.includes("CPU") && userdata.priorities[0].active === true ?
             <div style={{
               border: "1px solid rgba(255,255,255,0.1)", borderRadius: theme.palette?.borderRadius, marginTop: 10,
-              marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor:
+              marginBottom: 10, padding: 15, height: 70, textAlign: "left", backgroundColor:
                 theme.palette.surfaceColor, display: "flex", maxHeight: "105px", minHeight: "110px"
             }}
             >

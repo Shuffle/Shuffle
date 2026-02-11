@@ -25,7 +25,7 @@ const Priority = (props) => {
   	const { globalUrl, clickedFromOrgTab,userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, appFramework, } = props;
 	const { themeMode, supportEmail } = useContext(Context);
 	const theme = getTheme(themeMode);
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 
 	if (window.location.pathname === "/workflows") {
@@ -120,7 +120,7 @@ const Priority = (props) => {
 	const srcSize = realignedSrc ? 35 : 30 
 	const dstSize = realignedDst ? 35 : 30
 	return (
-		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" :  clickedFromOrgTab ?null:"1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, marginTop: 10, marginBottom: 10, padding:  clickedFromOrgTab ? 24:15, textAlign: "center", minHeight: isCloud ? 70 : 100, maxHeight: isCloud ? 70 : 100, textAlign: "left", backgroundColor: clickedFromOrgTab ?  theme.palette.backgroundColor : theme.palette.surfaceColor, display: "flex", }}>
+		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" :  clickedFromOrgTab ?null:"1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, marginTop: 10, marginBottom: 10, padding:  clickedFromOrgTab ? 24:15, minHeight: isCloud ? 70 : 100, maxHeight: isCloud ? 70 : 100, textAlign: "left", backgroundColor: clickedFromOrgTab ?  theme.palette.backgroundColor : theme.palette.surfaceColor, display: "flex", }}>
 			<div style={{flex: 2, overflow: "hidden",}}>
 				<span style={{display: "flex", }}>
 					{priority.type === "usecase" || priority.type == "apps" ? <AutoFixHighIcon style={{height: 19, width: 19, marginLeft: 3, marginRight: 10, color: theme.palette.text.primary}}/> : null} 

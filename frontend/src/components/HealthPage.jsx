@@ -24,8 +24,9 @@ const HealthPage = (props) => {
     const [liveExecutionsRange, setLiveExecutionsRange] = useState('1h'); // Default to 1h
     const [isHealthLoading, setIsHealthLoading] = useState(false); // Loading state for HealthBarChart
     const [isLiveExecutionsLoading, setIsLiveExecutionsLoading] = useState(false); // Loading state for LiveExecutionsChart
+    const [isFixingOpensearchPrefix, setIsFixingOpensearchPrefix] = useState(false);
 
-    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
+    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (import.meta.env.VITE_IS_SSR === "true");
 
     const fetchHealthStats = useCallback(async () => {
         setIsHealthLoading(true); // Start loading for HealthBarChart
@@ -364,19 +365,63 @@ const HealthPage = (props) => {
         }
     };
 
+    const handleFixOpensearchPrefix = async () => {
+        if (isFixingOpensearchPrefix) {
+            return;
+        }
+
+        setIsFixingOpensearchPrefix(true);
+        try {
+            const response = await fetch(`${globalUrl}/api/v1/health/opensearch-prefix`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                credentials: "include",
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                const reason = data && data.reason ? data.reason : "Failed to fix opensearch prefix";
+                throw new Error(reason);
+            }
+
+            const reindexed = data.reindexed ? data.reindexed.length : 0;
+            const aliasUpdates = data.alias_updates ? data.alias_updates.length : 0;
+            const deleted = data.deleted_indices ? data.deleted_indices.length : 0;
+            toast.success(`Fixed opensearch prefix (reindexed ${reindexed}, aliases ${aliasUpdates}, deleted ${deleted})`);
+        } catch (error) {
+            console.error("Error fixing opensearch prefix:", error);
+            toast.error(error.message || "Failed to fix opensearch prefix");
+        } finally {
+            setIsFixingOpensearchPrefix(false);
+        }
+    };
+
 	  const healthBarData = updateChartData()
 
 
     return (
         <div style={{ paddingTop: 30, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             {/* Health Bar Chart Section */}
-            <ButtonGroup style={{ display: 'flex', margin: "auto", marginBottom: 10, width: 300, borderRadius: 30, background: "#000000" }}>
-                <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '24hr' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '24hr' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('24hr')} disabled={isHealthLoading}>24h</Button>
-                <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '7day' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '7day' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('7day')} disabled={isHealthLoading}>7d</Button>
-                <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '30d' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '30d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('30d')} disabled={isHealthLoading}>30d</Button>
-                <Button disabled variant="contained" style={{ flex: 1, borderBottom: selectedRange === '90d' ? '2px solid #FF8444' : 'none', background: "#000000", color: false === false ? "grey" : selectedRange === '90d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('90d')} disabled={isHealthLoading}>90d</Button>
-                <Button disabled variant="contained" style={{ flex: 1, borderBottom: selectedRange === '180d' ? '2px solid #FF8444' : 'none', background: "#000000", color: false === false ? "grey" : selectedRange === '180d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('180d')} disabled={isHealthLoading}>180d</Button>
-            </ButtonGroup>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: "auto", marginBottom: 10 }}>
+                <ButtonGroup style={{ display: 'flex', width: 300, borderRadius: 30, background: "#000000" }}>
+                    <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '24hr' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '24hr' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('24hr')} disabled={isHealthLoading}>24h</Button>
+                    <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '7day' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '7day' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('7day')} disabled={isHealthLoading}>7d</Button>
+                    <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '30d' ? '2px solid #FF8444' : 'none', background: "#000000", color: selectedRange === '30d' ? '#FF8444' : '#cfd8dc', textTransform: 'none' }} onClick={() => filterDataByRange('30d')} disabled={isHealthLoading}>30d</Button>
+                    <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '90d' ? '2px solid #FF8444' : 'none', background: "#000000", color: "grey", textTransform: 'none' }} onClick={() => filterDataByRange('90d')} disabled>90d</Button>
+                    <Button variant="contained" style={{ flex: 1, borderBottom: selectedRange === '180d' ? '2px solid #FF8444' : 'none', background: "#000000", color: "grey", textTransform: 'none' }} onClick={() => filterDataByRange('180d')} disabled>180d</Button>
+                </ButtonGroup>
+                <Button
+                    variant="contained"
+                    style={{ background: '#1a1a1a', color: '#FF8444', textTransform: 'none' }}
+                    onClick={handleFixOpensearchPrefix}
+                    disabled={isFixingOpensearchPrefix}
+                >
+                    {isFixingOpensearchPrefix ? 'Fixing Opensearch Prefix...' : 'Fix Opensearch Prefix'}
+                </Button>
+            </div>
 
             {/* Loading Bar for HealthBarChart */}
             {isHealthLoading && (

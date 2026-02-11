@@ -73,15 +73,18 @@ const SchedulesTab = memo((props) => {
 			setWorkflows(responseJson || []);
 
 			for (var i = 0; i < responseJson?.length; i++) {
-				if (responseJson[i].background_processing === true && responseJson[i].name.toLowerCase().includes("ingest tickets") && responseJson[i].triggers !== undefined) {
+				if (responseJson[i].background_processing === true && (responseJson[i].name.toLowerCase().includes("ticket") || responseJson[i].name.toLowerCase().includes("ingest")) && responseJson[i].triggers !== undefined) {
 
 					for (var triggerkey in responseJson[i].triggers) {
-						if (responseJson[i].triggers[triggerkey].trigger_type === "WEBHOOK") { 
-  							setDetectionWorkflowId(responseJson[i].id)
-							setTicketWebhook(`${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
-							setNewPipelineValue(`export live=true | sigma /tmp/sigma_rules | to ${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
-							break;
+						//console.log("TRIGGER: ", responseJson[i].triggers[triggerkey].trigger_type) 
+						if (responseJson[i].triggers[triggerkey].trigger_type !== "WEBHOOK") { 
+							continue
 						}
+
+						setDetectionWorkflowId(responseJson[i].id)
+						setTicketWebhook(`${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+						setNewPipelineValue(`export live=true | sigma /tmp/sigma_rules | to ${globalUrl}/api/v1/hooks/webhook_${responseJson[i].triggers[triggerkey].id}`)
+						break;
 					}
 				}
 			}

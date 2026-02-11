@@ -64,6 +64,7 @@ const AppSelection = props => {
   	document.title = "Choose your apps"
     const ref = useRef()
     let navigate = useNavigate();
+
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
     useEffect(() => {

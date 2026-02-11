@@ -432,7 +432,7 @@ const EnvironmentTab = memo((props) => {
         -e SHUFFLE_SWARM_CONFIG=run \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
         -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
-        -e SHUFFLE_PIPELINE_URL=http://tenzir-node:5160 \ \n        -e SHUFFLE_PIPELINE_STANDALONE=true \\` : ""}${!showDetection ? `
+        -e SHUFFLE_PIPELINE_URL=http://tenzir-node:5160 \\\n        -e SHUFFLE_PIPELINE_STANDALONE=true \\` : ""}${!showDetection ? `
         -v /tmp:/tmp \\` : ""}
         ghcr.io/shuffle/shuffle-orborus:latest
             `)
@@ -1225,7 +1225,9 @@ const EnvironmentTab = memo((props) => {
 						  :
 						(environment.running_ip === undefined ||
 						  environment.running_ip === null ||
-						  environment.running_ip.length === 0)
+						  environment.running_ip.length === 0) || 
+						  environment?.checkin === 0 ||
+						  Date.now() / 1000 - environment?.checkin > 180 
 						  ? 
 						  <Chip
         	                key={index}

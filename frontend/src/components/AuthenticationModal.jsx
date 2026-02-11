@@ -97,6 +97,12 @@ const AuthenticationModal = (props) => {
 	}
 
 	if (authenticationModalOpen === false) {
+		// Add 5px for every character over 12
+		var addednumber = selectedAppData?.name?.length > 12 ? (selectedAppData?.name?.length - 12) * 5 : 0
+		if (addednumber > 50) {
+			addednumber = 50
+		}
+
 		return (
 			<Button
 				fullWidth
@@ -111,8 +117,8 @@ const AuthenticationModal = (props) => {
 					backgroundColor: "#ffffff",
 					color: "#2f2f2f",
 					borderRadius: theme.palette?.borderRadius,
-					minWidth:  275, 
-					maxWidth: 275,
+					minWidth: 275+addednumber,
+					maxWidth: 275+addednumber,
 					maxHeight: 50,
 					overflow: "hidden",
 					border: `1px solid ${theme.palette.inputColor}`,
@@ -128,10 +134,10 @@ const AuthenticationModal = (props) => {
 				<span style={{display: "flex"}}>
 					<img
 						alt={selectedAppData?.name}
-						style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
+						style={{ margin: "4px 4px 4px 0px", minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 						src={selectedAppData?.large_image}
 					/>
-					<Typography style={{ margin: 0, marginLeft: 10, marginTop: 8, color: "#2f2f2f",}} variant="body1">
+					<Typography style={{ margin: 0, marginLeft: 5, marginTop: 8, color: "#2f2f2f",}} variant="body1">
 						Authenticate {selectedAppData?.name?.replaceAll("_", " ", -1)}
 					</Typography>
 				</span>

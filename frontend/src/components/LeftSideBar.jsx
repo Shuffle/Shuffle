@@ -2,14 +2,13 @@ import React, { useEffect, useRef, useState, useContext, useCallback, useMemo, m
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
-  GridView as GridViewIcon,
-  ShieldOutlined as ShieldOutlinedIcon,
-  Add as AddIcon,
-  BorderColor,
-  Close as CloseIcon,
-  ConstructionOutlined as ConstructionOutlinedIcon,
   Toc as TocIcon,
-  Settings as SettingsIcon 
+  Settings as SettingsIcon,
+  Business as BusinessIcon,
+  HelpOutline as HelpOutlineIcon,
+  MeetingRoom as MeetingRoomIcon,
+  Search as SearchIcon,
+  Add as AddIcon
 } from "@mui/icons-material";
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
@@ -44,24 +43,18 @@ import { useNavigate } from "react-router";
 import { getTheme } from "../theme.jsx";
 
 import { Link } from "react-router-dom";
-import {
-  Business as BusinessIcon,
-  Notifications as NotificationsIcon,
-  HelpOutline as HelpOutlineIcon,
-  MeetingRoom as MeetingRoomIcon,
-  Lightbulb as LightbulbIcon,
-  Search as SearchIcon
-} from "@mui/icons-material";
 
 import { toast } from "react-toastify";
 import { Context } from "../context/ContextApi.jsx";
+import Licensed from "./Licensed.jsx";
 
 const ShuffleLogo = "/images/Shuffle_logo.png";
 const detectionIcon = "/icons/detection.svg";
 const documentationIcon = "/icons/documentation.svg";
 const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
 
-const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
+
+const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_VERSION }) => {
 
   const navigate = useNavigate();
   const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, updateOrg, setUpdateOrg, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
@@ -690,7 +683,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 
         <Typography color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, fontSize: 18 }}>
           Version: <a href="https://github.com/Shuffle/Shuffle/releases" style={{ color: theme.palette.text.primary, textDecoration: "underline" }} target="_blank" rel="noreferrer"> 
-	  		2.1.2
+	  		{SHUFFLE_VERSION}
 	  		</a>
         </Typography>
       </Menu>
@@ -1930,72 +1923,48 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         style={{
           display: "flex",
           flexDirection: "column",
-          padding: 10,
-          marginLeft: 5,
+          padding: "0 8px",
+          marginBottom: 8,
         }}
       >
 	  	
-      
-	  {userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && expandLeftNav && !isProdStatusOn &&
-		  <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", }}>
-			  <Button
-					variant="outlined"
-					style={{marginBottom: 15, borderWidth: 2, }}
-					onClick={() => {
-						navigate("/admin?admin_tab=billingstats&ref=left_sidebar_upgrade")
-						if (isCloud) { 
-							window.open("https://shuffler.io/contact?category=book_a_demo&ref=cloud", "_blank")
-						} else {
-							window.open("https://shuffler.io/contact?category=book_a_demo&ref=onprem", "_blank")
-						}
-					}}
-				>
-					Book a Demo
-			  </Button>
-		  </div>
-	  }
-
-      {!isCloud && activeOrgData?.old_org? (
-          <div
-           style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 20,
-                      padding: "4px 10px",
-                      marginLeft: "5px",
-                      marginRight: "5px",
-                      borderRadius: 20,
-                      marginBottom: "14px",
-                      background: isProdStatusOn
-                        ? "rgba(43, 192, 126, 0.1)"
-                        : "rgba(255, 82, 82, 0.1)",
-                        cursor: "pointer",
-                    }}
-                    onClick={() => {
-                      navigate("/admin?admin_tab=billingstats")
-            }}
-          >
-            <span
+        <>
+           {userdata?.licensed !== true && !userdata?.org_status?.includes("integration_partner") && !isProdStatusOn && (
+            <Button
+              variant="outlined"
+              color="primary"
+              fullWidth
               style={{
-                  width: 8,
-                  height: 8,
-                  marginLeft: 10,
-                  background: isProdStatusOn ? "#2BC07E" : "#FD4C62",
-                  borderRadius: 999,
-                  display: expandLeftNav ? "inline" : "none",
+                marginBottom: 30,
+                marginRight: 8,
+                height: 40,
+                borderWidth: 1.5,
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 600,
+                textTransform: 'none',
+                width: "95%" ,
+                display: expandLeftNav ? 'flex' : 'none',
               }}
-            />
-              <Typography
-                style={{
-                  fontFamily: "12px",
-                  opacity: 0.9,
-                  color: isProdStatusOn ? "#2BC07E" : "#FD4C62",
-                 }}
-              >
-                {expandLeftNav ? isProdStatusOn ? "Production" : "NOT production" : isProdStatusOn ? "ON" : "OFF"}
-              </Typography>
-          </div>
-      ) : null}
+              onClick={() => {
+                if (isCloud) { 
+                  window.open("https://shuffler.io/contact?category=book_a_demo&ref=cloud", "_blank")
+                } else {
+                  window.open("https://shuffler.io/contact?category=book_a_demo&ref=onprem", "_blank")
+                }
+              }}
+            >
+              Book a Demo
+            </Button>
+          )}
+          {!isCloud && (activeOrgData?.old_org || isProdStatusOn) && (
+
+          <Licensed
+            expanded={expandLeftNav}
+            licensed={isProdStatusOn}
+          />
+          )}
+        </>
 
         <Box ref={autocompleteRef}>
           <Autocomplete

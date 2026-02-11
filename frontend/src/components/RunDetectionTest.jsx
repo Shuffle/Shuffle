@@ -168,11 +168,13 @@ const RunDetectionTest = (props) => {
         return foundCorrect
     }
 
+	console.log("DETECTION CHECK: ", haveDetectionPipelines().length, ticketWebhook, detectionWorkflowId, detectionTestRunning)
+
 	return ( 
 		<div style={{display: "flex", }}>
 			<ButtonGroup style={{minWidth: 150, maxWidth: 225,}}>
 				  <Tooltip title={
-					  `Run a detection test with Sigma rules on your Tenzir Orborus instance. Requires: TCPC Syslog- & Sigma pipeline\n\nEnvironments: ${haveDetectionPipelines().join(", ")}`
+					  `Run a detection test with Sigma rules on your Tenzir Orborus instance. Requires: TCP Syslog- & Sigma pipeline\n\nEnvironments: ${haveDetectionPipelines().join(", ")}`
 				  } style={{}} aria-label={"Run detection test"}>
 	  				  <div>
 						  <Button

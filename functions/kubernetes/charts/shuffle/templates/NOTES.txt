@@ -22,6 +22,6 @@ Access the pod you want to debug by executing
 
 To access shuffle using port-forwarding:
 
-1. Run `kubectl port-forward -n shuffle svc/shuffle-frontend 8080:http`
+1. Run `kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "shuffle.frontend.name" . }} 8080:http`
 2. Visit http://localhost:8080 with your browser
-
+3. Create the administrator account, if not already done

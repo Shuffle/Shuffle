@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {getTheme} from '../theme.jsx';
 import classNames from "classnames";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { DataGrid, GridValueGetterParams } from '@mui/x-data-grid'
+import { DataGrid } from '@mui/x-data-grid'
 import { toast } from "react-toastify" 
 
 import { 

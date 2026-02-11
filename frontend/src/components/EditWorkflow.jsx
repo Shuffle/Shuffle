@@ -216,8 +216,8 @@ const EditWorkflow = (props) => {
 						setNewWorkflowTags(responseJson.tags)
 					}
 
-					if (selectedUsecases === []) {
-						selectedUsecases = responseJson.usecase_ids
+					if (selectedUsecases.length === 0) {
+						setSelectedUsecases(responseJson.usecase_ids)
 					}
 
 					innerWorkflow.id = responseJson.id
@@ -979,7 +979,6 @@ const EditWorkflow = (props) => {
 									color="primary"
 									defaultValue={innerWorkflow.description}
 									placeholder="Description"
-									multiline
 									label="Description"
 									margin="dense"
 									fullWidth

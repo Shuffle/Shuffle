@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify" 
 import theme from '../theme.jsx';
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 
 import { 
 	Tooltip,

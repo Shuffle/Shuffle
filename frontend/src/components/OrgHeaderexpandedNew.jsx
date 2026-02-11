@@ -32,7 +32,6 @@ import {
 } from "@mui/material";
 
 import {
-	Icon as IconButton,
 	ExpandLess as ExpandLessIcon,
 	ExpandMore as ExpandMoreIcon,
 	Save as SaveIcon,
