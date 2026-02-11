@@ -1509,6 +1509,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			appversion = "1.1.0"
 			appname = "shuffle-ai"
 
+			action.AppVersion = "1.1.0"
+			action.AppName = "shuffle-ai"
 			action.Name = "run_agent"
 
 			inputParamValue := ""
@@ -1534,68 +1536,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					Value: allowedActions,
 				},
 			}
-
-			//log.Printf("PARAMS: %#v", action.Parameters)
-			//os.Exit(3)
-
-			/*
-			log.Printf("[INFO][%s] Running AI Agent action %s via backend API", workflowExecution.ExecutionId, action.ID)
-
-			fullUrl := fmt.Sprintf("%s/api/v1/agent?execution_id=%s&authorization=%s&action_id=%s",
-				baseUrl, workflowExecution.ExecutionId, workflowExecution.Authorization, action.ID)
-
-			serverUrl := os.Getenv("SHUFFLE_BACKEND_URL")
-			if len(serverUrl) > 0 {
-				fullUrl = fmt.Sprintf("%s/api/v1/agent?execution_id=%s&authorization=%s&action_id=%s",
-					serverUrl, workflowExecution.ExecutionId, workflowExecution.Authorization, action.ID)
-			}
-
-
-			requestBody := map[string]interface{}{
-				"id": action.ID,
-				"params": map[string]interface{}{
-					"tool_name":   action.AppName,
-					"tool_id":     action.AppID,
-					"environment": action.Environment,
-					"input": map[string]interface{}{
-						"text": inputParamValue,
-					},
-				},
-			}
-
-			requestBodyBytes, err := json.Marshal(requestBody)
-			if err != nil {
-				log.Printf("[ERROR][%s] Failed marshalling request body: %s", workflowExecution.ExecutionId, err)
-				continue
-			}
-
-			req, err := http.NewRequest("POST", fullUrl, bytes.NewBuffer(requestBodyBytes))
-			if err != nil {
-				log.Printf("[ERROR][%s] Failed creating AI Agent request: %s", workflowExecution.ExecutionId, err)
-				continue
-			}
-
-			req.Header.Set("Content-Type", "application/json")
-
-			client := &http.Client{Timeout: 10 * time.Second}
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Printf("[ERROR][%s] Failed triggering AI Agent (timeout/error): %s", workflowExecution.ExecutionId, err)
-				log.Printf("[INFO][%s] Exiting execution handler - backend will requeue when agent completes", workflowExecution.ExecutionId)
-				return
-			}
-
-			defer resp.Body.Close()
-			// body, err := ioutil.ReadAll(resp.Body)
-			// if err != nil {
-			// 	log.Printf("[ERROR][%s] Failed reading AI Agent response: %s", workflowExecution.ExecutionId, err)
-			// } else {
-			// 	log.Printf("[INFO][%s] AI Agent triggered: %s", workflowExecution.ExecutionId, string(body))
-			// }
-
-			log.Printf("[INFO][%s] AI Agent triggered successfully - exiting execution handler, backend will requeue when agent completes", workflowExecution.ExecutionId)
-			return
-			*/
 		}
 
 		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
