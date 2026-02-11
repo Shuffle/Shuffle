@@ -1522,7 +1522,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				} else if strings.ToLower(param.Name) == "action" {
 					param.Value = strings.ReplaceAll("Nothing,", " ", "")
 					param.Value = strings.ReplaceAll("Nothing", " ", "")
-					inputParamValue = param.Value
+					allowedActions = param.Value
 				}
 			}
 
