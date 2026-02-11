@@ -990,6 +990,20 @@ const App = (message, props) => {
 
 			<Route
 				exact
+				path="/agent"
+				element={
+					<AgentUI
+						serverside={false}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+				/>
+			<Route
+				exact
 				path="/agents"
 				element={
 					<AgentUI
