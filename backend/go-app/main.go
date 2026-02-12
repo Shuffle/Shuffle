@@ -1263,7 +1263,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org, user, "")
+			baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org)
 			if err != nil {
 				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
 			}
@@ -5891,7 +5891,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/{key}/mcp", runMCPAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/mcp", runMCPAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/agent", runMCPAction).Methods("POST", "OPTIONS")
-
 
 	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
