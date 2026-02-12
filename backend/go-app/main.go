@@ -1263,10 +1263,11 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org)
-			if err != nil {
-				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
-			}
+			// baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org)
+			// if err != nil {
+			// 	log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
+			// }
+			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
 			break
 		}
 
