@@ -19,6 +19,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -109,6 +110,8 @@ type ImageRequest struct {
 var finishedExecutions []string
 var imagesDistributed []string
 var imagedownloadTimeout = time.Second * 300
+
+var subflowPollBackoff sync.Map
 
 var window = shuffle.NewTimeWindow(10 * time.Second)
 
@@ -275,8 +278,6 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 						break
 					}
 
-					// Sleep for 1 second
-					time.Sleep(1 * time.Second)
 				}
 			} else {
 				log.Printf("[DEBUG][%s] No need to poll for results. Not polling", workflowExecution.ExecutionId)
@@ -2176,6 +2177,58 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
 	}
 
+	key := fmt.Sprintf("%s:%s", workflowExecution.ExecutionId, subflowId)
+	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
+	usedCache := false
+	if cacheData, err := shuffle.GetCache(ctx, cacheKey); err == nil {
+		cachedBytes, ok := cacheData.([]uint8)
+		if ok {
+			cacheWorkflow := shuffle.WorkflowExecution{}
+			if jsonErr := json.Unmarshal([]byte(cachedBytes), &cacheWorkflow); jsonErr == nil {
+				workflowExecution = cacheWorkflow
+				usedCache = true
+				log.Printf("[DEBUG][%s] Using cached workflow execution for subflow poll", workflowExecution.ExecutionId)
+
+				if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
+					log.Printf("[INFO][%s] Workflow execution is finished (cache). Exiting worker.", workflowExecution.ExecutionId)
+					log.Printf("[DEBUG] Shutting down (20)")
+					resetSubflowPollDelay(key)
+					if isKubernetes == "true" {
+						clientset, _, err := shuffle.GetKubernetesClient()
+						if err != nil {
+							log.Println("[ERROR] Error getting kubernetes client (2):", err)
+							os.Exit(1)
+						}
+
+						cleanupKubernetesExecution(clientset, workflowExecution, kubernetesNamespace)
+					} else {
+						shutdown(workflowExecution, "", "", true)
+					}
+				}
+
+				for _, result := range workflowExecution.Results {
+					if result.Action.ID != subflowId {
+						continue
+					}
+
+					if result.Status == "SUCCESS" || result.Status == "FINISHED" || result.Status == "FAILURE" || result.Status == "ABORTED" {
+						resetSubflowPollDelay(key)
+						setWorkflowExecution(ctx, workflowExecution, false)
+						return nil
+					}
+				}
+			}
+		}
+	}
+
+	if usedCache {
+		delay := nextSubflowPollDelay(key)
+		attempt := getSubflowPollAttempt(key)
+		log.Printf("[DEBUG][%s] Subflow poll backoff attempt %d for %s (cache hit), sleeping %s", workflowExecution.ExecutionId, attempt, subflowId, delay)
+		time.Sleep(delay)
+		return errors.New("Subflow status not found yet (cache)")
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamResultUrl,
@@ -2186,7 +2239,7 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed making request (1): %s", err)
-		time.Sleep(time.Duration(sleepTime) * time.Second)
+		time.Sleep(nextSubflowPollDelay(key))
 		return err
 	}
 
@@ -2194,7 +2247,7 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading body (1): %s", err)
-		time.Sleep(time.Duration(sleepTime) * time.Second)
+		time.Sleep(nextSubflowPollDelay(key))
 		return err
 	}
 
@@ -2206,20 +2259,21 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 			shutdown(workflowExecution, "", "", true)
 		}
 
-		time.Sleep(time.Duration(sleepTime) * time.Second)
+		time.Sleep(nextSubflowPollDelay(key))
 		return errors.New(fmt.Sprintf("Bad statuscode: %d", newresp.StatusCode))
 	}
 
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
 		log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
-		time.Sleep(time.Duration(sleepTime) * time.Second)
+		time.Sleep(nextSubflowPollDelay(key))
 		return err
 	}
 
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 		log.Printf("[INFO][%s] Workflow execution is finished. Exiting worker.", workflowExecution.ExecutionId)
 		log.Printf("[DEBUG] Shutting down (20)")
+		resetSubflowPollDelay(key)
 		if isKubernetes == "true" {
 			// log.Printf("workflow execution: %#v", workflowExecution)
 			clientset, _, err := shuffle.GetKubernetesClient()
@@ -2235,10 +2289,13 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 	}
 
 	hasUserinput := false
+	foundSubflow := false
 	for _, result := range workflowExecution.Results {
 		if result.Action.ID != subflowId {
 			continue
 		}
+
+		foundSubflow = true
 
 		if result.Action.AppName == "User Input" {
 			hasUserinput = true
@@ -2247,19 +2304,64 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		log.Printf("[DEBUG][%s] Found subflow to handle: %s (%s)", workflowExecution.ExecutionId, result.Action.AppName, result.Status)
 		if result.Status == "SUCCESS" || result.Status == "FINISHED" || result.Status == "FAILURE" || result.Status == "ABORTED" {
 			// Check for results
-
+			resetSubflowPollDelay(key)
 			setWorkflowExecution(ctx, workflowExecution, false)
 			return nil
 		}
 	}
 
-	if workflowExecution.Status == "WAITING" && workflowExecution.ExecutionSource != "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-		log.Printf("[INFO][%s] Workflow execution is waiting. Exiting worker, as backend will restart it.", workflowExecution.ExecutionId)
+	if workflowExecution.Status == "WAITING" && !foundSubflow && workflowExecution.ExecutionSource != "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+		log.Printf("[INFO][%s] Workflow execution is waiting without subflow progress. Exiting worker, as backend will restart it.", workflowExecution.ExecutionId)
+		resetSubflowPollDelay(key)
 		shutdown(workflowExecution, "", "", true)
+		return nil
 	}
 
 	log.Printf("[INFO][%s] (2) Status: %s, Results: %d, actions: %d. Userinput: %#v", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra, hasUserinput)
+	delay := nextSubflowPollDelay(key)
+	attempt := getSubflowPollAttempt(key)
+	log.Printf("[DEBUG][%s] Subflow poll backoff attempt %d for %s, sleeping %s", workflowExecution.ExecutionId, attempt, subflowId, delay)
+	time.Sleep(delay)
 	return errors.New("Subflow status not found yet")
+}
+
+func nextSubflowPollDelay(key string) time.Duration {
+	baseDelay := 250 * time.Millisecond
+	maxDelay := 5 * time.Second
+
+	current := 0
+	if raw, ok := subflowPollBackoff.Load(key); ok {
+		if value, ok := raw.(int); ok {
+			current = value
+		}
+	}
+
+	if current < 8 {
+		current += 1
+	}
+
+	subflowPollBackoff.Store(key, current)
+
+	delay := baseDelay * time.Duration(1<<uint(current-1))
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+
+	return delay
+}
+
+func resetSubflowPollDelay(key string) {
+	subflowPollBackoff.Delete(key)
+}
+
+func getSubflowPollAttempt(key string) int {
+	if raw, ok := subflowPollBackoff.Load(key); ok {
+		if value, ok := raw.(int); ok {
+			return value
+		}
+	}
+
+	return 0
 }
 
 func handleDefaultExecutionWrapper(ctx context.Context, workflowExecution shuffle.WorkflowExecution, streamResultUrl string, extra int) error {
@@ -3479,6 +3581,8 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 					fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
 					fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 					fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", logsDisabled),
+					fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
+					fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 				},
 				Hosts: []string{
 					containerName,
@@ -3736,9 +3840,10 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 				// Remove the service and redeploy it.
 				// There are cases where the service doesn't update properly
 				// Check when the last update happened. If it was within the last few minutes, skip
-				if int(time.Since(service.UpdatedAt).Seconds()) > 60 {
+				updateAgeSeconds := int(time.Since(service.UpdatedAt).Seconds())
+				if updateAgeSeconds > 60 {
 
-					log.Printf("[INFO] Attempting redeploy of app %s with image %s since it is more than 10 minutes since last attempt with failure.", name, image)
+					log.Printf("[INFO] Attempting redeploy of app %s with image %s since last update was %d seconds ago.", name, image, updateAgeSeconds)
 
 					err = dockercli.ServiceRemove(
 						context.Background(),
@@ -3767,7 +3872,7 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 						}
 					}
 				} else {
-					//log.Printf("[INFO] NOT redeploying service %s since it was updated less than 3 minutes ago.", name)
+					log.Printf("[INFO] Skipping redeploy of app %s since last update was %d seconds ago.", name, updateAgeSeconds)
 				}
 			}
 
@@ -4093,6 +4198,12 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 			log.Printf("[ERROR] Failed converting SHUFFLE_APP_REQUEST_TIMEOUT to int: %s", err)
 		} else {
 			log.Printf("[DEBUG] Setting client timeout to %d seconds for app request", timeoutInt)
+			client.Timeout = time.Duration(timeoutInt) * time.Second
+		}
+	} else if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
+		timeoutInt, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT"))
+		if err == nil && timeoutInt > 0 {
+			log.Printf("[DEBUG] Using SHUFFLE_APP_SDK_TIMEOUT=%d seconds for app request", timeoutInt)
 			client.Timeout = time.Duration(timeoutInt) * time.Second
 		}
 	}
