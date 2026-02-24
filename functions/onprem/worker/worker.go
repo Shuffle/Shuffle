@@ -1316,6 +1316,27 @@ func removeIndex(s []string, i int) []string {
 	return s[:len(s)-1]
 }
 
+func countHealthyServiceTasks(dockercli *dockerclient.Client, serviceID string) (int, error) {
+	ctx := context.Background()
+	filters := filters.NewArgs()
+	filters.Add("service", serviceID)
+	filters.Add("desired-state", "running")
+
+	tasks, err := dockercli.TaskList(ctx, types.TaskListOptions{Filters: filters})
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, task := range tasks {
+		if task.Status.State == swarm.TaskStateRunning {
+			count += 1
+		}
+	}
+
+	return count, nil
+}
+
 func getWorkerURLs() ([]string, error) {
 	workerUrls := []string{}
 
@@ -3836,12 +3857,22 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 			}
 
 			if redeploy {
+				healthyTasks, taskErr := countHealthyServiceTasks(dockercli, service.ID)
+				if taskErr != nil {
+					log.Printf("[WARNING] Failed checking tasks for service %s: %s", name, taskErr)
+				}
+
+				if healthyTasks > 0 {
+					log.Printf("[INFO] Skipping redeploy of app %s since %d task(s) are running", name, healthyTasks)
+					break
+				}
+
 				log.Printf("[INFO] Found to redeploy! Service: %s with image %s on port %d", name, image, exposedPort)
 				// Remove the service and redeploy it.
 				// There are cases where the service doesn't update properly
 				// Check when the last update happened. If it was within the last few minutes, skip
 				updateAgeSeconds := int(time.Since(service.UpdatedAt).Seconds())
-				if updateAgeSeconds > 60 {
+				if updateAgeSeconds > 300 {
 
 					log.Printf("[INFO] Attempting redeploy of app %s with image %s since last update was %d seconds ago.", name, image, updateAgeSeconds)
 
@@ -4115,9 +4146,12 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 	parsedRequest.Url = parsedRequest.BaseUrl
 	parsedRequest.BaseUrl = tmp
 
-	// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
-	// This means running with VIP instead.
-	if len(hostname) > 0 {
+	callbackUrl := os.Getenv("SHUFFLE_WORKER_SERVER_URL")
+	if len(callbackUrl) > 0 {
+		parsedRequest.BaseUrl = callbackUrl
+	} else if len(hostname) > 0 {
+		// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
+		// This means running with VIP instead.
 		parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 		//parsedRequest.BaseUrl = fmt.Sprintf("http://shuffle-workers:%d", baseport)
 		//log.Printf("[DEBUG][%s] Changing hostname to local hostname in Docker network for WORKER URL: %s", workflowExecution.ExecutionId, parsedRequest.BaseUrl)
