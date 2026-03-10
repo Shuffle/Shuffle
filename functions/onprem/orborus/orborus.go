@@ -3183,7 +3183,8 @@ func deployTenzirNode() error {
 		return nil
 	}
 
-	imageName := "frikky/shuffle:tenzir"
+	//imageName := "frikky/shuffle:tenzir"
+	imageName := "tenzir/tenzir:main"
 	if os.Getenv("TENZIR_IMAGE_NAME") != "" {
 		imageName = os.Getenv("TENZIR_IMAGE_NAME")
 		log.Printf("[INFO] Using custom Tenzir image name: %s", imageName)
