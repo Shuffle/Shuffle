@@ -2143,6 +2143,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
+
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
@@ -2211,6 +2212,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				}
 
 				// 1. This parses OpenAPI v2 to v3 etc, for use.
+				// Always returns an ID as well
 				parsedOpenApi, err := handleSwaggerValidation(readFile)
 				if err != nil {
 					log.Printf("[WARNING] Validation error for %s: %s", filename, err)
@@ -3322,6 +3324,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate, false)
+		iterateOpenApiGithub(fs, dir, "", "") 
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
