@@ -27,7 +27,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v1.0.6
-	github.com/shuffle/singul v0.0.26
+	github.com/shuffle/singul v0.0.28
 	golang.org/x/crypto v0.45.0
 	google.golang.org/api v0.236.0
 	google.golang.org/grpc v1.72.2
@@ -56,6 +56,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/adrg/strutil v0.3.1 // indirect
 	github.com/algolia/algoliasearch-client-go/v3 v3.31.4 // indirect
+	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bitly/go-simplejson v0.5.1 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20250403215159-8d39553ac7cf // indirect
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 // indirect
