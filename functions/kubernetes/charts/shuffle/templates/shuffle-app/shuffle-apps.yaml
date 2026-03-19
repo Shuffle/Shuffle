@@ -168,7 +168,7 @@ spec:
               value: {{ include "shuffle.backend.baseUrl" $ | quote }}
             - name: SHUFFLE_SWARM_CONFIG
               value: run # Shuffle Worker requires this to be set even when using K8s instead of swarm
-            {{- $env := include "shuffle.appInstance.env" $ | fromYaml }}
+            {{- $env := include "shuffle.appInstance.env" (dict "app" $appValues "context" $) | fromYaml }}
             {{- range $key, $val := $env }}
             - name: {{ $key | quote }}
               value: {{ $val | quote }}

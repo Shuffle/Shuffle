@@ -139,6 +139,9 @@ SHUFFLE_SWARM_CONFIG: "run" # Shuffle Worker requires this to be set even when u
 BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
 WORKER_HOSTNAME: {{ include "shuffle.worker.hostname" . }}
+{{- if .Values.worker.debug }}
+DEBUG: "true"
+{{- end }}
 
 {{- if .Values.worker.manageAppDeployments }}
 # Shuffle app images
@@ -177,6 +180,6 @@ SHUFFLE_APP_EPHEMERAL_STORAGE_LIMIT: {{ (index $appResources.limits "ephemeral-s
 {{- end }}
 
 # Include shuffle app environment variables. Worker passes them down to apps, when creating their deployment.
-{{ include "shuffle.appInstance.env" . }}
+{{ include "shuffle.appInstance.env" (dict "app" .Values.app "context" $) -}}
 {{- end }}
 {{- end -}}

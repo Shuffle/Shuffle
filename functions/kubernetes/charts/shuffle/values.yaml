@@ -516,6 +516,10 @@ backend:
     ##
     extraEgress: []
 
+  ## @param backend.debug Enable debug mode for backend, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.
+  ##
+  debug: false
+
   ## @param backend.cleanupSchedule The interval in seconds at which the cleanup job runs
   ##
   cleanupSchedule: 300
@@ -1329,6 +1333,10 @@ orborus:
     ##
     extraEgress: []
 
+  ## @param orborus.debug Enable debug mode for orborus, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.
+  ##
+  debug: false
+
   ## @param orborus.executionConcurrency The maximum amount of concurrent workflow executions per worker
   ##
   executionConcurrency: 25
@@ -1739,6 +1747,10 @@ worker:
     ##
     extraEgress: []
 
+  ## @param worker.debug Enable debug mode for worker, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.
+  ##
+  debug: false
+
   ## @param worker.manageAppDeployments Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).
   ## This effectively removes required RBAC permissions from the shuffle-worker service account to create deployments and services.
   ## The worker might still attempt to create kubernetes objects, resulting in an error. There is currently no way to tell the worker, that it should not manage k8s resources.
@@ -2124,6 +2136,9 @@ app:
     ##
     extraEgress: []
 
+  ## @param app.debug Enable debug mode for app, which enables extra logging
+  ##
+  debug: false
   ## @param app.mountTmpVolume Whether a writable /tmp emptyDir volume should be mounted to the app.
   ##
   mountTmpVolume: true

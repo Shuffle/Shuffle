@@ -113,4 +113,7 @@ SHUFFLE_OPENSEARCH_INDEX_PREFIX: "{{ .Values.backend.openSearch.indexPrefix }}"
 SHUFFLE_RERUN_SCHEDULE: "{{ .Values.backend.cleanupSchedule }}"
 TZ: "{{ .Values.shuffle.timezone }}"
 REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}" # Used by app builder
+{{- if .Values.backend.debug }}
+DEBUG: "true"
+{{- end }}
 {{- end -}}

@@ -121,9 +121,14 @@ Usage:
 {{/*
 Return the environment variables of shuffle apps in the format
 KEY: VALUE
+Usage:
+{{- include "shuffle.appInstance.env" (dict "app" $appValues "context" $) -}}
 */}}
 {{- define "shuffle.appInstance.env" -}}
-SHUFFLE_APP_SDK_TIMEOUT: {{ .Values.app.sdkTimeout | quote }}
-SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
-SHUFFLE_LOGS_DISABLED: {{ .Values.app.disableLogs | quote }}
+SHUFFLE_APP_SDK_TIMEOUT: {{ .app.sdkTimeout | quote }}
+SHUFFLE_APP_EXPOSED_PORT: {{ .app.exposedContainerPort | quote }}
+SHUFFLE_LOGS_DISABLED: {{ .app.disableLogs | quote }}
+{{- if .app.debug }}
+DEBUG: "true"
+{{- end }}
 {{- end -}}
