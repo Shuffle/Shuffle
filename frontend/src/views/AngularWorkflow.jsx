@@ -10265,7 +10265,15 @@ const AngularWorkflow = (defaultprops) => {
         }
       }else if(!action.isStartNode) {
         // This is to round the corners of the image
-        const originalBase64 = action.large_image !== undefined && action.large_image !== null && action.large_image !== "" ? action.large_image : theme.palette.defaultImage
+        // If action has no large_image (e.g. imported/synced workflow where it was stripped),
+        // inject it from the available apps in the sidebar
+        let imageSource = (action.large_image !== undefined && action.large_image !== null && action.large_image !== "") ? action.large_image : ""
+        if (!imageSource) {
+          const foundApp = apps.find((a) => a.id === action.app_id) ||
+            apps.find((a) => a.name === action.app_name)
+          imageSource = (foundApp && foundApp.large_image) ? foundApp.large_image : ""
+        }
+        const originalBase64 = imageSource !== "" ? imageSource : theme.palette.defaultImage
         const roundedImage = await roundBase64Image(originalBase64, 16);
         action = {...action, large_image: roundedImage}
 
