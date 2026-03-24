@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -1866,6 +1867,68 @@ func getLocalIP() string {
 	return ""
 }
 
+func normalizeIPCandidate(address string) string {
+	address = strings.TrimSpace(address)
+	if len(address) == 0 {
+		return ""
+	}
+
+	if ip := net.ParseIP(address); ip != nil {
+		if ip4 := ip.To4(); ip4 != nil {
+			return ip4.String()
+		}
+
+		return ip.String()
+	}
+
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return ""
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return ""
+	}
+
+	if ip4 := ip.To4(); ip4 != nil {
+		return ip4.String()
+	}
+
+	return ip.String()
+}
+
+func getIPCandidatesFromSwarmError(err error) []string {
+	if err == nil {
+		return nil
+	}
+
+	pattern := regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
+	matches := pattern.FindAllString(err.Error(), -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	seen := map[string]bool{}
+	valid := []string{}
+	for _, candidate := range matches {
+		ip := net.ParseIP(candidate)
+		if ip == nil || ip.To4() == nil {
+			continue
+		}
+
+		normalized := ip.To4().String()
+		if seen[normalized] {
+			continue
+		}
+
+		seen[normalized] = true
+		valid = append(valid, normalized)
+	}
+
+	return valid
+}
+
 // Get all local IPs in the system
 func getLocalIPs() ([]string, error) {
 	var ipv4s []string
@@ -1916,7 +1979,11 @@ func getLocalIPs() ([]string, error) {
 
 func checkSwarmService(ctx context.Context) {
 	// https://docs.docker.com/engine/reference/commandline/swarm_init/
-	ip := getLocalIP()
+	ip := normalizeIPCandidate(os.Getenv("SHUFFLE_SWARM_ADVERTISE_ADDR"))
+	if len(ip) == 0 {
+		ip = getLocalIP()
+	}
+
 	log.Printf("[DEBUG] Attempting swarm setup on %s", ip)
 
 	info, err := dockercli.Info(ctx)
@@ -1931,37 +1998,66 @@ func checkSwarmService(ctx context.Context) {
 
 	listenAddr := "0.0.0.0"
 	req := swarm.InitRequest{
-		ListenAddr:    fmt.Sprintf("%s:2377", listenAddr),
-		AdvertiseAddr: fmt.Sprintf("%s:2377", ip),
+		ListenAddr: fmt.Sprintf("%s:2377", listenAddr),
+	}
+	if len(ip) > 0 {
+		req.AdvertiseAddr = net.JoinHostPort(ip, "2377")
 	}
 
 	id, err := dockercli.SwarmInit(ctx, req)
 	if err != nil {
 		log.Printf("[ERROR] Swarm init issue: %s. Retrying with a failover IP address from interface.", err)
 
-		// Dummy message used for testing
-		//err = errors.New("Error response from daemon: could not choose an IP address to advertise since this system has multiple addresses on different interfaces (10.52.208.221 on eno1 and 192.168.122.1 on virbr0) - specify one with --advertise-addr")
-		// Update 28 Jan 2026: The error message updated and not as clear
-
-		candidates, err := getLocalIPs()
-		if len(candidates) > 0 && err == nil {
-			for cnt, candidate := range candidates {
-				if cnt > 5 {
-					break
-				}
-
-				req.AdvertiseAddr = fmt.Sprintf("%s:2377", candidate)
-				id, err = dockercli.SwarmInit(context.Background(), req)
-				if err != nil {
-					continue
-				}
-
-				log.Printf("[INFO] Swarm init ID: '%s'.", id)
+		seenCandidates := map[string]bool{}
+		candidates := []string{}
+		addCandidate := func(candidate string) {
+			normalized := normalizeIPCandidate(candidate)
+			if len(normalized) == 0 {
 				return
+			}
+
+			parsed := net.ParseIP(normalized)
+			if parsed == nil || parsed.IsUnspecified() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() || parsed.IsLinkLocalMulticast() {
+				return
+			}
+
+			if seenCandidates[normalized] {
+				return
+			}
+
+			seenCandidates[normalized] = true
+			candidates = append(candidates, normalized)
+		}
+
+		addCandidate(os.Getenv("SHUFFLE_SWARM_ADVERTISE_ADDR"))
+		for _, candidate := range getIPCandidatesFromSwarmError(err) {
+			addCandidate(candidate)
+		}
+
+		fallbacks, fallbackErr := getLocalIPs()
+		if fallbackErr == nil {
+			for _, candidate := range fallbacks {
+				addCandidate(candidate)
 			}
 		}
 
-		log.Printf("[ERROR] Swarm init failed after advertise-addr retries: %s, try running swarm init manually: docker swarm init", err)
+		for index := 0; index < len(candidates); index++ {
+			candidate := candidates[index]
+			req.AdvertiseAddr = net.JoinHostPort(candidate, "2377")
+			id, err = dockercli.SwarmInit(context.Background(), req)
+			if err == nil {
+				log.Printf("[INFO] Swarm init ID: '%s'.", id)
+				return
+			}
+
+			for _, hinted := range getIPCandidatesFromSwarmError(err) {
+				addCandidate(hinted)
+			}
+
+			log.Printf("[WARNING] Swarm init retry %d/%d failed on advertise address %s: %s", index+1, len(candidates), candidate, err)
+		}
+
+		log.Printf("[ERROR] Swarm init failed after advertise-addr retries: %s. Set SHUFFLE_SWARM_ADVERTISE_ADDR to the host IP and restart orborus", err)
 		return
 	}
 }
