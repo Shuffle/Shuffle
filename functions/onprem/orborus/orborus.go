@@ -1898,6 +1898,33 @@ func normalizeIPCandidate(address string) string {
 	return ip.String()
 }
 
+func isUsableAdvertiseIP(address string) bool {
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return false
+	}
+
+	if ip.IsUnspecified() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return false
+	}
+
+	return true
+}
+
+func addAdvertiseCandidate(candidates *[]string, seen map[string]bool, candidate string) {
+	normalized := normalizeIPCandidate(candidate)
+	if len(normalized) == 0 || !isUsableAdvertiseIP(normalized) {
+		return
+	}
+
+	if seen[normalized] {
+		return
+	}
+
+	seen[normalized] = true
+	*candidates = append(*candidates, normalized)
+}
+
 func getIPCandidatesFromSwarmError(err error) []string {
 	if err == nil {
 		return nil
@@ -1927,6 +1954,27 @@ func getIPCandidatesFromSwarmError(err error) []string {
 	}
 
 	return valid
+}
+
+func getSwarmAdvertiseCandidates(initErr error) []string {
+	seen := map[string]bool{}
+	candidates := []string{}
+
+	addAdvertiseCandidate(&candidates, seen, os.Getenv("SHUFFLE_SWARM_ADVERTISE_ADDR"))
+	for _, candidate := range getIPCandidatesFromSwarmError(initErr) {
+		addAdvertiseCandidate(&candidates, seen, candidate)
+	}
+
+	addAdvertiseCandidate(&candidates, seen, getLocalIP())
+
+	fallbacks, fallbackErr := getLocalIPs()
+	if fallbackErr == nil {
+		for _, candidate := range fallbacks {
+			addAdvertiseCandidate(&candidates, seen, candidate)
+		}
+	}
+
+	return candidates
 }
 
 // Get all local IPs in the system
@@ -2008,37 +2056,10 @@ func checkSwarmService(ctx context.Context) {
 	if err != nil {
 		log.Printf("[ERROR] Swarm init issue: %s. Retrying with a failover IP address from interface.", err)
 
+		candidates := getSwarmAdvertiseCandidates(err)
 		seenCandidates := map[string]bool{}
-		candidates := []string{}
-		addCandidate := func(candidate string) {
-			normalized := normalizeIPCandidate(candidate)
-			if len(normalized) == 0 {
-				return
-			}
-
-			parsed := net.ParseIP(normalized)
-			if parsed == nil || parsed.IsUnspecified() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() || parsed.IsLinkLocalMulticast() {
-				return
-			}
-
-			if seenCandidates[normalized] {
-				return
-			}
-
-			seenCandidates[normalized] = true
-			candidates = append(candidates, normalized)
-		}
-
-		addCandidate(os.Getenv("SHUFFLE_SWARM_ADVERTISE_ADDR"))
-		for _, candidate := range getIPCandidatesFromSwarmError(err) {
-			addCandidate(candidate)
-		}
-
-		fallbacks, fallbackErr := getLocalIPs()
-		if fallbackErr == nil {
-			for _, candidate := range fallbacks {
-				addCandidate(candidate)
-			}
+		for _, candidate := range candidates {
+			seenCandidates[candidate] = true
 		}
 
 		for index := 0; index < len(candidates); index++ {
@@ -2051,7 +2072,7 @@ func checkSwarmService(ctx context.Context) {
 			}
 
 			for _, hinted := range getIPCandidatesFromSwarmError(err) {
-				addCandidate(hinted)
+				addAdvertiseCandidate(&candidates, seenCandidates, hinted)
 			}
 
 			log.Printf("[WARNING] Swarm init retry %d/%d failed on advertise address %s: %s", index+1, len(candidates), candidate, err)
