@@ -6310,7 +6310,7 @@ const Workflows2 = (props) => {
                             <TableHead>
                                 <TableRow>
                                     <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Name</TableCell>
-                                    <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Folder</TableCell>
+                                    {/* <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Folder</TableCell> */}
                                     <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Last Updated</TableCell>
                                     <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }} align="right">Action</TableCell>
                                 </TableRow>
@@ -6319,7 +6319,7 @@ const Workflows2 = (props) => {
                                 {remoteWorkflows.map((wf) => (
                                     <TableRow key={wf.id}>
                                         <TableCell style={{ color: theme.palette.text.primary }}>{wf.name}</TableCell>
-                                        <TableCell style={{ color: theme.palette.text.secondary }}>{wf.folder_name || "—"}</TableCell>
+                                        {/* <TableCell style={{ color: theme.palette.text.secondary }}>{wf.folder_name || "—"}</TableCell> */}
                                         <TableCell style={{ color: theme.palette.text.secondary }}>
                                             {wf.updated_at && wf.updated_at > 0
                                                 ? new Date(wf.updated_at * 1000).toLocaleDateString()
