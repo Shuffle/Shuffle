@@ -115,6 +115,84 @@ var subflowPollBackoff sync.Map
 
 var window = shuffle.NewTimeWindow(10 * time.Second)
 
+func restoreActionConfig(ctx context.Context, executionID string, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) {
+	if len(executionID) == 0 || action == nil {
+		return
+	}
+
+	cacheKey := fmt.Sprintf("workflowexecution_%s_action_snapshot", executionID)
+	cacheDataRaw, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		return
+	}
+
+	originalActions := []shuffle.Action{}
+	cacheData := []byte(cacheDataRaw.([]uint8))
+	if err := json.Unmarshal(cacheData, &originalActions); err != nil {
+		return
+	}
+
+	original := shuffle.Action{}
+	for _, candidate := range originalActions {
+		if candidate.ID == action.ID {
+			original = candidate
+			break
+		}
+	}
+
+	if len(original.ID) == 0 {
+		return
+	}
+
+	for index, param := range action.Parameters {
+		if !param.Configuration || len(param.Value) > 0 {
+			continue
+		}
+
+		for _, originalParam := range original.Parameters {
+			if !strings.EqualFold(strings.TrimSpace(param.Name), strings.TrimSpace(originalParam.Name)) {
+				continue
+			}
+
+			if len(originalParam.Value) > 0 {
+				action.Parameters[index].Value = originalParam.Value
+			}
+
+			break
+		}
+	}
+
+	if workflowExecution == nil {
+		return
+	}
+
+	for actionIndex, workflowAction := range workflowExecution.Workflow.Actions {
+		if workflowAction.ID != action.ID {
+			continue
+		}
+
+		for parameterIndex, workflowParam := range workflowAction.Parameters {
+			if !workflowParam.Configuration || len(workflowParam.Value) > 0 {
+				continue
+			}
+
+			for _, originalParam := range original.Parameters {
+				if !strings.EqualFold(strings.TrimSpace(workflowParam.Name), strings.TrimSpace(originalParam.Name)) {
+					continue
+				}
+
+				if len(originalParam.Value) > 0 {
+					workflowExecution.Workflow.Actions[actionIndex].Parameters[parameterIndex].Value = originalParam.Value
+				}
+
+				break
+			}
+		}
+
+		break
+	}
+}
+
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
 	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
@@ -140,6 +218,15 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	if len(workflowExecution.ExecutionId) == 0 {
 		log.Printf("[DEBUG] Workflowexecution executionId can't be empty.")
 		return errors.New("ExecutionId can't be empty.")
+	}
+
+	if len(workflowExecution.Workflow.Actions) > 0 {
+		snapshotKey := fmt.Sprintf("workflowexecution_%s_action_snapshot", workflowExecution.ExecutionId)
+		if _, err := shuffle.GetCache(ctx, snapshotKey); err != nil {
+			if payload, marshalErr := json.Marshal(workflowExecution.Workflow.Actions); marshalErr == nil {
+				_ = shuffle.SetCache(ctx, snapshotKey, payload, 3600)
+			}
+		}
 	}
 
 	//log.Printf("[DEBUG][%s] Setting with %d results (pre)", workflowExecution.ExecutionId, len(workflowExecution.Results))
@@ -4168,6 +4255,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 	if err == nil && len(exec.ExecutionId) > 0 {
 		parsedRequest.FullExecution = *exec
 	}
+
+	restoreActionConfig(ctx, workflowExecution.ExecutionId, action, &parsedRequest.FullExecution)
+	parsedRequest.Action = *action
 
 	data, err := json.Marshal(parsedRequest)
 	if err != nil {
