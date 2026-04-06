@@ -4010,7 +4010,8 @@ func removeFile(fileName string) error {
 }
 
 func removePath(containerName, path string) error {
-	rmCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", path))
+	// rmCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", path))
+	rmCmd := exec.Command("docker", "exec", "-u", "root", containerName, "rm", "-rf", path)
 	output, err := rmCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error removing path: %v, output: %s", err, output)
@@ -4069,7 +4070,8 @@ func disableRule(fileName string) error {
 	destDir := "/var/lib/tenzir/disabled_rules"
 	destPath := fmt.Sprintf("%s/%s", destDir, fileName)
 
-	checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	// checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	checkSrcCmd := exec.Command("docker", "exec", containerName, "test", "-f", srcPath)
 	if err := checkSrcCmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
 			fmt.Printf("File does not exist: %s\n", srcPath)
@@ -4078,12 +4080,14 @@ func disableRule(fileName string) error {
 		return fmt.Errorf("error checking source file: %v", err)
 	}
 
-	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
+	// checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
+	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", destDir)
 	if err := checkDestDirCmd.Run(); err != nil {
 		return fmt.Errorf("error ensuring destination directory exists: %v", err)
 	}
 
-	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
+	// moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
+	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", srcPath, destPath)
 	if err := moveCmd.Run(); err != nil {
 		return fmt.Errorf("error moving file: %v", err)
 	}
@@ -4098,7 +4102,8 @@ func enableRule(fileName string) error {
 	destDir := "/var/lib/tenzir/sigma_rules"
 	destPath := fmt.Sprintf("%s/%s", destDir, fileName)
 
-	checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	// checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	checkSrcCmd := exec.Command("docker", "exec", containerName, "test", "-f", srcPath)
 	if err := checkSrcCmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
 			fmt.Printf("File does not exist: %s\n", srcPath)
@@ -4107,11 +4112,13 @@ func enableRule(fileName string) error {
 		return fmt.Errorf("error checking source file: %v", err)
 	}
 
-	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
+	// checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
+	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", destDir)
 	if err := checkDestDirCmd.Run(); err != nil {
 		return fmt.Errorf("error ensuring destination directory exists: %v", err)
 	}
-	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
+	// moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
+	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", srcPath, destPath)
 	if err := moveCmd.Run(); err != nil {
 		return fmt.Errorf("error moving file: %v", err)
 	}
