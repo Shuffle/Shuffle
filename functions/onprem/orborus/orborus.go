@@ -4081,13 +4081,13 @@ func disableRule(fileName string) error {
 	}
 
 	// checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
-	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", destDir)
+	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", "--", destDir)
 	if err := checkDestDirCmd.Run(); err != nil {
 		return fmt.Errorf("error ensuring destination directory exists: %v", err)
 	}
 
 	// moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
-	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", srcPath, destPath)
+	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", "--", srcPath, destPath)
 	if err := moveCmd.Run(); err != nil {
 		return fmt.Errorf("error moving file: %v", err)
 	}
@@ -4113,12 +4113,12 @@ func enableRule(fileName string) error {
 	}
 
 	// checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
-	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", destDir)
+	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", "--", destDir)
 	if err := checkDestDirCmd.Run(); err != nil {
 		return fmt.Errorf("error ensuring destination directory exists: %v", err)
 	}
 	// moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
-	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", srcPath, destPath)
+	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", "--", srcPath, destPath)
 	if err := moveCmd.Run(); err != nil {
 		return fmt.Errorf("error moving file: %v", err)
 	}
