@@ -123,12 +123,13 @@ Return the environment variables of shuffle apps in the format
 KEY: VALUE
 Usage:
 {{- include "shuffle.appInstance.env" (dict "app" $appValues "context" $) -}}
+
+WARNING: Do NOT add environment variables here that would conflict with shuffle.worker.env or shuffle.orborus.env.
+Worker also sets all env variables that are defined here, because they will be passed down to apps when worker.manageAppDeployments is set.
+Instead, add them directly to the deployment template (shuffle-apps.yaml).
 */}}
 {{- define "shuffle.appInstance.env" -}}
 SHUFFLE_APP_SDK_TIMEOUT: {{ .app.sdkTimeout | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .app.exposedContainerPort | quote }}
 SHUFFLE_LOGS_DISABLED: {{ .app.disableLogs | quote }}
-{{- if .app.debug }}
-DEBUG: "true"
-{{- end }}
 {{- end -}}

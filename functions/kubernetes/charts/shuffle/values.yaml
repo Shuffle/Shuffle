@@ -520,6 +520,12 @@ backend:
   ##
   debug: false
 
+  ## @param backend.autoGOMEMLIMIT Automatically set GOMEMLIMIT environment variable to 90% of the container memory limit.
+  ## This helps prevent Go runtime memory limits from exceeding container limits, which can cause OOM kills.
+  ## Only effective when backend.resources.limits.memory is set or a resourcesPreset is used that defines memory limits.
+  ##
+  autoGOMEMLIMIT: true
+
   ## @param backend.cleanupSchedule The interval in seconds at which the cleanup job runs
   ##
   cleanupSchedule: 300
@@ -1337,6 +1343,13 @@ orborus:
   ##
   debug: false
 
+  ## @param orborus.autoGOMEMLIMIT Automatically set GOMEMLIMIT environment variable to 90% of the container memory limit.
+  ## This helps prevent Go runtime memory limits from exceeding container limits, which can cause OOM kills.
+  ## Only effective when orborus.resources.limits.memory is set or a resourcesPreset is used that defines memory limits.
+  ## Only effective when orborus is deployed via helm.
+  ##
+  autoGOMEMLIMIT: true
+
   ## @param orborus.executionConcurrency The maximum amount of concurrent workflow executions per worker
   ##
   executionConcurrency: 25
@@ -1750,6 +1763,13 @@ worker:
   ## @param worker.debug Enable debug mode for worker, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.
   ##
   debug: false
+
+  ## @param worker.autoGOMEMLIMIT Automatically set GOMEMLIMIT environment variable to 90% of the container memory limit.
+  ## This helps prevent Go runtime memory limits from exceeding container limits, which can cause OOM kills.
+  ## Only effective when worker.resources.limits.memory is set or a resourcesPreset is used that defines memory limits.
+  ## Only effective when worker is deployed via helm (see worker.enableHelmDeployment).
+  ##
+  autoGOMEMLIMIT: true
 
   ## @param worker.manageAppDeployments Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).
   ## This effectively removes required RBAC permissions from the shuffle-worker service account to create deployments and services.

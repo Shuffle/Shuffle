@@ -131,17 +131,15 @@ http://shuffle-workers.{{ .Release.Namespace }}.svc.cluster.local
 {{/*
 Return the environment variables of shuffle-worker in the format
 KEY: VALUE
+
+WARNING: Do NOT add environment variables here that would conflict with shuffle.orborus.env.
+Orborus also sets all env variables that are defined here, because they will be passed down to worker when orborus.manageWorkerDeployments is set.
+Instead, add them directly to the deployment template (shuffle-worker-dpl.yaml).
 */}}
 {{- define "shuffle.workerInstance.env" -}}
-IS_KUBERNETES: "true"
-KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 SHUFFLE_SWARM_CONFIG: "run" # Shuffle Worker requires this to be set even when using K8s instead of swarm
-BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
 WORKER_HOSTNAME: {{ include "shuffle.worker.hostname" . }}
-{{- if .Values.worker.debug }}
-DEBUG: "true"
-{{- end }}
 
 {{- if .Values.worker.manageAppDeployments }}
 # Shuffle app images

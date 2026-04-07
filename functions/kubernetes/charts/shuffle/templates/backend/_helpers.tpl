@@ -116,4 +116,10 @@ REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}" # Used by app builder
 {{- if .Values.backend.debug }}
 DEBUG: "true"
 {{- end }}
+{{- if .Values.backend.autoGOMEMLIMIT }}
+{{- $backendResources := (.Values.backend.resources | default (include "common.resources.preset" (dict "type" .Values.backend.resourcesPreset) | fromYaml)) -}}
+{{- if and $backendResources $backendResources.limits $backendResources.limits.memory }}
+GOMEMLIMIT: {{ include "shuffle.k8sMemoryLimitToGOMEMLIMIT" (dict "k8sMemoryLimit" $backendResources.limits.memory) | quote }}
+{{- end }}
+{{- end }}
 {{- end -}}
