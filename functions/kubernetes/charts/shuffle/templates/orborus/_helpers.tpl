@@ -89,6 +89,15 @@ TZ: "{{ .Values.shuffle.timezone }}"
 BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: {{ .Values.orborus.executionConcurrency | quote }}
+{{- if .Values.orborus.debug }}
+DEBUG: "true"
+{{- end }}
+{{- if .Values.orborus.autoGOMEMLIMIT }}
+{{- $orborusResources := (.Values.orborus.resources | default (include "common.resources.preset" (dict "type" .Values.orborus.resourcesPreset) | fromYaml)) -}}
+{{- if and $orborusResources $orborusResources.limits $orborusResources.limits.memory }}
+GOMEMLIMIT: {{ include "shuffle.k8sMemoryLimitToGOMEMLIMIT" (dict "k8sMemoryLimit" $orborusResources.limits.memory) | quote }}
+{{- end }}
+{{- end }}
 
 {{- if .Values.orborus.manageWorkerDeployments }}
 # Shuffle worker configuration
