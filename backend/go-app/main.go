@@ -893,7 +893,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	childOrgs := []shuffle.Org{}
 	if len(org.CreatorOrg) > 0 {
-		childOrgs, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
+		childOrgs, _, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
 		if err != nil {
 			log.Printf("[ERROR] Failed to get child orgs during getinfo: %s", err)
 			childOrgs = []shuffle.Org{}
