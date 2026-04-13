@@ -134,46 +134,122 @@ var window = shuffle.NewTimeWindow(1 * time.Minute)
 
 func init() {
 	var err error
+	// Look for argc/argv and map environment variables
+	sensorMode := false
+	for _, arg := range os.Args {
+		if !strings.HasPrefix(arg, "--") {
+			continue
+		}
 
-	// dockercli, err = dockerclient.NewEnvClient()
-	dockercli, dockerApiVersion, err = shuffle.GetDockerClient()
-	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
+		// Split away =
+		value := ""
+		if strings.Contains(arg, "=") {
+			newArg := strings.Split(arg, "=")[0]
+			value = strings.Split(arg, "=")[1]
+
+			arg = newArg
+		} else {
+			continue
+		}
+
+		if len(value) == 0 {
+			continue
+		}
+
+		parsedArg := strings.TrimPrefix(arg, "--")
+		parsedArg = strings.ReplaceAll(strings.ToUpper(parsedArg), " ", "_")
+		if !strings.HasPrefix(parsedArg, "SHUFFLE_") {
+			parsedArg = "SHUFFLE_" + parsedArg
+		}
+
+		if parsedArg == "SHUFFLE_SENSOR_MODE" {
+			parsedArg = "SHUFFLE_AGENT_SENSOR_MODE"
+		} else if parsedArg == "SHUFFLE_AGENT_MODE" {
+			parsedArg = "SHUFFLE_AGENT_SENSOR_MODE"
+		}
+
+		if parsedArg == "SHUFFLE_AGENT_SENSOR_MODE" && strings.ToLower(value) == "true" {
+			sensorMode = true
+		}
+
+		os.Setenv(parsedArg, value)
 	}
 
-	if os.Getenv("SHUFFLE_EC2_INSTANCE") == "true" {
-		log.Printf("[INFO] Detected AWS EC2 instance. Setting up Docker Swarm with AWS optimizations.")
-		containers, err := dockercli.ContainerList(context.Background(), container.ListOptions{})
-		if err == nil {
-			for _, container := range containers {
-				if strings.Contains(container.Image, "shuffle-orborus") {
-					if len(container.Names) != 0 {
-						if strings.Contains(container.Names[0], "shuffle-orborus") {
-							containerName = container.Names[0]
-							containerName = strings.TrimPrefix(containerName, "/")
-							os.Setenv("ORBORUS_CONTAINER_NAME", containerName)
-							log.Printf("[DEBUG] Found orborus container name: %s", containerName)
-							break
+	if sensorMode {
+		log.Printf("[INFO] Enabling sensormode (init check)")
+		for _, arg := range os.Args {
+			if !strings.HasPrefix(arg, "--") {
+				continue
+			}
+
+			// Split away =
+			value := ""
+			if strings.Contains(arg, "=") {
+				newArg := strings.Split(arg, "=")[0]
+				value = strings.Split(arg, "=")[1]
+
+				arg = newArg
+			} else {
+				continue
+			}
+
+			if len(value) == 0 {
+				continue
+			}
+
+			arg = strings.TrimPrefix(arg, "--")
+
+			if arg == "queue" {
+				os.Setenv("ENVIRONMENT_NAME", value)
+				environment = value
+			} else if arg == "auth" {
+				os.Setenv("AUTH", value)
+				auth = value
+			} else if arg == "org_id" {
+				os.Setenv("ORG", value)
+				org = value
+			}
+		}
+	} else {
+		// dockercli, err = dockerclient.NewEnvClient()
+		dockercli, dockerApiVersion, err = shuffle.GetDockerClient()
+		if err != nil {
+			log.Printf("Unable to create docker client: %s", err)
+		}
+
+		if os.Getenv("SHUFFLE_EC2_INSTANCE") == "true" {
+			log.Printf("[INFO] Detected AWS EC2 instance. Setting up Docker Swarm with AWS optimizations.")
+			containers, err := dockercli.ContainerList(context.Background(), container.ListOptions{})
+			if err == nil {
+				for _, container := range containers {
+					if strings.Contains(container.Image, "shuffle-orborus") {
+						if len(container.Names) != 0 {
+							if strings.Contains(container.Names[0], "shuffle-orborus") {
+								containerName = container.Names[0]
+								containerName = strings.TrimPrefix(containerName, "/")
+								os.Setenv("ORBORUS_CONTAINER_NAME", containerName)
+								log.Printf("[DEBUG] Found orborus container name: %s", containerName)
+								break
+							}
 						}
 					}
 				}
+			} else {
+				log.Printf("[ERROR] Failed to find orborus container: %s", err)
 			}
-		} else {
-			log.Printf("[ERROR] Failed to find orborus container: %s", err)
+		}
+
+		getThisContainerId()
+
+		if len(pipelineApikey) == 0 {
+			if len(os.Getenv("SHUFFLE_AUTHORIZATION")) > 0 {
+				log.Printf("[DEBUG] No pipeline API key found. Overriding with api key from SHUFFLE_AUTHORIZATION")
+
+				pipelineApikey = os.Getenv("SHUFFLE_AUTHORIZATION")
+				os.Setenv("SHUFFLE_PIPELINE_AUTH", pipelineApikey)
+			}
 		}
 	}
-
-	getThisContainerId()
-
-	if len(pipelineApikey) == 0 {
-		if len(os.Getenv("SHUFFLE_AUTHORIZATION")) > 0 {
-			log.Printf("[DEBUG] No pipeline API key found. Overriding with api key from SHUFFLE_AUTHORIZATION")
-
-			pipelineApikey = os.Getenv("SHUFFLE_AUTHORIZATION")
-			os.Setenv("SHUFFLE_PIPELINE_AUTH", pipelineApikey)
-		}
-	}
-
 }
 
 // form id of current running container
@@ -2014,7 +2090,15 @@ func parseResourceUsage(body io.Reader) (float64, float64, error) {
 
 }
 
-func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
+func getHostname() (string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname: %w", err)
+	}
+	return hostname, nil
+}
+
+func getOrborusStats(ctx context.Context, sensorMode shuffle.SensorMode) shuffle.OrborusStats {
 	newStats := shuffle.OrborusStats{
 		OrgId:        org,
 		Environment:  environment,
@@ -2037,14 +2121,52 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		return newStats
 	}
 
+	// FIXME: Returning for now due to this causing network congestion
+	// and database fillup. The backend api also has it disabled.
+	if sensorMode.Enabled { 
+		newStats.SensorDetails.SensorMode = true
+		hostname, err := getHostname()
+		if err == nil { 
+			newStats.SensorDetails.Hostname = hostname
+		}
+
+		newStats.SensorDetails.OS = runtime.GOOS
+		newStats.SensorDetails.Arch = runtime.GOARCH
+		newStats.SensorDetails.ElevatedAccess = shuffle.IsElevated()
+		newStats.SensorDetails.Serial = shuffle.GetProfiler()
+
+		if sensorMode.SoftwareListEnabled {
+			// Check cache first before running the command
+			newStats.SensorDetails.InstalledSoftware = shuffle.ListInstalledSoftware()
+		}
+
+		if sensorMode.HdEncryptedCheck {
+			newStats.SensorDetails.HdEncrypted = fmt.Sprintf("%t", shuffle.IsDiskEncrypted())
+		}
+
+		if sensorMode.ScreenlockCheck {  
+			newStats.SensorDetails.AutomaticScreenlockEnabled = fmt.Sprintf("%t", shuffle.IsAutomaticScreenlockEnabled())
+		}
+
+		if len(sensorMode.LogForwarding) > 0 {
+			newStats.SensorDetails.LogForwarding = fmt.Sprintf("not implemented: %s", sensorMode.LogForwarding)
+		}
+
+		if sensorMode.ResponseActionsEnabled { 
+			newStats.SensorDetails.ResponseActionsEnabled = fmt.Sprintf("not implemented: %s", sensorMode.ResponseActionsEnabled)
+		}
+
+
+		return newStats
+	} else {
+		return newStats
+	}
+
+	// FIXME: Should we reach here anymore? Can it be useful? Primarily used for stats.
 	// Disable orborus stats
 	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
 		return newStats
 	}
-
-	// FIXME: Returning for now due to this causing network congestion
-	// and database fillup. The backend api also has it disabled.
-	return newStats
 
 	// Use the docker API to get the CPU usage of the docker engine machine
 	pers, err := dockercli.Info(ctx)
@@ -2240,17 +2362,30 @@ func cleanup() {
 	log.Printf("[INFO] Cleaning up during shutdown")
 	ctx := context.Background()
 	cleanupExistingNodes(ctx)
-	zombiecheck(ctx, 600)
+	zombiecheck(ctx, 600, shuffle.SensorMode{
+		Enabled: os.Getenv("SHUFFLE_AGENT_MODE") == "true",
+	})
 	os.Exit(0)
 }
 
-func StartAgent() {
-	log.Printf("[INFO] Starting Orborus agent mode")
+func StartAgentSensor(sensorMode shuffle.SensorMode) error {
+	if sensorMode.Enabled == false {
+		return errors.New("Sensor mode is not enabled. Set SHUFFLE_AGENT_MODE to true to enable it.")
+	}
 
-	auditLogEnabled := os.Getenv("SHUFFLE_AUDIT_LOG_ENABLED") == "true"
+	log.Printf("[INFO] Starting Orborus - host monitoring mode (sensor/agent)")
 
-	if auditLogEnabled {
-		log.Printf("[INFO] Audit log monitoring is enabled")
+	// Check if inside Docker/Kubernetes. Use Docker/Kubernetes libraries
+	if isKubernetes == "true" || shuffle.IsRunningInCluster() {
+		log.Printf("[INFO] Detected Kubernetes environment. Not valid for Sensor Mode. Exiting.")
+		return errors.New("Kubernetes environment detected. Sensor mode is not valid in Kubernetes. Exiting.")
+	} else if swarmConfig == "run" || swarmConfig == "swarm" {
+		log.Printf("[INFO] Detected Docker Swarm environment. Not valid for Sensor Mode. Exiting.")
+		return errors.New("Docker Swarm environment detected. Sensor mode is not valid in Docker Swarm. Exiting.")
+	}
+
+	if len(sensorMode.LogForwarding) > 0 {
+		log.Printf("[INFO] Audit log monitoring is enabled (SHUFFLE_LOG_FORWARDING=<endpoint>)")
 
 		// Initialize telemetry configuration
 		telemetryConfig := shuffle.TelemetryConfig{
@@ -2299,231 +2434,37 @@ func StartAgent() {
 			}
 		}
 	} else {
-		log.Printf("[INFO] Audit log monitoring is disabled")
+		log.Printf("[INFO] Audit log monitoring is NOT enabled (SHUFFLE_LOG_FORWARDING=<endpoint>")
 	}
-	select {}
+
+	return nil
 }
 
 // Initial loop etc
 func main() {
-	// Get arch. amd64 or arm64
 
-	//sigCh := make(chan os.Signal, 1)
-	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	//defer cleanup()
+	// Checks for whether sensor mode is enabled for detection/response
+	sensorMode := shuffle.SensorMode{
+		Enabled: os.Getenv("SHUFFLE_AGENT_SENSOR_MODE") == "true",
 
-	agentMode := os.Getenv("SHUFFLE_AGENT_MODE")
-	if agentMode == "true" {
-		log.Printf("[INFO] Running in agent mode. Starting the agent.")
-		StartAgent()
-		return
-	}
+		LogForwarding: os.Getenv("SHUFFLE_LOG_FORWARDING"),
+		SoftwareListEnabled: os.Getenv("SHUFFLE_SOFTWARE_LIST_ENABLED") == "true",
+		HdEncryptedCheck: os.Getenv("SHUFFLE_HD_ENCRYPTED_CHECK") == "true",
+		ScreenlockCheck: os.Getenv("SHUFFLE_SCREENLOCK_CHECK") == "true",
 
-	if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
-		log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
-
-		tenzirDisabled = false
-		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
-	}
-
-	// Block until a signal is received
-	if shuffle.IsRunningInCluster() {
-		log.Printf("[INFO] Running inside k8s cluster")
-	}
-
-	if isKubernetes == "true" {
-		fixk8sRoles()
-	}
-
-	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
-	if len(startupDelay) > 0 {
-		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
-
-		tmpInt, err := strconv.Atoi(startupDelay)
-		if err == nil {
-			time.Sleep(time.Duration(tmpInt) * time.Second)
-		} else {
-			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_STARTUP_DELAY must be a number, not '%s'. Using default.", startupDelay)
-		}
-	}
-
-	// Auto enables pipelines IF they are not mentioned
-	if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
-		tenzirDisabled = false
-		os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-		os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
-	}
-
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") != "false" {
-		// Run in 15 seconds in a goroutine
-		go func() {
-			time.Sleep(15 * time.Second)
-			log.Printf("[INFO] Auto-downloading Sigma rules during startup")
-			ruleType := "sigma"
-			err := handleFileCategoryChange(ruleType)
-			if err != nil {
-				log.Printf("[WARNING] Failed downloading %s rules: %s", ruleType, err)
-			}
-		}()
-	}
-
-	log.Println("[INFO] Setting up execution environment for env '%s'", environment)
-	// //FIXME
-	if baseUrl == "" {
-		baseUrl = "https://shuffler.io"
-	}
-
-	if len(orborusUuid) == 0 {
-		orborusUuid = uuid.NewV4().String()
-	}
-
-	//if orgId == "" {
-	//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
-	//	os.Exit(3)
-	//}
-	if environment == "" {
-		log.Printf("[ERROR] Environment not defined. Set variable ENVIRONMENT_NAME to configure it.")
-		os.Exit(3)
-	}
-
-	if timezone == "" {
-		timezone = "Europe/Amsterdam"
-	}
-
-	log.Printf("[INFO] Using environment '%s' with timezone %s", environment, timezone)
-
-	if len(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME")) > 0 {
-		log.Printf("[INFO] Trying to set Orborus sleep time between polls to %s", os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
-
-		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
-		if err == nil {
-			sleepTime = tmpInt
-		}
-	}
-
-	// Handle Cleanup - made it cleanup by default
-	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" && os.Getenv("CLEANUP") == "" {
-		cleanupEnv = "true"
-	}
-
-	if len(cleanupEnv) > 0 {
-		log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
-	}
-
-	// Default to 120 instead of default 30
-	if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) == 0 {
-		os.Setenv("SHUFFLE_APP_SDK_TIMEOUT", "120")
-	}
-
-	workerTimeout := 600
-	if workerTimeoutEnv != "" {
-		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
-		if err == nil {
-			workerTimeout = tmpInt
-		} else {
-			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_TIMEOUT must be a number, not %s", workerTimeoutEnv)
-		}
-
-		log.Printf("[INFO] Cleanup process running every %d seconds", workerTimeout)
-	}
-
-	if concurrencyEnv != "" {
-		//var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
-		tmpInt, err := strconv.Atoi(concurrencyEnv)
-		if err == nil {
-			maxConcurrency = tmpInt
-			log.Printf("[INFO] Max workflow execution concurrency set to %d", maxConcurrency)
-		} else {
-			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY must be a number, not %s. Defaulted to %d", workerTimeoutEnv, maxConcurrency)
-		}
-	}
-
-	if len(os.Getenv("DOCKER_HOST")) > 0 {
-		log.Printf("[DEBUG] Running docker with socket proxy %s instead of default", os.Getenv("DOCKER_HOST"))
-
-	} else {
-		log.Printf(`[DEBUG] Running docker with default socket /var/run/docker.sock or `)
+		ResponseActionsEnabled: os.Getenv("SHUFFLE_RESPONSE_ACTIONS_ENABLED") == "true",
 	}
 
 	ctx := context.Background()
-	// Run by default from now
-	//commenting for now as its stoppoing minikube
-
-	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
-
-	if environment == "" {
-		environment = "onprem"
-		log.Printf("[WARNING] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
-	}
-
-	if pipelineUrl == "" {
-		pipelineUrl = "http://localhost:5160"
-
-		// Find the IP in baseUrl. Base format is http://<ip>:<port>
-		if baseUrl != "" && !strings.Contains(baseUrl, "shuffle") && !strings.Contains(baseUrl, "localhost") && !strings.Contains(baseUrl, "run.app") {
-			urlSplit := strings.Split(baseUrl, "://")
-			if len(urlSplit) > 1 {
-				// Find the IP
-				ipSplit := strings.Split(urlSplit[1], ":")
-				if len(ipSplit) > 0 {
-					pipelineUrl = fmt.Sprintf("http://%s:5160", ipSplit[0])
-				}
-			}
-		}
-
-		if len(containerId) > 0 {
-			pipelineUrl = "http://tenzir-node:5160"
-		}
-
-		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that", pipelineUrl)
-		os.Setenv("SHUFFLE_PIPELINE_URL", pipelineUrl)
-	}
-
-	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
-	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
-	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
-
-	initializeImages()
+	workerTimeout := 600
 	workerImage := fmt.Sprintf("ghcr.io/shuffle/shuffle-worker:%s", workerVersion)
 	if len(newWorkerImage) > 0 {
 		workerImage = newWorkerImage
 	}
 
-	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
-
-		if isKubernetes != "true" {
-			checkSwarmService(ctx)
-		}
-
-		log.Printf("[DEBUG] Cleaning up containers from previous run")
-		cleanupExistingNodes(ctx)
-		time.Sleep(time.Duration(5) * time.Second)
-
-		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
-
-		runString := "Run: \"docker service ls\" for more info"
-
-		if isKubernetes != "true" {
-			deployServiceWorkers(workerImage)
-
-			err := setBackendToSwarmNetwork(ctx)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
-			}
-
-		} else {
-			deployK8sWorker(workerImage, "shuffle-workers", []string{})
-			runString = "Run: \"kubectl get pods\" for more info"
-		}
-
-		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)
-		time.Sleep(time.Duration(45) * time.Second)
-
-		//deployServiceWorkers(workerImage)
+	if len(orborusUuid) == 0 {
+		orborusUuid = uuid.NewV4().String()
 	}
-
-	zombiecheck(ctx, workerTimeout)
 
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
@@ -2533,10 +2474,220 @@ func main() {
 		fullUrl += "?amount=50"
 	}
 
-	if isKubernetes == "true" {
-		log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
+	if sensorMode.Enabled {
+		// Start high on purpose for now
+		if sleepTime < 30 {
+			sleepTime = 30 
+		}
+
+		log.Printf("[INFO] Running in sensor/agent mode. Starting the agent.")
+		err := StartAgentSensor(sensorMode)
+		if err != nil { 
+			log.Printf("[ERROR] Failed to start sensor/agent mode: %#v", err)
+			return
+		}
 	} else {
-		log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+		if os.Getenv("SHUFFLE_PIPELINE_STANDALONE") == "true" {
+			log.Printf("[INFO] Allowing use of standalone pipeline (tenzir). URL: %s", pipelineUrl)
+
+			tenzirDisabled = false
+			os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+			os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
+		}
+
+		// Block until a signal is received
+		if shuffle.IsRunningInCluster() {
+			log.Printf("[INFO] Running inside k8s cluster")
+		}
+
+		if isKubernetes == "true" {
+			fixk8sRoles()
+		}
+
+		startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
+		if len(startupDelay) > 0 {
+			log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
+
+			tmpInt, err := strconv.Atoi(startupDelay)
+			if err == nil {
+				time.Sleep(time.Duration(tmpInt) * time.Second)
+			} else {
+				log.Printf("[WARNING] Env SHUFFLE_ORBORUS_STARTUP_DELAY must be a number, not '%s'. Using default.", startupDelay)
+			}
+		}
+
+		// Auto enables pipelines IF they are not mentioned
+		if len(os.Getenv("SHUFFLE_SKIP_PIPELINES")) == 0 {
+			tenzirDisabled = false
+			os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+			os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
+		}
+
+		if os.Getenv("SHUFFLE_SKIP_PIPELINES") != "true" && os.Getenv("SHUFFLE_PIPELINE_ENABLED") != "false" {
+			// Run in 15 seconds in a goroutine
+			go func() {
+				time.Sleep(15 * time.Second)
+				log.Printf("[INFO] Auto-downloading Sigma rules during startup")
+				ruleType := "sigma"
+				err := handleFileCategoryChange(ruleType)
+				if err != nil {
+					log.Printf("[WARNING] Failed downloading %s rules: %s", ruleType, err)
+				}
+			}()
+		}
+
+		log.Println("[INFO] Setting up execution environment for env '%s'", environment)
+		// //FIXME
+		if baseUrl == "" {
+			baseUrl = "https://shuffler.io"
+		}
+
+		//if orgId == "" {
+		//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
+		//	os.Exit(3)
+		//}
+		if environment == "" {
+			log.Printf("[ERROR] Environment not defined. Set variable ENVIRONMENT_NAME to configure it.")
+			os.Exit(3)
+		}
+
+		if timezone == "" {
+			timezone = "Europe/Amsterdam"
+		}
+
+		log.Printf("[INFO] Using environment '%s' with timezone %s", environment, timezone)
+
+		if len(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME")) > 0 {
+			log.Printf("[INFO] Trying to set Orborus sleep time between polls to %s", os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
+
+			tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
+			if err == nil {
+				sleepTime = tmpInt
+			}
+		}
+
+		// Handle Cleanup - made it cleanup by default
+		if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" && os.Getenv("CLEANUP") == "" {
+			cleanupEnv = "true"
+		}
+
+		if len(cleanupEnv) > 0 {
+			log.Printf("[DEBUG] Verbose mode. NOT cleaning up. Cleanup env: %s", cleanupEnv)
+		}
+
+		// Default to 120 instead of default 30
+		if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) == 0 {
+			os.Setenv("SHUFFLE_APP_SDK_TIMEOUT", "120")
+		}
+
+		if workerTimeoutEnv != "" {
+			tmpInt, err := strconv.Atoi(workerTimeoutEnv)
+			if err == nil {
+				workerTimeout = tmpInt
+			} else {
+				log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_TIMEOUT must be a number, not %s", workerTimeoutEnv)
+			}
+
+			log.Printf("[INFO] Cleanup process running every %d seconds", workerTimeout)
+		}
+
+		if concurrencyEnv != "" {
+			//var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
+			tmpInt, err := strconv.Atoi(concurrencyEnv)
+			if err == nil {
+				maxConcurrency = tmpInt
+				log.Printf("[INFO] Max workflow execution concurrency set to %d", maxConcurrency)
+			} else {
+				log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY must be a number, not %s. Defaulted to %d", workerTimeoutEnv, maxConcurrency)
+			}
+		}
+
+		if len(os.Getenv("DOCKER_HOST")) > 0 {
+			log.Printf("[DEBUG] Running docker with socket proxy %s instead of default", os.Getenv("DOCKER_HOST"))
+
+		} else {
+			log.Printf(`[DEBUG] Running docker with default socket /var/run/docker.sock or `)
+		}
+
+		// Run by default from now
+		//commenting for now as its stoppoing minikube
+
+		log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
+
+		if environment == "" {
+			environment = "onprem"
+			log.Printf("[WARNING] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
+		}
+
+		if pipelineUrl == "" {
+			pipelineUrl = "http://localhost:5160"
+
+			// Find the IP in baseUrl. Base format is http://<ip>:<port>
+			if baseUrl != "" && !strings.Contains(baseUrl, "shuffle") && !strings.Contains(baseUrl, "localhost") && !strings.Contains(baseUrl, "run.app") {
+				urlSplit := strings.Split(baseUrl, "://")
+				if len(urlSplit) > 1 {
+					// Find the IP
+					ipSplit := strings.Split(urlSplit[1], ":")
+					if len(ipSplit) > 0 {
+						pipelineUrl = fmt.Sprintf("http://%s:5160", ipSplit[0])
+					}
+				}
+			}
+
+			if len(containerId) > 0 {
+				pipelineUrl = "http://tenzir-node:5160"
+			}
+
+			log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that", pipelineUrl)
+			os.Setenv("SHUFFLE_PIPELINE_URL", pipelineUrl)
+		}
+
+		// FIXME - during init, BUILD and/or LOAD worker and app_sdk
+		// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
+		log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
+
+		initializeImages()
+
+		if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
+
+			if isKubernetes != "true" {
+				checkSwarmService(ctx)
+			}
+
+			log.Printf("[DEBUG] Cleaning up containers from previous run")
+			cleanupExistingNodes(ctx)
+			time.Sleep(time.Duration(5) * time.Second)
+
+			log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
+
+			runString := "Run: \"docker service ls\" for more info"
+
+			if isKubernetes != "true" {
+				deployServiceWorkers(workerImage)
+
+				err := setBackendToSwarmNetwork(ctx)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
+				}
+
+			} else {
+				deployK8sWorker(workerImage, "shuffle-workers", []string{})
+				runString = "Run: \"kubectl get pods\" for more info"
+			}
+
+			log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)
+			time.Sleep(time.Duration(45) * time.Second)
+
+			//deployServiceWorkers(workerImage)
+		}
+
+		zombiecheck(ctx, workerTimeout, sensorMode)
+
+		if isKubernetes == "true" {
+			log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
+		} else {
+			log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+		}
 	}
 
 	forwardData := bytes.NewBuffer([]byte{})
@@ -2591,21 +2742,21 @@ func main() {
 		swarmControlMode = true
 	}
 
-	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
+	log.Printf("[INFO] Waiting for executions at %s with Environment %#v. Sensormode: %#v", fullUrl, environment, sensorMode.Enabled)
 
 	hasStarted := false
 	for {
-		if req.Method == "POST" {
+		if req.Method == "POST" && !sensorMode.Enabled {
 			// Should find data to send (memory etc.)
 
-			// Create timeout of max 4 seconds just in case
+			// Create timeout of max a few seconds just in case
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			// Marshal and set body
-			orborusStats := getOrborusStats(ctx)
+			orborusStats := getOrborusStats(ctx, sensorMode)
 
-			pipelinePayload, pipelineerr := sendPipelineHealthStatus()
+			pipelinePayload, pipelineerr := sendPipelineHealthStatus(sensorMode)
 
 			if pipelineerr != nil {
 				// Too verbose to be enabled.
@@ -2625,6 +2776,17 @@ func main() {
 				time.Sleep(time.Duration(sleepTime) * time.Second)
 				continue
 			}
+		} else if sensorMode.Enabled { 
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			orborusStats := getOrborusStats(ctx, sensorMode)
+
+			jsonData, err := json.Marshal(orborusStats)
+			if err == nil {
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(jsonData))
+			} else {
+				log.Printf("[ERROR] Failed marshalling. Maybe max 4 second timeout? %s", err)
+			}
 		}
 
 		newresp, err := client.Do(req)
@@ -2633,7 +2795,7 @@ func main() {
 
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(ctx, workerTimeout)
+				go zombiecheck(ctx, workerTimeout, sensorMode)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -2656,7 +2818,7 @@ func main() {
 			log.Printf("[ERROR] Failed reading body from Shuffle: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(ctx, workerTimeout)
+				go zombiecheck(ctx, workerTimeout, sensorMode)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -2672,7 +2834,7 @@ func main() {
 			log.Printf("[ERROR] Backend connection failed for url '%s', or is missing (%d): %s", fullUrl, newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {
-				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
+				log.Printf("[DEBUG] Starting iteration on environment %#v (default: Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
 			}
 
 			if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" && os.Getenv("SHUFFLE_SCALE_REPLICAS") == "" {
@@ -2688,7 +2850,7 @@ func main() {
 			sleepTime = 10
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(ctx, workerTimeout)
+				go zombiecheck(ctx, workerTimeout, sensorMode)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -2700,7 +2862,6 @@ func main() {
 			// Type string `json:"type"`
 		}
 
-		// FIXME: Add features here for orborus & worker to
 		// do things on behalf of backend
 		var toBeRemoved shuffle.ExecutionRequestWrapper
 		if len(executionRequests.Data) > 0 {
@@ -2733,117 +2894,123 @@ func main() {
 
 			executionRequests.Data = deduplicatedJobs
 			for _, incRequest := range executionRequests.Data {
-
-				// Looking for specific jobs
-				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_UPDATE" {
-					log.Printf("[INFO] Handling pipeline request from backend: '%s' with argument '%s'", incRequest.Type, incRequest.ExecutionArgument)
-
-					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
-					tenzirDisabled = false
-
-					// Running NEW or editing pipelines
-					err := handlePipeline(incRequest)
-					if err != nil {
-						log.Printf("[ERROR] Failed handling pipeline ('%s' '%s'): %s. Deleting job anyway.", incRequest.Type, incRequest.ExecutionSource, err)
-					}
+				if sensorMode.Enabled { 
+					log.Printf("[DEBUG] Sensor mode enabled. Removing job from queue without processing: %#v", incRequest)
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
-					log.Printf("[INFO] Re-downloading new image(s) due to backend request: %#v", incRequest.ExecutionArgument)
-
-					if len(incRequest.ExecutionArgument) > 0 {
-						go handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
-					} else {
-						log.Printf("[ERROR] No image name provided for download. Removing job from queue.")
-					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-
-				} else if incRequest.Type == "CATEGORY_UPDATE" {
-					os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-
-					tenzirDisabled = false
-					err = handleFileCategoryChange("sigma")
-					if err != nil {
-						log.Printf("[ERROR] Failed to download the file category: %s", err)
-					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-
-				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
-					log.Printf("[INFO] Got job to disable sigma rules")
-
-					err = removeFileCategory("sigma")
-					if err != nil {
-						log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
-					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-
-				} else if incRequest.Type == "DISABLE_SIGMA_FILE" {
-					fileName := incRequest.ExecutionArgument
-					log.Printf("[INFO] Got job to disable sigma file %s", fileName)
-
-					err = disableRule(fileName)
-					if err != nil {
-						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
-					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-
-				} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
-					fileName := incRequest.ExecutionArgument
-					log.Printf("[INFO] Got job to enable sigma file %s", fileName)
-
-					err = enableRule(fileName)
-					if err != nil {
-						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
-					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-				} else if incRequest.Type == "START_TENZIR" {
-					log.Printf("[INFO] Got job to start tenzir")
-
-					// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
-					//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
-					tenzirDisabled = false
-
-					// Removed either way
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-
-					err := deployTenzirNode()
-					if err != nil {
-						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
-							// Disabling until UI is updated
-							//os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
-							//tenzirDisabled = true
-
-							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
-							err = shuffle.CreateOrgNotification(
-								ctx,
-								fmt.Sprintf("Failed to start Tenzir: %s", err),
-								fmt.Sprintf("Tenzir failed to start due to: %s", err),
-								fmt.Sprintf("/detections/Sigma"),
-								org,
-								true,
-								"LOW",
-								"TENZIR_START",
-							)
-
-							if err != nil {
-								log.Printf("[ERROR] Failed to send notification: %s", err)
-								return
-							}
-						}
-					}
 
 				} else {
-					if debug {
-						log.Printf("[DEBUG] Passing execution ID request to normal queue: %#v", incRequest.ExecutionId)
-					}
+					// Looking for specific jobs
+					if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_UPDATE" {
+						log.Printf("[INFO] Handling pipeline request from backend: '%s' with argument '%s'", incRequest.Type, incRequest.ExecutionArgument)
 
-					newrequests = append(newrequests, incRequest)
+						os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+						os.Setenv("SHUFFLE_PIPELINE_ENABLED", "true")
+						tenzirDisabled = false
+
+						// Running NEW or editing pipelines
+						err := handlePipeline(incRequest)
+						if err != nil {
+							log.Printf("[ERROR] Failed handling pipeline ('%s' '%s'): %s. Deleting job anyway.", incRequest.Type, incRequest.ExecutionSource, err)
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
+						log.Printf("[INFO] Re-downloading new image(s) due to backend request: %#v", incRequest.ExecutionArgument)
+
+						if len(incRequest.ExecutionArgument) > 0 {
+							go handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
+						} else {
+							log.Printf("[ERROR] No image name provided for download. Removing job from queue.")
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+					} else if incRequest.Type == "CATEGORY_UPDATE" {
+						os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+
+						tenzirDisabled = false
+						err = handleFileCategoryChange("sigma")
+						if err != nil {
+							log.Printf("[ERROR] Failed to download the file category: %s", err)
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+					} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
+						log.Printf("[INFO] Got job to disable sigma rules")
+
+						err = removeFileCategory("sigma")
+						if err != nil {
+							log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+					} else if incRequest.Type == "DISABLE_SIGMA_FILE" {
+						fileName := incRequest.ExecutionArgument
+						log.Printf("[INFO] Got job to disable sigma file %s", fileName)
+
+						err = disableRule(fileName)
+						if err != nil {
+							log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+					} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
+						fileName := incRequest.ExecutionArgument
+						log.Printf("[INFO] Got job to enable sigma file %s", fileName)
+
+						err = enableRule(fileName)
+						if err != nil {
+							log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					} else if incRequest.Type == "START_TENZIR" {
+						log.Printf("[INFO] Got job to start tenzir")
+
+						// Manual command = overrides to allow starting of Tenzir from the frontend anyway.
+						//os.Setenv("SHUFFLE_SKIP_PIPELINES", "false")
+						tenzirDisabled = false
+
+						// Removed either way
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+						err := deployTenzirNode()
+						if err != nil {
+							if strings.Contains(fmt.Sprintf("%s", err), "node available") {
+								// Disabling until UI is updated
+								//os.Setenv("SHUFFLE_SKIP_PIPELINES", "true")
+								//tenzirDisabled = true
+
+								log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
+								err = shuffle.CreateOrgNotification(
+									ctx,
+									fmt.Sprintf("Failed to start Tenzir: %s", err),
+									fmt.Sprintf("Tenzir failed to start due to: %s", err),
+									fmt.Sprintf("/detections/Sigma"),
+									org,
+									true,
+									"LOW",
+									"TENZIR_START",
+								)
+
+								if err != nil {
+									log.Printf("[ERROR] Failed to send notification: %s", err)
+									return
+								}
+							}
+						}
+
+					} else {
+						if debug {
+							log.Printf("[DEBUG] Passing execution ID request to normal queue: %#v", incRequest.ExecutionId)
+						}
+
+						newrequests = append(newrequests, incRequest)
+					}
 				}
 			}
 
@@ -2865,7 +3032,7 @@ func main() {
 			if len(executionRequests.Data) == 0 {
 				zombiecounter += 1
 				if zombiecounter*sleepTime > workerTimeout {
-					go zombiecheck(ctx, workerTimeout)
+					go zombiecheck(ctx, workerTimeout, sensorMode)
 					zombiecounter = 0
 				}
 				time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -2876,7 +3043,7 @@ func main() {
 			executionCount = getRunningWorkers(ctx, workerTimeout)
 			if executionCount >= maxConcurrency {
 				if zombiecounter*sleepTime > workerTimeout {
-					go zombiecheck(ctx, workerTimeout)
+					go zombiecheck(ctx, workerTimeout, sensorMode)
 					zombiecounter = 0
 				}
 				time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -4019,7 +4186,11 @@ func removePath(containerName, path string) error {
 	return nil
 }
 
-func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
+func sendPipelineHealthStatus(sensorMode shuffle.SensorMode) (shuffle.LakeConfig, error) {
+	if sensorMode.Enabled { 
+		return shuffle.LakeConfig{}, nil 
+	}
+
 	pipelinePayload := shuffle.LakeConfig{
 		Enabled:   false,
 		Pipelines: []shuffle.PipelineInfo{},
@@ -4218,7 +4389,11 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
-func zombiecheck(ctx context.Context, workerTimeout int) error {
+func zombiecheck(ctx context.Context, workerTimeout int, sensorMode shuffle.SensorMode) error {
+	if sensorMode.Enabled { 
+		return nil
+	}
+
 	isK8s := isKubernetes == "true"
 
 	executionIds = []string{}
