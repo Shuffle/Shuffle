@@ -2098,6 +2098,13 @@ func getHostname() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get hostname: %w", err)
 	}
+
+	// Split away TLD
+	parts := strings.Split(hostname, ".")
+	if len(parts) > 0 {
+		hostname = parts[0]
+	}
+
 	return hostname, nil
 }
 
@@ -2124,9 +2131,30 @@ func getOrborusStats(ctx context.Context, sensorMode shuffle.SensorMode) shuffle
 		return newStats
 	}
 
-	// FIXME: Returning for now due to this causing network congestion
-	// and database fillup. The backend api also has it disabled.
+	// Handles Orborus in sensor mode. Sends minimal data per request, but 
+	// once in a while (30 minutes) sends a lot of details like software etc
 	if sensorMode.Enabled { 
+		cacheKey := fmt.Sprintf("orborus_sensorDetails_cache")
+		cached, err := shuffle.GetCache(ctx, cacheKey)
+		if err == nil {
+			cacheData := []byte(cached.([]uint8))
+			err := json.Unmarshal(cacheData, &newStats.SensorDetails)
+			if err == nil && len(newStats.SensorDetails.Hostname) > 0 {
+				newStats.SensorDetails.SensorMode = true
+
+				// Not necessary to always send as it's big
+				// Backend optimises this anyway
+				if len(newStats.SensorDetails.Serial) > 100 { 
+					newStats.SensorDetails.Serial = ""
+				}
+
+				newStats.SensorDetails.InstalledSoftware = []shuffle.Software{}
+				return newStats
+			}
+			// If there's an error, we ignore the cache and continue to gather details
+			log.Printf("[WARNING] Failed to unmarshal cached sensor details: %s. Gathering new details.", err)
+		}
+
 		newStats.SensorDetails.SensorMode = true
 		hostname, err := getHostname()
 		if err == nil { 
@@ -2155,10 +2183,14 @@ func getOrborusStats(ctx context.Context, sensorMode shuffle.SensorMode) shuffle
 			newStats.SensorDetails.LogForwarding = fmt.Sprintf("not implemented: %s", sensorMode.LogForwarding)
 		}
 
-		if sensorMode.ResponseActionsEnabled { 
-			newStats.SensorDetails.ResponseActionsEnabled = fmt.Sprintf("not implemented: %s", sensorMode.ResponseActionsEnabled)
+		if len(sensorMode.ResponseActions) > 0 { 
+			newStats.SensorDetails.ResponseActions = sensorMode.ResponseActions
 		}
 
+		marshalledStats, err := json.Marshal(newStats.SensorDetails)
+		if err == nil {
+			shuffle.SetCache(ctx, cacheKey, marshalledStats, 30) // Cache for 10 minutes
+		}
 
 		return newStats
 	} else {
@@ -2450,12 +2482,12 @@ func main() {
 	sensorMode := shuffle.SensorMode{
 		Enabled: os.Getenv("SHUFFLE_AGENT_SENSOR_MODE") == "true",
 
-		LogForwarding: os.Getenv("SHUFFLE_LOG_FORWARDING"),
 		SoftwareListEnabled: os.Getenv("SHUFFLE_SOFTWARE_LIST_ENABLED") == "true",
 		HdEncryptedCheck: os.Getenv("SHUFFLE_HD_ENCRYPTED_CHECK") == "true",
 		ScreenlockCheck: os.Getenv("SHUFFLE_SCREENLOCK_CHECK") == "true",
 
-		ResponseActionsEnabled: os.Getenv("SHUFFLE_RESPONSE_ACTIONS_ENABLED") == "true",
+		LogForwarding: os.Getenv("SHUFFLE_LOG_FORWARDING"),
+		ResponseActions: os.Getenv("SHUFFLE_RESPONSE_ACTIONS"), 
 	}
 
 	ctx := context.Background()
@@ -2477,10 +2509,51 @@ func main() {
 		fullUrl += "?amount=50"
 	}
 
+	if len(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME")) > 0 {
+		log.Printf("[INFO] Trying to set Orborus sleep time between polls to %s", os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
+
+		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
+		if err == nil {
+			sleepTime = tmpInt
+		}
+	}
+
+	log.Println("[INFO] Setting up execution environment for env '%s'", environment)
+	if baseUrl == "" {
+		baseUrl = "https://uk.shuffler.io"
+	}
+
+	//if orgId == "" {
+	//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
+	//	os.Exit(3)
+	//}
+	if environment == "" {
+		log.Printf("[ERROR] Environment not defined. Set variable ENVIRONMENT_NAME to configure it.")
+		os.Exit(3)
+	}
+
+	if timezone == "" {
+		timezone = "Europe/Amsterdam"
+	}
+
+	log.Printf("[INFO] Using environment '%s' with timezone %s", environment, timezone)
+
 	if sensorMode.Enabled {
-		// Start high on purpose for now
-		if sleepTime < 30 {
-			sleepTime = 30 
+
+		// Start high on purpose for now (no overloads)
+		if sleepTime < 15 {
+
+			// For prod
+			if strings.Contains(baseUrl, "shuffler.io") || strings.Contains(baseUrl, ".run.app") {
+				log.Printf("[INFO] Running in hosted environment. Setting default sleep time to 30 seconds to avoid hitting rate limits. You can adjust this with SHUFFLE_ORBORUS_PULL_TIME.", sleepTime)
+				sleepTime = 15 
+			}
+		}
+
+		if sensorMode.ResponseActions != "full" && sensorMode.ResponseActions != "controlled" { 
+			log.Printf("[WARNING] Invalid response actions mode '%s'. Disabling. Valid options are 'full', 'controlled', or empty.", sensorMode.ResponseActions)
+			sensorMode.ResponseActions = ""
+
 		}
 
 		log.Printf("[INFO] Running in sensor/agent mode. Starting the agent.")
@@ -2537,37 +2610,7 @@ func main() {
 					log.Printf("[WARNING] Failed downloading %s rules: %s", ruleType, err)
 				}
 			}()
-		}
-
-		log.Println("[INFO] Setting up execution environment for env '%s'", environment)
-		// //FIXME
-		if baseUrl == "" {
-			baseUrl = "https://shuffler.io"
-		}
-
-		//if orgId == "" {
-		//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
-		//	os.Exit(3)
-		//}
-		if environment == "" {
-			log.Printf("[ERROR] Environment not defined. Set variable ENVIRONMENT_NAME to configure it.")
-			os.Exit(3)
-		}
-
-		if timezone == "" {
-			timezone = "Europe/Amsterdam"
-		}
-
-		log.Printf("[INFO] Using environment '%s' with timezone %s", environment, timezone)
-
-		if len(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME")) > 0 {
-			log.Printf("[INFO] Trying to set Orborus sleep time between polls to %s", os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
-
-			tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
-			if err == nil {
-				sleepTime = tmpInt
-			}
-		}
+		}	
 
 		// Handle Cleanup - made it cleanup by default
 		if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" && os.Getenv("CLEANUP") == "" {
@@ -2747,6 +2790,7 @@ func main() {
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v. Sensormode: %#v", fullUrl, environment, sensorMode.Enabled)
 
+	hostname, err := getHostname()
 	hasStarted := false
 	for {
 		if req.Method == "POST" && !sensorMode.Enabled {
@@ -2850,7 +2894,10 @@ func main() {
 		err = json.Unmarshal(body, &executionRequests)
 		if err != nil {
 			log.Printf("[WARNING] Failed executionrequest in queue unmarshaling: %s", err)
-			sleepTime = 10
+			if !sensorMode.Enabled { 
+				sleepTime = 10
+			}
+
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
 				go zombiecheck(ctx, workerTimeout, sensorMode)
@@ -2897,10 +2944,38 @@ func main() {
 
 			executionRequests.Data = deduplicatedJobs
 			for _, incRequest := range executionRequests.Data {
-				if sensorMode.Enabled { 
-					log.Printf("[DEBUG] Sensor mode enabled. Removing job from queue without processing: %#v", incRequest)
 
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				// Handles sensormode. ELSE handles Docker/K8s etc.
+				if sensorMode.Enabled { 
+
+					if len(incRequest.ExecutionSource) > 0 || len(incRequest.ExecutionArgument) == 0 { 
+						parsedHostname := incRequest.ExecutionSource
+						if strings.Contains(parsedHostname, ".") { 
+							parsedHostnameSplit := strings.Split(parsedHostname, ".")
+							parsedHostname = parsedHostnameSplit[0]
+						}
+
+						if parsedHostname == hostname {
+							if debug { 
+								log.Printf("[DEBUG]CORRECT HOSTNAME: %#v matches sensor hostname %#v. Removing from queue without processing.", parsedHostname, hostname)
+							}
+
+							if sensorMode.ResponseActions != "" {
+								go shuffle.HandleSensorResponseAction(sensorMode, incRequest)
+							}
+							toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+						} else {
+							// Just ignore as other machines will handle it.
+							//log.Printf("[WARNING] Hostname '%s' from job does not match sensor hostname '%s'. Removing from queue without processing. Job: %#v", parsedHostname, hostname, incRequest)
+						}
+					} else {
+						// Invalid command
+						if debug { 
+							log.Printf("[DEBUG] Removing invalid sensor command from queue: %#v", incRequest)
+						}
+
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					}
 
 				} else {
 					// Looking for specific jobs
@@ -3031,7 +3106,9 @@ func main() {
 		}
 
 		// Skipping throttling with swarm
-		if swarmConfig != "run" && swarmConfig != "swarm" {
+		if sensorMode.Enabled { 
+			// Pass
+		} else if swarmConfig != "run" && swarmConfig != "swarm" {
 			if len(executionRequests.Data) == 0 {
 				zombiecounter += 1
 				if zombiecounter*sleepTime > workerTimeout {

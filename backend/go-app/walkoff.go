@@ -344,7 +344,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]
 		}
-
 	}
 
 	newjson, err := json.Marshal(executionRequests)
