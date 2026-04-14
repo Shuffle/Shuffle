@@ -2105,6 +2105,7 @@ func getHostname() (string, error) {
 		hostname = parts[0]
 	}
 
+	hostname = strings.ToUpper(hostname)
 	return hostname, nil
 }
 
@@ -2952,12 +2953,12 @@ func main() {
 						parsedHostname := incRequest.ExecutionSource
 						if strings.Contains(parsedHostname, ".") { 
 							parsedHostnameSplit := strings.Split(parsedHostname, ".")
-							parsedHostname = parsedHostnameSplit[0]
+							parsedHostname = strings.ToUpper(parsedHostnameSplit[0])
 						}
 
 						if parsedHostname == hostname {
 							if debug { 
-								log.Printf("[DEBUG]CORRECT HOSTNAME: %#v matches sensor hostname %#v. Removing from queue without processing.", parsedHostname, hostname)
+								log.Printf("[DEBUG] CORRECT HOSTNAME: %#v matches sensor hostname %#v. Removing from queue without processing.", parsedHostname, hostname)
 							}
 
 							if sensorMode.ResponseActions != "" {
