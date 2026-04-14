@@ -208,6 +208,9 @@ func init() {
 			} else if arg == "org_id" {
 				os.Setenv("ORG", value)
 				org = value
+			} else if arg == "base_url" {
+				os.Setenv("BASE_URL", value)
+				baseUrl = value
 			}
 		}
 	} else {
