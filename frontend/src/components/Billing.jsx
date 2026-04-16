@@ -81,7 +81,7 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
     }
 
     const themeMode = theme.palette.mode;
-	const workflowActive = selectedOrganization?.sync_features?.workflow_executions?.active;
+	const workflowActive = selectedOrganization?.sync_features?.app_executions?.active;
 	const multiTenantActive = selectedOrganization?.sync_features?.multi_tenant?.active;
 	const multiEnvActive = selectedOrganization?.sync_features?.multi_env?.active;
 	const brandingActive = selectedOrganization?.sync_features?.branding?.active;
@@ -104,9 +104,9 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
     const features = [
         {
             icon: ZapIcon,
-            label: 'Workflow Executions',
-            licensed: `${selectedOrganization?.sync_features?.workflow_executions?.limit}/month limit`,
-            unlicensed: '10,000/month limit',
+            label: 'App Runs',
+            licensed: `${selectedOrganization?.sync_features?.app_executions?.limit}/month limit`,
+            unlicensed: '25,000/month limit',
             isActive: workflowActive,
         },
         {
