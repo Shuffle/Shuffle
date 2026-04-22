@@ -777,7 +777,7 @@ const CloudSyncTab = (props) => {
 							newname = "app runs"
 						}
 
-                        if ((key === "onprem_app_executions" && userdata.support !== true) || !isCloud) {
+                        if (key === "onprem_app_executions" && userdata.support !== true) {
                             return null
                         }
 
