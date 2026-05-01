@@ -1581,11 +1581,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		return
 	}
 
-	if workflowExecution.Status == "WAITING" {
-		log.Printf("[DEBUG][%s] Execution is WAITING. Skipping action dispatch until a new result updates state.", workflowExecution.ExecutionId)
-		return
-	}
-
 	startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	var dockercli *dockerclient.Client
@@ -3087,12 +3082,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
 	if err == nil {
-		expectedSubflows, completedSubflows, failedSubflows := enforceSubflowBarrier(workflowExecution)
-		if expectedSubflows > 0 {
-			dbSave = true
-			log.Printf("[DEBUG][%s] Subflow barrier progress: %d/%d completed (failed=%d). Status=%s", workflowExecution.ExecutionId, completedSubflows, expectedSubflows, failedSubflows, workflowExecution.Status)
-		}
-
 		if workflowExecution.Status != "EXECUTING" && workflowExecution.Status != "WAITING" {
 			log.Printf("[WARNING][%s] Execution is not executing, but %s. Stopping Transaction update.", workflowExecution.ExecutionId, workflowExecution.Status)
 			if resp != nil {
@@ -3157,11 +3146,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				return
 			} else {
 				log.Printf("[DEBUG][%s] Successfully got ParsedExecution with %d results!", workflowExecution.ExecutionId, len(workflowExecution.Results))
-				expectedSubflows, completedSubflows, failedSubflows := enforceSubflowBarrier(workflowExecution)
-				if expectedSubflows > 0 {
-					dbSave = true
-					log.Printf("[DEBUG][%s] Subflow barrier progress: %d/%d completed (failed=%d). Status=%s", workflowExecution.ExecutionId, completedSubflows, expectedSubflows, failedSubflows, workflowExecution.Status)
-				}
 			}
 		} else {
 			log.Printf("[ERROR][%s] Failed execution of parsedexecution: %s", workflowExecution.ExecutionId, err)
