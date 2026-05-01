@@ -1581,6 +1581,11 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		return
 	}
 
+	if workflowExecution.Status == "WAITING" {
+		log.Printf("[DEBUG][%s] Execution is WAITING. Skipping action dispatch until a new result updates state.", workflowExecution.ExecutionId)
+		return
+	}
+
 	startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	var dockercli *dockerclient.Client
@@ -2280,11 +2285,6 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		}
 	}
 
-	if len(data) == 0 {
-		log.Printf("[WARNING] Stream result missing execution ID and authorization; injecting them from workflow execution")
-		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
-	}
-
 	key := fmt.Sprintf("%s:%s", workflowExecution.ExecutionId, subflowId)
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	usedCache := false
@@ -2335,6 +2335,11 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		log.Printf("[DEBUG][%s] Subflow poll backoff attempt %d for %s (cache hit), sleeping %s", workflowExecution.ExecutionId, attempt, subflowId, delay)
 		time.Sleep(delay)
 		return errors.New("Subflow status not found yet (cache)")
+	}
+
+	if len(data) == 0 {
+		log.Printf("[WARNING] Stream result missing execution ID and authorization; injecting them from workflow execution")
+		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
 	}
 
 	req, err := http.NewRequest(
@@ -2599,6 +2604,112 @@ func arrayContains(visited []string, id string) bool {
 	}
 
 	return found
+}
+
+func isTerminalResultStatus(status string) bool {
+	return status == "SUCCESS" || status == "FINISHED" || status == "FAILURE" || status == "ABORTED"
+}
+
+func hasWaitForResultParameter(params []shuffle.WorkflowAppActionParameter) bool {
+	for _, param := range params {
+		if param.Name == "check_result" && strings.ToLower(param.Value) == "true" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func getSubflowBarrierActionIDs(workflowExecution shuffle.WorkflowExecution) map[string]struct{} {
+	actionIDs := map[string]struct{}{}
+
+	for _, action := range workflowExecution.Workflow.Actions {
+		if action.AppName != "shuffle-subflow" && action.AppName != "shuffle-subflow-v2" && action.AppName != "Shuffle Workflow" {
+			continue
+		}
+
+		if !hasWaitForResultParameter(action.Parameters) {
+			continue
+		}
+
+		actionIDs[action.ID] = struct{}{}
+	}
+
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		if trigger.AppName != "shuffle-subflow" && trigger.AppName != "shuffle-subflow-v2" && trigger.AppName != "Shuffle Workflow" {
+			continue
+		}
+
+		if !hasWaitForResultParameter(trigger.Parameters) {
+			continue
+		}
+
+		actionIDs[trigger.ID] = struct{}{}
+	}
+
+	return actionIDs
+}
+
+func getSubflowBarrierProgress(workflowExecution shuffle.WorkflowExecution) (int, int, int) {
+	barrierActions := getSubflowBarrierActionIDs(workflowExecution)
+	expected := len(barrierActions)
+	if expected == 0 {
+		return 0, 0, 0
+	}
+
+	terminalByAction := map[string]string{}
+	for _, result := range workflowExecution.Results {
+		if _, ok := barrierActions[result.Action.ID]; !ok {
+			continue
+		}
+
+		if !isTerminalResultStatus(result.Status) {
+			continue
+		}
+
+		terminalByAction[result.Action.ID] = result.Status
+	}
+
+	completed := len(terminalByAction)
+	failed := 0
+	for _, status := range terminalByAction {
+		if status == "FAILURE" || status == "ABORTED" {
+			failed += 1
+		}
+	}
+
+	return expected, completed, failed
+}
+
+func enforceSubflowBarrier(workflowExecution *shuffle.WorkflowExecution) (int, int, int) {
+	if workflowExecution == nil {
+		return 0, 0, 0
+	}
+
+	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "ABORTED" {
+		return 0, 0, 0
+	}
+
+	expected, completed, failed := getSubflowBarrierProgress(*workflowExecution)
+	if expected == 0 {
+		return 0, 0, 0
+	}
+
+	if completed < expected {
+		workflowExecution.Status = "WAITING"
+		return expected, completed, failed
+	}
+
+	if workflowExecution.Status == "WAITING" {
+		if failed > 0 {
+			workflowExecution.Status = "FAILURE"
+			workflowExecution.Result = fmt.Sprintf("Subflow barrier failed: %d of %d subflows failed or aborted", failed, expected)
+		} else {
+			workflowExecution.Status = "EXECUTING"
+		}
+	}
+
+	return expected, completed, failed
 }
 
 func getResult(workflowExecution shuffle.WorkflowExecution, id string) shuffle.ActionResult {
@@ -2976,6 +3087,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
 	if err == nil {
+		expectedSubflows, completedSubflows, failedSubflows := enforceSubflowBarrier(workflowExecution)
+		if expectedSubflows > 0 {
+			dbSave = true
+			log.Printf("[DEBUG][%s] Subflow barrier progress: %d/%d completed (failed=%d). Status=%s", workflowExecution.ExecutionId, completedSubflows, expectedSubflows, failedSubflows, workflowExecution.Status)
+		}
+
 		if workflowExecution.Status != "EXECUTING" && workflowExecution.Status != "WAITING" {
 			log.Printf("[WARNING][%s] Execution is not executing, but %s. Stopping Transaction update.", workflowExecution.ExecutionId, workflowExecution.Status)
 			if resp != nil {
@@ -3040,6 +3157,11 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				return
 			} else {
 				log.Printf("[DEBUG][%s] Successfully got ParsedExecution with %d results!", workflowExecution.ExecutionId, len(workflowExecution.Results))
+				expectedSubflows, completedSubflows, failedSubflows := enforceSubflowBarrier(workflowExecution)
+				if expectedSubflows > 0 {
+					dbSave = true
+					log.Printf("[DEBUG][%s] Subflow barrier progress: %d/%d completed (failed=%d). Status=%s", workflowExecution.ExecutionId, completedSubflows, expectedSubflows, failedSubflows, workflowExecution.Status)
+				}
 			}
 		} else {
 			log.Printf("[ERROR][%s] Failed execution of parsedexecution: %s", workflowExecution.ExecutionId, err)
