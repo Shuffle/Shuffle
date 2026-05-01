@@ -593,15 +593,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-	if hasEquivalentActionResult(*workflowExecution, actionResult) {
-		log.Printf("[DEBUG][%s] Ignoring duplicate action result for action %s with status %s", workflowExecutionId, actionResult.Action.ID, actionResult.Status)
-		if resp != nil {
-			resp.WriteHeader(http.StatusOK)
-			resp.Write([]byte(`{"success": true, "reason": "duplicate result ignored"}`))
-		}
-		return
-	}
-
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
@@ -635,32 +626,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 	}
 
-}
-
-func hasEquivalentActionResult(workflowExecution shuffle.WorkflowExecution, incoming shuffle.ActionResult) bool {
-	for _, existing := range workflowExecution.Results {
-		if existing.Action.ID != incoming.Action.ID {
-			continue
-		}
-
-		if existing.Status != incoming.Status {
-			continue
-		}
-
-		if existing.CompletedAt > 0 && incoming.CompletedAt > 0 && existing.CompletedAt == incoming.CompletedAt {
-			return true
-		}
-
-		if existing.StartedAt > 0 && incoming.StartedAt > 0 && existing.StartedAt == incoming.StartedAt {
-			return true
-		}
-
-		if len(existing.Result) > 0 && existing.Result == incoming.Result {
-			return true
-		}
-	}
-
-	return false
 }
 
 func JSONCheck(str string) bool {
