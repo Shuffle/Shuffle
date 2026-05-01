@@ -5038,7 +5038,7 @@ func main() {
 	}
 }
 
-func checkUnfinished(resp http.ResponseWriter, request *http.Request, execRequest shuffle.OrborusExecutionRequest) {
+func checkUnfinished(execRequest shuffle.OrborusExecutionRequest) {
 	// Meant as a function that periodically checks whether previous executions have finished or not.
 	// Should probably be based on executedIds and finishedIds
 	// Schedule a check in the future instead?
@@ -5067,38 +5067,16 @@ func checkUnfinished(resp http.ResponseWriter, request *http.Request, execReques
 	sendResult(*exec, data)
 }
 
-func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("[WARNING] Failed reading body for stream result queue")
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	//log.Printf("[DEBUG] In run execution with body length %d", len(body))
-	var execRequest shuffle.OrborusExecutionRequest
-	err = json.Unmarshal(body, &execRequest)
-	if err != nil {
-		log.Printf("[WARNING] Failed shuffle.WorkflowExecution unmarshaling: %s", err)
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
+func processRunExecution(execRequest shuffle.OrborusExecutionRequest) {
 	// Checks if a workflow is done 30 seconds later, and sends info to backend no matter what
 	go func() {
 		time.Sleep(time.Duration(30) * time.Second)
-		checkUnfinished(resp, request, execRequest)
+		checkUnfinished(execRequest)
 	}()
 	window.AddEvent(time.Now())
 
 	ctx := context.Background()
 
-	// FIXME: This should be PER EXECUTION
-	//if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
-	// Is it ok if these are standard? Should they be update-able after launch? Hmm
 	if len(execRequest.HTTPProxy) > 0 {
 		log.Printf("[DEBUG] Sending proxy info to child process")
 		os.Setenv("SHUFFLE_PASS_APP_PROXY", execRequest.ShufflePassProxyToApp)
@@ -5128,9 +5106,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		baseUrl = execRequest.BaseUrl
 	}
 
-	// Setting to just have an auth available.
 	if len(execRequest.Authorization) > 0 && len(os.Getenv("AUTHORIZATION")) == 0 {
-		//log.Printf("[DEBUG] Sending proxy info to child process")
 		os.Setenv("AUTHORIZATION", execRequest.Authorization)
 	}
 
@@ -5143,71 +5119,47 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	)
 
 	if err != nil {
-		log.Printf("[ERROR][%s] Failed to create a new request", execRequest.ExecutionId)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed to create stream results request: %s", execRequest.ExecutionId, err)
 		return
 	}
 
 	client := shuffle.GetExternalClient(streamResultUrl)
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR] Failed making request (2): %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed making stream results request: %s", execRequest.ExecutionId, err)
 		return
 	}
 
 	defer newresp.Body.Close()
-	body, err = ioutil.ReadAll(newresp.Body)
+	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR][%s] Failed reading body (2): %s", execRequest.ExecutionId, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed reading stream results response body: %s", execRequest.ExecutionId, err)
 		return
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR][%s] Bad statuscode: %d, %s", execRequest.ExecutionId, newresp.StatusCode, string(body))
-
-		if strings.Contains(string(body), "Workflowexecution is already finished") {
-			log.Printf("[DEBUG] Shutting down (19)")
-			//shutdown(workflowExecution, "", "", true)
-		}
-
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad statuscode: %d"}`, newresp.StatusCode)))
+		log.Printf("[ERROR][%s] Bad statuscode from stream results: %d, %s", execRequest.ExecutionId, newresp.StatusCode, string(body))
 		return
 	}
 
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
-		log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed workflowExecution unmarshal: %s", execRequest.ExecutionId, err)
 		return
 	}
 
-	//err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
-		log.Printf("[ERROR] Failed initializing execution saving for %s: %s", workflowExecution.ExecutionId, err)
+		log.Printf("[ERROR][%s] Failed initializing execution saving: %s", workflowExecution.ExecutionId, err)
 	}
 
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
-		log.Printf("[DEBUG] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
-		log.Printf("[DEBUG] Shutting down (20)")
-
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status for execution - already %s. Returning with 200 OK"}`, workflowExecution.Status)))
+		log.Printf("[DEBUG] Workflow %s is finished before dispatch. Exiting async run setup.", workflowExecution.ExecutionId)
 		return
 	}
 
-	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
-
 	extra := 0
 	for _, trigger := range workflowExecution.Workflow.Triggers {
-		//log.Printf("Appname trigger (0): %s", trigger.AppName)
 		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
 			extra += 1
 		}
@@ -5216,14 +5168,9 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO][%s] (1) Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 
 	if workflowExecution.Status != "EXECUTING" {
-		log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
-		log.Printf("[DEBUG] Shutting down (38)")
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status %s for the workflow execution %s"}`, workflowExecution.Status, workflowExecution.ExecutionId)))
+		log.Printf("[WARNING][%s] Exiting async run as execution status is %s", workflowExecution.ExecutionId, workflowExecution.Status)
 		return
 	}
-
-	//log.Printf("[DEBUG] Starting execution :O")
 
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	execData, err := json.Marshal(workflowExecution)
@@ -5239,15 +5186,36 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	err = executionInit(workflowExecution)
 	if err != nil {
 		log.Printf("[DEBUG][%s] Shutting down (30) - Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in execution init: %s"}`, err)))
 		return
-		//shutdown(workflowExecution, "", "", true)
 	}
 
 	handleExecutionResult(workflowExecution)
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed reading body for stream result queue")
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	//log.Printf("[DEBUG] In run execution with body length %d", len(body))
+	var execRequest shuffle.OrborusExecutionRequest
+	err = json.Unmarshal(body, &execRequest)
+	if err != nil {
+		log.Printf("[WARNING] Failed shuffle.WorkflowExecution unmarshaling: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+	resp.Write([]byte(`{"success": true, "accepted": true}`))
+
+	go processRunExecution(execRequest)
 }
 
 func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
