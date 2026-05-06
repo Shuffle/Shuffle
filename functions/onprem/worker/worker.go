@@ -193,6 +193,40 @@ func restoreActionConfig(ctx context.Context, executionID string, action *shuffl
 	}
 }
 
+func getAppProxyValue(primaryKey, fallbackKey string) string {
+	value := strings.TrimSpace(os.Getenv(primaryKey))
+	if len(value) > 0 {
+		return value
+	}
+
+	return strings.TrimSpace(os.Getenv(fallbackKey))
+}
+
+func appendAppProxyEnv(env []string) []string {
+	httpProxy := getAppProxyValue("HTTP_PROXY", "SHUFFLE_APP_HTTP_PROXY")
+	httpsProxy := getAppProxyValue("HTTPS_PROXY", "SHUFFLE_APP_HTTPS_PROXY")
+	noProxy := getAppProxyValue("NO_PROXY", "SHUFFLE_APP_NO_PROXY")
+	noProxyLower := getAppProxyValue("no_proxy", "SHUFFLE_APP_no_proxy")
+
+	if len(httpProxy) > 0 {
+		env = append(env, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
+	}
+
+	if len(httpsProxy) > 0 {
+		env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", httpsProxy))
+	}
+
+	if len(noProxy) > 0 {
+		env = append(env, fmt.Sprintf("NO_PROXY=%s", noProxy))
+	}
+
+	if len(noProxyLower) > 0 {
+		env = append(env, fmt.Sprintf("no_proxy=%s", noProxyLower))
+	}
+
+	return env
+}
+
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
 	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
@@ -1784,10 +1818,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 			//log.Printf("APPENDING PROXY TO THE APP!")
-			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
-			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
-			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
-			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
+			env = appendAppProxyEnv(env)
 		}
 
 		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -3818,10 +3849,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = appendAppProxyEnv(serviceSpec.TaskTemplate.ContainerSpec.Env)
 	}
 
 	overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -4342,6 +4370,10 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 	callbackUrl := os.Getenv("SHUFFLE_WORKER_SERVER_URL")
 	if len(callbackUrl) > 0 {
 		parsedRequest.BaseUrl = callbackUrl
+		if parsedRequest.Action.AppName == "shuffle-subflow" || parsedRequest.Action.AppName == "shuffle-subflow-v2" || parsedRequest.Action.AppName == "User Input" {
+			parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+			//parsedRequest.Url = parsedRequest.BaseUrl
+		}
 	} else if len(hostname) > 0 {
 		// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
 		// This means running with VIP instead.
@@ -4568,10 +4600,7 @@ func baseDeploy() {
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 			//log.Printf("APPENDING PROXY TO THE APP!")
-			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
-			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
-			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
-			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
+			env = appendAppProxyEnv(env)
 		}
 
 		if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
