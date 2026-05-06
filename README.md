@@ -6,16 +6,16 @@ Shuffle Automation
 
 </h1><h4 align="center">
   
-  <p>Deploy<p/>
+  <p>Deploy On<p/>
 <p align="center">
   <a href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle">
     <img src="https://github.com/user-attachments/assets/37858273-eaeb-42a9-b228-a425026ca82d"
-         height="45"/>
+         height="80"/>
   </a>
   &nbsp;&nbsp;&nbsp;
   <a href="https://aws.amazon.com/marketplace/pp/prodview-typ7upg6kwntk">
     <img src="https://github.com/user-attachments/assets/250e00d7-2a23-4b4e-95e1-5db4db1f7864"
-         height="45"/>
+         height="80"/>
   </a>
 </p>
 
