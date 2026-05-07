@@ -846,6 +846,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     setIsLoading(true);
     if(!isCloud || !userdata?.active_org?.is_partner) {
       // If the user is not a partner or if it's not a cloud environment do not make api call :)
+      setIsLoading(false);
       return;
     }
     // Load usecase data from API

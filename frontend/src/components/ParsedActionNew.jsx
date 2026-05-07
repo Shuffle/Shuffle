@@ -10,6 +10,7 @@ import { sortByKey, getActionState, setActionState } from "../views/AngularWorkf
 import { NestedMenuItem } from "mui-nested-menu";
 import { parsedDatatypeImages } from "../components/AppFramework.jsx";
 import { green, yellow, red } from "../views/AngularWorkflow.jsx"
+import ReactGA from 'react-ga4';
 //import { useAlert 
 import { Context } from "../context/ContextApi.jsx";
 import {
@@ -206,6 +207,8 @@ const ParsedAction = (props) => {
 	const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
 	const [showAutocomplete, setShowAutocomplete] = React.useState(false);
 	const [menuPosition, setMenuPosition] = useState(null);
+	const [anchorEl, setAnchorEl] = useState(null);
+
 	const [uiBox, setUiBox] = useState(null);
 	const [parentAction, setParentAction] = useState(null);
 	const isIntegration = selectedAction.app_id === "integration"
@@ -220,6 +223,22 @@ const ParsedAction = (props) => {
 			setLastSaved(false)
 		}
 	}, [expansionModalOpen])
+
+	// Clean up invalid authentication ID in action : If the authentication is deleted from main auth array then action should not keep that authentication_id as it will create confusion for users and also create issue in execution. So removing that invalid authentication_id
+	useEffect(() => {
+		if (selectedAction && selectedAction.authentication_id && appAuthentication && 
+			(selectedAction?.selectedAuthentication == null || Object.keys(selectedAction.selectedAuthentication).length === 0) &&
+			selectedAction.selectedAuthentication?.id !== selectedAction.authentication_id) {
+			
+			// Getting all the valid ids for auth
+			const validAuthIds = appAuthentication.map(auth => auth.id);
+			if (!validAuthIds.includes(selectedAction.authentication_id)) {
+				selectedAction.authentication_id = "";
+				selectedAction.selectedAuthentication = {};
+				setSelectedAction(selectedAction);
+			}
+		}
+	}, [appAuthentication, selectedAction?.authentication_id])
 
 	const {themeMode, supportEmail} = useContext(Context)
 	const theme = getTheme(themeMode)
@@ -373,6 +392,34 @@ const ParsedAction = (props) => {
 			.concat(generated_optional)
 			.concat(special_optional)
 			.concat(optional)
+
+		if (selectedAction?.name === "custom_action") {
+			// Because we want to put it below method field :)
+			const methodIndex = newparams.findIndex(p => p.name === "method");
+			if (methodIndex !== -1) {
+				// Move path after method
+				const pathIndex = newparams.findIndex(p => p.name === "path");
+				if (pathIndex !== -1) {
+					const [pathParam] = newparams.splice(pathIndex, 1);
+					const mIndex = newparams.findIndex(p => p.name === "method");
+					newparams.splice(mIndex + 1, 0, pathParam);
+				}
+
+				// Move body after path (or method if path missing)
+				const bodyIndex = newparams.findIndex(p => p.name === "body");
+				if (bodyIndex !== -1) {
+					const [bodyParam] = newparams.splice(bodyIndex, 1);
+					const pIndex = newparams.findIndex(p => p.name === "path");
+					const mIndex = newparams.findIndex(p => p.name === "method");
+
+					if (pIndex !== -1) {
+						newparams.splice(pIndex + 1, 0, bodyParam);
+					} else {
+						newparams.splice(mIndex + 1, 0, bodyParam);
+					}
+				}
+			}
+		}
 
 		const dedupedParams = []
 		for (var paramKey in newparams) {
@@ -664,38 +711,64 @@ const ParsedAction = (props) => {
 		//setStartNode(selectedAction.id)
 	};
 
+	// Memoize hasAuth to avoid timing issues :((
+	const hasAuth = useMemo(() => {
+		if (!selectedAction) return false;
+		return (selectedAction.authentication && selectedAction.authentication.length > 0) || 
+			   (selectedAction.authentication_id && selectedAction.authentication_id !== "");
+	}, [selectedAction?.authentication, selectedAction?.authentication_id]);
+
+	// Check if app needs authentication (more reliable than requiresAuthentication timing)
+	const appMayNeedAuth = useMemo(() => {
+		// Show if there are already existing authentications
+		if (hasAuth) return true;
+		
+		// Show when requiresAuthentication is true (preserves original behavior for agents/integrations)
+		if (selectedApp?.name !== undefined && requiresAuthentication) {
+			return true;
+		}
+		
+		// Show if the app has inherent authentication requirements
+		if (selectedApp?.authentication?.required) return true;
+		
+		return false;
+	}, [selectedApp, selectedAction, isAgent, isIntegration, hasAuth, requiresAuthentication]);
+
 	useEffect(() => {
 		if (selectedAction?.id) {
-			// Dynamically setting the active tab on Right Sidebar (Setup/Config)
 			const state = getActionState(selectedAction.id, workflow?.id)
 
 			let tab = state.tab
-			// Only change tab automatically if no user preference exists (tab is empty/undefined)
-			// or if this is the initial load (tab is "setup" but no actual user selection made)
-			if (tab === undefined || tab === null || tab === "" || 
-				(tab === "setup" && !state.userSelectedTab)) {
-				const hasAuth = (selectedAction.authentication && selectedAction.authentication.length > 0) || (selectedAction.authentication_id && selectedAction.authentication_id !== "")
-				if (!requiresAuthentication || hasAuth) {
-					tab = "configuration"
-				} else {
+			// Only use saved tab preference if user explicitly selected a tab
+			// For newly activated apps, always check auth requirements to avoid jumping
+			if (!state.userSelectedTab) {
+				if (requiresAuthentication === undefined) {
+					tab = "setup";
+				} else if ((requiresAuthentication || appMayNeedAuth) && !hasAuth) {
 					tab = "setup"
+				} else {
+					tab = "configuration"
 				}
 			}
-			// If user has explicitly selected a tab, respect their choice
-
 			setActiveMainTab(tab)
-			setOptionalParamsOpen(state.showOptionalParams)
+			
+			// Handle optional params visibility
+			const shouldShowOptional = state.showOptionalParams;
+			setOptionalParamsOpen(shouldShowOptional)
 			
 			// If no required fields exist, open optional params by default
 			if (selectedAction?.parameters?.length > 0) {
 				const hasRequiredFields = selectedAction.parameters.some(
 					param => param.required === true || param.configuration === true
 				)
-				if (!hasRequiredFields && !state.showOptionalParams) {
+				if (!hasRequiredFields) {
 					setOptionalParamsOpen(true)
 				}
 			}
 		}
+	}, [selectedAction, workflow?.id, requiresAuthentication, appMayNeedAuth, hasAuth]);
+
+	useEffect(() => {
 
 		// Only set app action name if it has changed
 		if (selectedAction.label !== appActionName) {
@@ -750,7 +823,7 @@ const ParsedAction = (props) => {
 				}
 			}
 		}
-	}, [selectedAction, selectedApp, setNewSelectedAction, workflow, workflowExecutions, getParents, requiresAuthentication])
+	}, [selectedAction, selectedApp, setNewSelectedAction, workflow, workflowExecutions, getParents])
 
 	useEffect(() => {
 		const newActionList = [];
@@ -1297,8 +1370,10 @@ const ParsedAction = (props) => {
 			}
 		}
 
-		selectedActionParameters[count].autocompleted = false
-		selectedAction.parameters[count].autocompleted = false
+		if (selectedActionParameters[count]?.value !== event.target.value) {
+			selectedActionParameters[count].autocompleted = false
+			selectedAction.parameters[count].autocompleted = false
+		}
 		selectedActionParameters[count].value = event.target.value;
 		selectedAction.parameters[count].value = event.target.value;
 
@@ -1361,6 +1436,10 @@ const ParsedAction = (props) => {
 
 
 	const changeActionParameterCodeMirror = (event, count, data) => {
+		if (data === undefined || data === null) {
+			return
+		}
+
 		if (data.startsWith("${") && data.endsWith("}")) {
 			// PARAM FIX - Gonna use the ID field, even though it's a hack
 			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
@@ -1676,7 +1755,7 @@ const ParsedAction = (props) => {
 	}
 
 	// FIXME: Issue #40 - selectedActionParameters not reset
-	if (selectedAction && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters?.length > 0) {
+	if (selectedAction && selectedAction !== null && typeof selectedAction === 'object' && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters?.length > 0) {
 		var wrapperapp = {
 			"id": "",
 			"name": "noapp",
@@ -1866,6 +1945,62 @@ const ParsedAction = (props) => {
 
 	}
 
+
+	const setSelectedActionLocal = (selectedAction, app) => {
+		selectedAction.example = ""
+		selectedAction.large_image = app.large_image
+		if (cy !== undefined && cy !== null && !isAgent) {
+			const foundnode = cy.getElementById(selectedAction.id)
+			if (foundnode !== undefined && foundnode !== null) {
+				foundnode.data("large_image", app.large_image)
+			}
+		}
+
+		if (paramIndex === -1) {
+			console.log("Couldn't find app_name parameter")
+			selectedAction.parameters.push({
+				name: "app_name",
+				value: app.name,
+				autocompleted: false,
+			})
+		} else {
+			// Multiselect for agent
+			if (isAgent) { 
+				if (selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
+					selectedAction.parameters[paramIndex].value = app.name
+				} else if (!selectedAction.parameters[paramIndex].value.includes(app.name)) {
+					selectedAction.parameters[paramIndex].value += `,${app.name}`
+				} else {
+					// Remove it
+					const appNames = selectedAction.parameters[paramIndex].value.split(",").map(name => name.trim())
+					const filteredAppNames = appNames.filter(name => name !== app.name)
+					selectedAction.parameters[paramIndex].value = filteredAppNames.join(",")
+				}
+
+			} else {
+				selectedAction.parameters[paramIndex].value = app.name
+			}
+		}
+
+		console.log("New name: ", selectedAction?.parameters[paramIndex]?.value)
+
+		setSelectedAction(selectedAction)
+		setUpdate(Math.random())
+
+
+		var requiresAuth = app?.authentication?.required
+		if (requiresAuth && appAuthentication?.length > 0) {
+			for (var key in appAuthentication) {
+				if (appAuthentication[key]?.app?.name === app?.name) {
+					requiresAuth = false
+					break
+				}
+			}
+		}
+
+		setRequiresAuthentication(requiresAuth);
+	}
+
 	var optionalFound = false
 	return (
 		<div style={appApiViewStyle} id="parsed_action_view">
@@ -1962,6 +2097,15 @@ const ParsedAction = (props) => {
 				<Tab
 					label="Setup"
 					value="setup"
+					onClick={() => {
+						if (isCloud) { 
+							ReactGA.event({
+								category: "Workflow_Editor",
+								action: "Switch_Tab",
+								label: "Setup",
+							});
+						}
+					}}
 					style={{
 						textTransform: "none",
 						minHeight: 50,
@@ -1975,6 +2119,15 @@ const ParsedAction = (props) => {
 				<Tab
 					label="Configuration"
 					value="configuration"
+					onClick={() => {
+						if (isCloud) { 
+							ReactGA.event({
+								category: "Workflow_Editor",
+								action: "Switch_Tab",
+								label: "Configuration",
+							});
+						}
+					}}
 					style={{
 						textTransform: "none",
 						minHeight: 50,
@@ -2084,6 +2237,14 @@ const ParsedAction = (props) => {
 										paddingRight: 0,
 									}}
 									onClick={() => {
+										if (isCloud) { 
+											ReactGA.event({
+												category: "Integration",
+												action: "Authenticate",
+												label: `${selectedApp?.name} - Open 5`,
+											})
+										}
+
 										setAuthenticationModalOpen(true)
 									}}
 								>
@@ -2232,176 +2393,10 @@ const ParsedAction = (props) => {
 						</div>
 					</div>
 
-					{activeMainTab === "setup" && (
-					<>
-					{(isIntegration || isAgent) && selectedAction && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters?.length > 0 ?
-						apps !== undefined && apps !== null && apps.length > 0 && wrapperapp !== undefined && newimage !== undefined ?
-							<div style={{ display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden", marginBottom: 20, marginTop: 20}}>
-								<div onClick={() => {
-									selectedAction.example = "noapp"
-									selectedAction.large_image = newimage
-									if (cy !== undefined && cy !== null) {
-										const foundnode = cy.getElementById(selectedAction.id)
-										if (foundnode !== undefined && foundnode !== null) {
-											foundnode.data("large_image", newimage)
-										}
-									}
+		
 
-									/*
-									const iconInfo = GetIconInfo(selectedAction)
-									if (iconInfo !== undefined && iconInfo !== null) {
-										selectedAction.fillGradient = iconInfo.fillGradient
-
-										selectedAction.iconBackground = iconInfo.iconBackgroundColor
-										selectedAction.fillstyle = "linear-gradient"
-									}
-									*/
-
-									const paramIndex = selectedAction.parameters !== undefined && selectedAction.parameters !== null ? selectedAction.parameters.findIndex((param) => param.name === "app_name") : -1
-									if (paramIndex === -1) {
-										console.log("Couldn't find app_name parameter")
-										selectedAction.parameters.push({
-											name: "app_name",
-											value: wrapperapp.name,
-											autocompleted: false,
-										})
-									} else {
-										selectedAction.parameters[paramIndex].value = wrapperapp.name
-									}
-
-									setSelectedAction(selectedAction)
-									setUpdate(Math.random())
-
-								}}>
-									<Tooltip title={"Unselect which App to use"} placement="top">
-										<div style={{ textAlign: "center", }}>
-											<img
-												src={wrapperapp.large_image}
-												style={{
-													minWidth: 30,
-													maxWidth: 30,
-													minHeight: 30,
-													maxHeight: 30,
-
-													marginRight: 25,
-													marginTop: isIntegration ? 3 : 0, 
-													borderRadius: 5,
-													cursor: "pointer",
-													border: noAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
-
-													paddingLeft: isAgent || isIntegration ? 0 : 5,
-													paddingTop: isAgent || isIntegration ? 0 : 5,
-												}} />
-										</div>
-									</Tooltip>
-								</div>
-
-								{apps.map((app, appIndex) => {
-									// Forces it into every category (for now)
-									// This is to make it possible to "use" shuffle for Singul natively
-									if (app.name === "Shuffle Tools") {
-										if (actionname == "Intel" || actionname == "Intel") { 
-											app.categories = [actionname]
-										}
-									}
-
-									if (app.categories === undefined || app.categories === null || app.categories.length === 0) {
-										return null
-									}
-
-									var newactionname = actionname.toLowerCase()
-									if (isAgent === true) {
-										newactionname = "ai"
-									}
-
-									var found = false
-									for (var key in app.categories) {
-
-										var localnewactionname = newactionname
-										if (newactionname == "comms") {
-											localnewactionname = "communication"
-										}
-
-										if (app.categories[key].toLowerCase() !== localnewactionname) {
-											continue
-										}
-
-										found = true
-										break
-									}
-
-									if (!found) {
-										return null
-									}
-
-									var isAppSelected = false
-									const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
-									if (paramIndex > -1) {
-										// Check the actual value and if it's the same
-										if (selectedAction.parameters[paramIndex].value === app.name) {
-											isAppSelected = true
-										}
-									}
-
-									return (
-										<div onClick={() => {
-											selectedAction.example = ""
-											selectedAction.large_image = app.large_image
-											if (cy !== undefined && cy !== null) {
-												const foundnode = cy.getElementById(selectedAction.id)
-												if (foundnode !== undefined && foundnode !== null) {
-													foundnode.data("large_image", app.large_image)
-												}
-											}
-
-											if (paramIndex === -1) {
-												console.log("Couldn't find app_name parameter")
-												selectedAction.parameters.push({
-													name: "app_name",
-													value: app.name,
-													autocompleted: false,
-												})
-											} else {
-												selectedAction.parameters[paramIndex].value = app.name
-											}
-
-											setSelectedAction(selectedAction)
-											setUpdate(Math.random())
-
-									
-											var requiresAuth = app?.authentication?.required
-											if (requiresAuth && appAuthentication?.length > 0) {
-												for (var key in appAuthentication) {
-													if (appAuthentication[key]?.app?.name === app?.name) {
-														requiresAuth = false
-														break
-													}
-												}
-											}
-
-											setRequiresAuthentication(requiresAuth);
-										}}>
-											<Tooltip title={`Select ${app.name?.replaceAll("_", " ")}`} placement="top">
-												<img
-													src={app.large_image}
-													style={{
-														width: 35,
-														height: 35,
-														marginRight: 5,
-														borderRadius: 5,
-														cursor: "pointer",
-														border: isAppSelected ? "5px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
-													}} />
-											</Tooltip>
-										</div>
-									)
-								})}
-							</div>
-							: null
-						:
-						null
-					}
-
+				{activeMainTab === "setup" && (
+				<>
 					<div style={{ display: "flex", gap: 5 }}>
 						<div style={{ flex: 5 }}>
 							<Typography style={{ color: theme.palette.textPrimary, paddingLeft: 1}}>Name</Typography>
@@ -2657,7 +2652,21 @@ const ParsedAction = (props) => {
 										placeholder={selectedAction.execution_delay}
 										value={delay}
 										onChange={(event) => {
+											// Check if positive number
+											if (isNaN(event.target.value) || Number(event.target.value) < 0) {
+												toast.error("Please enter a valid positive number for delay.")
+												return
+											}
+
+											// Check if first number is 0
+											if (event.target.value.length > 1 && event.target.value.charAt(0) === "0") {
+												event.target.value = event.target.value.substring(1)
+											}
+
 											setDelay(event.target.value)
+											selectedAction.execution_delay = event.target.value
+											setSelectedAction(selectedAction)
+											setUpdate(Math.random())
 										}}
 									/>
 								</span>
@@ -2702,9 +2711,13 @@ const ParsedAction = (props) => {
 								fullWidth
 								variant="contained"
 								onClick={() => {
-									//if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
-									//	return null
-									//}
+									if (isCloud) { 
+										ReactGA.event({
+											category: "Integration",
+											action: "Authenticate",
+											label: `${selectedApp?.name} - Open 1`,
+										})
+									}
 
 									setAuthenticationModalOpen(true);
 								}}
@@ -2718,19 +2731,7 @@ const ParsedAction = (props) => {
 			) : null}
 
 {/* Change made in new release when we added Tabs system in it */}
-			{(
-				(selectedAction.authentication !== undefined &&
-					selectedAction.authentication !== null &&
-					selectedAction.authentication.length > 0) ||
-				(selectedApp.name !== undefined &&
-					(((selectedAction.authentication === undefined ||
-						selectedAction.authentication === null ||
-						selectedAction.authentication.length === 0)) ||
-						isAgent ||
-						isIntegration) &&
-					requiresAuthentication)
-			) ? (
-
+			{appMayNeedAuth ? (
 				<div style={{ marginTop: 15, position: "relative", }}>
 					<div
 						style={{ display: "flex", alignItems: "center", cursor: "pointer", paddingBottom: 10 }}
@@ -2797,7 +2798,7 @@ const ParsedAction = (props) => {
 					<Tooltip 
 						arrow
 						title={
-						workflow?.suborg_distribution?.length > 0 && selectedAction?.selectedAuthentication && Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length !== 0 ? (
+						workflow?.suborg_distribution?.length > 0 && selectedAction?.selectedAuthentication && typeof selectedAction.selectedAuthentication === 'object' && Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length !== 0 ? (
 							<React.Fragment>
 								<div style={{padding: 10, backgroundColor: theme.palette.textFieldStyle.backgroundColor, borderRadius: theme.palette.borderRadius, border: theme.palette.defaultBorder}}>
 									<FormControlLabel
@@ -2833,7 +2834,7 @@ const ParsedAction = (props) => {
 								labelId="select-app-auth"
 								value={
 									selectedAction?.authentication_id === "authgroups" ? "authgroups" :
-										!selectedAction?.selectedAuthentication || Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
+										(selectedAction?.selectedAuthentication === null || !selectedAction?.selectedAuthentication || typeof selectedAction.selectedAuthentication !== 'object' || Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0)
 											? "No selection"
 											: selectedAction?.selectedAuthentication
 								}
@@ -2997,6 +2998,14 @@ const ParsedAction = (props) => {
 									variant="outlined"
 									style={{}}
 									onClick={() => {
+										if (isCloud) { 
+											ReactGA.event({
+												category: "Integration",
+												action: "Authenticate",
+												label: `${selectedApp?.name} - Open 2`,
+											})
+										}
+
 										setAuthenticationModalOpen(true);
 									}}
 								>
@@ -3005,68 +3014,18 @@ const ParsedAction = (props) => {
 							</Tooltip>
 						</div>
 					</Tooltip>
-					{requiresAuthentication && (!selectedAction.authentication_id || selectedAction.authentication_id === "") ? (
-							<div
-								style={{
-									marginTop: 16,
-									padding: 16,
-									borderRadius: theme.palette.borderRadius,
-									border: `1px solid ${theme.palette.accentColor}`,
-									display: "flex",
-									justifyContent: "center",
-									alignItems: "center",
-									flexDirection: "column",
-								}}
-							>
-								<Typography
-									variant="subtitle1"
-									style={{
-										color: theme.palette.textPrimary,
-										fontWeight: 600,
-										marginBottom: 8,
-										fontFamily: theme.typography.fontFamily,
-									}}
-								>
-									Authentication needed.
-								</Typography>
-								<Typography
-									variant="body2"
-									style={{
-										color: theme.palette.text.secondary,
-										marginBottom: 16,
-										textAlign: "center",
-										fontFamily: theme.typography.fontFamily,
-									}}
-								>
-									Some steps in this workflow won’t run until you connect your account.
-								</Typography>
-								<Button
-									variant="contained"
-									color="primary"
-									style={{
-										textTransform: "none",
-										fontWeight: 600,
-										borderRadius: theme.palette.borderRadius,
-									}}
-									onClick={() => {
-										setAuthenticationModalOpen(true)
-									}}
-								>
-									Add Authentication
-								</Button>
-							</div>
-					) : null}
+					
 					</Collapse>
 				</div>
 			) : null}
 
-			{selectedAction.authentication_id === "authgroups" && (authGroups === undefined || authGroups === null || authGroups.length === 0) ?
-				<a href="/admin?tab=app_auth" target="_blank" style={{ textDecoration: "none", color: "#FF8544", }}>
-					<Typography variant="body2" style={{ marginTop: 5, }}>
-						Create your first Authentication group
-					</Typography>
-				</a>
-				: null}
+	{selectedAction.authentication_id === "authgroups" && (authGroups === undefined || authGroups === null || authGroups.length === 0) ?
+		<a href="/admin?tab=app_auth" target="_blank" style={{ textDecoration: "none", color: "#FF8544", }}>
+			<Typography variant="body2" style={{ marginTop: 5, }}>
+				Create your first Authentication group
+			</Typography>
+		</a>
+		: null}
 
 
 			{/*showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
@@ -3158,6 +3117,8 @@ const ParsedAction = (props) => {
 
 		</div>
       ) : null*/}
+
+					
 
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
 				<div style={{ marginTop: "20px" }}>
@@ -3470,11 +3431,80 @@ const ParsedAction = (props) => {
 				) : null}
 			</div>
 
+			{appMayNeedAuth && !hasAuth && !isAgent && !isIntegration ? (
+				<div
+					style={{
+						marginTop: 16,
+						padding: 16,
+						borderRadius: theme.palette.borderRadius,
+						border: `1px solid ${theme.palette.accentColor}`,
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						flexDirection: "column",
+					}}
+				>
+					<Typography
+						variant="subtitle1"
+						style={{
+							color: theme.palette.textPrimary,
+							fontWeight: 600,
+							marginBottom: 8,
+							fontFamily: theme.typography.fontFamily,
+						}}
+					>
+						Authentication needed {isIntegration || isAgent ? `` : "."}
+					</Typography>
+					<Typography
+						variant="body2"
+						style={{
+							color: theme.palette.text.secondary,
+							marginBottom: 16,
+							textAlign: "center",
+							fontFamily: theme.typography.fontFamily,
+						}}
+					>
+						This step may not work until you authenticate it.
+					</Typography>
+					<Button
+						variant="contained"
+						color="primary"
+						style={{
+							textTransform: "none",
+							fontWeight: 600,
+							borderRadius: theme.palette.borderRadius,
+						}}
+						onClick={() => {
+							if (isCloud) { 
+								ReactGA.event({
+									category: "Integration",
+									action: "Authenticate",
+									label: `${selectedApp?.name} - Open 3`,
+								})
+							}
+
+							setAuthenticationModalOpen(true)
+						}}
+						>
+							Add Authentication
+						</Button>
+					</div>
+			) : null}
+
 		    {activeMainTab === "setup" && (
 			<Button
 				variant="outlined"
-				color={requiresAuthentication === true ? "secondary" : "primary"}
-				onClick={() => setActiveMainTab("configuration")}
+				color={(!selectedAction?.selectedAuthentication || !selectedAction.selectedAuthentication || typeof selectedAction.selectedAuthentication !== 'object' || Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0) ? "secondary" : "primary"}
+				onClick={() => {
+					if (isCloud) { 
+						ReactGA.event({
+							category: "Workflow_Editor",
+							action: "Switch_Tab",
+							label: "Setup",
+						});
+					}
+					setActiveMainTab("configuration")
+				}}
 				style={{
 					marginTop: 25,
 					textTransform: "none",
@@ -3492,7 +3522,277 @@ const ParsedAction = (props) => {
 			) : null}
 
 			{activeMainTab === "configuration" ? (
-			<React.Fragment>
+			<React.Fragment>	
+				{(isIntegration || isAgent) && selectedAction && selectedAction !== null && typeof selectedAction === 'object' && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters?.length > 0 && selectedAction?.name !== "Translate standard" && selectedAction.parameters.find((param) => param.name === "app_name")?.custom_value !== true ?
+					apps !== undefined && apps !== null && apps.length > 0 && wrapperapp !== undefined && newimage !== undefined ?
+						<div style={{marginTop: 20, }}>
+							<Typography variant="body1" color="textSecondary">
+								{isIntegration ? 
+									"App to use with Singul"
+									:
+									`Allowed MCPs`
+								}
+							</Typography>
+
+							<div style={{ display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden", marginTop: 5, }}>
+								<ButtonGroup style={{marginRight: 15, }}>
+
+									<div onClick={() => {
+										selectedAction.example = "noapp"
+										selectedAction.large_image = newimage
+										if (cy !== undefined && cy !== null) {
+											const foundnode = cy.getElementById(selectedAction.id)
+											if (foundnode !== undefined && foundnode !== null) {
+												foundnode.data("large_image", newimage)
+											}
+										}
+
+										/*
+										const iconInfo = GetIconInfo(selectedAction)
+										if (iconInfo !== undefined && iconInfo !== null) {
+											selectedAction.fillGradient = iconInfo.fillGradient
+
+											selectedAction.iconBackground = iconInfo.iconBackgroundColor
+											selectedAction.fillstyle = "linear-gradient"
+										}
+										*/
+
+										const paramIndex = selectedAction.parameters !== undefined && selectedAction.parameters !== null ? selectedAction.parameters.findIndex((param) => param.name === "app_name") : -1
+										if (paramIndex === -1) {
+											console.log("Couldn't find app_name parameter")
+											selectedAction.parameters.push({
+												name: "app_name",
+												value: wrapperapp.name,
+												autocompleted: false,
+											})
+										} else {
+											selectedAction.parameters[paramIndex].value = wrapperapp.name
+										}
+
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random())
+
+									}}>
+										<Tooltip title={"Unselect which App to use"} placement="top">
+											<div style={{ textAlign: "center", }}>
+												<img
+													src={wrapperapp.large_image}
+													style={{
+														minWidth: 35,
+														maxWidth: 35,
+														minHeight: 35,
+														maxHeight: 35,
+
+														cursor: "pointer",
+														border: noAppSelected ? "3px solid #86c142" : "1px solid rgba(255,255,255,0.6)",
+														borderRadius: "5px 0px 0px 5px",
+
+														paddingLeft: isAgent || isIntegration ? 0 : 5,
+														paddingTop: isAgent || isIntegration ? 0 : 5,
+													}} />
+											</div>
+										</Tooltip>
+									</div>
+
+									<Tooltip title={"Choose from all your apps"} placement="top">
+										<Button color="secondary" variant="outlined" style={{height: 37, minWidth: 37, maxWidth: 37, }} onClick={(e) => {
+											setAnchorEl(e.currentTarget)
+										}}>
+											<AddIcon />
+										</Button>
+									</Tooltip>
+								</ButtonGroup>
+
+								<Menu
+									anchorEl={anchorEl}
+									open={Boolean(anchorEl)}
+									onClose={() => setAnchorEl(null)}
+
+									anchorOrigin={{
+									  vertical: 'bottom',
+									  horizontal: 'left',
+									}}
+									transformOrigin={{
+									  vertical: 'top',
+									  horizontal: 'left',
+									}}
+
+									style={{
+										zIndex: 20000,
+										marginTop: 2,
+										border: "1px solid rgba(255,255,255,0.3)",
+									}}
+
+									PaperProps={{
+										style: {
+											maxHeight: 600, 
+											maxWidth: 450, 
+										}
+									}}
+								>
+									<MenuItem
+									  key={"Custom Value"}
+									  onClick={(e) => {
+									    e.preventDefault()
+									    e.stopPropagation()
+
+										const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+										if (paramIndex === -1) {
+											selectedAction.parameters.push({
+												"description": "The name of the app to run the LLM query against",
+												"id": "",
+												"name": "app_name",
+												"example": "",
+												"value": "",
+												"multiline": false,
+												"multiselect": false,
+												"options": null,
+												"action_field": "",
+												"variant": "STATIC_VALUE",
+												"required": true,
+												"configuration": false,
+												"tags": null,
+												"schema": {
+													"type": ""
+												},
+												"skip_multicheck": false,
+												"value_replace": null,
+												"unique_toggled": false,
+												"error": "",
+												"hidden": false,
+
+												"custom_value": true,
+											})
+										} else {
+											selectedAction.parameters[paramIndex].custom_value = true
+										}
+
+										// Overwrite params for custom value handling
+										const newSelectedActionParameters = JSON.parse(JSON.stringify(selectedAction?.parameters))
+										setSelectedActionParameters(newSelectedActionParameters)
+										setSelectedAction(selectedAction)
+										setAnchorEl(null)
+									  }}
+									  selected={false}
+									  style={{
+										  margin: 7, 
+										  display: "flex", 
+										  minWidth: 400, 
+										  maxWidth: 400, 
+										  cursor: "pointer", 
+									  }}
+									>
+										<span style={{}}>
+											Custom Value
+										</span>
+									</MenuItem>
+									<Divider />
+
+								  {apps.map((item, index) => {
+									  const parsedName = (item.name?.charAt(0).toUpperCase() + item.name?.substring(1)).replace(/_/g, " ")
+									  return (
+										<MenuItem
+										  key={item.id}
+										  onClick={() => {
+											  //handleSelect(item)
+											  setSelectedActionLocal(selectedAction, item)
+											  setAnchorEl(null)
+										  }}
+										  selected={false}
+										  style={{
+											  margin: 7, 
+											  display: "flex", 
+											  minWidth: 400, 
+											  maxWidth: 400, 
+											  cursor: "pointer", 
+										  }}
+										>
+											<img src={item.large_image} style={{width: 35, height: 35, marginRight: 10, borderRadius: theme.palette.borderRadius, }} />
+											<span style={{}}>
+												{parsedName}
+											</span>
+										</MenuItem>
+									)
+								  })}
+								
+								</Menu>
+
+								{apps.map((app, appIndex) => {
+									// Forces it into every category (for now)
+									// This is to make it possible to "use" shuffle for Singul natively
+									if (app.name === "Shuffle Tools") {
+										if (actionname == "Intel" || actionname == "Intel") { 
+											app.categories = [actionname]
+										}
+									}
+
+									var isAppSelected = false
+									const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+									if (paramIndex > -1) {
+										// Check the actual value and if it's the same
+										//if (selectedAction.parameters[paramIndex].value === app.name) {
+										if (selectedAction.parameters[paramIndex].value.includes(app.name)) {
+											isAppSelected = true
+										}
+									}
+
+									if (app.categories === undefined || app.categories === null || app.categories.length === 0) {
+										if (!isAppSelected) { 
+											return null
+										}
+									}
+
+									var newactionname = actionname.toLowerCase()
+									if (isAgent === true) {
+										//newactionname = "ai"
+									} else {
+										var found = false
+										for (var key in app.categories) {
+
+											var localnewactionname = newactionname
+											if (newactionname == "comms") {
+												localnewactionname = "communication"
+											}
+
+											if (app.categories[key].toLowerCase() !== localnewactionname) {
+												continue
+											}
+
+											found = true
+											break
+										}
+
+										if (!found && !isAppSelected) {
+											return null
+										}
+									}
+
+
+									return (
+										<div onClick={() => {
+											setSelectedActionLocal(selectedAction, app)
+										}}>
+											<Tooltip title={`Select ${app.name?.replaceAll("_", " ")}`} placement="top">
+												<img
+													src={app.large_image}
+													style={{
+														width: 30,
+														height: 30,
+														marginRight: 5,
+														borderRadius: 5,
+														cursor: "pointer",
+														border: isAppSelected ? "5px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
+													}} />
+											</Tooltip>
+										</div>
+									)
+								})}
+
+							</div>
+						</div>
+						: null
+					: null
+				}
 
 
 			<div style={{ flex: "6"}}>
@@ -3524,7 +3824,7 @@ const ParsedAction = (props) => {
 						marginBottom: hideExtraTypes ? 50 : 200,
 					}}
 				> {
-						selectedActionParameters !== undefined && selectedActionParameters !== null && selectedAction && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ?
+						selectedActionParameters !== undefined && selectedActionParameters !== null && selectedAction && selectedAction !== null && typeof selectedAction === 'object' && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ?
 							<div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
 								{/* <Tooltip
 									color="secondary"
@@ -3695,8 +3995,12 @@ const ParsedAction = (props) => {
 									}
 
 									if ((isIntegration || isAgent) && data.name === "app_name") { 
-										return null
-									}
+										if (data?.custom_value === true) { 
+											//data.label = "Allowed MCPs"
+										} else {
+											return null
+										}
+									} 
 
 									/*
 									// Somehow autogenerate from the app itself
@@ -3827,13 +4131,9 @@ const ParsedAction = (props) => {
 									}
 
 									if (selectedAction.name === "custom_action" && data.name === "body") {
-										for (var key in selectedActionParameters) {
-											const param = selectedActionParameters[key]
-											if (param.name === "method") {
-												if (param.value === "GET") {
-													return null
-												}
-											}
+										const methodParam = selectedActionParameters.find(p => p.name === "method") || selectedAction.parameters?.find(p => p.name === "method");
+										if (methodParam?.value?.toUpperCase() === "GET") {
+											return null
 										}
 									}
 
@@ -3897,6 +4197,7 @@ const ParsedAction = (props) => {
 										  backgroundColor: themeMode === "dark" ? "#161616" : "#CCCCCC",
 										  color: theme.palette.text.primary,
 										  fontWeight: 600,
+										  borderRadius: "6px !important",
 										  "&:hover": {
 											  backgroundColor: themeMode === "dark" ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.1)",
 											},
@@ -4322,7 +4623,7 @@ const ParsedAction = (props) => {
 									}
 
 
-									if ((multiline === undefined || multiline === false) && ((data?.autocompleted === true || data?.field_active === true) || data.name.startsWith("${") && data.name.endsWith("}"))) {
+									if ((multiline === undefined || multiline === false) && (data.name.startsWith("${") && data.name.endsWith("}"))) {
 										multiline = true
 									}
 
@@ -4827,6 +5128,16 @@ const ParsedAction = (props) => {
 												fullWidth
 												id={"rightside_field_" + count}
 												onChange={(e) => {
+													if (e.target.value.includes("custom_shuffle_action")) {
+														data.options = []
+														selectedActionParameters[count].options = []
+														setSelectedActionParameters(selectedActionParameters)
+														selectedAction.parameters = selectedActionParameters
+														setSelectedAction(selectedAction)
+														setUpdate(Math.random())
+														return
+													} 
+
 													changeActionParameter(e, count, data);
 													setUpdate(Math.random());
 												}}
@@ -4871,6 +5182,22 @@ const ParsedAction = (props) => {
 														);
 													}
 												)}
+
+												<Divider />
+												{isAgent || isIntegration ? 
+													<MenuItem
+														key={data}
+														sx={{
+															color: theme.palette.textFieldStyle.color,
+															"&:hover": {
+																backgroundColor: theme.palette.hoverColor 
+															},
+														}}
+														value={"custom_shuffle_action"}
+													>
+														Custom Value
+													</MenuItem>
+												: null}
 											</Select>
 										);
 									} else if (data.variant === "STATIC_VALUE") {
@@ -5263,12 +5590,14 @@ const ParsedAction = (props) => {
 
 									const buttonTitle = `Authenticate the ${selectedApp?.name?.replaceAll("_", " ")} API`
 									const hasAutocomplete = data?.autocompleted === true
+									const isPathField = selectedAction?.name === "custom_action" && data?.name === "path"
+
 									if (data.variant === undefined || data.variant === null) {
 										data.variant = "STATIC_VALUE"
 									}
 
-									var isFirstOptional = optionalFound === false && data.configuration === false && data.required === false ? true : false
-									if (optionalFound === false && data.configuration === false && data.required === false) {
+									var isFirstOptional = optionalFound === false && data.configuration === false && data.required === false && !isPathField ? true : false
+									if (optionalFound === false && data.configuration === false && data.required === false && !isPathField) {
 										optionalFound = true
 									}
 
@@ -5295,7 +5624,7 @@ const ParsedAction = (props) => {
 										}
 									}
 
-									const isOptional = data.configuration === false && data.required === false
+									const isOptional = (data.configuration === false && data.required === false) && !isPathField
 									
 									return (
 										<div key={data.name} style={{ marginTop: isFirstOptional ? 55 : 5, }}>
@@ -5352,6 +5681,13 @@ const ParsedAction = (props) => {
 																color: theme.palette.textPrimary,
 															}}
 															onClick={() => {
+																if (isCloud) { 
+																	ReactGA.event({
+																		category: "Integration",
+																		action: "Authenticate",
+																		label: `${selectedApp?.name} - Open 4`,
+																	})
+																}
 																setAuthenticationModalOpen(true);
 															}}
 														/>

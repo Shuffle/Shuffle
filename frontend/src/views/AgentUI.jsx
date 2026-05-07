@@ -44,6 +44,7 @@ import {
 	Add as AddIcon,
 	Warning as WarningIcon,
 	Pause as PauseIcon,
+	Chat as ChatIcon,
 } from '@mui/icons-material'
 
 import { 
@@ -71,6 +72,7 @@ const AgentUI = (props) => {
     const [newSelectedApp, setNewSelectedApp] = React.useState({})
 	const [appPickerAnchor, setAppPickerAnchor] = React.useState(null)
 	const [chosenApps, setChosenApps] = useState([])
+	const [planningEnabled, setPlanningEnabled] = useState([])
 
 	const activateApp = (appId) => {
 		if (appId === undefined || appId === null || appId === "") {
@@ -188,11 +190,11 @@ const AgentUI = (props) => {
 
 	const agentWrapperStyle = {
 		width: "100%",
-		maxHeight: "100vh",
+		minHeight: "100vh",
 		margin: "auto",
 		backgroundColor: theme.palette.backgroundColor,
 
-		paddingBottom: showAgentStarter ? 0 : 1500, 
+		paddingBottom: showAgentStarter ? 0 : 50, 
 
 	}
 
@@ -248,21 +250,25 @@ const AgentUI = (props) => {
 			return
 		}
 
+		// If no node_id provided, look for the AI Agent node
 		if (node_id === undefined || node_id === null || node_id === "") {
-			// Look for AI agent
-			/*
 			for (var key in execution_data.results) {
 				const item = execution_data.results[key]
-				if (item?.action?.app_name !== "AI Agent") {
-					continue
+				if (item?.action?.app_name === "AI Agent") {
+					node_id = item?.action?.id
+					break
 				}
-
-				node_id = item?.action?.id
-				break
 			}
-			*/
 
 			if (node_id === undefined || node_id === null || node_id === "") {
+				// Fallback: if only one result, use it
+				if (execution_data?.results?.length === 1) {
+					setAgentActionResult(execution_data.results[0])
+					const validatedData = validateJson(execution_data.results[0].result)
+					if (validatedData.valid) {
+						setData(validatedData.result)
+					}
+				}
 				return
 			}
 		}
@@ -270,6 +276,11 @@ const AgentUI = (props) => {
 		var found = false
 		for (var key in execution_data.results) {
 			const item = execution_data.results[key]
+			
+			if (item?.action?.app_name !== "AI Agent") {
+				continue
+			}
+
 			if (item?.action?.id !== node_id) {
 				continue
 			}
@@ -289,16 +300,6 @@ const AgentUI = (props) => {
 
 		if (found === false) {
 			toast.warn("Failed to find the relevant AI Agent result")
-
-			if (execution_data?.results?.length === 1) {
-				setAgentActionResult(execution_data.results[0])
-				const validatedData = validateJson(execution_data.results[0].result)
-				if (validatedData.valid) {
-					setData(validatedData.result)
-				} else {
-					toast.warn("Action output result is not valid JSON!")
-				}
-			}
 		}
 	}
 
@@ -475,7 +476,7 @@ const AgentUI = (props) => {
 		getAppAuth() 
 	}, [])
 
-	const maxTimelineWidth = 375 
+	const maxTimelineWidth = 275 
 
 	const submitQuestions = (decisionId, questionAnswers, isContinuation) => {
 		console.log("Submitting questions: ", decisionId, questionAnswers)
@@ -521,8 +522,12 @@ const AgentUI = (props) => {
 		const executionId = params.get("execution_id")
 		const nodeId = params.get("node_id")
 		const authorization = params.get("authorization")
+		const workflowIdParam = params.get("workflow_id")
 
-		const url = `${globalUrl}/api/v1/workflows/${executionId}/run?reference_execution=${executionId}&authorization=${authorization}&answer=true&note=${encodeURIComponent(JSON.stringify(newArgument))}&agentic=true&decision_id=${decisionId}`
+		// workflow_id param > execution.workflow.id > executionId
+		const foundWorkflowId = workflowIdParam !== undefined && workflowIdParam !== null && workflowIdParam !== "" ? workflowIdParam : execution?.workflow?.id !== undefined && execution?.workflow?.id !== null && execution?.workflow?.id !== "" ? execution.workflow.id : executionId
+
+		const url = `${globalUrl}/api/v1/workflows/${foundWorkflowId}/run?reference_execution=${executionId}&authorization=${authorization}&answer=true&note=${encodeURIComponent(JSON.stringify(newArgument))}&agentic=true&decision_id=${decisionId}&node_id=${nodeId}`
 		fetch(url, {
 			method: "GET",
 			credentials: "include",
@@ -893,15 +898,32 @@ const AgentUI = (props) => {
 						/>
 					</div>
 					<div style={{
-						minWidth: 300, 
-						maxWidth: 300, 
-						maxHeight: 150, 
-						overflowX: "hidden", 
-						overflowY: "auto", 
-						paddingTop: defaultTopPadding, 
-						paddingBottom: defaultTopPadding,
+						minWidth: 400,
+						maxWidth: 400,
+						maxHeight: 150,
+						overflowX: "hidden",
+						overflowY: "auto",
 					}}>
-						{itemLabel}
+						<Markdown
+							components={markdownComponents}
+							id="markdown_wrapper"
+							className={"style.reactMarkdown"}
+							escapeHtml={false}
+							skipHtml={false}
+							remarkPlugins={[remarkGfm]}
+							style={{
+								minWidth: 400,
+								maxWidth: 450,
+								maxHeight: 150,
+								overflowX: "hidden",
+								overflowY: "auto",
+
+								paddingTop: defaultTopPadding, 
+								paddingBottom: defaultTopPadding,
+							}}
+						>
+							{itemLabel}
+						</Markdown>
 					</div>
 
 					<Tooltip title={`Time taken: ${currentDuration} seconds. Started: ${new Date(itemStartTime * 1000).toLocaleString()}\nFinished: ${new Date(itemEndTime * 1000).toLocaleString()}`} placement="right"
@@ -1084,7 +1106,7 @@ const AgentUI = (props) => {
 					</div>
 				: null}
 
-				{questions?.length > 0 && item?.status === "RUNNING" || item?.status === "WAITING" ? 
+				{item.category !== "agent" && questions?.length > 0 && (item?.status === "RUNNING" || item?.status === "WAITING") ? 
 					<div>
 						{questions.map((q, questionIndex) => {
 							return (
@@ -1189,7 +1211,25 @@ const AgentUI = (props) => {
 
 		const [continuationText, setContinuationText] = useState("")
 
-		var actionResult = execution?.results?.length > 0 ? execution.results[0] : execution 
+		// Find the AI Agent result specifically, not just results[0]
+		var actionResult = null
+		if (execution?.results?.length > 0) {
+			for (var key in execution.results) {
+				const item = execution.results[key]
+				if (item?.action?.app_name === "AI Agent") {
+					actionResult = item
+					break
+				}
+			}
+			
+			// Fallback to first result if no AI Agent found
+			if (actionResult === null) {
+				actionResult = execution.results[0]
+			}
+		} else {
+			actionResult = execution
+		}
+
 		const validate = validateJson(actionResult?.result)
 		if (validate.valid === true) {
 			actionResult.result = validate.result
@@ -1245,6 +1285,11 @@ const AgentUI = (props) => {
 		var sortedTimelineItems = []
 		for (var key in agent_data?.decisions) {
 			const item = agent_data.decisions[key]
+
+			if (item.run_details === undefined) {
+				console.log("Skipping item without run_details:", item)
+				continue
+			}
 
 			if (item.run_details.started_at === undefined || item.run_details.started_at === null) {
 				item.run_details.started_at = originalStartTime
@@ -1495,6 +1540,7 @@ const AgentUI = (props) => {
 			parsedAction = parsedAction.slice(0, -1) // Remove last comma
 		}
 
+		/*
 		const data = {
 			"id": uuid,
 			"name":"agent",
@@ -1517,9 +1563,23 @@ const AgentUI = (props) => {
 					"name":"action",
 					"value": parsedAction,
 				}
-		]}
-
+			],
+			"planning_mode": planningEnabled,
+		}
 		const url = `${globalUrl}/api/v1/apps/agent_starter/run`
+		*/
+		
+		const data = {
+		  "jsonrpc": "2.0",
+		  "method": "tools/call",
+		  "params": {
+			"tool_name": parsedAction,
+			"input": { 
+			  "text": inputText,
+			},
+		  }
+		}
+		const url = `${globalUrl}/api/v1/agent`
 		fetch(url, {
 			method: "POST",
 			body: JSON.stringify(data),
@@ -1604,8 +1664,8 @@ const AgentUI = (props) => {
 		</ButtonGroup>
 
 	return (
-		<div>
-			<div style={{height: showAgentStarter ? "25vh" : "5vh", }}>
+		<div style={{paddingBottom: 500, }}>
+			<div style={{height: showAgentStarter ? "17vh" : "5vh", }}>
 			</div>
 			<div style={agentWrapperStyle}>
 				<div style={{
@@ -1667,10 +1727,14 @@ const AgentUI = (props) => {
 										agentRequestLoading ?
 											<CircularProgress size={24} style={{marginRight: 10, }} />
 										: 
-										<Tooltip title="This is the input for the AI Agent. It can be any valid JSON.">
-											<IconButton type="submit"> 
+										<Tooltip title="Start the agent. Data can be anything, and it will run based on your selected tools">
+											<IconButton 
+												type="submit"
+												color={actionInput === "" || actionInput === undefined || actionInput === null ? "secondary" : "primary"}
+												disabled={actionInput === "" || actionInput === undefined || actionInput === null}
+											> 
 												<SendIcon 
-													color="primary"
+													color={actionInput === "" || actionInput === undefined || actionInput === null ? "secondary" : "primary"}
 												/>
 											</IconButton>
 										</Tooltip>
@@ -1678,12 +1742,29 @@ const AgentUI = (props) => {
 								}}
 							/>
 
-							<div style={{display: "flex", margin: "auto", marginTop: 30, minWidth: 300, maxWidth: 300, justifyContent: "center", overflowWrap: "wrap", }}>
+							<div style={{display: "flex", margin: "auto", marginTop: 20, minWidth: 500, maxWidth: 500, justifyContent: "center", overflowWrap: "wrap", }}>
 								<div style={{}}>
+									{/*
+									<Tooltip title="Enables/Disables planning mode. Agents will not DO anything - just plan what to do. Primarily used for usecase build helping." placement="top">
+										<span>
+											<Chip 
+												id="planning_enabled"
+												icon={<ChatIcon />} label="Planning Mode"  
+												style={chipStyle}
+												variant={planningEnabled ? "contained" : "outlined"}
+												onClick={() => {
+													setPlanningEnabled(!planningEnabled)
+												}}
+												disabled={true}
+											/>
+										</span>
+									</Tooltip>
+									*/}
 									<Chip 
 										id="add_app_chip"
 										icon={<AddIcon />} label="Select Apps / MCPs"  
 										style={chipStyle}
+										variant={"outlined"}
 										onClick={() => {
 											setAppPickerAnchor(document.getElementById("add_app_chip"))
 										}}
@@ -1794,18 +1875,21 @@ const AgentUI = (props) => {
 									<AvatarGroup>
 										{chosenApps?.map((app, index) => {
 											return(
-												<Tooltip title={`Constraint: ${app?.name}`} key={index} placement="top">
+												<Tooltip title={`MCP / App: ${app?.name}`} key={index} placement="top">
 													<Avatar 
 														key={index}
 														alt={app?.name} 
 														src={app?.large_image ? app.large_image : app?.image ? app.image : theme.palette.singulBlackWhite}
 														onClick={() => {
-															window.open(`/apps/${app.id}`, '_blank', 'noopener,noreferrer');
+															if (app?.id !== undefined) { 
+																window.open(`/apps/${app.id}`, '_blank', 'noopener,noreferrer');
+															}
 														}}
 														style={{
 															cursor: "pointer", 
 															width: 30,
 															height: 30, 
+															backgroundColor: theme.palette.backgroundColor,
 														}}
 													/>
 												</Tooltip>

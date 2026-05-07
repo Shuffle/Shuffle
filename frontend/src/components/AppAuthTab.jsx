@@ -20,6 +20,7 @@ import { isMobile } from "react-device-detect"
 import PaperComponent from "../components/PaperComponent.jsx";
 import { CodeHandler, Img, OuterLink, } from '../views/Docs.jsx'
 import { v4 as uuidv4} from "uuid";
+import DeleteConfirmDialog from "./DeleteConfirmDialog.jsx";
 
 import {
     Divider, 
@@ -63,10 +64,11 @@ import {
 } from "react-instantsearch-dom";
 import aa from "search-insights";
 import { Context } from '../context/ContextApi.jsx';
+import SubOrgDistributionDialog from './SubOrgDistributionDialog.jsx';
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "c8f882473ff42d41158430be09ec2b4e"
+  "33e4e3564f4f060e96e0531957bed552"
 )
 
 const AppAuthTab = memo((props) => {
@@ -89,9 +91,13 @@ const AppAuthTab = memo((props) => {
     const [searchQuery, setSearchQuery] = React.useState("");
     const [showAppModal, setShowAppModal] = useState(false)
     const [selectedAuthId, setSelectedAuthId] = useState("");
+    const [selectedAuthName, setSelectedAuthName] = useState("");
     const [showDistributionPopup, setShowDistributionPopup] = useState(false);
     const [showAuthenticationLoader, setShowAuthenticationLoader] = useState(true)
   const [showAppAuthGroupLoader, setShowAppAuthGroupLoader] = useState(true)
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
+    const [distribOrgOrder, setDistribOrgOrder] = useState([]);
   const { themeMode, supportEmail, brandColor } = useContext(Context)
   const theme = getTheme(themeMode, brandColor)
     
@@ -183,7 +189,7 @@ const AppAuthTab = memo((props) => {
     };
 
     const deleteAuthentication = (data) => {
-        toast("Deleting auth " + data.label);
+        toast("Deleting auth " + data?.label);
 
         // Just use this one?
         const url = globalUrl + "/api/v1/apps/authentication/" + data.id;
@@ -211,33 +217,6 @@ const AppAuthTab = memo((props) => {
             .catch((error) => {
                 console.log("Error in userdata: ", error);
             });
-    };
-
-    const handleSelectSubOrg = (id, action) => {
-        if (action === "all") {
-            const childOrgs = userdata.orgs.filter(
-                (data) => data.creator_org === userdata.active_org.id
-            );
-            setSelectedSubOrg((prev) => {
-                if (prev.length === childOrgs.length) {
-                    // If all child orgs are already selected, clear the selection
-                    return [];
-                } else {
-                    // Otherwise, select all child org IDs
-                    return childOrgs.map((data) => data.id);
-                }
-            });
-        } else if (action === "none") {
-            setSelectedSubOrg([]);
-        } else {
-            setSelectedSubOrg((prev) => {
-                if (prev.includes(id)) {
-                    return prev.filter((data) => data !== id);
-                } else {
-                    return [...prev, id];
-                }
-            });
-        }
     };
 
     const editAuthenticationConfig = (id, parentAction, selectedSuborgs) => {
@@ -284,100 +263,22 @@ const AppAuthTab = memo((props) => {
     
         editAuthenticationConfig(id, "suborg_distribute", [...new Set(selectedSubOrg)])
       }
-  
-  
-      const cacheDistributionModal = showDistributionPopup ? (
-          <Dialog
-      open={showDistributionPopup}
-      onClose={() => {setShowDistributionPopup(false);setSelectedAuthId("")}}
-      PaperProps={{
-        sx: {
-          borderRadius: theme?.palette?.DialogStyle?.borderRadius,
-          border: theme?.palette?.DialogStyle?.border,
-          fontFamily: theme?.typography?.fontFamily,
-          backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-          zIndex: 1000,
-          minWidth: "600px",
-          minHeight: "320px",
-          overflow: "auto",
-          '& .MuiDialogContent-root': {
-            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-          },
-          '& .MuiDialogTitle-root': {
-            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-          },
-          '& .MuiDialogActions-root': {
-            backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-          },
-        },
-      }}
-    >
-      <DialogTitle>
-        <Typography variant="h5" color="textPrimary">
-          Select sub-org to distribute Datastore key
-        </Typography>
-      </DialogTitle>
-      <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
-        <MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
-        <MenuItem value="all" onClick={()=> {handleSelectSubOrg(null, "all")}}>All</MenuItem>
-        {userdata.orgs.map((data, index) => {
-          if (data.creator_org !== userdata.active_org.id) {
-            return null;
-          }
-  
-          const imagesize = 22;
-          const imageStyle = {
-            width: imagesize,
-            height: imagesize,
-            pointerEvents: "none",
-            marginRight: 10,
-            marginLeft: data.id === userdata.active_org.id ? 0 : 20,
-          };
-  
-          const image = data.image === "" ? (
-            <img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
-          ) : (
-            <img alt={data.name} src={data.image} style={imageStyle} />
-          );
 
-          return (
-            <MenuItem
-              key={index}
-              value={data.id}
-              onClick={() => handleSelectSubOrg(data.id)}
-              style={{ display: "flex", alignItems: "center" }}
-            >
-              <Checkbox
-                checked={selectedSubOrg.includes(data.id)}
-              />
-              {image}
-              <span style={{ marginLeft: 8 }}>{data.name}</span>
-            </MenuItem>
-          );
-        })}
-  
-        <div style={{ display: "flex", marginTop: 20 }}>
-          <Button
-            style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main  }}
-            onClick={() => {setShowDistributionPopup(false); setSelectedAuthId("")}}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
-            onClick={() => {
-              changeDistribution(selectedAuthId, selectedSubOrg);
-            }}
-            color="primary"
-          >
-            Submit
-          </Button>
-        </div>
-      </DialogContent>
-      </Dialog>
-      ) : null;
+    const deleteConfirmDialog = (
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => { setDeleteConfirmOpen(false); setDeleteConfirmTarget(null); }}
+        onConfirm={() => {
+          deleteAuthentication(deleteConfirmTarget);
+          setDeleteConfirmOpen(false);
+          setDeleteConfirmTarget(null);
+        }}
+        title="Delete Authentication?"
+        description={<>Are you sure you want to delete <b>{deleteConfirmTarget?.app?.name}</b> authentication?</>}
+        warningText="This cannot be undone. Any workflows using this authentication will lose access."
+      />
+    );
+
 
     const editAuthenticationModal = selectedAuthenticationModalOpen ? (
         <Dialog
@@ -985,7 +886,17 @@ const AppAuthTab = memo((props) => {
     return (
         <div style={{width: "100%", minHeight: 1100, maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin',boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
           {appModal}
-          {cacheDistributionModal}
+          <SubOrgDistributionDialog
+            open={showDistributionPopup}
+            onClose={() => { setShowDistributionPopup(false); setSelectedAuthId(""); setSelectedAuthName(""); }}
+            title="Distribute App Auth to Sub-Organizations"
+            extraInfo={selectedAuthName ? `Selected Auth: ${selectedAuthName}` : null}
+            orgs={distribOrgOrder.map(id => (userdata?.orgs || []).find(o => o.id === id)).filter(Boolean)}
+            selectedOrgIds={selectedSubOrg}
+            onSelectionChange={setSelectedSubOrg}
+            onSave={(ids) => { changeDistribution(selectedAuthId, ids); }}
+          />
+          {deleteConfirmDialog}
             <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
             <div style={{ width: 'auto', display:'flex',}}>
                 <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -1362,10 +1273,10 @@ const AppAuthTab = memo((props) => {
                                     </IconButton>
                                   </Tooltip>
                                 <IconButton
-                                  style={{ }}
                                   disabled={data.org_id !== selectedOrganization.id}
                                   onClick={() => {
-                                    deleteAuthentication(data);
+                                    setDeleteConfirmTarget(data);
+                                    setDeleteConfirmOpen(true);
                                   }}
                                 >
                                   <img src='/icons/deleteIcon.svg' alt='delete icon' color="secondary" />
@@ -1400,21 +1311,27 @@ const AppAuthTab = memo((props) => {
                                               color="secondary"
                                               onClick={() => {
                                                   setShowDistributionPopup(true)
-                                                  if(data?.suborg_distribution?.length > 0){
-                                                    setSelectedSubOrg(data.suborg_distribution)
-                                                  }else{
-                                                    setSelectedSubOrg([])
-                                                  }
-                                                  setSelectedAuthId(data.id)
+                                                  let initialSelected = [];
                                                   if (data?.suborg_distributed) {
-                                                    const allSuborg = userdata?.orgs?.map((data, index) => {
-                                                      if (data.creator_org !== userdata.active_org.id) {
-                                                        return null;
-                                                      }
-                                                      return data.id;
-                                                    })
-                                                    setSelectedSubOrg(allSuborg.filter((data) => data !== null))
+                                                    const allSuborg = userdata?.orgs?.map((d) => {
+                                                      if (d.creator_org !== userdata.active_org.id) return null;
+                                                      return d.id;
+                                                    });
+                                                    initialSelected = allSuborg.filter((d) => d !== null);
+                                                  } else if (data?.suborg_distribution?.length > 0) {
+                                                    initialSelected = data.suborg_distribution;
                                                   }
+                                                  setSelectedSubOrg(initialSelected);
+                                                  setSelectedAuthId(data.id);
+                                                  setSelectedAuthName(data?.app?.name);
+                                                  const suborgs = (userdata?.orgs || []).filter(o => o.creator_org === userdata?.active_org?.id);
+                                                  const sorted = [...suborgs].sort((a, b) => {
+                                                    const aS = initialSelected.includes(a.id);
+                                                    const bS = initialSelected.includes(b.id);
+                                                    if (aS !== bS) return bS - aS;
+                                                    return a.name.localeCompare(b.name);
+                                                  });
+                                                  setDistribOrgOrder(sorted.map(o => o.id));
 
                                               }}
                                           />

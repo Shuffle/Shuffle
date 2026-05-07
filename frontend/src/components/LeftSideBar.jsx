@@ -52,6 +52,12 @@ const ShuffleLogo = "/images/Shuffle_logo.png";
 const detectionIcon = "/icons/detection.svg";
 const documentationIcon = "/icons/documentation.svg";
 const ExpandMoreAndLessIcon = "/icons/expandMoreIcon.svg";
+const shuffleSecurityLogo = (
+  <svg width="30" height="30" viewBox="0 0 56 56" fill="none">
+    <path d="M14 14h28v6H20v16h16v-10h-8v-6h14v22H14V14z" fill="#FF6600" />
+  </svg>
+);
+
 
 
 const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_VERSION }) => {
@@ -87,6 +93,17 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
   );
   const [activeOrgData, setActiveOrgData] = useState(null);
   const [isProdStatusOn, setIsProdStatusOn] = useState(false);
+  const [productAnchorEl, setProductAnchorEl] = useState(null);
+
+  const handleProductClick = (event) => {
+    event.preventDefault();
+    setProductAnchorEl((prev) => (prev ? null : event.currentTarget));
+  };
+
+  const handleProductClose = () => {
+    setProductAnchorEl(null);
+  };
+
   const userOrgs = React.useMemo(() => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
@@ -120,7 +137,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
       setCurrentSelectedTheme(userdata?.theme);
     }
   }, [userdata]);
-      
+
       
   
   const CustomPopper = (props) => {
@@ -839,6 +856,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           regiontag = "EU-2";
         } else if (regiontag === "ca"){
           regiontag = "CA";
+        } else if (regiontag === "uk"){
+          regiontag = "UK";
         }
       }
     }
@@ -1022,7 +1041,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           }}
         >
         <Tooltip 
-          title="Go to Home" 
+          title={showPartnerLogo ? "Go to Home" : "Switch Product"}
           placement="top"
           arrow  
           componentsProps={{
@@ -1042,16 +1061,194 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
             }
           }}
         >
-          <Link to={isCloud && !showPartnerLogo ? "/" : "/workflows"}>
-            <img
-              src={
-				  showPartnerLogo ? userdata?.active_org?.image : ShuffleLogo
-			  }
-              alt="Shuffle Logo"
-              style={{ width: showPartnerLogo ? 30 : 24, height: showPartnerLogo ? 30 : 24 }}
-            />
-          </Link>
-          </Tooltip>
+          <Box
+            onClick={showPartnerLogo ? undefined : handleProductClick}
+            sx={{
+              cursor: showPartnerLogo ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 0.5 
+            }}
+          >
+            <Link
+              to={showPartnerLogo ? (isCloud ? "/" : "/workflows") : "#"}
+              style={{ display: "flex", alignItems: "center" }}
+              onClick={(e) => {
+                !showPartnerLogo && e.preventDefault();
+              }}
+            >
+              <img
+                src={showPartnerLogo ? userdata?.active_org?.image : ShuffleLogo}
+                alt="Shuffle Logo"
+                style={{
+                  width: showPartnerLogo ? 30 : 26,
+                  height: showPartnerLogo ? 30 : 26,
+                }}
+              />
+              {!showPartnerLogo && expandLeftNav && (
+                <ExpandMoreIcon
+                  sx={{
+                    fontSize: 16,
+                    color: themeMode === "dark" ? lightText : darkText,
+                    opacity: 1,
+                    ml: 0.5,
+                    transform: productAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s ease",
+                  }}
+                />
+              )}
+            </Link>
+          </Box>
+        </Tooltip>
+
+        <Menu
+          anchorEl={productAnchorEl}
+          open={Boolean(productAnchorEl)}
+          onClose={handleProductClose}
+          disableScrollLock={true}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+          sx={{
+            zIndex: 1000020,
+          }}
+          PaperProps={{
+            sx: {
+              mt: 1, 
+              ml: -1,
+              backgroundColor: themeMode === "dark" ? "#212121  " : "#FFFFFF",
+              backgroundImage: "none", 
+              color: theme.palette.text.primary,
+              borderRadius: "12px",
+              padding: "4px",
+              minWidth: "240px",
+              border: `1px solid ${
+                themeMode === "dark" ? "#333333" : "#E0E0E0"
+              }`,
+              boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.4)",
+              "& .MuiList-root": {
+                backgroundColor: "transparent",
+                padding: "4px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              },
+            },
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+				if (isCloud) { 
+					//ReactGA.event({
+					//	category: "sidebar",
+					//	action: "click_shuffle_security",
+					//	label: "",
+					//})
+
+              		window.location.href = "https://security.shuffler.io/incidents?utm_source=shuffler_sidebar";
+				} else {
+					const { protocol, hostname } = window.location;
+
+					var newPort = 3002;
+					if (protocol === "https") {
+						newPort = 3444
+					}
+					
+					const newUrl = `${protocol}//${hostname}:${newPort}/incidents`;
+					window.location.href = newUrl;
+				}
+            }}
+            sx={{
+              borderRadius: "8px",
+              padding: "10px 12px",
+              border: "1px solid transparent",
+              "&:hover": {
+                backgroundColor: themeMode === "dark" ? "#2C2C2C" : "#F5F5F5",
+              },
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+            }}
+          >
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {shuffleSecurityLogo}
+            </Box>
+            <Typography
+              sx={{
+                fontSize: "15px",
+                fontWeight: 500,
+                color: themeMode === "dark" ? "#E0E0E0" : "#333333",
+                fontFamily: "Inter, Roboto, sans-serif",
+              }}
+            >
+              <span style={{ color: "#f26402", fontWeight: 600 }}>Shuffle</span>{" "}
+              Security
+            </Typography>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleProductClose();
+              window.location.href =
+                isCloud && !showPartnerLogo ? "/" : "/workflows";
+            }}
+            sx={{
+              borderRadius: "8px",
+              padding: "10px 12px",
+              border:
+                themeMode === "dark"
+                  ? "1px solid rgba(242, 100, 2, 0.3)"
+                  : "1px solid rgba(242, 100, 2, 0.2)",
+              backgroundColor:
+                themeMode === "dark"
+                  ? "rgba(242, 100, 2, 0.05)"
+                  : "rgba(242, 100, 2, 0.02)",
+              "&:hover": {
+                backgroundColor:
+                  themeMode === "dark"
+                    ? "rgba(242, 100, 2, 0.1)"
+                    : "rgba(242, 100, 2, 0.06)",
+              },
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+            }}
+          >
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <img
+                src={ShuffleLogo}
+                alt="Shuffle"
+                style={{ width: 20, height: 20 }}
+              />
+            </Box>
+            <Typography
+              sx={{
+                fontSize: "15px",
+                fontWeight: 500,
+                color: themeMode === "dark" ? "#E0E0E0" : "#333333",
+                fontFamily: "Inter, Roboto, sans-serif",
+              }}
+            >
+              <span style={{ color: "#f26402", fontWeight: 600 }}>Shuffle</span>{" "}
+          	  Core    
+            </Typography>
+          </MenuItem>
+        </Menu>
           {
             !isCloud && expandLeftNav && (
               <Typography variant="body2" style={{fontSize: 16, color: themeMode === "dark" ? lightText : darkText, transition: "opacity 0.3s ease", fontWeight: 600, marginTop: -5, marginLeft: 3}}>
@@ -1747,7 +1944,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           <span style={{ display: "inline-block", width: "100%" }}>
           <Button
            component={Link}
-           to="/partners"
+           to={isCloud ? "/partners" : "https://shuffler.io/partners"}
+           target={isCloud ? "_self" : "_blank"}
             onClick={(event) => {
               setCurrentOpenTab("partners");
               localStorage.setItem("lastTabOpenByUser", "partners");

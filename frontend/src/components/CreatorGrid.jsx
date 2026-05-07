@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import {Link} from 'react-router-dom';
 import theme from '../theme.jsx';
 import { removeQuery } from '../components/ScrollToTop.jsx';
+import SearchContactForm from '../components/SearchContactForm.jsx';
 
 import { 
 	SkipNext as SkipNextIcon,
@@ -38,18 +39,14 @@ import {
 } from "@mui/material"
 import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", "33e4e3564f4f060e96e0531957bed552")
 const CreatorGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, isHeader }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
-	const [formMail, setFormMail] = React.useState("");
-	const [message, setMessage] = React.useState("");
-	const [formMessage, setFormMessage] = React.useState("");
 
-	const buttonStyle = {borderRadius: 30, height: 50, width: 220, margin: isMobile ? "15px auto 15px auto" : 20, fontSize: 18,}
 
 	const isCloud =
 		window.location.host === "localhost:3002" ||
@@ -58,44 +55,6 @@ const CreatorGrid = props => {
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3
 	window.title = "Shuffle | Workflows | Discover your use-case"
-
-	const submitContact = (email, message) => {
-		const data = {
-			"firstname": "",
-			"lastname": "",
-			"title": "",
-			"companyname": "",
-			"email": email,
-			"phone": "",
-			"message": message,
-		}
-	
-		const errorMessage = "Something went wrong. Please contact frikky@shuffler.io directly."
-
-		fetch(globalUrl+"/api/v1/contact", {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(data),
-		})
-		.then(response => response.json())
-		.then(response => {
-			if (response.success === true) {
-				setFormMessage(response.reason)
-				//toast("Thanks for submitting!")
-			} else {
-				setFormMessage(errorMessage)
-			}
-
-			setFormMail("")
-			setMessage("")
-    })
-		.catch(error => {
-			setFormMessage(errorMessage)
-    	console.log(error)
-		});
-	}
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
@@ -249,62 +208,8 @@ const CreatorGrid = props => {
 				<CustomHits hitsPerPage={100}/>
 			</InstantSearch>
 			{showSuggestion === true ? 
-				<div style={{maxWidth: isMobile ? "100%" : "60%", margin: "auto", paddingTop: 50, textAlign: "center",}}>
-					<Typography variant="h6" style={{color: "white", marginTop: 50,}}>
-						Can't find what you're looking for? 
-					</Typography>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
-						<TextField
-							required
-							style={{flex: "1", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
-							InputProps={{
-								style:{
-									color: "#ffffff",
-								},
-							}}
-							color="primary"
-							fullWidth={true}
-							placeholder="Email (optional)"
-							type="email"
-						  id="email-handler"
-							autoComplete="email"
-							margin="normal"
-							variant="outlined"
-				  				onChange={e => setFormMail(e.target.value)}
-						/>
-						<TextField
-							required
-							style={{flex: "1", backgroundColor: theme.palette.inputColor}}
-							InputProps={{
-								style:{
-									color: "#ffffff",
-								},
-							}}
-							color="primary"
-							fullWidth={true}
-							placeholder="What are we missing?"
-							type=""
-						  id="standard-required"
-							margin="normal"
-							variant="outlined"
-							autoComplete="off"
-				  			onChange={e => setMessage(e.target.value)}
-						/>
-					</div>
-					<Button
-						variant="contained"
-						color="primary"
-						style={buttonStyle}
-						disabled={message.length === 0}
-						onClick={() => {
-							submitContact(formMail, message)
-						}}
-					>
-						Submit	
-					</Button>
-					<Typography style={{color: "white"}} variant="body2">{formMessage}</Typography>
-				</div>
-				: null
+			<SearchContactForm globalUrl={globalUrl} isMobile={isMobile} tabName="creators" />
+			: null
 			}
 		</div>
 	)
