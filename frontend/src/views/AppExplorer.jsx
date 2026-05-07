@@ -65,7 +65,6 @@ import { Context } from "../context/ContextApi.jsx";
 
 import {
   SearchBox,
-  StaticRefinementList,
   RefinementList,
   InstantSearch,
   connectSearchBox,
