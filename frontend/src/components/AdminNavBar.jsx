@@ -142,6 +142,10 @@ const AdminNavBar = (props) => {
         //         navigate(`?tab=organization`, { replace: true });
         //     }
         // }
+        const adminTab = queryParams.get('admin_tab');
+        if (adminTab) {
+            setSelectedItem("Organization");
+        }
         if (partnerTab) {
             setSelectedItem("Partner");
         }

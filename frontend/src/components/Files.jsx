@@ -29,6 +29,8 @@ import {
   Menu,
   Pagination,
   PaginationItem,
+  Box,
+  InputAdornment,
 } from "@mui/material";
 
 import { DataGrid } from "@mui/x-data-grid";
@@ -45,9 +47,12 @@ import {
   Clear as ClearIcon,
   Add as AddIcon,
   SelectAll,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 
 import Dropzone from "../components/Dropzone.jsx";
+import SubOrgDistributionDialog from "./SubOrgDistributionDialog.jsx";
+import DeleteConfirmDialog from "./DeleteConfirmDialog.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import {getTheme} from "../theme.jsx";
 import { Context } from "../context/ContextApi.jsx";
@@ -82,6 +87,10 @@ const Files = memo((props) => {
   const [showDistributionPopup, setShowDistributionPopup] = useState(false)
   const [selectedSubOrg, setSelectedSubOrg] = useState([])
   const [fileIdSelectedForDistribution, setFileIdSelectedForDistribution] = useState("")
+  const [fileNameSelectedForDistribution, setFileNameSelectedForDistribution] = useState("")
+  const [distribOrgOrder, setDistribOrgOrder] = useState([])
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null)
   const [totalAmount, setTotalAmount] = useState(0);
 const [page, setPage] = useState(0);
 const [pageSize, setPageSize] = useState(50)
@@ -326,7 +335,7 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 									navigator.clipboard.writeText(file.id);
 									document.execCommand("copy");
 
-									toast(file.id + " copied to clipboard");
+									toast.info(file.id + " copied to clipboard");
 							}}
 						>
 							<svg
@@ -369,7 +378,8 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 								onClick={(e) => {
 								e.stopPropagation();
 								e.preventDefault();
-								deleteFile(file.id, true);
+								setDeleteConfirmTarget({ id: file.id, filename: file.filename });
+								setDeleteConfirmOpen(true);
 								}}
 							>
 								<svg
@@ -441,6 +451,12 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 									setSelectedSubOrg([])
 								}
 								setFileIdSelectedForDistribution(file.id)
+						setFileNameSelectedForDistribution(file.filename)
+								setDistribOrgOrder(
+									(userdata?.orgs || [])
+										.filter(o => o.creator_org === userdata.active_org.id)
+										.map(o => o.id)
+								)
 								}}
 							/>
 						</Tooltip>
@@ -534,7 +550,7 @@ const [filesLoaded, setFilesLoaded] = useState(false);
     })
 	.then((responseJson) => {
 		if (responseJson.success === true) {
-			toast("Successfully updated file");
+			toast.success("Successfully updated file");
 		}
 	})
     .catch((error) => {
@@ -848,125 +864,39 @@ const [filesLoaded, setFilesLoaded] = useState(false);
     </Dialog>
    : null
 
-   const handleSelectSubOrg = (id, action) => {
-    if (action === "all") {
-        const childOrgs = userdata.orgs.filter(
-            (data) => data.creator_org === userdata.active_org.id
-        );
-        setSelectedSubOrg((prev) => {
-            if (prev.length === childOrgs.length) {
-                // If all child orgs are already selected, clear the selection
-                return [];
-            } else {
-                // Otherwise, select all child org IDs
-                return childOrgs.map((data) => data.id);
-            }
-        });
-    } else if (action === "none") {
-        setSelectedSubOrg([]);
-    } else {
-        setSelectedSubOrg((prev) => {
-            if (prev.includes(id)) {
-                return prev.filter((data) => data !== id);
-            } else {
-                return [...prev, id];
-            }
-        });
-    }
-	};
-
-  const fileDistributionModal = showDistributionPopup ? (
-	<Dialog
-		open={showDistributionPopup}
-		onClose={() => setShowDistributionPopup(false)}
-		PaperProps={{
-			sx: {
-				borderRadius: theme?.palette?.DialogStyle?.borderRadius,
-				border: theme?.palette?.DialogStyle?.border,
-				fontFamily: theme?.typography?.fontFamily,
-				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				zIndex: 1000,
-				minWidth: "600px",
-				minHeight: "320px",
-				overflow: "auto",
-				'& .MuiDialogContent-root': {
-					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				},
-				'& .MuiDialogTitle-root': {
-					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				},
-				'& .MuiDialogActions-root': {
-					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				},
-			},
-		}}
-	>
-		<DialogTitle>
-			<Typography variant="h5" color="textPrimary" >
-				Select sub-org to distribute files
-			</Typography>
-		</DialogTitle>
-		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
-			<MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
-			<MenuItem value="all" onClick={()=> {handleSelectSubOrg(null, "all")}}>All</MenuItem>
-			{userdata.orgs.map((data, index) => {
-				if (data.creator_org !== userdata.active_org.id) {
-					return null;
-				}
-
-				const imagesize = 22;
-				const imageStyle = {
-					width: imagesize,
-					height: imagesize,
-					pointerEvents: "none",
-					marginRight: 10,
-					marginLeft: data.id === userdata.active_org.id ? 0 : 20,
-				};
-
-				const image = data.image === "" ? (
-					<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
-				) : (
-					<img alt={data.name} src={data.image} style={imageStyle} />
-				);
-
-				return (
-					<MenuItem
-						key={index}
-						value={data.id}
-						onClick={() => handleSelectSubOrg(data.id)}
-						style={{ display: "flex", alignItems: "center" }}
-					>
-						<Checkbox
-							checked={selectedSubOrg.includes(data.id)}
-						/>
-						{image}
-						<span style={{ marginLeft: 8 }}>{data.name}</span>
-					</MenuItem>
-				);
-			})}
-
-			<div style={{ display: "flex", marginTop: 20 }}>
-				<Button
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main }}
-					onClick={() => setShowDistributionPopup(false)}
-				>
-					Cancel
-				</Button>
-				<Button
-					variant="contained"
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
-					onClick={() => {
-						changeDistribution(fileIdSelectedForDistribution, selectedSubOrg);
-					}}
-					color="primary"
-				>
-					Submit
-				</Button>
-			</div>
-		</DialogContent>
-		</Dialog>
-
-  ): null
+  const deleteConfirmDialog = (
+    <DeleteConfirmDialog
+      open={deleteConfirmOpen}
+      onClose={() => { setDeleteConfirmOpen(false); setDeleteConfirmTarget(null); }}
+      onConfirm={() => {
+        if (deleteConfirmTarget?.bulk) {
+          const toDelete = [...selectedRows];
+          const count = toDelete.length;
+          setSelectedRows([]);
+          toDelete.forEach(fileId => deleteFile(fileId, false));
+          setTimeout(() => {
+            getFiles(selectedCategory);
+            toast.success('Deleted ' + count + ' file' + (count > 1 ? 's' : ''));
+          }, 3000);
+        } else {
+          deleteFile(deleteConfirmTarget.id, true);
+        }
+        setDeleteConfirmOpen(false);
+        setDeleteConfirmTarget(null);
+      }}
+      title={
+        deleteConfirmTarget?.bulk
+          ? 'Delete ' + selectedRows?.length + ' File' + (selectedRows?.length > 1 ? 's' : '') + '?'
+          : 'Delete File?'
+      }
+      description={
+        deleteConfirmTarget?.bulk
+          ? <>Are you sure you want to delete <b>{selectedRows?.length} file{selectedRows?.length > 1 ? 's' : ''}</b>?</>
+          : <>Are you sure you want to delete <b>{deleteConfirmTarget?.filename}</b>?</>
+      }
+      warningText="This cannot be undone."
+    />
+  );
 
   const deleteFile = (fileId, showSinglDeleteToast) => {
 
@@ -1295,7 +1225,17 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 			}}
 			onDrop={uploadFile}
 		>
-			{fileDistributionModal}
+			<SubOrgDistributionDialog
+				open={showDistributionPopup}
+				onClose={() => { setShowDistributionPopup(false); }}
+				title="Distribute File to Sub-Organizations"
+				extraInfo={fileNameSelectedForDistribution ? `Selected File: ${fileNameSelectedForDistribution}` : null}
+				orgs={distribOrgOrder.map(id => (userdata?.orgs || []).find(o => o.id === id)).filter(Boolean)}
+				selectedOrgIds={selectedSubOrg}
+				onSelectionChange={setSelectedSubOrg}
+				onSave={(ids) => { changeDistribution(fileIdSelectedForDistribution, ids); setShowDistributionPopup(false); }}
+			/>
+			{deleteConfirmDialog}
 			<div style={{width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor,borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
 
         		<div style={{height: "100%", }}>
@@ -1559,17 +1499,20 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 					autoFocus
 				/>}
 
-				<ShuffleCodeEditor
-					isCloud={isCloud}
-					expansionModalOpen={openEditor}
-					setExpansionModalOpen={setOpenEditor}
-					setcodedata = {setFileContent}
-					codedata={fileContent}
-					isFileEditor = {true}
-					key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
-					runUpdateText = {runUpdateText}
-					contentLoading = {contentLoading}
-				/>
+				{openEditor === true && fileContent !== undefined && fileContent !== null && fileContent.length > 0 ?
+					<ShuffleCodeEditor
+						isCloud={isCloud}
+						expansionModalOpen={openEditor}
+						setExpansionModalOpen={setOpenEditor}
+						setcodedata = {setFileContent}
+						codedata={fileContent}
+						isFileEditor = {true}
+						key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
+						runUpdateText = {runUpdateText}
+						contentLoading = {contentLoading}
+					/>
+				: null}
+
 				{isSelectedFiles?null:
 				<Divider
 					style={{
@@ -1672,22 +1615,9 @@ const [filesLoaded, setFilesLoaded] = useState(false);
 										toast("Please select files to delete");
 										return;
 									}
-
-									for (let i = 0; i < selectedRows.length; i++) {
-										const fileIdToDelete = selectedRows[i];
-										deleteFile(fileIdToDelete, false);
-
-										if (i === selectedRows.length - 1) {
-										setTimeout(() => {
-											setSelectedRows([]);
-											getFiles(selectedCategory);
-											toast.success(
-											`Deleted ${selectedRows.length} file${selectedRows.length === 1 ? "" : "s"}`
-											);
-										}, 2500);
-										}
-									}
-									}}
+									setDeleteConfirmTarget({ bulk: true });
+									setDeleteConfirmOpen(true);
+								}}
 									variant={"outlined"}
 									color="secondary"
 									startIcon={

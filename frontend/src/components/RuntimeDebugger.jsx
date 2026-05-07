@@ -1087,6 +1087,9 @@ const RuntimeDebugger = (props) => {
 				  options={[{
 					  "name": "Agent Runs",
 					  "id": "AGENT",
+				  },{
+					  "name": "Sensor Actions",
+					  "id": "SENSOR_ACTION",
 				  }].concat(workflows)}
 				  fullWidth
 				  style={{
