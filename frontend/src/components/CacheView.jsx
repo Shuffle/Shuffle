@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useContext, memo } from "react";
 import { makeStyles } from "@mui/styles";
 import { getTheme } from "../theme.jsx";
-import SubOrgDistributionDialog from "./SubOrgDistributionDialog.jsx";
-import DeleteConfirmDialog from "./DeleteConfirmDialog.jsx";
 import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
@@ -19,6 +17,8 @@ import {
     Button,
     Tabs,
     Tab,
+    List,
+    ListItem,
     ListItemText,
     IconButton,
     Dialog,
@@ -82,7 +82,6 @@ import {
 	Hub as HubIcon,
 	Key as KeyIcon, 
 	FlashOn as FlashOnIcon,
-	Search as SearchIcon,
 } from "@mui/icons-material";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -128,9 +127,6 @@ const CacheView = memo((props) => {
     const [showDistributionPopup, setShowDistributionPopup] = useState(false);
     const [selectedSubOrg, setSelectedSubOrg] = useState([]);
     const [selectedCacheKey, setSelectedCacheKey] = useState("");
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-    const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
-    const [distribOrgOrder, setDistribOrgOrder] = useState([]);
 	const [totalAmount, setTotalAmount] = useState(0);
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50)
@@ -237,7 +233,7 @@ const CacheView = memo((props) => {
 
 		{
 			"name": "Enrich",
-			"description": "Enriches the data. Uses regex keys and runs a workflow in the background. Added to the 'enrichments' key.", 
+			"description": "Enriches the data. Only runs on valid JSON data AND if the 'enrichment' field does not exist.",
 			"type": "singul",
 			"options": [{
 				"key": "",
@@ -335,14 +331,6 @@ const CacheView = memo((props) => {
 
 			// In order to make linking weird urls from workflow page work.
 			if (urlParams.get("src") == "workflow") {
-				if (categoryParam === "OCSF") {
-					const newParam = "shuffle-security incidents"
-
-					urlParams.set("category", newParam)
-					window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`)
-					categoryParam = newParam
-				}
-
 				if (categoryParam?.toLowerCase().startsWith("list")) {
 					const newParam = categoryParam.substring(5).replaceAll("%20", "_")
 
@@ -582,26 +570,17 @@ const CacheView = memo((props) => {
             .then((response) => {
                 if (response.status === 200) {
 					if (refreshList === undefined || refreshList === null || refreshList === true) {
+
                     	toast.success("Deleted datastore entry");
 						setTimeout(() => {
 							listOrgCache(orgId, selectedCategory, 0, pageSize, page)
 						}, 1000);
 					}
                 } else {
-                    if (refreshList === undefined || refreshList === null || refreshList === true) {
-						setTimeout(() => {
-							listOrgCache(orgId, selectedCategory, 0, pageSize, page)
-						}, 1000);
-					}
                     toast.error(`Failed deleting entry ${key} in category ${itemCategory || selectedCategory}. If this persists, please contact support@shuffler.io.`)
                 }
             })
             .catch((error) => {
-                if (refreshList === undefined || refreshList === null || refreshList === true) {
-					setTimeout(() => {
-						listOrgCache(orgId, selectedCategory, 0, pageSize, page)
-					}, 1000);
-				}
                 toast(error.toString());
             });
     };
@@ -852,11 +831,6 @@ const CacheView = memo((props) => {
 								Category: {dataValue.category}
 							</Typography>
 						: null}
-						{dataValue?.enrichments !== undefined && dataValue?.enrichments !== null && dataValue.enrichments.length > 0 ?
-							<Typography variant="body2" color="textSecondary" style={{ }}>
-								Enrichments: {dataValue.enrichments.length}
-							</Typography>
-						: null}
 						{dataValue?.tags !== undefined && dataValue?.tags !== null && dataValue?.tags?.length > 0 ?  
 							<div style={{display: "flex", marginTop: 12, }}>
 								<Typography variant="body2" color="textSecondary" style={{ marginRight: 10, marginTop: 4, }}>
@@ -926,6 +900,33 @@ const CacheView = memo((props) => {
         </Dialog>
     );
 
+    const handleSelectSubOrg = (id, action) => {
+        if (action === "all") {
+            const childOrgs = userdata.orgs.filter(
+                (data) => data.creator_org === userdata.active_org.id
+            );
+            setSelectedSubOrg((prev) => {
+                if (prev.length === childOrgs.length) {
+                    // If all child orgs are already selected, clear the selection
+                    return [];
+                } else {
+                    // Otherwise, select all child org IDs
+                    return childOrgs.map((data) => data.id);
+                }
+            });
+        } else if (action === "none") {
+            setSelectedSubOrg([]);
+        } else {
+            setSelectedSubOrg((prev) => {
+                if (prev.includes(id)) {
+                    return prev.filter((data) => data !== id);
+                } else {
+                    return [...prev, id];
+                }
+            });
+        }
+    };
+
     const changeDistribution = (id, selectedSubOrg) => {	
 
 		editFileConfig(id, [...new Set(selectedSubOrg)], selectedCategory)
@@ -939,6 +940,8 @@ const CacheView = memo((props) => {
 			selected_suborgs: selectedSubOrg,
 			category: category === undefined || category === "" || category === "default" ? "" : category,
 		}
+
+		console.log("data: ", data);	
 		
 		const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/config`;
 
@@ -972,41 +975,98 @@ const CacheView = memo((props) => {
         };
 
 
+    const cacheDistributionModal = showDistributionPopup ? (
+        <Dialog
+		open={showDistributionPopup}
+		onClose={() => setShowDistributionPopup(false)}
+		PaperProps={{
+			sx: {
+				borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+				border: theme?.palette?.DialogStyle?.border,
+				fontFamily: theme?.typography?.fontFamily,
+				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				zIndex: 1000,
+				minWidth: "600px",
+				minHeight: "320px",
+				overflow: "auto",
+				'& .MuiDialogContent-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				},
+				'& .MuiDialogTitle-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				},
+				'& .MuiDialogActions-root': {
+					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+				},
+			},
+		}}
+	>
+		<DialogTitle>
+			<Typography variant="h5" color="textPrimary">
+				Select sub-org to distribute Datastore key
+			</Typography>
+		</DialogTitle>
+		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+			<MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
+			<MenuItem value="all" onClick={()=> {handleSelectSubOrg(null, "all")}}>All</MenuItem>
+			{userdata.orgs.map((data, index) => {
+				if (data.creator_org !== userdata.active_org.id) {
+					return null;
+				}
 
+				const imagesize = 22;
+				const imageStyle = {
+					width: imagesize,
+					height: imagesize,
+					pointerEvents: "none",
+					marginRight: 10,
+					marginLeft: data.id === userdata.active_org.id ? 0 : 20,
+				};
 
-    const deleteConfirmDialog = (
-      <DeleteConfirmDialog
-        open={deleteConfirmOpen}
-        onClose={() => { setDeleteConfirmOpen(false); setDeleteConfirmTarget(null); }}
-        onConfirm={() => {
-          if (deleteConfirmTarget?.bulk) {
-            const itemsToDelete = selectedRows.map(rowId =>
-              listCache.find(item => `${item.key}_${item.category || ""}` === rowId)
-            ).filter(Boolean);
+				const image = data.image === "" ? (
+					<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+				) : (
+					<img alt={data.name} src={data.image} style={imageStyle} />
+				);
 
-            const count = itemsToDelete.length;
-            setSelectedRows([]);
-            itemsToDelete.forEach(item => deleteEntry(orgId, item.key, item.category, false));
+				return (
+					<MenuItem
+						key={index}
+						value={data.id}
+						onClick={() => handleSelectSubOrg(data.id)}
+						style={{ display: "flex", alignItems: "center" }}
+					>
+						<Checkbox
+							checked={selectedSubOrg.includes(data.id)}
+						/>
+						{image}
+						<span style={{ marginLeft: 8 }}>{data.name}</span>
+					</MenuItem>
+				);
+			})}
 
-            setTimeout(() => {
-              listOrgCache(orgId, selectedCategory, 0, pageSize, page);
-              toast.success("Deleted " + count + " keys from datastore");
-            }, 3000);
-          } else {
-            deleteEntry(orgId, deleteConfirmTarget.key, deleteConfirmTarget.category);
-          }
-          setDeleteConfirmOpen(false);
-          setDeleteConfirmTarget(null);
-        }}
-        title={deleteConfirmTarget?.bulk ? `Delete ${selectedRows?.length} Key${selectedRows?.length > 1 ? "s" : ""}?` : "Delete Key?"}
-        description={
-          deleteConfirmTarget?.bulk
-            ? <>Are you sure you want to delete <b>{selectedRows?.length} key{selectedRows?.length > 1 ? "s" : ""}</b>?</>
-            : <>Are you sure you want to delete <b>{deleteConfirmTarget?.key}</b>?</>
-        }
-        warningText="This cannot be undone. Any workflows using these keys will lose access."
-      />
-    );
+			<div style={{ display: "flex", marginTop: 20 }}>
+				<Button
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main  }}
+					onClick={() => setShowDistributionPopup(false)}
+					color="primary"
+				>
+					Cancel
+				</Button>
+				<Button
+					variant="contained"
+					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
+					onClick={() => {
+						changeDistribution(selectedCacheKey, selectedSubOrg);
+					}}
+					color="primary"
+				>
+					Submit
+				</Button>
+			</div>
+		</DialogContent>
+		</Dialog>
+    ) : null;
 
 	const saveAutomation = (allAutomation, settings) => {
 		// Check if icon is a string. Otherwise make it empty.
@@ -1699,10 +1759,6 @@ const CacheView = memo((props) => {
 							enableClipboard={(copy) => {
 								handleReactJsonClipboard(copy)
 							}}
-							onSelect={(select) => {
-								//currentParams.set("category", selectedCategory);
-								//HandleJsonCopy(validate.result, select, "exec");
-							}}
 							collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 							iconStyle={theme.palette.jsonIconStyle}
 							displayDataTypes={false}
@@ -1879,7 +1935,6 @@ const CacheView = memo((props) => {
 											"workflow_id": data.workflow_id,
 											"category": data.category,
 											"tags": data.tags,
-											"enrichments": data.enrichments,
 										})
 										setValue(newvalue)
 										setModalOpen(true)
@@ -1964,8 +2019,7 @@ const CacheView = memo((props) => {
 									onClick={(e) => {
 										e.preventDefault()
 										e.stopPropagation()
-										setDeleteConfirmTarget({ key: data.key, category: data.category })
-										setDeleteConfirmOpen(true)
+										deleteEntry(orgId, data.key, data.category)
 									}}
 								>
 									<svg
@@ -2040,21 +2094,13 @@ const CacheView = memo((props) => {
 								  style={{ margin: "auto" }}
 								  color="secondary"
 								  onClick={() => {
-									setShowDistributionPopup(true);
-									let initialSelected = [];
+									setShowDistributionPopup(true)
 									if(data?.suborg_distribution?.length > 0){
-										initialSelected = data.suborg_distribution;
+										setSelectedSubOrg(data.suborg_distribution)
+									}else{
+										setSelectedSubOrg([])
 									}
-									setSelectedSubOrg(initialSelected);
-									setSelectedCacheKey(data.key);
-									const suborgs = (userdata?.orgs || []).filter(o => o.creator_org === userdata?.active_org?.id);
-									const sorted = [...suborgs].sort((a, b) => {
-										const aS = initialSelected.includes(a.id);
-										const bS = initialSelected.includes(b.id);
-										if (aS !== bS) return bS - aS;
-										return a.name.localeCompare(b.name);
-									});
-									setDistribOrgOrder(sorted.map(o => o.id));
+									setSelectedCacheKey(data.key)
 								  }}
 							  />
 						  </Tooltip>
@@ -2070,7 +2116,6 @@ const CacheView = memo((props) => {
 
 	var previousgroup = ""
 	const isAutomating = categoryAutomations?.find((automation) => automation.enabled) !== undefined
-	const isAutomatingAccess = categoryConfig?.settings?.timeout >= 60 || categoryConfig?.settings?.public === true ? true : false
     return (
         <div style={{
 			minHeight: 2000, 
@@ -2138,17 +2183,7 @@ const CacheView = memo((props) => {
 				apps={apps}
 			/>
 
-            <SubOrgDistributionDialog
-                open={showDistributionPopup}
-                onClose={() => { setShowDistributionPopup(false); setSelectedCacheKey(""); }}
-                title="Distribute Datastore Key to Sub-Organizations"
-                extraInfo={selectedCacheKey ? `Selected Key: ${selectedCacheKey}` : null}
-                orgs={distribOrgOrder.map(id => (userdata?.orgs || []).find(o => o.id === id)).filter(Boolean)}
-                selectedOrgIds={selectedSubOrg}
-                onSelectionChange={setSelectedSubOrg}
-                onSave={(ids) => { changeDistribution(selectedCacheKey, ids); }}
-            />
-            {deleteConfirmDialog}
+            {cacheDistributionModal}
 
             <div style={{height: "100%", overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
               <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'  }}>
@@ -2169,6 +2204,7 @@ const CacheView = memo((props) => {
 										height: 35, 
 										textTransform: 'none', 
 
+										//border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
 									}}
 									variant="outlined"
 									color="secondary"
@@ -2236,12 +2272,12 @@ const CacheView = memo((props) => {
 					datastoreCategories !== null &&
 					datastoreCategories.length > 1 ? (
 
-						<FormControl style={{ minWidth: 275, maxWidth: 275, marginTop: 8, }}>
+						<FormControl style={{ minWidth: 250, maxWidth: 250, marginTop: 8, }}>
 							<Autocomplete
 								labelId="category-choice"
 								style={{
-									minWidth: 275,
-									maxWidth: 275,
+									minWidth: 250,
+									maxWidth: 250,
 								}}
 								ListboxProps={{
 									style: {
@@ -2521,13 +2557,13 @@ const CacheView = memo((props) => {
 								marginLeft: 3, 
 							}}
 							variant="outlined"
-							color={isAutomatingAccess ? "primary" : "secondary"}
+							color="secondary"
 							disabled={selectedCategory === undefined || selectedCategory === "" || selectedCategory === "default"}
 							onClick={() => {
 								setShowSettingsMenu(true)
 							}}
 						>
-							<SettingsIcon style={{}} />
+							<SettingsIcon style={{color: theme.palette.secondary.main, }} />
 						</Button>
 					</Tooltip> 
 				</ButtonGroup>
@@ -2841,8 +2877,27 @@ const CacheView = memo((props) => {
 						<Button
 							style={{ marginLeft: 50, }}
 							onClick={() => {
-								setDeleteConfirmTarget({ bulk: true });
-								setDeleteConfirmOpen(true);
+								setCachedLoaded(false)
+								for (var key in selectedRows) {
+									// Find the item and its category
+									var foundCategory = ""
+									for (var i = 0; i < listCache.length; i++) {
+										if (listCache[i].key === selectedRows[key]) {
+											foundCategory = listCache[i].category
+											break
+										}
+									}
+
+									deleteEntry(orgId, selectedRows[key], foundCategory, false)
+								}
+
+								setSelectedRows([])
+								setTimeout(() => {
+									// Refresh the list
+									listOrgCache(orgId, selectedCategory, 0, pageSize, page)
+									toast.success("Deleted " + selectedRows.length + " keys from datastore")
+								}, 2500)
+
 							}}
 							variant={"outlined"}
 							color="secondary"

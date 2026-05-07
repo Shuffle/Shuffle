@@ -95,7 +95,7 @@ const RunWorkflow = (defaultprops) => {
   const answer = searchParams.get("answer")
   const execution_id = searchParams.get("reference_execution")
   const authorization = searchParams.get("authorization")
-  const sourceNode = searchParams.get("source_node") || searchParams.get("start")
+  const sourceNode = searchParams.get("source_node")
   const decisionId = searchParams.get("decision_id") // ONLY for agentic workflows
   const backendUrl = searchParams.get("backend_url") || globalUrl
 
@@ -847,9 +847,7 @@ const RunWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
 		if (responseJson.success === false) {
-			if (workflow_id !== execution_id) { 
-				toast.warn("Failed getting the workflow. Please contact support@shuffler.io if this persists.")
-			}
+			toast.warn("Failed getting the workflow. Please contact support@shuffler.io if this persists.")
 			return
 		}
 
@@ -1184,9 +1182,9 @@ const RunWorkflow = (defaultprops) => {
 		if (props.match.params.key === undefined) {
   			setExplorerUi(true)
 
-			if (isLoggedIn && userdata?.active_org?.id) {
-				loadForms(userdata?.active_org?.id)
-				handleGetOrg(userdata?.active_org?.id)
+			if (isLoggedIn) {
+				loadForms(userdata.active_org.id)
+				handleGetOrg(userdata.active_org.id)
 			}
 
 			return
@@ -1271,28 +1269,24 @@ const RunWorkflow = (defaultprops) => {
 
 	//console.log("IMG: ", image, "ORG: ", selectedOrganization)
 
-	useEffect(() => {
-		if (disabledButtons || answer === undefined || answer === null || organization === "Unknown" || buttonClicked.length > 0) {
-			return
-		}
-
-		// Show rejection form for answer=false instead of auto-clicking
-		if (answer === "false") {
-			return
-		}
-
+	if (!disabledButtons && answer !== undefined && answer !== null && organization !== "Unknown" && buttonClicked.length === 0) {
+		console.log("Finding button!")
+		// Find the button
 		var buttonid = ""
-		if (answer === "true") {
+		if (answer === "false") {
+			buttonid = "abort_execution"
+		} else if (answer === "true") {
 			buttonid = "continue_execution"
 		}
 
 		if (buttonid !== "") {
 			const foundButton = document.getElementById(buttonid)
+			console.log("Button: ", foundButton)
 			if (foundButton !== undefined && foundButton !== null) {
 				foundButton.click()
 			}
 		}
-	}, [disabledButtons, answer, organization, buttonClicked])
+	}
 
 	const FormList = () => {
 		return (
@@ -1703,103 +1697,61 @@ const RunWorkflow = (defaultprops) => {
 									}
 
 									{disabledButtons ? null :
-										answer === "false" ?
-											<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, }}>
-												Why are you declining?
-											</Typography>
-										:
-											<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, }}>
-												What do you want to do?
-											</Typography>
+										<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, }}>
+											What do you want to do?
+										</Typography>
 									}
 
-									{answer === "false" ?
-										<div style={{width: "100%", marginTop: 10, marginBottom: 10, }}>
-											<TextField
-												fullWidth
-												multiline
-												minRows={3}
-												maxRows={6}
-												variant="outlined"
-												placeholder="Provide a reason for declining (optional)"
-												value={executionArgument || ""}
-												onChange={(e) => {
-													setExecutionArgument(e.target.value)
-												}}
-												style={{marginBottom: 10, }}
-											/>
-											<Button
-												fullWidth
-												id="abort_execution"
-												variant="contained"
-												disabled={disabledButtons}
-												color="primary"
-												style={{textTransform: "none", }}
-												onClick={() => {
-													setTimeout(() => {
-														setButtonClicked("ABORTED")
-														setExecutionData({
-															status: "ABORTED",
-														})
-													}, 2500)
+									<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
+										<Button 
+											fullWidth 
+											id="continue_execution" 
+											variant="contained" 
+											disabled={!handleValidateForm(executionArgument) || disabledButtons} 
+											color="primary" 
+											style={{
+												flex: 1,
+												textTransform: "none",
+											}} 
+											onClick={() => {
+												// Timeout 2500 just in case
+												setTimeout(() => {
+													setButtonClicked("FINISHED")
+													setExecutionData({
+														status: "FINISHED",
+													})
+												}, 2500)
 
-													onSubmit(null, execution_id, authorization, false)
-												}}>
-												Confirm Decline
-											</Button>
-										</div>
-									:
-										<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
-											<Button
-												fullWidth
-												id="continue_execution"
-												variant="contained"
-												disabled={!handleValidateForm(executionArgument) || disabledButtons}
-												color="primary"
-												style={{
-													flex: 1,
-													textTransform: "none",
-												}}
-												onClick={() => {
-													// Timeout 2500 just in case
-													setTimeout(() => {
-														setButtonClicked("FINISHED")
-														setExecutionData({
-															status: "FINISHED",
-														})
-													}, 2500)
-
-													onSubmit(null, execution_id, authorization, true)
-												}}>
-												Continue</Button>
-											<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
-												&nbsp;or&nbsp;
-											</Typography>
-											<Button
-												fullWidth
-												id="abort_execution"
-												variant="outlined"
-												disabled={!handleValidateForm(executionArgument) || disabledButtons}
-												color="primary"
-												style={{
-													flex: 1,
-													textTransform: "none",
-												}} onClick={() => {
-													setTimeout(() => {
-														setButtonClicked("ABORTED")
-														setExecutionData({
-															status: "ABORTED",
-														})
-													}, 2500)
-
-													onSubmit(null, execution_id, authorization, false)
+												onSubmit(null, execution_id, authorization, true) 
 											}}>
-												Stop
-											</Button>
-										</div>
-									}
+											Continue</Button>
+										<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
+											&nbsp;or&nbsp;
+										</Typography>
+										<Button 
+											fullWidth 
+											id="abort_execution" 
+											variant="outlined"
+											disabled={!handleValidateForm(executionArgument) || disabledButtons} 
+											color="primary" 
+											style={{ 
+												flex: 1, 
+												textTransform: "none", 
+											}} onClick={() => {
+												setTimeout(() => {
+													setButtonClicked("ABORTED")
+													setExecutionData({
+														status: "ABORTED",
+													})
+												}, 2500)
 
-									{answer !== "false" && handleValidateForm(executionArgument) === false && disabledButtons === false ?
+												onSubmit(null, execution_id, authorization, false) 
+										}}>
+											Stop
+										</Button>
+									</div>
+
+									{handleValidateForm(executionArgument) === false && disabledButtons === false ?
 										<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, underline: "1px solid grey", }}>
 											All required questions have not been answered yet.
 										</Typography>

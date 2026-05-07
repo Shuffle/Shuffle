@@ -70,11 +70,10 @@ const inputColor = "#383B40";
 
 const chipStyle = {
   backgroundColor: "#3d3f43",
-  height: 30,
+  height: 28,
   marginRight: 5,
   paddingLeft: 5,
   paddingRight: 5,
-  height: 28,
   cursor: "pointer",
   borderColor: "#3d3f43",
   color: "white",
@@ -280,7 +279,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
   return parsedValues;
 };
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "33e4e3564f4f060e96e0531957bed552")
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
 const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, serverside, } = props;
 
@@ -634,7 +633,7 @@ const Apps = (props) => {
   // dropdown with copy etc I guess
   const AppPaper = (props) => {
 	const { app } = props
-	const data = app
+	let data = app
 
     if (data.name === "" && data.id === "") {
       return null;
@@ -802,7 +801,6 @@ const Apps = (props) => {
                     justifyContent: "center",
                     overflow: "hidden",
                     maxHeight: 43,
-                    overflow: "hidden",
                   }}
                 >
                   <Typography variant="body2" color="textSecondary">
@@ -1165,7 +1163,6 @@ const Apps = (props) => {
                 position: "absolute",
                 top: -10,
                 right: isCloud ? 50 : 0,
-                backgroundColor: theme.palette.surfaceColor,
                 backgroundColor: inputColor,
                 color: "white",
                 height: 35,
@@ -1305,7 +1302,7 @@ const Apps = (props) => {
             		    if (queryID !== undefined && queryID !== null) {
             		      aa("init", {
             		        appId: "JNSS5CFDZZ",
-            		        apiKey: "33e4e3564f4f060e96e0531957bed552",
+            		        apiKey: "c8f882473ff42d41158430be09ec2b4e",
             		      });
 
             		      const timestamp = new Date().getTime();
@@ -1511,7 +1508,6 @@ const Apps = (props) => {
                             borderRadius: 17 / 2,
                             backgroundColor: itemColor,
                             marginRight: 10,
-                            marginTop: 2,
                             marginTop: "auto",
                             marginBottom: "auto",
                           }}
@@ -1945,7 +1941,7 @@ const Apps = (props) => {
       const baseImage = <LibraryBooksIcon />
 
       return (
-        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
+        <div style={{ position: "absolute", marginTop: 15, marginLeft: 0, marginRight: 10, color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
           <List style={{ backgroundColor: theme.palette.inputColor, }}>
             {hits.length === 0 ?
               <ListItem style={outerlistitemStyle}>
@@ -2036,7 +2032,7 @@ const Apps = (props) => {
                     if (queryID !== undefined && queryID !== null) {
                       aa('init', {
                         appId: "JNSS5CFDZZ",
-                        apiKey: "33e4e3564f4f060e96e0531957bed552",
+                        apiKey: "c8f882473ff42d41158430be09ec2b4e",
                       })
 
                       const timestamp = new Date().getTime()
@@ -3015,7 +3011,7 @@ const Apps = (props) => {
       <FormControl>
         <DialogTitle>
           <div style={{ color: "rgba(255,255,255,0.9)" }}>
-		  	Generate an app based on documentation
+		  	Generate an app based on documentation (beta)
           </div>
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>

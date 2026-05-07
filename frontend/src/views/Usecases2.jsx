@@ -751,15 +751,12 @@ const UsecaseListComponent = (props) => {
 				return (
 					<div key={index} style={{marginTop: 75, }}>
 						<Typography variant="body1" style={{color: themeMode === "dark" ? usecase.color : usecaseLightThemeColor[usecase.name.slice(3, 100).toLowerCase()], textAlign: "left", marginBottom: 10, }}>
-							<b>{index+1}. {usecase[1]?.name === "." ? usecase?.name.slice(3, 100) : usecase.name}</b>
+							<b>{index+1}. {usecase.name.slice(3, 100)}</b>
 						</Typography>
       					<Grid container spacing={1}>
 
 							{usecase.list.map((subcase, subindex) => {
 								const selectedItem = subindex === expandedItem && index === expandedIndex
-								if (subcase?.disabled === true) { 
-									return null
-								}
 
 								if (subcase.matches === undefined || subcase.matches === null) {
 									subcase.matches = []

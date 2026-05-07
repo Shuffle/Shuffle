@@ -34,7 +34,7 @@ import {
 
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { ClearRefinements, connectInfiniteHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList, connectRefinementList, Configure } from "react-instantsearch-dom";
+import { ClearRefinements, connectHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList, connectRefinementList, Configure } from "react-instantsearch-dom";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 import { toast } from "react-toastify";
 import algoliasearch from "algoliasearch/lite";
@@ -47,7 +47,7 @@ import Dropzone from "../components/Dropzone.jsx";
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "eb5fd80aa6ed5ab4730d836cff3ea283"
+  "c8f882473ff42d41158430be09ec2b4e"
 );
 
 // AppCard Component
@@ -297,8 +297,6 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 const Hits = ({
   userdata,
   hits,
-  hasMore,
-  refineNext,
   handleAppClick,
   setIsAnyAppActivated,
   searchQuery,
@@ -312,37 +310,13 @@ const Hits = ({
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const loadMoreRef = useRef(null);
-  const isFetchingMore = useRef(false);
   const { themeMode } = useContext(Context);
   const theme = getTheme(themeMode);
 
   useEffect(() => {
-    isFetchingMore.current = false;
-    setIsLoadingMore(false);
-  }, [hits.length]);
-
-  useEffect(() => {
-    return; // infinite scroll disabled
-    if (!loadMoreRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isFetchingMore.current) {
-          isFetchingMore.current = true;
-          setIsLoadingMore(true);
-          refineNext();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, refineNext]);
-
-  useEffect(() => {
+    var baseurl = globalUrl;
     setIsLoading(true)
-    fetch(globalUrl + "/api/v1/me", {
+    fetch(baseurl + "/api/v1/me", {
       credentials: "include",
       headers: {
         'Content-Type': 'application/json',
@@ -358,7 +332,7 @@ const Hits = ({
       .catch(error => {
         console.log("Failed login check: ", error);
       });
-  }, []);
+  }, [currTab]);
 
   const normalizedString = (name) => {
     if (typeof name === 'string') {
@@ -373,16 +347,6 @@ const Hits = ({
       setAllActivatedAppIds(userdata.active_apps);
     }
   }, [currTab, window.location]);
-
-  const sortedHits = (() => {
-    const list = [...(hits || [])];
-    if (!allActivatedAppIds?.length) return list;
-    return list.sort((a, b) => {
-      const aActive = allActivatedAppIds.includes(a.objectID) ? 1 : 0;
-      const bActive = allActivatedAppIds.includes(b.objectID) ? 1 : 0;
-      return bActive - aActive;
-    });
-  })();
 
   //Function for activation and deactivation of app
   const handleActivateButton = (event, data, type) => {
@@ -420,7 +384,7 @@ const Hits = ({
         } else {
           //toast.success(`App ${type}d Successfully!`);
           if (type === 'activate') {
-            setAllActivatedAppIds(prev => [...(prev ?? []), data.objectID]);
+            setAllActivatedAppIds(prev => [...prev, data.objectID]);
             setIsAnyAppActivated(true);
           }
           if (type === 'deactivate') {
@@ -441,7 +405,8 @@ const Hits = ({
 
   return (
     <div>
-      {(
+      {!isLoading ?
+        (
           <div>
             {hits?.length === 0 && searchQuery.length >= 0 ? (
               <div style={{
@@ -487,7 +452,7 @@ const Hits = ({
                   paddingBottom: 40
                 }}
               >
-                {sortedHits.map((data, index) => {
+                {hits?.map((data, index) => {
                   const appUrl =
                     isCloud
                       ? `/apps/${data.objectID}?queryID=${data.__queryID}`
@@ -739,18 +704,13 @@ const Hits = ({
                     </Zoom>
                   );
                 })}
-                <div ref={loadMoreRef} style={{ gridColumn: "1 / -1", height: 10 }} />
-                {isLoadingMore && (
-                  <>
-                    {[...Array(3)].map((_, i) => (
-                      <AppSkeleton key={`skeleton-more-${i}`} />
-                    ))}
-                  </>
-                )}
               </div>
             )}
           </div>
-      )}
+        ) : (
+          <LoadingGrid />
+        )
+      }
     </div >
   );
 }
@@ -851,7 +811,7 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
 };
 
 const CustomSearchBox = connectSearchBox(SearchBox);
-const CustomHits = connectInfiniteHits(Hits);
+const CustomHits = connectHits(Hits);
 
 // Custom Category Dropdown Component
 const CategoryDropdown = ({ items, currentRefinement, refine }) => {
@@ -1148,7 +1108,7 @@ const Apps2 = (props) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [selectedLabel, setSelectedLabel] = useState([]);
-  const [currTab, setCurrTab] = useState(isLoggedIn ? 0 : 2);
+  const [currTab, setCurrTab] = useState(0);
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -1182,21 +1142,6 @@ const Apps2 = (props) => {
   const {themeMode, brandColor} = useContext(Context);
   const theme = getTheme(themeMode, brandColor);
 
-  const conditionalSearchClient = useMemo(() => ({
-    ...searchClient,
-    search(requests) {
-      if (currTab !== 2) {
-        return Promise.resolve({
-          results: requests.map(() => ({
-            hits: [], nbHits: 0, page: 0, nbPages: 0, hitsPerPage: 0,
-            processingTimeMS: 0, exhaustiveNbHits: true, query: "", params: "",
-          })),
-        });
-      }
-      return searchClient.search(requests);
-    },
-  }), [currTab]);
-
   const baseRepository = "https://github.com/frikky/shuffle-apps";
 
   const isCloud =
@@ -1219,17 +1164,6 @@ const Apps2 = (props) => {
       }
     }
   }, [location.search]);
-
-  // When auth loads and user is logged in, default to tab 0 if no tab param in URL
-  useEffect(() => {
-    if (isLoggedIn) {
-      const queryParams = new URLSearchParams(location.search);
-      const tabParam = queryParams.get('tab');
-      if (!tabParam) {
-        setCurrTab(0);
-      }
-    }
-  }, [isLoggedIn]);
 
   useEffect(() => {
 
@@ -1966,7 +1900,7 @@ const Apps2 = (props) => {
       onDrop={uploadFile}
     >
     <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: theme.palette.backgroundColor, fontFamily: theme?.typography?.fontFamily, zoom: 0.7, }}>
-      <InstantSearch key={currTab === 2 ? "active" : "inactive"} searchClient={conditionalSearchClient} indexName="appsearch">
+      <InstantSearch searchClient={searchClient} indexName="appsearch">
         <AppModal
           open={openModal}
           onClose={handleAppModalClose}
@@ -2478,26 +2412,24 @@ const Apps2 = (props) => {
             }
 
             {
-              currTab === 2 && (
-                <>
-                  <Configure clickAnalytics hitsPerPage={20} />
-                  <CustomHits
-                    isLoggedIn={isLoggedIn}
-                    userdata={userdata}
-                    handleAppClick={handleAppClick}
-                    setIsAnyAppActivated={setIsAnyAppActivated}
-                    globalUrl={globalUrl}
-                    searchQuery={searchQuery}
-                    mouseHoverIndex={mouseHoverIndex}
-                    setMouseHoverIndex={setMouseHoverIndex}
-                    currTab={currTab}
-                    leftSideBarOpenByClick={leftSideBarOpenByClick}
-                  />
-                </>
-              )
+              currTab === 2 &&
+              <CustomHits
+                isLoggedIn={isLoggedIn}
+                userdata={userdata}
+                handleAppClick={handleAppClick}
+                setIsAnyAppActivated={setIsAnyAppActivated}
+                hitsPerPage={5}
+                globalUrl={globalUrl}
+                searchQuery={searchQuery}
+                mouseHoverIndex={mouseHoverIndex}
+                setMouseHoverIndex={setMouseHoverIndex}
+                currTab={currTab}
+                leftSideBarOpenByClick={leftSideBarOpenByClick}
+              />
             }
           </div>
         </div >
+        <Configure clickAnalytics />
       </InstantSearch>
     </div>
     </Dropzone>

@@ -3,7 +3,6 @@ import { Context } from "../context/ContextApi.jsx";
 import { toast } from 'react-toastify';
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getTheme } from '../theme.jsx';
-import ReactGA from 'react-ga4';
 //import { useAlert 
 
 import { v4 as uuidv4 } from "uuid";
@@ -479,7 +478,7 @@ const AuthenticationOauth2 = (props) => {
    	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
 		defaultPrompt = prompt
 	}
-
+		
 	var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
 	if (admin_consent === true) {
 		console.log("Running Oauth2 WITH admin consent")
@@ -514,71 +513,57 @@ const AuthenticationOauth2 = (props) => {
 
 	// Admin consent
     //const url = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${client_id}&scope=AaaServer.profile.Read&redirect_uri=${redirectUri}&prompt=consent`
-	  
-
-	console.log("URL: ", url)
     try {
-      	var newwin = window.open(url, "", "width=582,height=700");
+      var newwin = window.open(url, "", "width=582,height=700");
+      //console.log(newwin)
 
-		// This happens if automatic clicks occurr without the user, which is 
-		// disallowed in most cases
-	  	if (newwin === null || newwin === undefined) {
-      		setButtonClicked(false);
-	  		if (setFinalized !== undefined) {
-	  			setFinalized(true)
+      var open = true;
+      const timer = setInterval(() => {
+        if (newwin.closed) {
+		  console.log("Closing?")
+
+          setButtonClicked(false);
+          clearInterval(timer);
+          //alert('"Secure Payment" window closed!');
+
+		  if (getAppAuthentication !== undefined) {
+			// This should be orgId, not action Id as to load auth properly
+			if (workflow !== undefined && workflow !== null && workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+	 	  		getAppAuthentication(true, true, true, workflow.org_id)
+			} else {
+	 	  		getAppAuthentication(true, true, true) 
 			}
+		  }
 
-	  	} else {
-      		var open = true;
-      		const timer = setInterval(() => {
-      		  if (newwin.closed) {
-	  		    console.log("Closing?")
+		  toast.info("Authentication window closed")
 
-      		    setButtonClicked(false);
-      		    clearInterval(timer);
-      		    //alert('"Secure Payment" window closed!');
+		  // This is more a guess than anything
+		  // Should be handled in getAppAuthentication()
+		  // in the parent component to make it accurate,
+		  // seeing as we don't know what the parent component
+		  // wants to happen
+		  if (setFinalized !== undefined) {
+			  setFinalized(true)
+		  }
+        } else {
+			//console.log("Not closed")
+		}
+      }, 1000);
+      //do {
+      //	setTimeout(() => {
+      //		console.log(newwin)
+      //		console.log("CLOSED", newwin.closed)
+      //		if (newwin.closed) {
 
-	  		    if (getAppAuthentication !== undefined) {
-	  		  	// This should be orgId, not action Id as to load auth properly
-	  		  	if (workflow !== undefined && workflow !== null && workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
-	  		    		getAppAuthentication(true, true, true, workflow.org_id)
-	  		  	} else {
-	  		    		getAppAuthentication(true, true, true) 
-	  		  	}
-	  		    }
-
-	  		    toast.success("Authentication finished. You may close this window.",{
-					duration: 60,
-				}) 
-
-	  		    // This is more a guess than anything
-	  		    // Should be handled in getAppAuthentication()
-	  		    // in the parent component to make it accurate,
-	  		    // seeing as we don't know what the parent component
-	  		    // wants to happen
-	  		    if (setFinalized !== undefined) {
-	  		  	  setFinalized(true)
-	  		    }
-      		  } else {
-	  		  	//console.log("Not closed")
-	  		  }
-      		}, 2000);
-      		//do {
-      		//	setTimeout(() => {
-      		//		console.log(newwin)
-      		//		console.log("CLOSED", newwin.closed)
-      		//		if (newwin.closed) {
-
-      		//			open = false
-      		//		}
-      		//	}, 1000)
-      		//}
-      		//while(open === true)
-	  	}
-    } 	catch (e) {
-      	toast("Failed authentication - probably bad credentials. Try again: " + e)
-      	
-      	setButtonClicked(false);
+      //			open = false
+      //		}
+      //	}, 1000)
+      //}
+      //while(open === true)
+    } catch (e) {
+      toast("Failed authentication - probably bad credentials. Try again")
+      
+      setButtonClicked(false);
     }
 
     return;
@@ -729,13 +714,6 @@ const AuthenticationOauth2 = (props) => {
 			onClick={() => {
 				// Hardcode some stuff?
 				// This could prolly be added to the app itself with a "default" client ID 
-				if (isCloud) { 
-					ReactGA.event({
-						category: "Integration",
-						action: "Authenticate",
-						label: `${selectedApp?.name} - One click`,
-					})
-				}
 				startOauth2Request()
 			}}
 			color="primary"
@@ -1100,14 +1078,6 @@ const AuthenticationOauth2 = (props) => {
 			toast.info("Starting authentication process", {
 				"autoClose": 1500,
 			})
-
-			if (isCloud) { 
-				ReactGA.event({
-					category: "Integration",
-					action: "Authenticate",
-					label: `${selectedApp?.name} - Oauth2 manual`,
-				})
-			}
 
             handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes, undefined, true);
           }}

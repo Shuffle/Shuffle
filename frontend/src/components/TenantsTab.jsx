@@ -1,6 +1,5 @@
 import React, { memo, useContext, useEffect, useState } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
-import { getTheme } from "../theme.jsx";
+import {getTheme} from "../theme.jsx";
 import { Context } from '../context/ContextApi.jsx';
 import {
     FormControl,
@@ -25,11 +24,9 @@ import {
     IconButton,
     Modal,
     Checkbox,
-    Select,
-    MenuItem,
-} from "@mui/material";
-
-import {
+  } from "@mui/material";
+  
+  import {
     Edit as EditIcon,
     Polyline as PolylineIcon,
     CheckCircle as CheckCircleIcon,
@@ -37,13 +34,11 @@ import {
     Apps as AppsIcon,
     Business as BusinessIcon,
     Flag,
-    ArrowDropDown as ArrowDropDownIcon,
+	ArrowDropDown as ArrowDropDownIcon,
     VisibilityOff,
     Visibility,
-    KeyboardArrowLeft,
-    KeyboardArrowRight,
 
-} from "@mui/icons-material";
+  } from "@mui/icons-material";
 
 import { toast } from 'react-toastify';
 
@@ -78,15 +73,8 @@ const TenantsTab = memo((props) => {
     const theme = getTheme(themeMode, brandColor);
     const [accountDeleteButtonClicked, setAccountDeleteButtonClicked] = useState(false);
     const [selectedSuborg, setSelectedSuborg] = useState(null);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [nextCursor, setNextCursor] = useState("");
-    const [currentCursor, setCurrentCursor] = useState("");
-    const [cursorStack, setCursorStack] = useState([]);
-    const [localPage, setLocalPage] = useState(0);
-    const [loadingSubOrgs, setLoadingSubOrgs] = useState(false);
-    const [isChangingOrg, setIsChangingOrg] = useState(false);
     useEffect(() => {
-        if (parentOrg !== null && parentOrgFlag === null) {
+        if(parentOrg !== null && parentOrgFlag === null) {
             let regiontag = "UK";
             let regionCode = "gb";
 
@@ -97,25 +85,25 @@ const TenantsTab = memo((props) => {
                     regiontag = namesplit[namesplit.length - 1];
 
                     if (regiontag === "california") {
-                        regiontag = "US";
-                        regionCode = "us";
+						regiontag = "US";
+						regionCode = "us";
                     } else if (regiontag === "frankfurt") {
-                        regiontag = "EU-2";
-                        regionCode = "eu";
+						regiontag = "EU-2";
+						regionCode = "eu";
                     } else if (regiontag === "ca") {
-                        regiontag = "CA";
-                        regionCode = "ca";
-                    } else if (regiontag === "au") {
+						regiontag = "CA";
+						regionCode = "ca";
+                    }else if (regiontag === "au") {
                         regiontag = "AUS";
                         regionCode = "au"
                     }
                 }
                 setParentOrgFlag(regionCode);
                 setParentOrgRegionName(regiontag);
-            }
         }
+    }
     }, [parentOrg, parentOrgFlag]);
-
+    
     var syncList = [
         {
             primary: "Workflows",
@@ -139,26 +127,19 @@ const TenantsTab = memo((props) => {
 
     useEffect(() => {
         if (userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0) {
-            handleGetSubOrgs(userdata.active_org.id, "", 100);
+            handleGetSubOrgs(userdata.active_org.id);
         }
         else console.log("error in user data")
     }, [userdata]);
 
-    const handleGetSubOrgs = (orgId, cursor = "", limit = 100, direction = "next") => {
-        const effectiveLimit = limit !== null ? limit : 100;
+    const handleGetSubOrgs = (orgId) => {
 
         if (orgId.length === 0) {
             toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
             return;
         }
 
-        setLoadingSubOrgs(true);
-        let url = `${globalUrl}/api/v1/orgs/${orgId}/suborgs?limit=${effectiveLimit}`;
-        if (cursor) {
-            url += `&cursor=${encodeURIComponent(cursor)}`;
-        }
-
-        fetch(url, {
+        fetch(`${globalUrl}/api/v1/orgs/${orgId}/suborgs`, {
             method: "GET",
             credentials: "include",
             headers: {
@@ -173,85 +154,47 @@ const TenantsTab = memo((props) => {
             })
             .then((responseJson) => {
                 if (responseJson.success === false) {
-                    setLoadOrgs(false);
-                    setLoadingSubOrgs(false);
+                    setLoadOrgs(false)
                     //toast("Failed getting your org. If this persists, please contact support.");
                 } else {
-                    const { subOrgs, parentOrg, cursor: responseCursor } = responseJson;
-                    setLoadOrgs(false);
-                    setLoadingSubOrgs(false);
-                    setSubOrgs(subOrgs || []);
+                    const { subOrgs, parentOrg } = responseJson;
+                    setLoadOrgs(false)
+                    setSubOrgs(subOrgs);
                     setParentOrg(parentOrg);
-                    setNextCursor(responseCursor || "");
-
-                    if (direction === "prev") {
-                        const len = (subOrgs || []).length;
-                        setLocalPage(len > 0 ? Math.ceil(len / rowsPerPage) - 1 : 0);
-                    } else {
-                        setLocalPage(0);
-                    }
 
                     let regiontag = "UK";
                     let regionCode = "gb";
 
                     if (parentOrg?.region_url?.length > 0) {
-                        const regionsplit = parentOrg?.region_url.split(".");
-                        if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-                            const namesplit = regionsplit[0].split("/");
-                            regiontag = namesplit[namesplit.length - 1];
+                    const regionsplit = parentOrg?.region_url.split(".");
+                    if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+                        const namesplit = regionsplit[0].split("/");
+                        regiontag = namesplit[namesplit.length - 1];
 
-                            if (regiontag === "california") {
-                                regiontag = "US";
-                                regionCode = "us";
-                            } else if (regiontag === "frankfurt") {
-                                regiontag = "EU-2";
-                                regionCode = "eu";
-                            } else if (regiontag === "ca") {
-                                regiontag = "CA";
-                                regionCode = "ca";
-                            } else if (regiontag === "au") {
-                                regiontag = "AUS";
-                                regionCode = "au"
-                            }
+                        if (regiontag === "california") {
+							regiontag = "US";
+							regionCode = "us";
+                        } else if (regiontag === "frankfurt") {
+							regiontag = "EU-2";
+							regionCode = "eu";
+                        } else if (regiontag === "ca") {
+							regiontag = "CA";
+							regionCode = "ca";
+                        }else if (regiontag === "au") {
+                            regiontag = "AUS";
+                            regionCode = "au"
                         }
+                    }
                         setParentOrgFlag(regionCode);
                         setParentOrgRegionName(regiontag);
-                    }
+                }
                 }
             })
             .catch((error) => {
                 console.log("Error getting sub orgs: ", error);
                 //toast("Error getting sub organizations");
-                setLoadOrgs(false);
-                setLoadingSubOrgs(false);
+                setLoadOrgs(false)
             });
-    };
-
-    const handleNextPage = () => {
-        const maxLocalPage = Math.ceil(subOrgs.length / rowsPerPage) - 1;
-        if (localPage < maxLocalPage) {
-            setLocalPage(prev => prev + 1);
-        } else if (nextCursor && nextCursor !== currentCursor) {
-            setCursorStack(prev => [...prev, currentCursor]);
-            setCurrentCursor(nextCursor);
-            handleGetSubOrgs(userdata.active_org.id, nextCursor, 100, "next");
-        }
-    };
-
-    const handlePrevPage = () => {
-        if (localPage > 0) {
-            setLocalPage(prev => prev - 1);
-        } else if (cursorStack.length > 0) {
-            const prevCursor = cursorStack[cursorStack.length - 1];
-            setCursorStack(prev => prev.slice(0, -1));
-            setCurrentCursor(prevCursor);
-            handleGetSubOrgs(userdata.active_org.id, prevCursor, 100, "prev");
-        }
-    };
-
-    const handleChangeRowsPerPage = (newSize) => {
-        setRowsPerPage(Number(newSize));
-        setLocalPage(0);
     };
 
     const GridItem = (props) => {
@@ -559,7 +502,7 @@ const TenantsTab = memo((props) => {
     const createSubOrg = (currentOrgId, name) => {
         const data = { name: name, org_id: currentOrgId };
         const url = globalUrl + `/api/v1/orgs/${currentOrgId}/create_sub_org`;
-        setSuborglistOpen(true)
+		setSuborglistOpen(true)
 
         fetch(url, {
             mode: "cors",
@@ -577,8 +520,8 @@ const TenantsTab = memo((props) => {
                     if (responseJson["success"] === false) {
                         if (responseJson.reason !== undefined) {
                             toast.error(responseJson.reason, {
-                                autoClose: 5000,
-                            })
+								autoClose: 5000,
+							})
                         } else {
                             toast("Failed creating suborg. Please try again");
                         }
@@ -611,7 +554,6 @@ const TenantsTab = memo((props) => {
         localStorage.setItem("globalUrl", "");
         localStorage.setItem("getting_started_sidebar", "open");
 
-        setIsChangingOrg(true);
         fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
             mode: "cors",
             credentials: "include",
@@ -627,8 +569,8 @@ const TenantsTab = memo((props) => {
                 if (response.status !== 200) {
                     console.log("Error in response");
                 } else {
-                    localStorage.setItem("apps", [])
-                }
+					localStorage.setItem("apps", [])
+				}
 
                 return response.json();
             })
@@ -665,215 +607,212 @@ const TenantsTab = memo((props) => {
         const [disabled, setDisabled] = useState(true);
         const [open, setOpen] = useState(true);
         const boxStyling = {
-            position: "relative",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            zIndex: "9999",
-            backgroundColor: theme.palette.backgroundColor,
-            color: theme.palette.text.primary,
-            padding: 20,
-            borderRadius: 5,
-            boxShadow: "0 0 10px rgba(0, 0, 0, 0.3)",
-            width: 430,
-            height: 430,
+          position: "relative",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: "9999",
+          backgroundColor: theme.palette.backgroundColor,
+          color: theme.palette.text.primary,
+          padding: 20,
+          borderRadius: 5,
+          boxShadow: "0 0 10px rgba(0, 0, 0, 0.3)",
+          width: 430,
+          height: 430,
         };
-
+    
         const closeIconButtonStyling = {
-            color: theme.palette.text.primary,
-            border: "none",
-            backgroundColor: "transparent",
-            position: 'relative',
-            width: 20,
-            height: 20,
-            cursor: "pointer",
-            left: "calc(100% - 30px)",
+          color: theme.palette.text.primary,
+          border: "none",
+          backgroundColor: "transparent",
+          position: 'relative',
+          width: 20,
+          height: 20,
+          cursor: "pointer",
+          left: "calc(100% - 30px)",
         };
-
+    
         const handlePasswordVisibility = () => {
-            setShowPassword(!showPassword);
+          setShowPassword(!showPassword);
         };
-
+    
         const buttonStyle = {
-            marginTop: 20,
-            height: 50,
-            border: "none",
-            width: "100%",
-            fontSize: 16,
-            backgroundColor: disabled ? "gray" : "red",
-            color: theme.palette.text.primary,
-            cursor: disabled === false && "pointer",
-        };
-
+          marginTop: 20,
+          height: 50,
+          border: "none",
+          width: "100%",
+          fontSize: 16,
+          backgroundColor: disabled ? "gray" : "red",
+          color: theme.palette.text.primary,
+          cursor: disabled === false && "pointer",
+        };    
+    
         const handlePasswordChange = (e) => {
-            setPassword(e.target.value);
+          setPassword(e.target.value);
         };
-
+    
         const handleCheckBoxEvent = () => {
-            setUserDeleteAccepted((prev) => !prev);
+          setUserDeleteAccepted((prev) => !prev);
         };
-
+    
         useEffect(() => {
-            if (password.length > 8 && userDeleteAccepted) {
-                setDisabled(false);
-            } else {
-                setDisabled(true);
-            }
+          if (password.length > 8 && userDeleteAccepted) {
+            setDisabled(false);
+          } else {
+            setDisabled(true);
+          }
         }, [password, userDeleteAccepted]);
 
-
+    
         const handleDeleteAccount = () => {
-            const baseURL = globalUrl;
+          const baseURL = globalUrl;
+    
+          const url = `${baseURL}/api/v1/orgs/${selectedSuborg?.id}`;
 
-            const url = `${baseURL}/api/v1/orgs/${selectedSuborg?.id}`;
+          const data = {
+            password: password,
+          };
 
-            const data = {
-                password: password,
-            };
+          fetch(url, {
+            mode: "cors",
+            method: "DELETE",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                toast.success(
+                  "Suborg deleted"
+                );
+                handleGetSubOrgs(userdata.active_org.id);
+                setAccountDeleteButtonClicked(false);
 
-            fetch(url, {
-                mode: "cors",
-                method: "DELETE",
-                body: JSON.stringify(data),
-                credentials: "include",
-                crossDomain: true,
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
+              } else {
+                if (data.reason) {
+                  toast.error(data.reason);
+                }else {
+                    toast.error("Failed to delete suborg. Please try again or contact support@shuffler.io for help.");
+                }
+              }
             })
-                .then((response) => response.json())
-                .then((data) => {
-                    if (data.success) {
-                        toast.success(
-                            "Suborg deleted"
-                        );
-                        setCursorStack([]);
-                        setCurrentCursor("");
-                        setNextCursor("");
-                        handleGetSubOrgs(userdata.active_org.id);
-                        setAccountDeleteButtonClicked(false);
-
-                    } else {
-                        if (data.reason) {
-                            toast.error(data.reason);
-                        } else {
-                            toast.error("Failed to delete suborg. Please try again or contact support@shuffler.io for help.");
-                        }
-                    }
-                })
-                .catch((error) => {
-                    console.error(
-                        "There was a problem with your fetch operation:",
-                        error
-                    );
-                });
+            .catch((error) => {
+              console.error(
+                "There was a problem with your fetch operation:",
+                error
+              );
+            });
         };
-
+    
         return (
-            <Modal open={open} >
-                <div style={boxStyling}>
-                    <IconButton
-                        style={closeIconButtonStyling}
-                        onClick={() => {
-                            setAccountDeleteButtonClicked(false);
-                            setSelectedSuborg(null);
-                        }}
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                    <h1 style={{ textAlign: "center", margin: "0 0 20px 0" }}>Sub-Organization</h1>
-                    {/* <div style={{paddingLeft: 15}} > */}
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            textAlign: "left",
-                            // paddingLeft: 15
-                            // marginLeft: 20
-                        }}
-                    >
-                        <label>If you delete your suborg then:</label>
-                        <ul style={{ textAlign: "left" }}>
-                            <li>
-                                <label>
-                                    Your suborg information will be removed from our Database
-                                    permanently.
-                                </label>
-                            </li>
-                            <li>
-                                <label>This action cannot be reversed.</label>
-                            </li>
-                        </ul>
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 10,
-                            }}
+          <Modal open= {open} >
+          <div style={boxStyling}>
+            <IconButton
+                style={closeIconButtonStyling}
+                onClick={() => {
+                    setAccountDeleteButtonClicked(false);
+                    setSelectedSuborg(null);
+                }}
+            >
+              <CloseIcon />
+            </IconButton>
+            <h1 style={{textAlign:"center", margin : "0 0 20px 0"}}>Sub-Organization</h1>
+          {/* <div style={{paddingLeft: 15}} > */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                textAlign: "left",
+                // paddingLeft: 15
+                // marginLeft: 20
+              }}
+            >
+              <label>If you delete your suborg then:</label>
+              <ul style={{ textAlign: "left" }}>
+                <li>
+                  <label>
+                    Your suborg information will be removed from our Database
+                    permanently.
+                  </label>
+                </li>
+                <li>
+                  <label>This action cannot be reversed.</label>
+                </li>
+              </ul>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Checkbox
+                  checked={userDeleteAccepted}
+                  onChange={handleCheckBoxEvent}
+                  size="medium"
+                />
+                <label style={{ fontSize: "16px", color: theme.palette.text.primary }}>
+                  I have read the above information and I agree to it completely
+                </label>
+              </div>
+              <div
+                style={{
+                  marginTop: 20,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                <label>Enter password to delete suborg {" " + selectedSuborg?.name}</label>
+                <TextField
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      flex: "1",
+                    }}
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={handlePasswordChange}
+                    required
+                    placeholder="Password"
+                    id="standard-required"
+                    autoComplete="off"
+                    InputProps={{
+                        style: {
+                            color: theme.palette.textFieldStyle.color,
+                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                            height: "45px",
+                            fontSize: "1em",
+                            borderRadius: theme.palette.textFieldStyle.borderRadius,
+                        },
+                      endAdornment: (
+                        <IconButton
+                          onClick={handlePasswordVisibility}
+                          style={{color:theme.palette.text.primary}}
                         >
-                            <Checkbox
-                                checked={userDeleteAccepted}
-                                onChange={handleCheckBoxEvent}
-                                size="medium"
-                            />
-                            <label style={{ fontSize: "16px", color: theme.palette.text.primary }}>
-                                I have read the above information and I agree to it completely
-                            </label>
-                        </div>
-                        <div
-                            style={{
-                                marginTop: 20,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 8,
-                            }}
-                        >
-                            <label>Enter password to delete suborg {" " + selectedSuborg?.name}</label>
-                            <TextField
-                                style={{
-                                    backgroundColor: theme.palette.inputColor,
-                                    flex: "1",
-                                }}
-                                type={showPassword ? "text" : "password"}
-                                value={password}
-                                onChange={handlePasswordChange}
-                                required
-                                placeholder="Password"
-                                id="standard-required"
-                                autoComplete="off"
-                                InputProps={{
-                                    style: {
-                                        color: theme.palette.textFieldStyle.color,
-                                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                        height: "45px",
-                                        fontSize: "1em",
-                                        borderRadius: theme.palette.textFieldStyle.borderRadius,
-                                    },
-                                    endAdornment: (
-                                        <IconButton
-                                            onClick={handlePasswordVisibility}
-                                            style={{ color: theme.palette.text.primary }}
-                                        >
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    ),
-                                }}
-                            />
-                        </div>
-                        <button
-                            style={buttonStyle}
-                            disabled={disabled}
-                            onClick={handleDeleteAccount}
-                        >
-                            Delete Suborg
-                        </button>
-                    </div>
-                </div>
-            </Modal>
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      ),
+                    }}
+                  />
+              </div>
+              <button
+                style={buttonStyle}
+                disabled={disabled}
+                onClick={handleDeleteAccount}
+              >
+                Delete Suborg
+              </button>
+            </div>
+          </div>
+          </Modal>
         );
-    };
+      };
 
     const modalView = (
         <Dialog
@@ -891,13 +830,13 @@ const TenantsTab = memo((props) => {
                     backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     zIndex: 1000,
                     '& .MuiDialogContent-root': {
-                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                     '& .MuiDialogTitle-root': {
-                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                     '& .MuiDialogActions-root': {
-                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                 },
             }}
@@ -941,7 +880,7 @@ const TenantsTab = memo((props) => {
                 </Button>
                 <Button
                     variant="contained"
-                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", }}
+                    style={{ borderRadius: "2px", fontSize: 16, textTransform: "none",}}
                     onClick={() => {
                         createSubOrg(selectedOrganization.id, orgName);
                     }}
@@ -969,13 +908,13 @@ const TenantsTab = memo((props) => {
                     backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     zIndex: 1000,
                     '& .MuiDialogContent-root': {
-                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                     '& .MuiDialogTitle-root': {
-                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                     '& .MuiDialogActions-root': {
-                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
                     },
                 },
             }}
@@ -1026,11 +965,9 @@ const TenantsTab = memo((props) => {
                                 cloudSyncApikey.length === 0) ||
                             loading
                         }
-                        style={{
-                            marginLeft: 15, height: 50, borderRadius: "2px", color: "#1a1a1a", backgroundColor: (!selectedOrganization.cloud_sync &&
-                                cloudSyncApikey.length === 0) ||
-                                loading ? "rgba(200, 200, 200, 0.5)" : theme.palette.primary.main, fontSize: 16, textTransform: "none"
-                        }}
+                        style={{ marginLeft: 15, height: 50, borderRadius: "2px", color: "#1a1a1a", backgroundColor: (!selectedOrganization.cloud_sync &&
+                            cloudSyncApikey.length === 0) ||
+                        loading ? "rgba(200, 200, 200, 0.5)" : theme.palette.primary.main, fontSize: 16, textTransform: "none" }}
                         onClick={() => {
                             setLoading(true);
                             enableCloudSync(
@@ -1074,181 +1011,71 @@ const TenantsTab = memo((props) => {
 
     const textColor = "#9E9E9E !important";
 
-    const getRegionInfo = (region_url) => {
-        let regiontag = "UK";
-        let regionCode = "gb";
-        if (region_url?.length > 0) {
-            const regionsplit = region_url.split(".");
-            if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-                const namesplit = regionsplit[0].split("/");
-                regiontag = namesplit[namesplit.length - 1];
-                if (regiontag === "california") { regiontag = "US"; regionCode = "us"; }
-                else if (regiontag === "frankfurt") { regiontag = "EU-2"; regionCode = "eu"; }
-                else if (regiontag === "ca") { regiontag = "CA"; regionCode = "ca"; }
-                else if (regiontag === "au") { regiontag = "AUS"; regionCode = "au"; }
-            }
-        }
-        return { regiontag, regionCode };
-    };
-
-    const subOrgColumns = [
-        {
-            field: 'logo',
-            headerName: 'Logo',
-            width: 90,
-            sortable: false,
-            disableColumnMenu: true,
-            renderCell: (params) => (
-                <img alt={params.row.name} src={params.row.image || theme.palette.defaultImage} style={imageStyle} />
-            ),
-        },
-        {
-            field: 'name',
-            headerName: 'Name',
-            flex: 1,
-            minWidth: 150,
-            sortable: false,
-            disableColumnMenu: true,
-        },
-        ...(isCloud ? [{
-            field: 'region',
-            headerName: 'Region',
-            width: 130,
-            sortable: false,
-            disableColumnMenu: true,
-            renderCell: (params) => {
-                const { regiontag, regionCode } = getRegionInfo(params.row.region_url);
-                return (
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                        <img alt={regionCode} src={`https://flagcdn.com/w20/${regionCode}.png`} style={{ width: "30px", height: "20px", marginRight: "5px" }} />
-                        <span>{regiontag.toUpperCase()}</span>
-                    </div>
-                );
-            },
-        }] : []),
-        {
-            field: 'id',
-            headerName: 'ID',
-            flex: 2,
-            minWidth: 280,
-            sortable: false,
-            disableColumnMenu: true,
-        },
-        {
-            field: 'actions',
-            headerName: 'Actions',
-            width: 310,
-            sortable: false,
-            disableColumnMenu: true,
-            renderCell: (params) => (
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <Tooltip title={params.row.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
-                        <span>
-                            <Button
-                                color="primary"
-                                variant="outlined"
-                                size="small"
-                                disabled={params.row.id === userdata?.active_org?.id}
-                                onClick={() => handleClickChangeOrg(params.row.id)}
-                                sx={{
-                                    boxShadow: "none",
-                                    textTransform: "capitalize",
-                                    fontSize: 14,
-                                    '&.Mui-disabled': { backgroundColor: 'rgba(200,200,200,0.5)', color: '#A9A9A9' },
-                                }}
-                            >
-                                Change Active Org
-                            </Button>
-                        </span>
-                    </Tooltip>
-                    {!selectedOrganization?.creator_org?.length && (
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            disabled={params.row.id === userdata?.active_org?.id}
-                            onClick={() => { setAccountDeleteButtonClicked(true); setSelectedSuborg(params.row); }}
-                            sx={{
-                                whiteSpace: "nowrap",
-                                textTransform: "none",
-                                fontSize: "14px",
-                                color: "red",
-                                borderColor: "red",
-                                "&:hover": { color: theme.palette.text.primary, backgroundColor: "red" },
-                            }}
-                        >
-                            Delete Org
-                        </Button>
-                    )}
-                </div>
-            ),
-        },
-    ];
-
     return (
-        <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height: "100%", backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder, }}>
+        <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: theme.palette.defaultBorder,}}>
             {modalView}
             {cloudSyncModal}
-            {accountDeleteButtonClicked && <DeleteAccountPopUp />}
-            <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", overflowX: 'hidden', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
-                <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
-                    <div style={{ marginBottom: 20 }}>
-                        <Typography variant='h5' color="textPrimary" style={{ marginBottom: 8, marginTop: 0 }}>Tenants</Typography>
-                        <Typography variant='body2' color="textSecondary">
-                            Create, manage and change to sub-organizations (tenants)! {" "}
-                            {isCloud
-                                ? `You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact ${supportEmail} to try it out.`
-                                : ''}&nbsp;
-                            <a
-                                href="/docs/organizations"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: theme.palette.linkColor }}
-                            >
-                                Learn more
-                            </a>
-                        </Typography>
-                    </div>
-
-                    <Button
-                        style={{ textTransform: 'none', fontSize: 16, borderRadius: 4, width: 212, height: 40 }}
-                        variant="contained"
-                        color="primary"
-                        disabled={userdata.admin !== 'true'}
-                        onClick={() => {
-                            setModalOpen(true);
-                        }}
-                    >
-                        Add suborganization
-                    </Button>
-
-                    <Divider
-                        style={{
-                            marginTop: 20,
-                            marginBottom: 20,
-                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                        }}
-                    />
-
-                    <div
-                        style={{
-                            textAlign: 'left',
-                            width: '100%',
-                            padding: '10px',
-                            marginTop: 20,
-                        }}
-                    >
-                        <Typography
-                            variant='h6'
-                            color="textPrimary"
-                            style={{
-                                margin: 0,
-                            }}
+             {accountDeleteButtonClicked && <DeleteAccountPopUp/>}
+            <div style={{height: "100%", maxHeight: 1700, overflowY: "auto",overflowX: 'hidden', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
+                <div style={{ height: "100%", width: "calc(100% - 20px)",  scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>   
+                <div style={{ marginBottom: 20 }}>
+                    <Typography variant='h5' color="textPrimary" style={{ marginBottom: 8, marginTop: 0 }}>Tenants</Typography>
+                    <Typography variant='body2' color="textSecondary">
+                        Create, manage and change to sub-organizations (tenants)! {" "}
+                        {isCloud
+                            ? `You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact ${supportEmail} to try it out.`
+                            : ''}&nbsp;
+                        <a
+                            href="/docs/organizations"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: theme.palette.linkColor }}
                         >
-                            Your Parent Organization
-                        </Typography>
-                    </div>
-                    <div>
+                            Learn more
+                        </a>
+                    </Typography>
+                </div>
 
+                <Button
+                    style={{ textTransform: 'none', fontSize: 16, borderRadius: 4, width: 212, height: 40 }}
+                    variant="contained"
+                    color="primary"
+                    disabled={userdata.admin !== 'true'}
+                    onClick={() => {
+                        setModalOpen(true);
+                    }}
+                >
+                    Add suborganization
+                </Button>
+
+                <Divider
+                    style={{
+                        marginTop: 20,
+                        marginBottom: 20,
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    }}
+                />
+
+                <div
+                    style={{
+                        textAlign: 'left',
+                        width: '100%',
+                        padding: '10px',
+                        marginTop: 20,
+                    }}
+                >
+                    <Typography 
+                        variant='h6'
+                        color="textPrimary"
+                        style={{
+                            margin: 0,
+                        }}
+                    >
+                        Your Parent Organization
+                    </Typography>
+                </div>
+                    <div>
+                        
 
                         {/* <Divider
                             style={{
@@ -1259,698 +1086,879 @@ const TenantsTab = memo((props) => {
                         /> */}
 
 
-                        <div style={{ borderRadius: 4, marginTop: 24, border: theme.palette.defaultBorder, width: "100%", overflowX: "auto", overflowY: "auto", maxHeight: "720px", paddingBottom: 0 }}>
-                            <List
-                                style={{
-                                    width: "100%",
-                                    tableLayout: "fixed",
-                                    display: "table",
-                                    minWidth: 800,
-                                    overflowX: "auto",
-                                    paddingBottom: 0,
-                                }}
-                            >
-                                <ListItem
-                                    style={{
-                                        width: "100%",
-                                        display: "table-row",
-                                        padding: "0px 8px 8px 8px",
-                                        whiteSpace: "nowrap",
-                                        textOverflow: "ellipsis",
-                                        verticalAlign: "middle",
-                                    }}
-                                >
-                                    <ListItemText
-                                        primary="Logo"
-                                        style={{
-                                            width: 100,
-                                            minWidth: 100,
-                                            maxWidth: 100,
-                                            paddingLeft: 20,
-                                            display: "table-cell",
-                                            padding: "0px 8px 8px 8px",
-                                            textAlign: "center",
-                                            borderBottom: theme.palette.defaultBorder,
-                                            verticalAlign: "middle",
-                                        }}
-                                    />
-                                    <ListItemText
-                                        primary="Name"
-                                        style={{
-                                            minWidth: 100,
-                                            maxWidth: 300,
-                                            display: "table-cell",
-                                            padding: "0px 8px 8px 8px",
-                                            whiteSpace: "nowrap",
-                                            textOverflow: "ellipsis",
-                                            borderBottom: theme.palette.defaultBorder,
-                                            verticalAlign: "middle",
-                                            textAlign: "center",
-                                        }}
-                                    />
-                                    {isCloud && (
-                                        <ListItemText
-                                            primary="Region"
-                                            style={{
-                                                minWidth: 100,
-                                                maxWidth: 100,
-                                                display: "table-cell",
-                                                borderBottom: theme.palette.defaultBorder,
-                                                padding: "0px 8px 8px 8px",
-                                            }}
-                                        />
-                                    )}
-                                    <ListItemText
-                                        primary="id"
-                                        style={{
-                                            minWidth: 400,
-                                            maxWidth: 400,
-                                            display: "table-cell",
-                                            padding: "0px 8px 8px 8px",
-                                            whiteSpace: "nowrap",
-                                            textOverflow: "ellipsis",
-                                            borderBottom: theme.palette.defaultBorder,
-                                            verticalAlign: "middle",
-                                        }}
-                                    />
-                                    <ListItemText
-                                        primary="Action"
-                                        style={{
-                                            minWidth: 400,
-                                            maxWidth: 400,
-                                            display: "table-cell",
-                                            padding: "0px 8px 8px 8px",
-                                            whiteSpace: "nowrap",
-                                            textOverflow: "ellipsis",
-                                            borderBottom: theme.palette.defaultBorder,
-                                            verticalAlign: "middle",
-                                        }}
-                                    />
-                                </ListItem>
-
-                                {loadOrgs ? (
-                                    [...Array(3)].map((_, rowIndex) => (
-                                        <ListItem
-                                            key={rowIndex}
-                                            style={{
-                                                display: "flex",
-                                                backgroundColor: theme.palette.platformColor,
-                                                height: 30,
-                                            }}
-                                        >
-                                            {[
-                                                { width: 100, minWidth: 100, maxWidth: 100 },
-                                                { width: 250, minWidth: 50, maxWidth: 250 },
-                                                { width: 400, minWidth: 400, maxWidth: 400 },
-                                                { width: "28%", minWidth: "28%" },
-                                                { width: 400, minWidth: 400, maxWidth: 400 },
-                                            ].map((style, colIndex) => (
-                                                <ListItemText
-                                                    key={colIndex}
-                                                    style={{
-                                                        padding: "8px",
-                                                        ...style,
-                                                    }}
-                                                >
-                                                    <Skeleton
-                                                        variant="text"
-                                                        animation="wave"
-                                                        sx={{
-                                                            backgroundColor: theme.palette.loaderColor,
-                                                            borderRadius: "4px",
-                                                        }}
-                                                    />
-                                                </ListItemText>
-                                            ))}
-                                        </ListItem>
-                                    ))
-                                ) : parentOrg?.id?.length > 0 ? (
-                                    <ListItem
-                                        style={{
-                                            backgroundColor: theme.palette.platformColor,
-                                            display: "table-row",
-                                            padding: 8,
-                                            verticalAlign: "middle",
-                                        }}
-                                    >
-                                        <ListItemText
-                                            primary={
-                                                <img
-                                                    alt={parentOrg?.name}
-                                                    src={parentOrg?.image || theme?.palette?.defaultImage}
-                                                    style={imageStyle}
-                                                />
-                                            }
-                                            style={{
-                                                width: 100,
-                                                minWidth: 100,
-                                                maxWidth: 100,
-                                                display: "table-cell",
-                                                padding: "8px 8px 8px 20px",
-                                                textAlign: "center",
-                                            }}
-                                        />
-                                        <ListItemText
-                                            primary={parentOrg?.name}
-                                            style={{
-                                                minWidth: 100,
-                                                maxWidth: 300,
-                                                overflow: "hidden",
-                                                whiteSpace: "nowrap",
-                                                textOverflow: "ellipsis",
-                                                display: "table-cell",
-                                                padding: 8,
-                                                verticalAlign: "middle",
-                                                textAlign: "center",
-                                            }}
-                                        />
-                                        {isCloud && (
-                                            <ListItemText
-                                                primary={
-                                                    <div style={{ display: "flex", alignItems: "center" }}>
-                                                        <img
-                                                            alt={parentOrgFlag}
-                                                            src={`https://flagcdn.com/w20/${parentOrgFlag}.png`}
-                                                            style={{ width: "30px", height: "20px", marginRight: "5px" }}
-                                                        />
-                                                        <ListItemText primary={parentOrgRegionName?.toUpperCase()} />
-                                                    </div>
-                                                }
-                                                style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}
-                                            />
-                                        )}
-                                        <ListItemText
-                                            primary={parentOrg?.id}
-                                            style={{
-                                                minWidth: 300,
-                                                maxWidth: 300,
-                                                display: "table-cell",
-                                                padding: 8,
-                                                verticalAlign: "middle",
-                                            }}
-                                        />
-                                        <ListItemText
-                                            primary={
-                                                <Tooltip
-                                                    title={
-                                                        parentOrg?.id === userdata?.active_org?.id
-                                                            ? "You are already in parent organization."
-                                                            : ""
-                                                    }
-                                                >
-                                                    <span>
-                                                        <Button
-                                                            variant="outlined"
-                                                            sx={{
-                                                                boxShadow: "none",
-                                                                textTransform: "capitalize",
-                                                                fontSize: 16,
-                                                                transition: "width 0.3s ease",
-                                                                "&.Mui-disabled": {
-                                                                    backgroundColor: "rgba(200, 200, 200, 0.5)",
-                                                                    color: "#A9A9A9",
-                                                                },
-                                                            }}
-                                                            color="primary"
-                                                            disabled={parentOrg?.id === userdata?.active_org?.id}
-                                                            onClick={() => {
-                                                                handleClickChangeOrg(parentOrg?.id);
-                                                            }}
-                                                        >
-                                                            Switch to Parent
-                                                        </Button>
-                                                    </span>
-                                                </Tooltip>
-                                            }
-                                            style={{ display: "table-cell", verticalAlign: "middle" }}
-                                        />
-                                    </ListItem>
-                                ) : (
-                                    <ListItem style={{ display: "table-row" }}>
-                                        {Array(5).fill().map((_, index) => (
-                                            <ListItemText
-                                                key={index}
-                                                style={{
-                                                    display: "table-cell",
-                                                    padding: "10px",
-                                                    whiteSpace: "nowrap",
-                                                }}
-                                                primary={index === 1 ? `Parent Organization not found or May be you are not part of parent org. Please contact ${supportEmail}` : null}
-                                                colSpan={index === 0 ? 5 : undefined}
-                                            />
-                                        ))}
-                                    </ListItem>
-                                )}
-                            </List>
-                        </div>
-                    </div>
-
-                    {(subOrgs.length > 0 || cursorStack.length > 0 || loadingSubOrgs) && (
-                        <div>
-                            <Divider
-                                style={{
-                                    marginTop: 20,
-                                    marginBottom: 20,
-                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                }}
-                            />
-
-                            <div
-                                style={{
-                                    textAlign: 'left',
-                                    width: '100%',
-                                    padding: '10px',
-                                    marginTop: 20,
-                                }}
-                            >
-                                <Typography
-                                    variant='h6'
-                                    color="textPrimary"
-                                    style={{
-                                        margin: 0,
-                                    }}
-                                >
-                                    Sub Organizations of the Current Organization ({subOrgs.length})
-                                </Typography>
-                            </div>
-
-                            <div style={{ borderRadius: 4, marginTop: 24, border: theme.palette.defaultBorder, width: "100%" }}>
-                                {!suborglistOpen ? (
-                                    <Button
-                                        fullWidth
-                                        variant="secondary"
-                                        style={{ textTransform: 'none' }}
-                                        onClick={() => setSuborglistOpen(true)}
-                                    >
-                                        Show Sub-Organizations <ArrowDropDownIcon />
-                                    </Button>
-                                ) : (
-                                    <DataGrid
-                                        rows={subOrgs.slice(localPage * rowsPerPage, (localPage + 1) * rowsPerPage)}
-                                        columns={subOrgColumns}
-                                        loading={loadingSubOrgs && !isChangingOrg}
-                                        hideFooter
-                                        rowHeight={70}
-                                        autoHeight
-                                        disableRowSelectionOnClick
-                                        getRowId={(row) => row.id}
-                                        sx={{
-                                            border: "none",
-                                            color: theme.palette.text.primary,
-                                            '& .MuiDataGrid-columnHeaders': {
-                                                borderBottom: theme.palette.defaultBorder,
-                                                backgroundColor: theme.palette.platformColor,
-                                            },
-                                            '& .MuiDataGrid-cell': {
-                                                borderBottom: theme.palette.defaultBorder,
-                                                display: "flex",
-                                                alignItems: "center",
-                                            },
-                                            '& .MuiDataGrid-row': {
-                                                backgroundColor: theme.palette.platformColor,
-                                            },
-                                            '& .MuiDataGrid-overlayWrapper': {
-                                                minHeight: subOrgs.length > 0 ? 0 : 100,
-                                            },
-                                        }}
-                                    />
-                                )}
-                            </div>
-                            {suborglistOpen && (
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "8px 16px", gap: 8 }}>
-                                    <Typography variant="body2" color="textSecondary" style={{ marginRight: 8 }}>
-                                        Rows per page:
-                                    </Typography>
-                                    <Select
-                                        value={rowsPerPage}
-                                        onChange={(e) => handleChangeRowsPerPage(e.target.value)}
-                                        variant="standard"
-                                        sx={{ color: theme.palette.text.primary, fontSize: 14, minWidth: 40 }}
-                                    >
-                                        <MenuItem value={10}>10</MenuItem>
-                                        <MenuItem value={20}>20</MenuItem>
-                                        <MenuItem value={30}>30</MenuItem>
-                                        <MenuItem value={50}>50</MenuItem>
-                                        <MenuItem value={100}>100</MenuItem>
-                                    </Select>
-                                    <IconButton
-                                        onClick={handlePrevPage}
-                                        disabled={loadingSubOrgs || (localPage === 0 && cursorStack.length === 0)}
-                                        size="small"
-                                        sx={{ color: (loadingSubOrgs || (localPage === 0 && cursorStack.length === 0)) ? theme.palette.text.disabled : theme.palette.text.primary }}
-                                    >
-                                        <KeyboardArrowLeft />
-                                    </IconButton>
-                                    <IconButton
-                                        onClick={handleNextPage}
-                                        disabled={loadingSubOrgs || (localPage >= Math.ceil(subOrgs.length / rowsPerPage) - 1 && (!nextCursor || nextCursor === currentCursor))}
-                                        size="small"
-                                        sx={{ color: (loadingSubOrgs || (localPage >= Math.ceil(subOrgs.length / rowsPerPage) - 1 && (!nextCursor || nextCursor === currentCursor))) ? theme.palette.text.disabled : theme.palette.text.primary }}
-                                    >
-                                        <KeyboardArrowRight />
-                                    </IconButton>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <Divider
+                    <div style={{ borderRadius: 4, marginTop: 24, border: theme.palette.defaultBorder, width: "100%", overflowX: "auto", paddingBottom: 0 }}>
+                    <List
                         style={{
-                            marginTop: 20,
-                            marginBottom: 20,
-                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                        width: "100%",
+                        tableLayout: "fixed",
+                        display: "table",
+                        minWidth: 800,
+                        overflowX: "auto",
+                        paddingBottom: 0,
                         }}
-                    />
-
-                    <div style={{ textAlign: 'left', width: '100%', padding: '10px', marginTop: 20 }}>
-                        <Typography
-                            variant='h6'
-                            color="textPrimary"
+                    >
+                        <ListItem
                             style={{
-                                margin: 0,
+                                width: "100%",
+                                display: "table-row",
+                                padding: "0px 8px 8px 8px",
+                                whiteSpace: "nowrap",
+                                textOverflow: "ellipsis",
+                                verticalAlign: "middle",
                             }}
                         >
-                            All Tenants
-                        </Typography>
+                        <ListItemText
+                            primary="Logo"
+                            style={{
+                                width: 100,
+                                minWidth: 100,
+                                maxWidth: 100,
+                                paddingLeft: 20,
+                                display: "table-cell",
+                                padding: "0px 8px 8px 8px",
+                                textAlign: "center",
+                                borderBottom: theme.palette.defaultBorder,
+                                verticalAlign: "middle",
+                            }}
+                        />
+                        <ListItemText
+                            primary="Name"
+                            style={{
+                            minWidth: 100,
+                            maxWidth: 300,
+                            display: "table-cell",
+                            padding: "0px 8px 8px 8px",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            borderBottom: theme.palette.defaultBorder,
+                            verticalAlign: "middle",
+                            textAlign: "center",
+                            }}
+                        />
+                        {isCloud && (
+                            <ListItemText
+                            primary="Region"
+                            style={{
+                                minWidth: 100,
+                                maxWidth: 100,
+                                display: "table-cell",
+                                borderBottom: theme.palette.defaultBorder,
+                                padding: "0px 8px 8px 8px",
+                            }}
+                            />
+                        )}
+                        <ListItemText
+                            primary="id"
+                            style={{
+                            minWidth: 400,
+                            maxWidth: 400,
+                            display: "table-cell",
+                            padding: "0px 8px 8px 8px",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            borderBottom: theme.palette.defaultBorder,
+                            verticalAlign: "middle",
+                            }}
+                        />
+                        <ListItemText
+                            primary="Action"
+                            style={{
+                            minWidth: 400,
+                            maxWidth: 400,
+                            display: "table-cell",
+                            padding: "0px 8px 8px 8px",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            borderBottom: theme.palette.defaultBorder,
+                            verticalAlign: "middle",
+                            }}
+                        />
+                        </ListItem>
+
+                        {loadOrgs ? (
+                            [...Array(3)].map((_, rowIndex) => (
+                                <ListItem
+                                key={rowIndex}
+                                style={{
+                                    display: "flex",
+                                    backgroundColor: theme.palette.platformColor,
+                                    height: 30,
+                                }}
+                                >
+                                {[
+                                    { width: 100, minWidth: 100, maxWidth: 100 },
+                                    { width: 250, minWidth: 50, maxWidth: 250 },
+                                    { width: 400, minWidth: 400, maxWidth: 400 },
+                                    { width: "28%", minWidth: "28%" },
+                                    { width: 400, minWidth: 400, maxWidth: 400 },
+                                ].map((style, colIndex) => (
+                                    <ListItemText
+                                    key={colIndex}
+                                    style={{
+                                        padding: "8px",
+                                        ...style,
+                                    }}
+                                    >
+                                    <Skeleton
+                                        variant="text"
+                                        animation="wave"
+                                        sx={{
+                                        backgroundColor: theme.palette.loaderColor,
+                                        borderRadius: "4px",
+                                        }}
+                                    />
+                                    </ListItemText>
+                                ))}
+                                </ListItem>
+                            ))
+                        ) : parentOrg?.id?.length > 0 ? (
+                    <ListItem
+                        style={{
+                            backgroundColor: theme.palette.platformColor,
+                            display: "table-row",
+                            padding: 8,
+                            verticalAlign: "middle",
+                        }}
+                    >
+                        <ListItemText
+                        primary={
+                            <img
+                            alt={parentOrg?.name}
+                            src={parentOrg?.image || theme?.palette?.defaultImage}
+                            style={imageStyle}
+                            />
+                        }
+                        style={{
+                            width: 100,
+                            minWidth: 100,
+                            maxWidth: 100,
+                            display: "table-cell",
+                            padding: "8px 8px 8px 20px",
+                            textAlign: "center",
+                        }}
+                        />
+                        <ListItemText
+                        primary={parentOrg?.name}
+                        style={{
+                            minWidth: 100,
+                            maxWidth: 300,
+                            overflow: "hidden",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            display: "table-cell",
+                            padding: 8,
+                            verticalAlign: "middle",
+                            textAlign: "center",
+                        }}
+                        />
+                        {isCloud && (
+                        <ListItemText
+                            primary={
+                            <div style={{ display: "flex", alignItems: "center" }}>
+                                <img
+                                alt={parentOrgFlag}
+                                src={`https://flagcdn.com/w20/${parentOrgFlag}.png`}
+                                style={{ width: "30px", height: "20px", marginRight: "5px" }}
+                                />
+                                <ListItemText primary={parentOrgRegionName?.toUpperCase()} />
+                            </div>
+                            }
+                            style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}
+                        />
+                        )}
+                        <ListItemText
+                        primary={parentOrg?.id}
+                        style={{
+                            minWidth: 300,
+                            maxWidth: 300,
+                            display: "table-cell",
+                            padding: 8,
+                            verticalAlign: "middle",
+                        }}
+                        />
+                        <ListItemText
+                        primary={
+                            <Tooltip
+                            title={
+                                parentOrg?.id === userdata?.active_org?.id
+                                ? "You are already in parent organization."
+                                : ""
+                            }
+                            >
+                            <span>
+                                <Button
+                                variant="outlined"
+                                sx={{
+                                    boxShadow: "none",
+                                    textTransform: "capitalize",
+                                    fontSize: 16,
+                                    transition: "width 0.3s ease",
+                                    "&.Mui-disabled": {
+                                    backgroundColor: "rgba(200, 200, 200, 0.5)",
+                                    color: "#A9A9A9",
+                                    },
+                                }}
+                                color="primary"
+                                disabled={parentOrg?.id === userdata?.active_org?.id}
+                                onClick={() => {
+                                    handleClickChangeOrg(parentOrg?.id);
+                                }}
+                                >
+                                Switch to Parent
+                                </Button>
+                            </span>
+                            </Tooltip>
+                        }
+                        style={{ display: "table-cell", verticalAlign: "middle" }}
+                        />
+                    </ListItem>
+                        ): (
+                        <ListItem style={{ display: "table-row" }}>
+                            {Array(5).fill().map((_, index) => (
+                                <ListItemText
+                                    key={index}
+                                    style={{
+                                        display: "table-cell",
+                                        padding: "10px",
+                                        whiteSpace: "nowrap",
+                                    }}
+                                    primary={index === 1 ? `Parent Organization not found or May be you are not part of parent org. Please contact ${supportEmail}` : null}
+                                    colSpan={index === 0 ? 5 : undefined}
+                                />
+                            ))}
+                        </ListItem>
+                        )}
+                    </List>
+                    </div>
                     </div>
 
-                    {/* <Divider
+                {subOrgs.length > 0 && (
+                    <div>
+                        <Divider
+                            style={{
+                                marginTop: 20,
+                                marginBottom: 20,
+                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                            }}
+                        />
+
+                        <div
+                            style={{
+                                textAlign: 'left',
+                                width: '100%',
+                                padding: '10px',
+                                marginTop: 20,
+                            }}
+                        >
+                            <Typography
+                                variant='h6'
+                                color="textPrimary"
+                                style={{
+                                    margin: 0,
+                                }}
+                            >
+                                Sub Organizations of the Current Organization ({subOrgs.length})
+                            </Typography>
+                        </div>
+
+                        {/* <Divider
+                            style={{
+                                marginTop: 20,
+                                marginBottom: 20,
+                                backgroundColor: theme.palette.inputColor,
+                            }}
+                        /> */}
+
+                        <div style={{borderRadius: 4, marginTop: 24, border: theme.palette.defaultBorder, width: "100%", overflowX: "auto", paddingBottom: 0 }}>
+                        <List 
+                            style={{
+                                width: '100%', 
+                                tableLayout: "fixed", 
+                                display: "table", 
+                                minWidth: 800,
+                                overflowX: "auto", 
+                                paddingBottom: 0,
+                            }}>
+							{!suborglistOpen ?
+								<ListItem
+									style={{
+										width: "100%",
+										display: "table-row",
+										padding: "0px 8px 8px 8px",
+										whiteSpace: "nowrap",
+										textOverflow: "ellipsis",
+										verticalAlign: "middle",
+										itemAlign: "center",
+
+									}}
+								>
+									<ListItemText 
+										primary={
+											<Button 
+												fullWidth 
+												variant="secondary" 
+												style={{
+													textTransform: 'none',
+												}} 
+												onClick={() => setSuborglistOpen(true)}
+											>
+												Show Sub-Organizations <ArrowDropDownIcon />
+											</Button>
+										}
+										style={{
+											width: 100,
+											minWidth: 100,
+											maxWidth: 100,
+											paddingLeft: 20,
+											display: "table-cell",
+											padding: "0px 8px 8px 8px",
+											textAlign: "center",
+											borderBottom: theme.palette.defaultBorder,
+											verticalAlign: "middle",
+										}} 
+									/>
+								</ListItem>
+							: 
+							<span>
+                            	<ListItem 
+                            	    style={{
+                            	        width: "100%",
+                            	        display: "table-row",
+                            	        padding: "0px 8px 8px 8px",
+                            	        whiteSpace: "nowrap",
+                            	        textOverflow: "ellipsis",
+                            	        verticalAlign: "middle",
+                            	    }}>
+                            	    <ListItemText 
+                            	        primary="Logo" 
+                            	        style={{
+                            	            width: 100,
+                            	            minWidth: 100,
+                            	            maxWidth: 100,
+                            	            paddingLeft: 20,
+                            	            display: "table-cell",
+                            	            padding: "0px 8px 8px 8px",
+                            	            textAlign: "center",
+                            	            borderBottom: theme.palette.defaultBorder,
+                            	            verticalAlign: "middle",
+                            	        }} />
+                            	    <ListItemText 
+                            	            primary="Name" 
+                            	            style={{
+                            	                minWidth: 100,
+                            	                maxWidth: 300,
+                            	                display: "table-cell",
+                            	                padding: "0px 8px 8px 8px",
+                            	                whiteSpace: "nowrap",
+                            	                textOverflow: "ellipsis",
+                            	                borderBottom: theme.palette.defaultBorder,
+                            	                verticalAlign: "middle",
+                            	                textAlign: "center",
+                            	            }} />
+                            	        {isCloud && (
+                            	            <ListItemText
+                            	            primary="Region"
+                            	            style={{
+                            	                minWidth: 100,
+                            	                maxWidth: 100,
+                            	                display: "table-cell",
+                            	                borderBottom: theme.palette.defaultBorder,
+                            	                padding: "0px 8px 8px 8px",
+                            	            }}
+                            	            />
+                            	        )}
+                            	    <ListItemText
+                            	        primary="id"
+                            	        style={{
+                            	        minWidth: 400,
+                            	        maxWidth: 400,
+                            	        display: "table-cell",
+                            	        padding: "0px 8px 8px 8px",
+                            	        whiteSpace: "nowrap",
+                            	        textOverflow: "ellipsis",
+                            	        borderBottom: theme.palette.defaultBorder,
+                            	        verticalAlign: "middle",
+                            	        }}
+                            	    />
+                            	    <ListItemText
+                            	        primary="Action"
+                            	        style={{
+                            	        minWidth: 400,
+                            	        maxWidth: 400,
+                            	        display: "table-cell",
+                            	        padding: "0px 8px 8px 8px",
+                            	        whiteSpace: "nowrap",
+                            	        textOverflow: "ellipsis",
+                            	        borderBottom: theme.palette.defaultBorder,
+                            	        verticalAlign: "middle",
+                            	        }}
+                            	    />
+                            	</ListItem>
+                            	{subOrgs.map((data, index) => {
+									let regiontag = "UK";
+									let regionCode = "gb";
+
+									if (data.region_url?.length > 0) {
+										const regionsplit = data.region_url.split(".");
+										if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+											const namesplit = regionsplit[0].split("/");
+											regiontag = namesplit[namesplit.length - 1];
+											if (regiontag === "california") {
+												regiontag = "US";
+												regionCode = "us";
+											} else if (regiontag === "frankfurt") {
+												regiontag = "EU-2";
+												regionCode = "eu";
+											} else if (regiontag === "ca") {
+												regiontag = "CA";
+												regionCode = "ca";
+											}
+										}
+									}
+                                    var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
+                                    if (index % 2 === 0) {
+                                        bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
+                                    }
+
+									return (
+                            	    <ListItem key={index} style={{ backgroundColor: bgColor, width: "100%", borderBottomLeftRadius: 8, display:'table-row', borderBottomRightRadius: 8 }}>
+                            	        <ListItemText primary={<img alt={data?.name} src={data.image || theme.palette.defaultImage} style={imageStyle} />} style={{ width: 100,
+                            	    minWidth: 100,
+                            	    maxWidth: 100,
+                            	    display: "table-cell",
+                            	    padding: "8px 8px 8px 20px",
+                            	    textAlign: "center", }} />
+                            	        <ListItemText primary={data.name} style={{ minWidth: 100,
+                            	    maxWidth: 300,
+                            	    overflow: "hidden",
+                            	    whiteSpace: "nowrap",
+                            	    textOverflow: "ellipsis",
+                            	    display: "table-cell",
+                            	    padding: 8,
+                            	    verticalAlign: "middle",
+                            	    textAlign: "center", }} />
+
+                            	    {isCloud && (
+                            	        <ListItemText
+                            	            primary={
+                            	            <div style={{ display: "flex", alignItems: "center" }}>
+                            	                <img
+                            	                alt={regiontag}
+                            	                src={`https://flagcdn.com/w20/${regionCode}.png`}
+                            	                style={{ width: "30px", height: "20px", marginRight: "5px" }}
+                            	                />
+                            	                <ListItemText primary={regiontag?.toUpperCase()} />
+                            	            </div>
+                            	            }
+                            	            style={{ display: "table-cell", padding: 8, verticalAlign: "middle" }}
+                            	        />
+                            	        )}
+                            	        <ListItemText primary={data.id} style={{ minWidth: 300,
+											maxWidth: 300,
+											display: "table-cell",
+											padding: 8,
+											verticalAlign: "middle", }} />
+
+                            	        <ListItemText
+                            			primary={
+                            	    		<>
+                                                <Tooltip title={data.id === userdata?.active_org?.id ? "You are already in this organization." : ""} disableInteractive>
+                            	            <Button
+                            	                color="primary"
+                            	                variant='outlined'
+                            	                disabled={data.id === userdata?.active_org?.id}
+                            	                onClick={() => {
+                            	                    handleClickChangeOrg(data.id);
+                            	                }}
+                            	                sx={{ 
+                            	                    boxShadow:"none", textTransform:"capitalize", 
+                            	                    fontSize:16, 
+                            	                    '&.Mui-disabled': {
+                            	                    backgroundColor: 'rgba(200, 200, 200, 0.5)',
+                            	                    color: '#A9A9A9',
+                            	                    },
+                            	                }}
+                            	            >
+                            	                Change Active Org
+                            	            </Button>
+                                            
+                            	        </Tooltip>
+                                        {selectedOrganization?.creator_org?.length > 0 ? null : 
+                                        <Button
+                                            variant="outlined"
+                                            sx={{
+                                                whiteSpace: "nowrap",
+                                                textTransform: "none",
+                                                fontSize: "16px",
+                                                color: "red",
+                                                marginLeft: "5px",
+                                                borderColor: "red",
+                                                "&:hover": {
+                                                    color: theme.palette.text.primary,
+                                                    backgroundColor: "red",
+                                                },
+
+                                            }}
+                                            disabled={data?.id === userdata?.active_org?.id}
+                                            onClick={() => {
+                                                setAccountDeleteButtonClicked(true);
+                                                setSelectedSuborg(data);
+                                            }}
+                                            >
+                                            Delete Org
+                                            </Button>}
+
+                                        </>
+                            	}
+                            	style={{ display: "table-cell", verticalAlign: "middle" }}
+                            	/>
+                            	    </ListItem>
+                            	)})}
+
+							</span>}
+
+                        </List>
+                        </div>
+                    </div>
+                )}
+
+                <Divider
+                    style={{
+                        marginTop: 20,
+                        marginBottom: 20,
+                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                    }}
+                />
+
+                <div style={{ textAlign: 'left', width: '100%', padding: '10px', marginTop: 20 }}>
+                    <Typography
+                        variant='h6'
+                        color="textPrimary"
+                        style={{
+                            margin: 0,
+                        }}
+                    >
+                        All Tenants
+                    </Typography>
+                </div>
+
+                {/* <Divider
                     style={{
                         marginTop: 20,
                         marginBottom: 20,
                         backgroundColor: theme.palette.inputColor,
                     }}
                 /> */}
-                    <div
-                        style={{
-                            borderRadius: 4,
-                            marginTop: 24,
-                            border: theme.palette.defaultBorder,
-                            width: "100%",
-                            overflowX: "auto",
-                            paddingBottom: 0,
-                        }}
-                    >
-                        <List
-                            style={{
-                                width: "100%",
-                                tableLayout: "fixed",
-                                display: "table",
-                                minWidth: 800,
-                                overflowX: "auto",
-                                paddingBottom: 0,
-                            }}
-                        >
-                            {!allTenantsOpen ?
-                                <ListItem
-                                    style={{
-                                        width: "100%",
-                                        display: "table-row",
-                                        padding: "0px 8px 8px 8px",
-                                        whiteSpace: "nowrap",
-                                        textOverflow: "ellipsis",
-                                        verticalAlign: "middle",
-                                        itemAlign: "center",
+                <div
+                style={{
+                    borderRadius: 4,
+                    marginTop: 24,
+                    border: theme.palette.defaultBorder,
+                    width: "100%",
+                    overflowX: "auto",
+                    paddingBottom: 0,
+                }}
+                >
+                <List
+                    style={{
+                    width: "100%",
+                    tableLayout: "fixed",
+                    display: "table",
+                    minWidth: 800,
+                    overflowX: "auto",
+                    paddingBottom: 0,
+                    }}
+                >
+					{!allTenantsOpen ?
+						<ListItem
+							style={{
+								width: "100%",
+								display: "table-row",
+								padding: "0px 8px 8px 8px",
+								whiteSpace: "nowrap",
+								textOverflow: "ellipsis",
+								verticalAlign: "middle",
+								itemAlign: "center",
 
-                                    }}
-                                >
-                                    <ListItemText
-                                        primary={
-                                            <Button
-                                                fullWidth
-                                                variant="secondary"
-                                                style={{
-                                                    textTransform: 'none',
-                                                }}
-                                                onClick={() => setAllTenantsOpen(true)}
-                                            >
-                                                Show ALL your tenants <ArrowDropDownIcon />
-                                            </Button>
-                                        }
-                                        style={{
-                                            width: 100,
-                                            minWidth: 100,
-                                            maxWidth: 100,
-                                            paddingLeft: 20,
-                                            display: "table-cell",
-                                            padding: "0px 8px 8px 8px",
-                                            textAlign: "center",
-                                            borderBottom: theme.palette.defaultBorder,
-                                            verticalAlign: "middle",
-                                        }}
-                                    />
-                                </ListItem>
-                                :
-                                <React.Fragment>
-                                    <ListItem
-                                        style={{
-                                            width: "100%",
-                                            display: "table-row",
-                                            padding: "0px 8px 8px 8px",
-                                            whiteSpace: "nowrap",
-                                            textOverflow: "ellipsis",
-                                            verticalAlign: "middle",
-                                        }}
-                                    >
-                                        <ListItemText
-                                            primary="Logo"
-                                            style={{
-                                                width: 100,
-                                                minWidth: 100,
-                                                maxWidth: 100,
-                                                paddingLeft: 20,
-                                                display: "table-cell",
-                                                padding: "0px 8px 8px 8px",
-                                                textAlign: "center",
-                                                borderBottom: theme.palette.defaultBorder,
-                                                verticalAlign: "middle",
-                                            }}
-                                        />
-                                        <ListItemText
-                                            primary="Name"
-                                            style={{
-                                                minWidth: 100,
-                                                maxWidth: 300,
-                                                display: "table-cell",
-                                                padding: "0px 8px 8px 8px",
-                                                whiteSpace: "nowrap",
-                                                textOverflow: "ellipsis",
-                                                borderBottom: theme.palette.defaultBorder,
-                                                verticalAlign: "middle",
-                                                textAlign: "center",
-                                            }}
-                                        />
-                                        {isCloud && (
-                                            <ListItemText
-                                                primary="Region"
-                                                style={{
-                                                    minWidth: 100,
-                                                    maxWidth: 100,
-                                                    display: "table-cell",
-                                                    borderBottom: theme.palette.defaultBorder,
-                                                    padding: "0px 8px 8px 8px",
-                                                }}
-                                            />
-                                        )}
-                                        <ListItemText
-                                            primary="id"
-                                            style={{
-                                                minWidth: 400,
-                                                maxWidth: 400,
-                                                display: "table-cell",
-                                                padding: "0px 8px 8px 8px",
-                                                whiteSpace: "nowrap",
-                                                textOverflow: "ellipsis",
-                                                borderBottom: theme.palette.defaultBorder,
-                                                verticalAlign: "middle",
-                                            }}
-                                        />
-                                        <ListItemText
-                                            primary="Action"
-                                            style={{
-                                                minWidth: 400,
-                                                maxWidth: 400,
-                                                display: "table-cell",
-                                                padding: "0px 8px 8px 8px",
-                                                whiteSpace: "nowrap",
-                                                textOverflow: "ellipsis",
-                                                borderBottom: theme.palette.defaultBorder,
-                                                verticalAlign: "middle",
-                                            }}
-                                        />
-                                    </ListItem>
+							}}
+						>
+							<ListItemText 
+								primary={
+									<Button 
+										fullWidth 
+										variant="secondary" 
+										style={{
+											textTransform: 'none',
+										}} 
+										onClick={() => setAllTenantsOpen(true)}
+									>
+										Show ALL your tenants <ArrowDropDownIcon />
+									</Button>
+								}
+								style={{
+									width: 100,
+									minWidth: 100,
+									maxWidth: 100,
+									paddingLeft: 20,
+									display: "table-cell",
+									padding: "0px 8px 8px 8px",
+									textAlign: "center",
+									borderBottom: theme.palette.defaultBorder,
+									verticalAlign: "middle",
+								}} 
+							/>
+						</ListItem>
+					: 
+					<span>
+                    	<ListItem
+                    	style={{
+                    	    width: "100%",
+                    	    display: "table-row",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    verticalAlign: "middle",
+                    	}}
+                    	>
+                    	<ListItemText
+                    	    primary="Logo"
+                    	    style={{
+                    	    width: 100,
+                    	    minWidth: 100,
+                    	    maxWidth: 100,
+                    	    paddingLeft: 20,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    textAlign: "center",
+                    	    borderBottom: theme.palette.defaultBorder,
+                    	    verticalAlign: "middle",
+                    	    }}
+                    	/>
+                    	<ListItemText
+                    	    primary="Name"
+                    	    style={{
+                    	    minWidth: 100,
+                    	    maxWidth: 300,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    borderBottom: theme.palette.defaultBorder,
+                    	    verticalAlign: "middle",
+                    	    textAlign: "center",
+                    	    }}
+                    	/>
+                    	{isCloud && (
+                    	    <ListItemText
+                    	    primary="Region"
+                    	    style={{
+                    	        minWidth: 100,
+                    	        maxWidth: 100,
+                    	        display: "table-cell",
+                    	        borderBottom: theme.palette.defaultBorder,
+                    	        padding: "0px 8px 8px 8px",
+                    	    }}
+                    	    />
+                    	)}
+                    	<ListItemText
+                    	    primary="id"
+                    	    style={{
+                    	    minWidth: 400,
+                    	    maxWidth: 400,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    borderBottom: theme.palette.defaultBorder,
+                    	    verticalAlign: "middle",
+                    	    }}
+                    	/>
+                    	<ListItemText
+                    	    primary="Action"
+                    	    style={{
+                    	    minWidth: 400,
+                    	    maxWidth: 400,
+                    	    display: "table-cell",
+                    	    padding: "0px 8px 8px 8px",
+                    	    whiteSpace: "nowrap",
+                    	    textOverflow: "ellipsis",
+                    	    borderBottom: theme.palette.defaultBorder,
+                    	    verticalAlign: "middle",
+                    	    }}
+                    	/>
+                    	</ListItem>
 
-                                    {userdata?.orgs?.length <= 0 ? (
-                                        [...Array(6)].map((_, rowIndex) => (
-                                            <ListItem
-                                                key={rowIndex}
-                                                style={{
-                                                    display: "table-row",
-                                                    backgroundColor: "#212121",
-                                                }}
-                                            >
-                                                {Array(7)
-                                                    .fill()
-                                                    .map((_, colIndex) => (
-                                                        <ListItemText
-                                                            key={colIndex}
-                                                            style={{
-                                                                display: "table-cell",
-                                                                padding: "8px",
-                                                            }}
-                                                        >
-                                                            <Skeleton
-                                                                variant="text"
-                                                                animation="wave"
-                                                                sx={{
-                                                                    backgroundColor: "#1a1a1a",
-                                                                    height: "20px",
-                                                                    borderRadius: "4px",
-                                                                }}
-                                                            />
-                                                        </ListItemText>
-                                                    ))}
-                                            </ListItem>
-                                        ))
-                                    ) : (
-                                        userdata?.orgs?.length > 0 &&
-                                        userdata.orgs.map((data, index) => {
-                                            let regiontag = "UK";
-                                            let regionCode = "gb";
+                    	{userdata?.orgs?.length <= 0 ? (
+                    	[...Array(6)].map((_, rowIndex) => (
+                    	    <ListItem
+                    	    key={rowIndex}
+                    	    style={{
+                    	        display: "table-row",
+                    	        backgroundColor: "#212121",
+                    	    }}
+                    	    >
+                    	    {Array(7)
+                    	        .fill()
+                    	        .map((_, colIndex) => (
+                    	        <ListItemText
+                    	            key={colIndex}
+                    	            style={{
+                    	            display: "table-cell",
+                    	            padding: "8px",
+                    	            }}
+                    	        >
+                    	            <Skeleton
+                    	            variant="text"
+                    	            animation="wave"
+                    	            sx={{
+                    	                backgroundColor: "#1a1a1a",
+                    	                height: "20px",
+                    	                borderRadius: "4px",
+                    	            }}
+                    	            />
+                    	        </ListItemText>
+                    	        ))}
+                    	    </ListItem>
+                    	))
+                    	) : (
+                    	userdata?.orgs?.length > 0 &&
+                    	userdata.orgs.map((data, index) => {
+                    	    let regiontag = "UK";
+                    	    let regionCode = "gb";
 
-                                            if (data.region_url?.length > 0) {
-                                                const regionsplit = data.region_url.split(".");
-                                                if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-                                                    const namesplit = regionsplit[0].split("/");
-                                                    regiontag = namesplit[namesplit.length - 1];
+                    	    if (data.region_url?.length > 0) {
+								const regionsplit = data.region_url.split(".");
+								if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+									const namesplit = regionsplit[0].split("/");
+									regiontag = namesplit[namesplit.length - 1];
 
-                                                    if (regiontag === "california") {
-                                                        regiontag = "US";
-                                                        regionCode = "us";
-                                                    } else if (regiontag === "frankfurt") {
-                                                        regiontag = "EU-2";
-                                                        regionCode = "eu";
-                                                    } else if (regiontag === "ca") {
-                                                        regiontag = "CA";
-                                                        regionCode = "ca";
-                                                    }
-                                                }
-                                            }
+									if (regiontag === "california") {
+									regiontag = "US";
+									regionCode = "us";
+									} else if (regiontag === "frankfurt") {
+									regiontag = "EU-2";
+									regionCode = "eu";
+									} else if (regiontag === "ca") {
+									regiontag = "CA";
+									regionCode = "ca";
+									}
+								}
+                    	    }
 
-                                            var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
-                                            if (index % 2 === 0) {
-                                                bgColor = themeMode === "dark" ? "#1A1A1A" : "#EAEAEA";
-                                            }
+                            var bgColor = themeMode === "dark" ? "#212121" : "#FFFFFF";
+                            if (index % 2 === 0) {
+                                bgColor = themeMode === "dark" ? "#1A1A1A" :  "#EAEAEA";
+                            }
 
-                                            return (
-                                                <ListItem
-                                                    key={index}
-                                                    style={{
-                                                        display: "table-row",
-                                                        verticalAlign: "middle",
-                                                        padding: 8,
-                                                        backgroundColor: bgColor,
-                                                        borderBottomLeftRadius:
-                                                            userdata?.orgs?.length - 1 === index ? 8 : 0,
-                                                        borderBottomRightRadius:
-                                                            userdata?.orgs?.length - 1 === index ? 8 : 0,
-                                                    }}
-                                                >
-                                                    <ListItemText
-                                                        primary={
-                                                            <img
-                                                                alt={data.name}
-                                                                src={data.image || theme.palette.defaultImage}
-                                                                style={imageStyle}
-                                                            />
-                                                        }
-                                                        style={{
-                                                            width: 100,
-                                                            minWidth: 100,
-                                                            maxWidth: 100,
-                                                            display: "table-cell",
-                                                            padding: "8px 8px 8px 20px",
-                                                            textAlign: "center",
-                                                        }}
-                                                    />
-                                                    <ListItemText
-                                                        primary={data?.name}
-                                                        style={{
-                                                            minWidth: 100,
-                                                            maxWidth: 300,
-                                                            overflow: "hidden",
-                                                            whiteSpace: "nowrap",
-                                                            textOverflow: "ellipsis",
-                                                            display: "table-cell",
-                                                            padding: 8,
-                                                            verticalAlign: "middle",
-                                                            textAlign: "center",
-                                                        }}
-                                                    ></ListItemText>
-                                                    {isCloud ? (
-                                                        <ListItemText
-                                                            primary={
-                                                                <div style={{ display: "flex", alignItems: "center" }}>
-                                                                    <img
-                                                                        alt={regiontag}
-                                                                        src={`https://flagcdn.com/w20/${regionCode}.png`}
-                                                                        style={{
-                                                                            display: "table-cell",
-                                                                            padding: 8,
-                                                                            verticalAlign: "middle",
-                                                                        }}
-                                                                    />
+                    	    return (
+                    	    <ListItem
+                    	        key={index}
+                    	        style={{
+                    	        display: "table-row",
+                    	        verticalAlign: "middle",
+                    	        padding: 8,
+                    	        backgroundColor: bgColor,
+                    	        borderBottomLeftRadius:
+                    	            userdata?.orgs?.length - 1 === index ? 8 : 0,
+                    	        borderBottomRightRadius:
+                    	            userdata?.orgs?.length - 1 === index ? 8 : 0,
+                    	        }}
+                    	    >
+                    	        <ListItemText
+                    	        primary={
+                    	            <img
+                    	            alt={data.name}
+                    	            src={data.image || theme.palette.defaultImage}
+                    	            style={imageStyle}
+                    	            />
+                    	        }
+                    	        style={{
+                    	            width: 100,
+                    	            minWidth: 100,
+                    	            maxWidth: 100,
+                    	            display: "table-cell",
+                    	            padding: "8px 8px 8px 20px",
+                    	            textAlign: "center",
+                    	        }}
+                    	        />
+                    	        <ListItemText
+                    	        primary={data?.name}
+                    	        style={{
+                    	            minWidth: 100,
+                    	            maxWidth: 300,
+                    	            overflow: "hidden",
+                    	            whiteSpace: "nowrap",
+                    	            textOverflow: "ellipsis",
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	            textAlign: "center",
+                    	        }}
+                    	        ></ListItemText>
+                    	        {isCloud ? (
+                    	        <ListItemText
+                    	            primary={
+                    	            <div style={{ display: "flex", alignItems: "center" }}>
+                    	                <img
+                    	                alt={regiontag}
+                    	                src={`https://flagcdn.com/w20/${regionCode}.png`}
+                    	                style={{
+                    	                    display: "table-cell",
+                    	                    padding: 8,
+                    	                    verticalAlign: "middle",
+                    	                }}
+                    	                />
 
-                                                                    <ListItemText primary={regiontag} />
-                                                                </div>
-                                                            }
-                                                            style={{
-                                                                display: "table-cell",
-                                                                padding: 8,
-                                                                verticalAlign: "middle",
-                                                            }}
-                                                        ></ListItemText>
-                                                    ) : null}
-                                                    <ListItemText
-                                                        primary={data.id}
-                                                        style={{
-                                                            minWidth: 300,
-                                                            maxWidth: 300,
-                                                            display: "table-cell",
-                                                            padding: 8,
-                                                            verticalAlign: "middle",
-                                                        }}
-                                                    />
-                                                    <ListItemText
-                                                        primary={
-                                                            <Button
-                                                                variant="outlined"
-                                                                style={{
-                                                                    whiteSpace: "nowrap",
-                                                                    textTransform: "none",
-                                                                    fontSize: 16,
-                                                                }}
-                                                                disabled={data?.id === userdata?.active_org?.id}
-                                                                onClick={() => {
-                                                                    handleClickChangeOrg(data?.id);
-                                                                }}
-                                                            >
-                                                                Change Active Org
-                                                            </Button>
-                                                        }
-                                                        style={{
-                                                            display: "table-cell",
-                                                            padding: 8,
-                                                            verticalAlign: "middle",
-                                                        }}
-                                                    ></ListItemText>
-                                                </ListItem>
-                                            );
-                                        })
-                                    )}
-                                </React.Fragment>}
-                        </List>
-                    </div>
+                    	                <ListItemText primary={regiontag} />
+                    	            </div>
+                    	            }
+                    	            style={{
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	            }}
+                    	        ></ListItemText>
+                    	        ) : null}
+                    	        <ListItemText
+                    	        primary={data.id}
+                    	        style={{
+                    	            minWidth: 300,
+                    	            maxWidth: 300,
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	        }}
+                    	        />
+                    	        <ListItemText
+                    	        primary={
+                    	            <Button
+                    	            variant="outlined"
+                    	            style={{
+                    	                whiteSpace: "nowrap",
+                    	                textTransform: "none",
+                    	                fontSize: 16,
+                    	            }}
+                    	            disabled={data?.id === userdata?.active_org?.id}
+                    	            onClick={() => {
+                    	                handleClickChangeOrg(data?.id);
+                    	            }}
+                    	            >
+                    	            Change Active Org
+                    	            </Button>
+                    	        }
+                    	        style={{
+                    	            display: "table-cell",
+                    	            padding: 8,
+                    	            verticalAlign: "middle",
+                    	        }}
+                    	        ></ListItemText>
+                    	    </ListItem>
+                    	    );
+                    	})
+                    	)}
+					</span>}
+                </List>
+                </div>
                 </div>
             </div>
 

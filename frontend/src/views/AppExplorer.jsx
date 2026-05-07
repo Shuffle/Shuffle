@@ -65,6 +65,7 @@ import { Context } from "../context/ContextApi.jsx";
 
 import {
   SearchBox,
+  StaticRefinementList,
   RefinementList,
   InstantSearch,
   connectSearchBox,
@@ -92,17 +93,8 @@ import aa from "search-insights";
 // 2 = OpenAPI (Invalid)
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "363e707135ea95f5523ec1b262d96b03"
+  "c8f882473ff42d41158430be09ec2b4e"
 )
-
-export const setAppCache = (globalUrl, appId, alias) => {
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-  if (!isCloud) return;
-  fetch(globalUrl + "/api/v1/apps/" + appId + "/cache?alias=" + encodeURIComponent(alias), {
-    method: "POST",
-    credentials: "include",
-  }).catch(() => {});
-};
 
 const AppExplorer = (props) => {
   const {
@@ -222,7 +214,6 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
   );
   const [relatedWorkflows, setRelatedWorkflows] = useState(0);
   const [relatedApps, setRelatedApps] = useState(0);
-  const [hasCachedCounts, setHasCachedCounts] = useState(false);
   const [appAuthentication, setAppAuthentication] = React.useState([]);
   const [authLoaded, setAuthLoaded] = useState(false);
   const baseResult = "The execution result will show up here";
@@ -310,9 +301,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
       if (serverside) {
         console.log("Not getting app because serverside.");
       } else {
-        if (params.appid === "new" || params.appid === "edit") {
-          return;
-        } else if (params.appid.length === 32 || params.appid.length === 36) {
+        if (params.appid.length === 32 || params.appid.length === 36) {
           handleEditApp(params.appid);
           runAlgoliaAppSearch(params.appid, false, true);
         } else {
@@ -466,6 +455,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                       rel="noopener noreferrer"
                       target="_blank"
                       href={data.url}
+                      target="_blank"
                       style={{ textDecoration: "none", color: "#f85a3e" }}
                     >
                       <Tooltip title={data.url} placement="bottom">
@@ -772,7 +762,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Org-Id": org_id !== undefined && org_id !== null && org_id?.length > 0 ? org_id : userdata?.active_org?.id
+        "Org-Id": org_id !== undefined && org_id !== null && org_id?.length > 0 ? org_id : userdata.active_org.id
       },
       credentials: "include",
     })
@@ -828,9 +818,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 
 		setAppId(appid)
 
-    const url = globalUrl + "/api/v1/apps/" + appid + "/config"
-
-    fetch(url, {
+    fetch(globalUrl + "/api/v1/apps/" + appid + "/config", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -1462,71 +1450,25 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
   };
 
   const runAlgoliaAppSearch = (appname, isOriginal, triggerOnly) => {
+    const index = searchClient.initIndex("appsearch");
 
-    if (appname === "integration" || appname == "singul") {
-      // Redirect to https://singul.io
-      window.location.href = "https://singul.io"
-    } else if (appname === "shuffle_agent" || appname === "agent" || appname === "agents" || appname == "shuffle-agent" || appname == "ai_agents" || appname == "AI Agent") {
-      navigate("/agents")
-      return
-    }
+    console.log("Running appsearch for: ", appname);
+	if (appname === "integration" || appname == "singul") {
+		// Redirect to https://singul.io
+		window.location.href = "https://singul.io"
+	} else if (appname === "shuffle_agent" || appname === "agent" || appname === "agents" || appname == "shuffle-agent") {
+		navigate("/agents")
+		return
+	}
 
-    // Check if appname is likely an ID (hash/UUID) or null - skip call
-    const isLikelyId = !appname || appname === "null" || (appname.length >= 32 && /^[a-f0-9\-]+$/i.test(appname));
-
-    const setCache = (appId) => setAppCache(globalUrl, appId, appname);
-
-    // Skip cache for IDs/null, proceed directly to Algolia
-    if (!isLikelyId) {
-      // For app names, try cache first
-      fetch(globalUrl + "/api/v1/apps/" + appname + "/cache")
-        .then((response) => {
-          if (!response.ok) {
-            return { success: false };
-          }
-          return response.json();
-        })
-        .catch((error) => {
-          return { success: false };
-        })
-        .then((cacheData) => {
-          if (cacheData && cacheData.success && (cacheData.id || cacheData.objectID)) {
-            const appId = cacheData.id || cacheData.objectID;
-            setCache(appId);
-            if (isOriginal !== false) {
-              handleEditApp(appId);
-              if (cacheData.related_workflows !== undefined) {
-                setRelatedWorkflows(cacheData.related_workflows);
-                setRelatedApps(cacheData.related_apps || 0);
-                setHasCachedCounts(true);
-              }
-            } else {
-              setSecondaryApp({ objectID: appId, name: appname });
-            }
-            return;
-          }
-          runAlgoliaSearch();
-        });
-      return;
-    }
-
-    // For IDs/null, skip cache and go straight to Algolia
-    runAlgoliaSearch();
-
-    function runAlgoliaSearch() {
-
-	  
-
-      const index = searchClient.initIndex("appsearch");
     index
       .search(appname)
       .then(({ hits }) => {
-        const appsearchname = appname.toLowerCase().replace(/[_ \-]/g, "");
+        const appsearchname = appname.replaceAll("_", " ").toLowerCase();
 		var found = false
 
 		if (hits !== undefined && hits !== null && hits.length === 1) {
 			found = true
-			if (!isLikelyId) setCache(hits[0].objectID);
 			if (isOriginal !== false) {
 				handleEditApp(hits[0].objectID)
 			} else {
@@ -1541,8 +1483,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
             continue;
           }
 
-          const hitNameClean = hit["name"].toLowerCase().replace(/[_ \-]/g, "");
-          if (hitNameClean.includes(appsearchname) || hit["objectID"] === appname) {
+          if (hit["name"].replaceAll("_", " ").toLowerCase().includes(appsearchname) || hit["objectID"] === appname) {
 			  /*
 			if (hit.triggers !== undefined && hit.triggers !== null && hit.triggers.length > 0) {
 				var parsedtriggers = []
@@ -1564,11 +1505,9 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 			} else {
 				if (isOriginal !== false) {
 					found = true
-					if (!isLikelyId) setCache(hit.objectID);
 					handleEditApp(hit.objectID);
 				} else {
 					console.log("Found second app: ", hit);
-					if (!isLikelyId) setCache(hit.objectID);
 					hit.name = hit.name.charAt(0).toUpperCase() + hit.name.slice(1);
 					setSecondaryApp(hit);
 				}
@@ -1580,7 +1519,6 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 
 	    if (!found) {
 			if (hits.length > 0) {
-				setCache(hits[0].objectID);
 				if (isOriginal !== false) {
 					handleEditApp(hits[0].objectID)
 				} else {
@@ -1598,7 +1536,6 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
       .catch((err) => {
         console.log(err);
       });
-    }
   };
 
 
@@ -3216,7 +3153,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
               <Tab style={{color: theme.palette.text.primary, textTransform: "none", }} icon={appType === 0 || appType === 2 ? <OpenInNewIcon /> : <AppsIcon />} label={appType === 0 || appType === 2 ? "Try the API" : "Try it out"} />
 
               <Tab icon={<ShowChartIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} label="Stats & Downloads" />
-              <Tab icon={<PolylineIcon />} style={{color: theme.palette.text.secondary, textTransform: "none", }} disabled label="Integrations" />
+              <Tab icon={<PolylineIcon />} style={{color: theme.palette.text.primary, textTransform: "none", }} disabled style={{color: theme.palette.text.secondary}} label="Integrations" />
               <Tab icon={<PersonIcon />} disabled={userdata.support !== true} style={{color: userdata.support !== true ? theme.palette.text.secondary: theme.palette.text.primary, textTransform: "none", }} label="Creator" value={4}  />
             </Tabs>
             <div style={{ marginTop: 25 }}>
@@ -3483,7 +3420,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                   </div>
                   <div style={{ textAlign: "center", marginTop: 25 }}>
                     <Link
-                      rel="noopener noreferrer nofollow"
+                      rel="noopener noreferrer"
                       to={`/register?app_one=${app.name}&app_two=${secondaryApp.name}&message=You need to login first to connect ${app.name} and ${secondaryApp.name}&view=/apps/${params.appid}/integrations/${secondaryApp.name}`}
                       style={{ textDecoration: "none" }}
                     >
@@ -3773,6 +3710,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
 
 												color="primary"
 												id="checkbox-search"
+												variant="body1"
 												style={{
 													backgroundColor: theme.palette.inputColor,
 													borderRadius: theme.palette?.borderRadius,
@@ -4198,7 +4136,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
         Activate for all suborgs
       </MenuItem>
 
-      {userdata?.orgs?.map((data, index) => {
+      {userdata.orgs.map((data, index) => {
         if (data.creator_org !== userdata.active_org.id) return null;
 
         const imageSize = 28;
@@ -4358,7 +4296,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                 if (queryID !== undefined && queryID !== null) {
                   aa("init", {
                     appId: "JNSS5CFDZZ",
-                    apiKey: "26986891ddd374051039420cd77b0fff",
+                    apiKey: "c8f882473ff42d41158430be09ec2b4e",
                   });
 
                   const timestamp = new Date().getTime();
@@ -4447,7 +4385,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                 if (queryID !== undefined && queryID !== null) {
                   aa("init", {
                     appId: "JNSS5CFDZZ",
-                    apiKey: "363e707135ea95f5523ec1b262d96b03",
+                    apiKey: "c8f882473ff42d41158430be09ec2b4e",
                   });
 
                   const timestamp = new Date().getTime();
@@ -4635,9 +4573,9 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                 maxWidth: height,
                 maxHeight: height,
               }}
-              // onClick={() => {
-              //   upload.click();
-              // }}
+              onClick={() => {
+                upload.click();
+              }}
             >
               {imageInfo}
             </div>
@@ -4849,7 +4787,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
           >
             <div style={{ padding: "50px 0" }}>
               <Typography variant="h4">
-                {hasCachedCounts || relatedWorkflows !== 0 ? (
+                {relatedWorkflows !== 0 ? (
                   relatedWorkflows
                 ) : (
                   <InstantSearch
@@ -4943,7 +4881,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
             >
               <div style={{ padding: "50px 0" }}>
                 <Typography variant="h4">
-                  {hasCachedCounts || relatedApps !== 0 ? (
+                  {relatedApps !== 0 ? (
                     relatedApps
                   ) : (
                     <InstantSearch

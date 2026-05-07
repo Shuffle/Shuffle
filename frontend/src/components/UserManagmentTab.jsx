@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext, memo } from "react";
 import { toast } from 'react-toastify';
 import { Context } from "../context/ContextApi.jsx";
-import { Link } from "react-router-dom";
 import {
     FormControl,
     InputLabel,
+    OutlinedInput,
+    Checkbox,
     Tooltip,
     Typography,
     Select,
@@ -30,12 +31,23 @@ import {
 import {
     Cached as CachedIcon,
     Edit as EditIcon,
+    Style,
 } from "@mui/icons-material";
 import ModeEditOutlineOutlinedIcon from '@mui/icons-material/ModeEditOutlineOutlined';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 
 import {getTheme} from "../theme.jsx";
-import SubOrgDistributionDialog from "./SubOrgDistributionDialog.jsx";
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+    PaperProps: {
+        style: {
+            maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+            width: 500,
+        },
+    },
+    getContentAnchorEl: () => null,
+};
 
 const logsViewModal = false;
 const userdata = "";
@@ -64,10 +76,9 @@ const UserManagmentTab = memo((props) => {
     const [logsViewModal, setLogsViewModal] = React.useState(false);
     const [ipSelected, setIpSelected] = React.useState("");
     const [userLogViewing, setUserLogViewing] = React.useState({});
-    const [subOrgModalOpen, setSubOrgModalOpen] = React.useState(false);
-    const [pendingSubOrgs, setPendingSubOrgs] = React.useState([]);
     const { themeMode, supportEmail, brandColor } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);
+
 
     useEffect(() => {
         if (selectedOrganization?.mfa_required !== MFARequired) {
@@ -236,6 +247,30 @@ const UserManagmentTab = memo((props) => {
             });
     };
 
+    const handleOrgEditChange = (event) => {
+        if (userdata.id === selectedUser.id) {
+            toast("Can't remove orgs from yourself");
+            return;
+        }
+
+		if (event.target.value.includes("ALL")) {
+			toast.info("Adding to available all sub-organizations. This may take a minute.")
+			event.target.value = selectedOrganization.child_orgs.map((org) => org.id)
+		} else if (event.target.value.includes("None")) { 
+			toast.info("Removing from all sub-organizations. This may take a minute")
+			event.target.value = []
+		}
+
+        setMatchingOrganizations(event.target.value);
+        // Workaround for empty orgs
+        if (event.target.value.length === 0) {
+            event.target.value.push("REMOVE");
+        }
+
+        setUser(selectedUser.id, "suborgs", event.target.value);
+        //setUser(selectedUser.id, "suborgs", matchingOrganizations)
+    };
+
     const userOrgEdit =
         selectedUser.id !== undefined &&
             selectedUser?.orgs !== undefined &&
@@ -243,43 +278,43 @@ const UserManagmentTab = memo((props) => {
             selectedOrganization?.child_orgs !== undefined &&
             selectedOrganization?.child_orgs !== null &&
             selectedOrganization?.child_orgs?.length > 0 ? (
-            <Button
-                variant="outlined"
-                color="primary"
-                fullWidth
-                disabled={selectedUser?.id === userdata?.id}
-                onClick={() => {
-                    setPendingSubOrgs([...matchingOrganizations]);
-                    setSubOrgModalOpen(true);
-                }}
-                sx={{ m: 1, textTransform: 'none', justifyContent: 'space-between', py: 1.5, fontSize: 14 }}
-            >
-                Manage Sub-Organizations ({matchingOrganizations.length} assigned of {selectedOrganization?.child_orgs?.length || 0})
-            </Button>
+            <FormControl fullWidth sx={{ m: 1 }}>
+                <InputLabel id="demo-multiple-checkbox-label" style={{ padding: 5 }}>
+                    Accessible Sub-Organizations (
+                    {selectedUser?.orgs ? selectedUser?.orgs?.length - 1 : 0})
+                </InputLabel>
+                <Select
+                    fullWidth
+                    style={{ width: "100%" }}
+                    disabled={selectedUser?.id === userdata?.id}
+                    labelId="demo-multiple-checkbox-label"
+                    id="demo-multiple-checkbox"
+                    multiple
+                    value={matchingOrganizations}
+                    onChange={handleOrgEditChange}
+                    input={<OutlinedInput label="Tag" />}
+                    renderValue={(selected) => {
+                        return selected.join(", ");
+                    }}
+                    MenuProps={MenuProps}
+                >
+					<MenuItem key={-2} value={"None"}>
+						<Checkbox checked={false} />
+						<ListItemText primary={"None"} />
+					</MenuItem>
+					<MenuItem key={-1} value={"ALL"}>
+						<Checkbox checked={false} />
+						<ListItemText primary={"ALL"} />
+					</MenuItem>
+                    {selectedOrganization.child_orgs.map((org, index) => (
+                        <MenuItem key={index} value={org.id}>
+                            <Checkbox checked={matchingOrganizations.indexOf(org.id) > -1} />
+                            <ListItemText primary={org.name} />
+                        </MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
         ) : null;
-
-    const subOrgManagementDialog = (
-        <SubOrgDistributionDialog
-            open={subOrgModalOpen}
-            onClose={() => setSubOrgModalOpen(false)}
-            title={`Manage Sub-Organizations for ${selectedUser?.username || ''}`}
-            orgs={selectedOrganization?.child_orgs || []}
-            selectedOrgIds={pendingSubOrgs}
-            onSelectionChange={setPendingSubOrgs}
-            onSave={(ids) => {
-                if (userdata.id === selectedUser.id) {
-                    toast("Can't modify orgs for yourself");
-                    return;
-                }
-                const newValue = ids.length === 0 ? ["REMOVE"] : [...ids];
-                setMatchingOrganizations([...ids]);
-                setUser(selectedUser.id, "suborgs", newValue);
-                setSubOrgModalOpen(false);
-                setSelectedUserModalOpen(false);
-            }}
-            disabled={selectedUser?.id === userdata?.id}
-        />
-    );
 
     const getUsers = () => {
         fetch(globalUrl + "/api/v1/getusers", {
@@ -1082,8 +1117,6 @@ const UserManagmentTab = memo((props) => {
           });
     };
 
-	var previousreferrer = ""
-	var nextreferrer = ""
     const logview = logsViewModal ? (
         <Dialog
           open={logsViewModal}
@@ -1130,23 +1163,26 @@ const UserManagmentTab = memo((props) => {
                 onChange={(event) => {
                   setIpSelected(event.target.value);
                   getLogs(event.target.value, userLogViewing.id);
+
+
                 }}
               >
                 {(() => {
                   const uniqueIPs = new Set();
-				  console.log("Login info: ", userLogViewing.login_info)
 
                   return userLogViewing.login_info.map((data, index) => {
-					console.log("Data: ", data)
-                    if (data.ip.includes("127.0.0.1") || uniqueIPs.has(data.ip)) {
-                      return null
+                    if (
+                      data.ip.includes("127.0.0.1") ||
+                      uniqueIPs.has(data.ip)
+                    ) {
+                      return null;
                     }
 
-                    uniqueIPs.add(data.ip)
+                    uniqueIPs.add(data.ip);
 
                     return (
                       <MenuItem key={index} value={data.ip}>
-                        {data?.timestamp ? new Date(data.timestamp * 1000).toLocaleString() : "N/A"} - {data?.ip} 
+                        {data.ip}
                       </MenuItem>
                     );
                   });
@@ -1193,13 +1229,12 @@ const UserManagmentTab = memo((props) => {
                       minWidth: 700,
                       maxWidth: 700,
                       overflow: "hidden",
-                      marginLeft: 50,
+                      marginLeft: 10,
                     }}
                   />
                 </ListItem>
               {logs.map((data, index) => {
-				  previousreferrer = nextreferrer
-				  nextreferrer = data.referer
+                  //console.log("LOG: ", data)
 
                   return (
                 // redirect user to logs
@@ -1208,8 +1243,6 @@ const UserManagmentTab = memo((props) => {
                   key={index}
                   style={{
                     backgroundColor: index % 2 === 0 ? "#1f2023" : "#27292d",
-					paddingTop: data.referer !== previousreferrer ? 50 : 0,
-					borderTop: data.referer !== previousreferrer  ? `1px solid rgba(255,255,255,0.3)` : "none",
                   }}
                 >
                   <ListItemText
@@ -1230,25 +1263,22 @@ const UserManagmentTab = memo((props) => {
                     }}
                   />
                   <ListItemText
-                    primary={data.referer.replace("https://shuffler.io", "")}
+                    primary={data.referer}
                     style={{
                       minWidth: 300,
                       maxWidth: 300,
                       overflow: "hidden",
                     }}
                   />
-				  <Link to={data.url} target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor }}>
-					  <ListItemText
-						primary={data.url.replace("https://shuffler.io", "")}
-						style={{
-						  minWidth: 700,
-						  maxWidth: 700,
-						  overflow: "hidden",
-						  marginLeft: 50,
-						  backgroundColor: data.url.includes("/api/v1/register") ? "#d52b2b" : "inherit",
-						}}
-					  />
-					</Link>
+                  <ListItemText
+                    primary={data.url}
+                    style={{
+                      minWidth: 700,
+                      maxWidth: 700,
+                      overflow: "hidden",
+                      marginLeft: 10,
+                    }}
+                  />
                 </ListItem>
               )})}
             </List>
@@ -1260,7 +1290,6 @@ const UserManagmentTab = memo((props) => {
         <div style={{ width: "100%", minHeight: 1100, boxSizing: 'border-box', padding: "27px 10px 19px 27px", height:"100%", backgroundColor: theme.palette.platformColor, borderTopRightRadius: '8px', borderBottomRightRadius: 8, borderLeft: "1px solid #494949", }}>
             {modalView}
             {editUserModal}
-            {subOrgManagementDialog}
             {logview}
             <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
             <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>

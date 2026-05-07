@@ -330,7 +330,7 @@ const LicencePopup = (props) => {
       body: JSON.stringify({
         org_id: selectedOrganization.id,
         editing: "subscription_update",
-        subscription_index: subscription.id,
+        subscription_index: 0,
         subscription: subscription,
       }),
       mode: "cors",
@@ -554,7 +554,7 @@ const LicencePopup = (props) => {
         const payload = {
           org_id: selectedOrganization.id,
           editing: "subscription_update",
-          subscription_index: subscription.id,
+          subscription_index: 0,
           subscription: {
             ...form,
             // Ensure backend gets array of features
@@ -694,15 +694,6 @@ const LicencePopup = (props) => {
               fullWidth
               error={!!errors.amount}
               helperText={errors.amount || "0 for Free"}
-            />
-
-            <TextField
-              label="Stripe Sub ID"
-              value={form.reference || ""}
-              onChange={(e) => setForm({ ...form, reference: e.target.value })}
-              fullWidth
-              placeholder="sub_1234567890abcdef"
-              helperText="Stripe subscription reference ID"
             />
 
             <TextField
@@ -1051,17 +1042,6 @@ const LicencePopup = (props) => {
         : localSub?.currency + localSub?.amount
       : "Free";
 
-    const calculateAppRunsFromPrice = (amount) => {
-      const price = parseInt(amount) || 0;
-      if (price === 0) return 2000; // Free plan
-      
-      // Calculate Stripe quantity from price ($32 per unit)
-      const stripeQuantity = Math.max(1, Math.round(price / 32));
-      
-      // Backend logic: (quantity * 10000) + 2000
-      return (stripeQuantity * 10000) + 2000;
-    };
-
     if (typeof window === "undefined" || window.location === undefined) {
       return null;
     }
@@ -1272,7 +1252,7 @@ const LicencePopup = (props) => {
                     </IconButton>
                   </Tooltip>
                 )}
-                {(isPaidPlan || localSub?.amount === "0") ? (
+                {isPaidPlan ? (
                   <div
                     style={{
                       display: "flex",
@@ -1356,37 +1336,21 @@ const LicencePopup = (props) => {
             ) : null}
 
             {localSub.cancellationdate !== 0 ? (
-                <Typography
-                  variant="caption"
-                  color="textSecondary"
-                  style={{ marginTop: 2 }}
-                >
-                  {`Cancelled on ${new Date(
-                    (localSub.cancellationdate || localSub.CancellationDate) *
-                      1000
-                  ).toLocaleDateString(undefined, {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}`}
-                </Typography>
+              <Typography
+                variant="caption"
+                color="textSecondary"
+                style={{ marginTop: 2 }}
+              >
+                {`Cancelled on ${new Date(
+                  (localSub.cancellationdate || localSub.CancellationDate) *
+                    1000
+                ).toLocaleDateString(undefined, {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}`}
+              </Typography>
             ) : null}
-
-            {localSub.amount !== "0" && (
-            <Typography
-                  variant="caption"
-                  color="textSecondary"
-                  style={{ marginTop: 2 }}
-                >
-                  {`Purchased on ${new Date(
-                    (localSub.startdate || localSub.Startdate) * 1000
-                  ).toLocaleDateString(undefined, {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}`}
-            </Typography>
-            )}
 
             <Divider
               style={{
@@ -1400,50 +1364,39 @@ const LicencePopup = (props) => {
                 (isCloud || (!isCloud && selectedOrganization.cloud_sync)) && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <Typography variant="body2" color="textSecondary" style={{}}>
-                  {localSub?.active ? "App Runs" : "App Runs included in plan"}
+                  App Runs
                 </Typography>
-                {localSub?.active ? (
-                  // Active plan - show current usage and progress bar
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    <Typography
-                      variant="body1"
-                      style={{ minWidth: 140, fontWeight: 600 }}
-                    >
-                      {usedAppRuns?.toLocaleString?.() || usedAppRuns} of{" "}
-                      {appRunsLimit?.toLocaleString?.() || appRunsLimit}
-                    </Typography>
-                    <Box sx={{ width: "100%" }}>
-                      <LinearProgress
-                        variant="determinate"
-                        value={appRunsPct}
-                        sx={{
-                          height: 6,
-                          borderRadius: 6,
-                          backgroundColor: "#3a3a3a",
-                          "& .MuiLinearProgress-bar": {
-                            backgroundColor: "#ff8544",
-                            borderRadius: 6,
-                          },
-                        }}
-                      />
-                    </Box>
-                  </div>
-                ) : (
-                  // Inactive plan - show only the plan's app runs capacity
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
                   <Typography
                     variant="body1"
-                    style={{ minWidth: 140, fontWeight: 600, fontSize: 18 }}
+                    style={{ minWidth: 140, fontWeight: 600 }}
                   >
-                    {calculateAppRunsFromPrice(localSub.amount)?.toLocaleString?.() || calculateAppRunsFromPrice(localSub.amount)}
+                    {usedAppRuns?.toLocaleString?.() || usedAppRuns} of{" "}
+                    {appRunsLimit?.toLocaleString?.() || appRunsLimit}
                   </Typography>
-                )}
+                  <Box sx={{ width: "100%" }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={appRunsPct}
+                      sx={{
+                        height: 6,
+                        borderRadius: 6,
+                        backgroundColor: "#3a3a3a",
+                        "& .MuiLinearProgress-bar": {
+                          backgroundColor: "#ff8544",
+                          borderRadius: 6,
+                        },
+                      }}
+                    />
+                  </Box>
+                </div>
               </div>
               )
             }
@@ -1527,6 +1480,7 @@ const LicencePopup = (props) => {
               }}
             >
               {isCloud &&
+              localSub.name.toLowerCase().includes("scale") &&
               localSub?.reference &&
               localSub.reference.length > 0 ? (
                 <Button
@@ -1536,11 +1490,8 @@ const LicencePopup = (props) => {
                   onClick={() => {
                     const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}/manage_subscription`;
                     fetch(url, {
-                      method: "POST",
+                      method: "GET",
                       credentials: "include",
-                      body: JSON.stringify({
-                        subscription_id: localSub.reference
-                      }),
                       headers: { "Content-Type": "application/json" },
                     })
                       .then((r) => r.json())
@@ -1624,8 +1575,8 @@ const LicencePopup = (props) => {
           display: "flex",
         }}
       >
-        <Grid item maxWidth={licensePopup ? 400 : 800} style={{ display: "flex", flexDirection: "row", gap: 16, flexWrap: "wrap" }}>
-        {isLoading ? (
+        <Grid item maxWidth={licensePopup ? 400 : 450}>
+          {isLoading ? (
             <SubscriptionSkeleton />
           ) : (
             <>
@@ -1633,14 +1584,8 @@ const LicencePopup = (props) => {
               selectedOrganization.subscriptions !== null &&
               selectedOrganization.subscriptions.length > 0
                 ? (selectedOrganization.subscriptions || [])
-                      .slice()
-                      .sort((a, b) => {
-                        // Active subscriptions first, then inactive
-                        if (a.active && !b.active) return -1;
-                        if (!a.active && b.active) return 1;
-                        return 0;
-                      })
-                      .map((sub, index) => {
+                    .slice()
+                    .map((sub, index) => {
                       return (
                         <SubscriptionObject
                           key={sub.id || index}
