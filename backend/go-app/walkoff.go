@@ -300,8 +300,18 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	var env *shuffle.Environment
 	found := false
+	//for i := range envs {
+	//	if envs[i].Name == environment {
+	//		env = &envs[i]
+	//		found = true
+	//		break
+	//	}
+	//}
+
+	parsedEnvName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-"))
 	for i := range envs {
-		if envs[i].Name == environment {
+		parsedInnerName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(envs[i].Name, " ", "-"), "_", "-"))
+		if parsedInnerName == parsedEnvName {
 			env = &envs[i]
 			found = true
 			break
@@ -2654,7 +2664,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, appId, body, runValidationAction, decisionId)
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, appId, body, runValidationAction, decisionId)
 	if appId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)

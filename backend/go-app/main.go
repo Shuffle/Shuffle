@@ -4343,7 +4343,8 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 				return
 			}
 
-			go shuffle.HandleAiAgentExecutionStart(parentExec, agentNode, false)
+			callerName := "deployAppShuffleOnprem"
+			go shuffle.HandleAiAgentExecutionStart(parentExec, agentNode, false, callerName)
 
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s", "mode": "hybrid"}`, parentExec.ExecutionId, parentExec.Authorization)))
@@ -4351,7 +4352,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 
 		} else {
 			//standalone mode
-			workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, "agent_starter", marshalledAction, false, "")
+			workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent_starter", marshalledAction, false, "")
 			if err != nil {
 				log.Printf("[ERROR] Failed to prepare standalone agent execution: %s", err)
 				resp.WriteHeader(500)
@@ -4367,7 +4368,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// For non-agent calls (MCP or other apps): continue with existing flow
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, "agent", marshalledAction, false, "")
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent", marshalledAction, false, "")
 	if fileId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
