@@ -6,33 +6,18 @@ Shuffle Automation
 
 </h1><h4 align="center">
   
-  <p>Deploy<p/>
-  <div style="display: flex">
-    <a
-      href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
-      target="_blank"
-      style="text-decoration: none; display: flex; align-items: center; gap: 8px;"
-    >
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg"
-        height="20"
-        alt="GCP install of Shuffle - Google Cloud Platform"
-      />      
-    </a>
-    <a
-      href="https://aws.amazon.com/marketplace/pp/prodview-typ7upg6kwntk"
-      target="_blank"
-      style="text-decoration: none; display: flex; align-items: center; gap: 24px;"
-    >
-      <img
-        src="https://raw.githubusercontent.com/Shuffle/Shuffle/refs/heads/main/frontend/public/icons/AWS-Logo.svg"
-        height="20"
-        style="background-color: white;"
-        alt="AWS install of Shuffle - Amazon Web Services"
-      />      
-    </a>
-      
-  </div>
+  <p>Deploy On<p/>
+<p align="center">
+  <a href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle">
+    <img src="https://github.com/user-attachments/assets/37858273-eaeb-42a9-b228-a425026ca82d"
+         height="80"/>
+  </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://aws.amazon.com/marketplace/pp/prodview-typ7upg6kwntk">
+    <img src="https://github.com/user-attachments/assets/250e00d7-2a23-4b4e-95e1-5db4db1f7864"
+         height="80"/>
+  </a>
+</p>
 
 
 
