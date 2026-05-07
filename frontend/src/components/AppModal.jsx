@@ -35,7 +35,7 @@ import { Context } from '../context/ContextApi.jsx';
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "c8f882473ff42d41158430be09ec2b4e"
+  "33e4e3564f4f060e96e0531957bed552"
 );;
 
 const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {

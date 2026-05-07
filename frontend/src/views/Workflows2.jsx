@@ -134,7 +134,7 @@ import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/Angul
 import Licensed from "../components/Licensed.jsx";
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
+const searchClient = algoliasearch("JNSS5CFDZZ", "33e4e3564f4f060e96e0531957bed552");
 
 const svgSize = 24;
 const imagesize = 23;
@@ -633,10 +633,13 @@ export const GetIconInfo = (action) => {
             svgViewBox: "0 0 48 48",
         },
         search: {
-            icon: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+            icon: "M21 29C25.4183 29 29 25.4183 29 21C29 16.5817 25.4183 13 21 13C16.5817 13 13 16.5817 13 21C13 25.4183 16.5817 29 21 29Z M33 33L26.657 26.657",
             iconColor: "white",
-            iconBackgroundColor: "green",
             originalIcon: <SearchIcon />,
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
+            iconBackgroundColor: "rgba(242, 101, 59, 1)",
+            fillGradient: ["rgba(242, 101, 59, 1)", "rgba(242, 101, 59, 1)"],
         },
 		eradication: {
             icon: "",
@@ -1211,6 +1214,16 @@ const Workflows2 = (props) => {
     };
 
     const handleCreateWorkflow = () => {
+
+        if (isCloud) {
+            ReactGA.event({
+                category: "Workflow",
+                action: "Create_Workflow",
+                label: "Create New Workflow Button"
+            });
+        }
+
+
         setModalOpen(true)
         setIsEditing(false)
         setNewWorkflowName("")
@@ -2932,6 +2945,16 @@ const Workflows2 = (props) => {
     }
 
     const deleteWorkflow = (id, bulk) => {
+        // remove workflow from local state immediately
+        setWorkflows(prev => {
+            const updated = (prev || []).filter(wf => wf.id !== id);
+            try {
+                localStorage.setItem("workflows", JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+        });
+        setFilteredWorkflows(prev => (prev || []).filter(wf => wf.id !== id));
+
         fetch(globalUrl + "/api/v1/workflows/" + id, {
             method: "DELETE",
             headers: {
@@ -3158,6 +3181,14 @@ const Workflows2 = (props) => {
                     sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     disabled={isDistributed}
                     onClick={(event) => {
+        				if (isCloud) {
+        				    ReactGA.event({
+        				        category: "Workflow",
+        				        action: "Edit_Workflow_Details",
+        				        label: "Editing a workflow from the workflow list",
+        				    });
+        				}
+
                         event.stopPropagation()
                         if (data.actions !== undefined && data.actions !== null && data.actions.length > 0 && data.image !== "") {
                             setEditing(data)
@@ -3451,6 +3482,15 @@ const Workflows2 = (props) => {
 
 
                             <Tooltip arrow
+								onClick={() => {
+									if (isCloud) { 
+										ReactGA.event({
+											category: "Workflow",
+											action: "View_Page",
+											label: "Workflow Editor",
+										});
+									}
+								}}
                                 onMouseEnter={() => {
                                     /*
                                     if (data.image === undefined || data.image === null || data.image === "" && !loadingWorkflows.includes(data.id)) {
@@ -4048,7 +4088,7 @@ const Workflows2 = (props) => {
 
         setLoadWorkflowsModalOpen(false);
 
-        if (workflowids.length > 0) {
+        if (workflowids?.length > 0) {
             setHighlightIds(workflowids)
         }
     };
@@ -5751,7 +5791,7 @@ const Workflows2 = (props) => {
                                     view === "grid" && currTab !== 2 ? (
                                         <>
 											{currTab === 4 && backgroundWorkflows.map((data, index) => {
-												if (data.triggers.length === 0) {
+												if (data?.triggers === null || data?.triggers === undefined || data?.triggers?.length === 0) {
 													return null
 												}
 

@@ -92,6 +92,11 @@ const AppStats = (defaultprops) => {
 		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
 		const dailyStats = inputdata[statKey]
 		if (dailyStats === undefined || dailyStats === null) {
+			setAppruns(undefined)
+			setWorkflowRuns(undefined)
+			setSubflowRuns(undefined)
+			setChildOrgsAppRuns(undefined)
+			setApprunCosts(undefined)
 			return
 		}
 
@@ -375,6 +380,17 @@ const AppStats = (defaultprops) => {
 		if (!syncStats && (statistics[statKey] === undefined || statistics[statKey] === null)) {
 			setFilteredStatistics(statistics)
 			setMonthlyAppRunsParent(statistics["monthly_app_executions"] ?? 0)
+			return
+		}
+
+		if (syncStats && (statistics[statKey] === undefined || statistics[statKey] === null)) {
+			setOnpremAppRuns(0)
+			setFilteredStatistics(statistics)
+			setAppruns(undefined)
+			setWorkflowRuns(undefined)
+			setSubflowRuns(undefined)
+			setChildOrgsAppRuns(undefined)
+			setApprunCosts(undefined)
 			return
 		}
 

@@ -473,6 +473,7 @@ const Docs = (defaultprops) => {
     const [hasRedirected, setHasRedirected] = useState(false)
     var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
     const searchFieldRef = useRef(null);
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
 
     const handleDocRedirectForPartners = () => {
         if (hasRedirected) return;
@@ -1279,6 +1280,7 @@ const Docs = (defaultprops) => {
             overflow: "hidden",
             paddingBottom: 100,
             marginLeft: mobile ? 0 : 50,
+            marginTop: 50,
             textAlign: "center",
             margin: "auto",
             marginTop: 50,
@@ -1289,6 +1291,9 @@ const Docs = (defaultprops) => {
 			{showPartnerLogo === true ? null : 
 				<div style={{ display: "flex", marginTop: 25, }}>
 					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/contact?category=support" />
+					{isCloud ? 
+					<CustomButton title="Support LLM" icon=<img src={theme.palette.singulBlackWhite} style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/chat" />
+					: null}
 					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
 				</div>
 			}
@@ -1566,9 +1571,21 @@ const Docs = (defaultprops) => {
                             </Button>
                         </Tooltip>
                     )}
+					<div />
+					{isCloud && window.location.pathname !== "/docs" ? 
+						 <Link to="/chat">
+							 <Button 
+								variant="outlined" 
+								color="secondary"
+								style={{marginBottom: 20, }}
+							>
+								Support LLM
+							 </Button>
+						 </Link>
+					 : null}
                     {tocLines.length > 0 ?
                         (
-                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>
+                            <h4 style={{ marginTop: 20, fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>
 
                         ) : null}
                     <div

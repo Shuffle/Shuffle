@@ -193,6 +193,40 @@ func restoreActionConfig(ctx context.Context, executionID string, action *shuffl
 	}
 }
 
+func getAppProxyValue(primaryKey, fallbackKey string) string {
+	value := strings.TrimSpace(os.Getenv(primaryKey))
+	if len(value) > 0 {
+		return value
+	}
+
+	return strings.TrimSpace(os.Getenv(fallbackKey))
+}
+
+func appendAppProxyEnv(env []string) []string {
+	httpProxy := getAppProxyValue("HTTP_PROXY", "SHUFFLE_APP_HTTP_PROXY")
+	httpsProxy := getAppProxyValue("HTTPS_PROXY", "SHUFFLE_APP_HTTPS_PROXY")
+	noProxy := getAppProxyValue("NO_PROXY", "SHUFFLE_APP_NO_PROXY")
+	noProxyLower := getAppProxyValue("no_proxy", "SHUFFLE_APP_no_proxy")
+
+	if len(httpProxy) > 0 {
+		env = append(env, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
+	}
+
+	if len(httpsProxy) > 0 {
+		env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", httpsProxy))
+	}
+
+	if len(noProxy) > 0 {
+		env = append(env, fmt.Sprintf("NO_PROXY=%s", noProxy))
+	}
+
+	if len(noProxyLower) > 0 {
+		env = append(env, fmt.Sprintf("no_proxy=%s", noProxyLower))
+	}
+
+	return env
+}
+
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
 	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
@@ -1784,10 +1818,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 			//log.Printf("APPENDING PROXY TO THE APP!")
-			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
-			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
-			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
-			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
+			env = appendAppProxyEnv(env)
 		}
 
 		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -2280,11 +2311,6 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		}
 	}
 
-	if len(data) == 0 {
-		log.Printf("[WARNING] Stream result missing execution ID and authorization; injecting them from workflow execution")
-		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
-	}
-
 	key := fmt.Sprintf("%s:%s", workflowExecution.ExecutionId, subflowId)
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	usedCache := false
@@ -2335,6 +2361,11 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		log.Printf("[DEBUG][%s] Subflow poll backoff attempt %d for %s (cache hit), sleeping %s", workflowExecution.ExecutionId, attempt, subflowId, delay)
 		time.Sleep(delay)
 		return errors.New("Subflow status not found yet (cache)")
+	}
+
+	if len(data) == 0 {
+		log.Printf("[WARNING] Stream result missing execution ID and authorization; injecting them from workflow execution")
+		data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)
 	}
 
 	req, err := http.NewRequest(
@@ -2599,6 +2630,112 @@ func arrayContains(visited []string, id string) bool {
 	}
 
 	return found
+}
+
+func isTerminalResultStatus(status string) bool {
+	return status == "SUCCESS" || status == "FINISHED" || status == "FAILURE" || status == "ABORTED"
+}
+
+func hasWaitForResultParameter(params []shuffle.WorkflowAppActionParameter) bool {
+	for _, param := range params {
+		if param.Name == "check_result" && strings.ToLower(param.Value) == "true" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func getSubflowBarrierActionIDs(workflowExecution shuffle.WorkflowExecution) map[string]struct{} {
+	actionIDs := map[string]struct{}{}
+
+	for _, action := range workflowExecution.Workflow.Actions {
+		if action.AppName != "shuffle-subflow" && action.AppName != "shuffle-subflow-v2" && action.AppName != "Shuffle Workflow" {
+			continue
+		}
+
+		if !hasWaitForResultParameter(action.Parameters) {
+			continue
+		}
+
+		actionIDs[action.ID] = struct{}{}
+	}
+
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		if trigger.AppName != "shuffle-subflow" && trigger.AppName != "shuffle-subflow-v2" && trigger.AppName != "Shuffle Workflow" {
+			continue
+		}
+
+		if !hasWaitForResultParameter(trigger.Parameters) {
+			continue
+		}
+
+		actionIDs[trigger.ID] = struct{}{}
+	}
+
+	return actionIDs
+}
+
+func getSubflowBarrierProgress(workflowExecution shuffle.WorkflowExecution) (int, int, int) {
+	barrierActions := getSubflowBarrierActionIDs(workflowExecution)
+	expected := len(barrierActions)
+	if expected == 0 {
+		return 0, 0, 0
+	}
+
+	terminalByAction := map[string]string{}
+	for _, result := range workflowExecution.Results {
+		if _, ok := barrierActions[result.Action.ID]; !ok {
+			continue
+		}
+
+		if !isTerminalResultStatus(result.Status) {
+			continue
+		}
+
+		terminalByAction[result.Action.ID] = result.Status
+	}
+
+	completed := len(terminalByAction)
+	failed := 0
+	for _, status := range terminalByAction {
+		if status == "FAILURE" || status == "ABORTED" {
+			failed += 1
+		}
+	}
+
+	return expected, completed, failed
+}
+
+func enforceSubflowBarrier(workflowExecution *shuffle.WorkflowExecution) (int, int, int) {
+	if workflowExecution == nil {
+		return 0, 0, 0
+	}
+
+	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "ABORTED" {
+		return 0, 0, 0
+	}
+
+	expected, completed, failed := getSubflowBarrierProgress(*workflowExecution)
+	if expected == 0 {
+		return 0, 0, 0
+	}
+
+	if completed < expected {
+		workflowExecution.Status = "WAITING"
+		return expected, completed, failed
+	}
+
+	if workflowExecution.Status == "WAITING" {
+		if failed > 0 {
+			workflowExecution.Status = "FAILURE"
+			workflowExecution.Result = fmt.Sprintf("Subflow barrier failed: %d of %d subflows failed or aborted", failed, expected)
+		} else {
+			workflowExecution.Status = "EXECUTING"
+		}
+	}
+
+	return expected, completed, failed
 }
 
 func getResult(workflowExecution shuffle.WorkflowExecution, id string) shuffle.ActionResult {
@@ -3712,10 +3849,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
-		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = appendAppProxyEnv(serviceSpec.TaskTemplate.ContainerSpec.Env)
 	}
 
 	overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
@@ -4236,6 +4370,10 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 	callbackUrl := os.Getenv("SHUFFLE_WORKER_SERVER_URL")
 	if len(callbackUrl) > 0 {
 		parsedRequest.BaseUrl = callbackUrl
+		if parsedRequest.Action.AppName == "shuffle-subflow" || parsedRequest.Action.AppName == "shuffle-subflow-v2" || parsedRequest.Action.AppName == "User Input" {
+			parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+			//parsedRequest.Url = parsedRequest.BaseUrl
+		}
 	} else if len(hostname) > 0 {
 		// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
 		// This means running with VIP instead.
@@ -4462,10 +4600,7 @@ func baseDeploy() {
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 			//log.Printf("APPENDING PROXY TO THE APP!")
-			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
-			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
-			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
-			env = append(env, fmt.Sprintf("no_proxy=%s", os.Getenv("no_proxy")))
+			env = appendAppProxyEnv(env)
 		}
 
 		if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
@@ -4932,7 +5067,7 @@ func main() {
 	}
 }
 
-func checkUnfinished(resp http.ResponseWriter, request *http.Request, execRequest shuffle.OrborusExecutionRequest) {
+func checkUnfinished(execRequest shuffle.OrborusExecutionRequest) {
 	// Meant as a function that periodically checks whether previous executions have finished or not.
 	// Should probably be based on executedIds and finishedIds
 	// Schedule a check in the future instead?
@@ -4961,38 +5096,16 @@ func checkUnfinished(resp http.ResponseWriter, request *http.Request, execReques
 	sendResult(*exec, data)
 }
 
-func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("[WARNING] Failed reading body for stream result queue")
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	//log.Printf("[DEBUG] In run execution with body length %d", len(body))
-	var execRequest shuffle.OrborusExecutionRequest
-	err = json.Unmarshal(body, &execRequest)
-	if err != nil {
-		log.Printf("[WARNING] Failed shuffle.WorkflowExecution unmarshaling: %s", err)
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
+func processRunExecution(execRequest shuffle.OrborusExecutionRequest) {
 	// Checks if a workflow is done 30 seconds later, and sends info to backend no matter what
 	go func() {
 		time.Sleep(time.Duration(30) * time.Second)
-		checkUnfinished(resp, request, execRequest)
+		checkUnfinished(execRequest)
 	}()
 	window.AddEvent(time.Now())
 
 	ctx := context.Background()
 
-	// FIXME: This should be PER EXECUTION
-	//if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
-	// Is it ok if these are standard? Should they be update-able after launch? Hmm
 	if len(execRequest.HTTPProxy) > 0 {
 		log.Printf("[DEBUG] Sending proxy info to child process")
 		os.Setenv("SHUFFLE_PASS_APP_PROXY", execRequest.ShufflePassProxyToApp)
@@ -5022,9 +5135,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		baseUrl = execRequest.BaseUrl
 	}
 
-	// Setting to just have an auth available.
 	if len(execRequest.Authorization) > 0 && len(os.Getenv("AUTHORIZATION")) == 0 {
-		//log.Printf("[DEBUG] Sending proxy info to child process")
 		os.Setenv("AUTHORIZATION", execRequest.Authorization)
 	}
 
@@ -5037,71 +5148,47 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	)
 
 	if err != nil {
-		log.Printf("[ERROR][%s] Failed to create a new request", execRequest.ExecutionId)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed to create stream results request: %s", execRequest.ExecutionId, err)
 		return
 	}
 
 	client := shuffle.GetExternalClient(streamResultUrl)
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR] Failed making request (2): %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed making stream results request: %s", execRequest.ExecutionId, err)
 		return
 	}
 
 	defer newresp.Body.Close()
-	body, err = ioutil.ReadAll(newresp.Body)
+	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR][%s] Failed reading body (2): %s", execRequest.ExecutionId, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed reading stream results response body: %s", execRequest.ExecutionId, err)
 		return
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR][%s] Bad statuscode: %d, %s", execRequest.ExecutionId, newresp.StatusCode, string(body))
-
-		if strings.Contains(string(body), "Workflowexecution is already finished") {
-			log.Printf("[DEBUG] Shutting down (19)")
-			//shutdown(workflowExecution, "", "", true)
-		}
-
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad statuscode: %d"}`, newresp.StatusCode)))
+		log.Printf("[ERROR][%s] Bad statuscode from stream results: %d, %s", execRequest.ExecutionId, newresp.StatusCode, string(body))
 		return
 	}
 
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
-		log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		log.Printf("[ERROR][%s] Failed workflowExecution unmarshal: %s", execRequest.ExecutionId, err)
 		return
 	}
 
-	//err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
-		log.Printf("[ERROR] Failed initializing execution saving for %s: %s", workflowExecution.ExecutionId, err)
+		log.Printf("[ERROR][%s] Failed initializing execution saving: %s", workflowExecution.ExecutionId, err)
 	}
 
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
-		log.Printf("[DEBUG] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
-		log.Printf("[DEBUG] Shutting down (20)")
-
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status for execution - already %s. Returning with 200 OK"}`, workflowExecution.Status)))
+		log.Printf("[DEBUG] Workflow %s is finished before dispatch. Exiting async run setup.", workflowExecution.ExecutionId)
 		return
 	}
 
-	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
-
 	extra := 0
 	for _, trigger := range workflowExecution.Workflow.Triggers {
-		//log.Printf("Appname trigger (0): %s", trigger.AppName)
 		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
 			extra += 1
 		}
@@ -5110,14 +5197,9 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO][%s] (1) Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 
 	if workflowExecution.Status != "EXECUTING" {
-		log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
-		log.Printf("[DEBUG] Shutting down (38)")
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status %s for the workflow execution %s"}`, workflowExecution.Status, workflowExecution.ExecutionId)))
+		log.Printf("[WARNING][%s] Exiting async run as execution status is %s", workflowExecution.ExecutionId, workflowExecution.Status)
 		return
 	}
-
-	//log.Printf("[DEBUG] Starting execution :O")
 
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	execData, err := json.Marshal(workflowExecution)
@@ -5133,15 +5215,36 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	err = executionInit(workflowExecution)
 	if err != nil {
 		log.Printf("[DEBUG][%s] Shutting down (30) - Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in execution init: %s"}`, err)))
 		return
-		//shutdown(workflowExecution, "", "", true)
 	}
 
 	handleExecutionResult(workflowExecution)
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed reading body for stream result queue")
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	//log.Printf("[DEBUG] In run execution with body length %d", len(body))
+	var execRequest shuffle.OrborusExecutionRequest
+	err = json.Unmarshal(body, &execRequest)
+	if err != nil {
+		log.Printf("[WARNING] Failed shuffle.WorkflowExecution unmarshaling: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+	resp.Write([]byte(`{"success": true, "accepted": true}`))
+
+	go processRunExecution(execRequest)
 }
 
 func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {

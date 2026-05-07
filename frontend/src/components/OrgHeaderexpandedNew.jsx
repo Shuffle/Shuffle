@@ -710,7 +710,8 @@ const OrgHeaderexpandedNew = (props) => {
 						/>
 					</span>
 				</Grid>
-				{!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org || null || selectedOrganization?.creator_org?.length > 0 ? null :
+
+				{!userdata?.support === true && (!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org === null || selectedOrganization?.creator_org?.length > 0) ? null :
 				<CloudSyncTab
 					globalUrl={globalUrl}
 					userdata={userdata}
@@ -1100,6 +1101,9 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		} else if (regiontag === "au") {
 			regiontag = "AUS";
 			regionCode = "au"
+		} else if (regiontag === "uk") {
+			regiontag = "UK";
+			regionCode = "gb"
 		}
 	}
 
