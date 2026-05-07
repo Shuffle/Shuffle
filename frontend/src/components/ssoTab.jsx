@@ -1,16 +1,16 @@
 import { useEffect, useContext } from "react";
 import React from "react";
-import {
-    Typography,
-    Switch,
-    Button,
-    Tooltip,
-    TextField,
-    Grid,
+import { 
+    Typography, 
+    Switch, 
+    Button, 
+    Tooltip, 
+    TextField, 
+    Grid, 
     Checkbox
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import theme from "../theme.jsx";
 import { toast } from "react-toastify";
 import { Context } from "../context/ContextApi.jsx";
@@ -28,13 +28,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 
     // Check if user is admin
     const isAdmin = userdata?.active_org?.role === "admin" || userdata?.support === true;
-
-    // Read region_url override from URL params (only allow shuffler.io domains)
-    const [searchParams] = useSearchParams();
-    const rawRegionUrl = searchParams.get("region_url");
-    const regionUrlOverride = rawRegionUrl && rawRegionUrl.includes("shuffler.io") ? rawRegionUrl : null;
-    const effectiveGlobalUrl = regionUrlOverride || globalUrl;
-
+    
     // State for tracking user SSO connection status
     const [users, setUsers] = React.useState([]);
     const [userSSOConnected, setUserSSOConnected] = React.useState(false);
@@ -115,7 +109,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
     // Function to fetch users and check current user's SSO status
     const checkUserSSOStatus = () => {
         setCheckingSSOStatus(true);
-        fetch(effectiveGlobalUrl + "/api/v1/getusers", {
+        fetch(globalUrl + "/api/v1/getusers", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -315,7 +309,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	};	
 	
 	const HandleTestSSO = () => {
-		const url = `${effectiveGlobalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
+		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
 		const data = {
 			org_id: selectedOrganization?.id,
 			sso: true,
@@ -372,7 +366,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	};
 
 	const HandleDisconnectSSO = () => {
-		const url = `${effectiveGlobalUrl}/api/v1/disconnect_sso`;
+		const url = `${globalUrl}/api/v1/disconnect_sso`;
 		const data = {
 			org_id: selectedOrganization?.id,
 		};
@@ -450,11 +444,6 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 								: "Connect your account with this org's SSO!"
 						}
 					</Typography>
-					{regionUrlOverride && (
-						<Typography variant="body2" style={{ margin: "5px 0px 5px 0px", fontSize: 14, color: "#f85a3e" }}>
-							Using region override: {regionUrlOverride}
-						</Typography>
-					)}
 					<Tooltip
 						title={
 						checkingSSOStatus

@@ -52,7 +52,6 @@ import {
 	Cancel as CancelIcon,
 	Shield as ShieldIcon,
 	Cancel as XCircleIcon,
-	LockOutlined as LockIcon,
 	FlashOn as ZapIcon,
 	People as UsersIcon,
 	FmdGoodOutlined as FmdGoodOutlinedIcon,
@@ -204,7 +203,7 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
             >
                 {isProdStatusOn
                     ? 'Your organization has full access to all enterprise features and capabilities.'
-                    : 'Your organization is running on the open-source plan. Upgrade to Enterprise to remove limits and unlock advanced capabilities.'}
+                    : 'View your current limits and available features. Upgrade to unlock enterprise capabilities.'}
             </Typography>
 
             {/* Features Grid */}
@@ -224,8 +223,8 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
                     })
                     .map((feature, index) => {
                     const Icon = feature.icon;
-                    const isAvailable = isProdStatusOn;
-                    const statusColor = isAvailable ? colors.success : colors.warning;
+                    const isAvailable = isProdStatusOn && feature.isActive;
+                    const statusColor = isAvailable ? colors.success : colors.disabled;
                     const bgColor = isAvailable ? themeMode === "dark" ? "#212121" : "#ffffff" : colors.disabledBg;
 
                     return (
@@ -236,34 +235,19 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
                                 alignItems: 'center',
                                 gap: 14,
                                 padding: '14px 16px',
-                                paddingLeft: !isAvailable ? 20 : 16,
                                 borderRadius: 10,
                                 background: bgColor,
                                 border: `1px solid ${isAvailable ? colors.success + '40' : colors.border}`,
                                 transition: 'all 0.2s',
-                                position: 'relative',
-                                overflow: 'hidden',
                             }}
                         >
-                            {!isAvailable && (
-                                <div style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    bottom: 0,
-                                    width: 3,
-                                    background: colors.warning,
-                                    borderRadius: '10px 0 0 10px',
-                                }} />
-                            )}
-
                             {/* Icon */}
                             <div
                                 style={{
                                     width: 40,
                                     height: 40,
                                     borderRadius: 8,
-                                    background: isAvailable ? colors.success + '20' : `${colors.warning}20`,
+                                    background: isAvailable ? colors.success + '20' : colors.disabledBg,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -280,7 +264,7 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
                                         fontSize: 15,
                                         fontWeight: 600,
                                         color: colors.textPrimary,
-                                        marginBottom: 3,
+                                        marginBottom: 4,
                                     }}
                                 >
                                     {feature.label}
@@ -288,7 +272,7 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
                                 <div
                                     style={{
                                         fontSize: 13,
-                                        color: !isAvailable ? colors.warning : colors.textSecondary,
+                                        color: colors.textSecondary,
                                         lineHeight: 1.4,
                                     }}
                                 >
@@ -301,8 +285,8 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
                                     style={{ color: colors.success, fontSize: 20, flexShrink: 0 }}
                                 />
                             ) : (
-                                <LockIcon
-                                    style={{ color: colors.warning, fontSize: 20, flexShrink: 0 }}
+                                <XCircleIcon
+                                    style={{ color: colors.disabled, fontSize: 20, flexShrink: 0 }}
                                 />
                             )}
                         </div>
@@ -320,322 +304,79 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
             />
 
             {!isProdStatusOn && (
-                <div style={{
+				<div
+                style={{
+                    padding: 20,
                     borderRadius: 12,
-                    overflow: 'hidden',
-                    border: `1px solid ${colors.accent}40`,
-                    marginBottom: 24,
-                }}>
-                    {/* Header */}
-                    <div style={{
-                        background: `linear-gradient(135deg, ${colors.accent}14 0%, ${colors.accent}06 100%)`,
-                        padding: '16px 20px',
-                        borderBottom: `1px solid ${colors.accent}20`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                    }}>
-                        <div style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            background: `${colors.accent}20`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                        }}>
-                            <ShieldIcon style={{ color: colors.accent, fontSize: 20 }} />
-                        </div>
-                        <div>
-                            <Typography variant="h6" style={{ fontWeight: 700, margin: 0, fontSize: 16 }}>
-                                Unlock Shuffle Enterprise
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary" style={{ margin: 0, fontSize: 12, lineHeight: 1.4 }}>
-                                Scale your security operations without limits
-                            </Typography>
-                        </div>
-                    </div>
-
-                    {/* Body */}
-                    <div style={{
-                        padding: '16px 20px 20px',
-                        background: themeMode === "dark" ? "#212121" : "#ffffff",
-                    }}>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: 8,
-                            marginBottom: 16,
-                        }}>
-                            {[
-                                { icon: ZapIcon, text: 'Higher App Run Limits' },
-                                { icon: UsersIcon, text: 'Multi-Tenant Support' },
-                                { icon: ShieldIcon, text: 'Enterprise SLA' },
-                                { icon: FmdGoodOutlinedIcon, text: 'Multi-Location Deploy' },
-                            ].map((item, i) => {
-                                const ItemIcon = item.icon;
-                                return (
-                                    <div key={i} style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 8,
-                                        padding: '8px 12px',
-                                        borderRadius: 8,
-                                        background: themeMode === "dark" ? `${colors.accent}08` : `${colors.accent}06`,
-                                    }}>
-                                        <ItemIcon style={{ color: colors.accent, fontSize: 16 }} />
-                                        <span style={{ fontSize: 13, color: colors.textPrimary, fontWeight: 500 }}>
-                                            {item.text}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        <Typography variant="body2" color="textSecondary" style={{
-                            marginBottom: 16,
-                            lineHeight: 1.6,
-                            fontSize: 13,
-                        }}>
-                            Purpose-built for security teams that need scalability, high availability, and dedicated
-                            expert support to run mission-critical workflows in production.{' '}
-                            <a href="https://shuffler.io/articles/Shuffle_Open_Source" target="_blank" rel="noreferrer" style={{ color: colors.accent }}>
-                                Learn more
-                            </a>
+                    background: themeMode == "dark" ? "#212121" : "#ffffff",
+                    border: `1px solid ${colors.border}`,
+                    marginBottom: 20,
+                }}
+            >
+                <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                    <InfoIcon style={{ color: colors.accent, flexShrink: 0, marginTop: 2, fontSize: 20 }} />
+                    <div>
+                        <Typography variant="h6" style={{ fontWeight: 600, margin: '0 0 8px 0' }}>
+                            About Shuffle Enterprise
                         </Typography>
-
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                        <Button
-                                href="https://shuffler.io/pricing?env=Self-Hosted"
-                            target="_blank"
-                            rel="noreferrer"
-                            variant="contained"
-                            color="primary"
-                            endIcon={<ArrowRightIcon sx={{ fontSize: 16 }} />}
-                            >
-                                Upgrade Now
-                            </Button>
-                            <Button
-                                href="https://shuffler.io/contact?category=talk_to_sales"
-                                target="_blank"
-                                rel="noreferrer"
-                                variant="outlined"
-                                startIcon={<MailIcon sx={{ fontSize: 16 }} />}
+                        <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            style={{
+                                margin: 0,
+                                lineHeight: 1.6,
+                            }}
                         >
-                            Talk to Sales
-                        </Button>
-                        </div>
+                            Shuffle Enterprise is designed for organizations that require scalability, high
+                            availability, dedicated support, and robust infrastructure to run mission-critical
+                            workflows in production environments. <a href="https://shuffler.io/articles/Shuffle_Open_Source" target="_blank" rel="noreferrer" style={{color: "#FF8544" }}>learn more</a>
+                        </Typography>
                     </div>
+                </div>
+            </div>)}
+
+            {/* CTA Section */}
+            {!isProdStatusOn && (
+                <div
+                    style={{
+                        padding: 20,
+                        borderRadius: 12,
+                        background: `linear-gradient(135deg, #FF854415 0%, #FF854408 100%)`,
+                        border: `1px solid #FF854440`,
+						marginBottom: 24,
+                    }}
+                >
+                    <div style={{ marginBottom: 16 }}>
+                        <Typography variant="h6" style={{ fontWeight: 600, margin: '0 0 8px 0' }}>
+                            Ready to upgrade?
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            style={{
+                                margin: 0,
+                                lineHeight: 1.6,
+                            }}
+                        >
+                            Contact our team to learn more about enterprise features and pricing.
+                        </Typography>
+                    </div>
+                    <Button
+						href="https://shuffler.io/contact?category=talk_to_sales"
+						target="_blank"
+						rel="noreferrer"
+						variant="contained"
+						color="primary"
+						startIcon={<MailIcon sx={{ fontSize: 16}} />}
+						endIcon={<ArrowRightIcon sx={{ fontSize: 16 }} />}
+					>
+					Contact Sales
+					</Button>
                 </div>
             )}
         </div>
     );
 };
-
-const AppRunsQueueCard = memo(({ environment, isAirGapped, isCloudSynching, totalRuns, limit, theme, navigate }) => {
-	
-	const usagePct = limit > 0 ? (totalRuns / limit) * 100 : 0;
-    const hardPauseLimit = limit * 2;
-    const hardPausePct = hardPauseLimit > 0 ? Math.min((totalRuns / hardPauseLimit) * 100, 100) : 0;
-    const mainBarPct = Math.min(usagePct, 100);
-
-    const queueSize = environment?.queue !== undefined && environment?.queue !== null
-        ? Math.max(0, environment.queue)
-        : 0;
-
-    const isThrottled = isCloudSynching ? false : (isAirGapped ? hardPausePct >= 100 : usagePct >= 100);
-
-    let status, statusColor, statusBg;
-    if (isThrottled) {
-        status = 'Throttled';
-        statusColor = '#ef4444';
-        statusBg = 'rgba(239, 68, 68, 0.12)';
-    } else if (!isCloudSynching && usagePct >= 80) {
-        status = 'Warning';
-        statusColor = '#f59e0b';
-        statusBg = 'rgba(245, 158, 11, 0.12)';
-    } else {
-        status = 'Healthy';
-        statusColor = theme.palette.green;
-        statusBg = `${theme.palette.green}1f`;
-    }
-
-    const throttleRate = isThrottled ? '1/min' : '\u2014';
-    const estClearTime = isThrottled && queueSize > 0 ? `${queueSize} min` : '\u2014';
-    const mainBarColor = isThrottled ? '#ef4444' : usagePct >= 80 && !isCloudSynching ? '#f59e0b' : theme.palette.green;
-
-    const envTypeLabel = environment?.run_type === 'cloud' ? 'Cloud' : 'On-prem';
-    const envName = environment?.Name || environment?.name || 'Default';
-
-    const borderColor = theme.palette.slateGrayColor;
-    const trackBg = theme.palette.slateGrayColor;
-    const mutedText = theme.palette.text.secondary;
-
-    return (
-        <div style={{
-            border: `1px solid ${borderColor}`,
-            borderRadius: 12,
-            padding: '20px 24px',
-            backgroundColor: theme.palette.platformColor,
-            marginBottom: 16,
-            maxWidth: 800,
-        }}>
-            {/* Title row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Typography variant="body2" style={{ color: mutedText, fontSize: 13, fontWeight: 500 }}>
-                    {envTypeLabel} - {envName} · App runs / month
-                </Typography>
-                <div style={{
-                    padding: '4px 14px',
-                    borderRadius: 20,
-                    backgroundColor: statusBg,
-                    border: `1px solid ${statusColor}60`,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: statusColor, display: 'inline-block', boxShadow: `0 0 6px ${statusColor}` }} />
-                    <span style={{ color: statusColor, fontWeight: 700, fontSize: 13 }}>{status}</span>
-                </div>
-            </div>
-
-            {/* Main number */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
-                <span style={{ fontSize: 28, fontWeight: 700, color: theme.palette.text.primary }}>
-                    {totalRuns.toLocaleString()}
-                </span>
-                <span style={{ fontSize: 18, color: mutedText }}>
-                    / {limit.toLocaleString()}
-                </span>
-            </div>
-
-            {isAirGapped && !isCloudSynching && (
-				<Typography variant="caption" style={{ color: mutedText, fontSize: 12, display: 'block', marginBottom: 14 }}>
-                No throttle until {hardPauseLimit.toLocaleString()} runs · 2× your plan limit
-            </Typography>
-			)}
-
-            {/* Main usage bar */}
-            <div style={{ position: 'relative', height: 8, borderRadius: 4, backgroundColor: trackBg, marginBottom: 4 }}>
-                <div style={{
-                    position: 'absolute',
-                    left: 0, top: 0, bottom: 0,
-                    width: `${mainBarPct}%`,
-                    borderRadius: 4,
-                    backgroundColor: mainBarColor,
-                    transition: 'width 0.4s ease',
-                }} />
-                {/* 80% threshold marker */}
-                <div style={{
-                    position: 'absolute',
-                    left: '80%',
-                    top: -3,
-                    bottom: -3,
-                    width: 2,
-                    backgroundColor: borderColor,
-                    borderRadius: 1,
-                }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
-                <Typography variant="caption" style={{ color: mutedText, fontSize: 11 }}>0</Typography>
-                <Typography variant="caption" style={{ color: mutedText, fontSize: 11 }}>80% threshold</Typography>
-                <Typography variant="caption" style={{ color: mutedText, fontSize: 11 }}>{limit.toLocaleString()}</Typography>
-            </div>
-
-            {/* Throttle limit row */}
-			{isAirGapped && (
-			<>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Typography variant="caption" style={{ color: mutedText, fontSize: 12 }}>
-                    Burst throttle threshold (2× limit) · workflows throttle to 1/min above this
-                </Typography>
-                <Typography variant="caption" style={{ color: mutedText, fontSize: 12 }}>
-                    {totalRuns.toLocaleString()} / {hardPauseLimit.toLocaleString()}
-                </Typography>
-            </div>
-			
-            <div style={{ position: 'relative', height: 6, borderRadius: 3, backgroundColor: trackBg, marginBottom: 16 }}>
-                <div style={{
-                    position: 'absolute',
-                    left: 0, top: 0, bottom: 0,
-                    width: `${hardPausePct}%`,
-                    borderRadius: 3,
-                    backgroundColor: '#ef4444',
-                    transition: 'width 0.4s ease',
-                }} />
-            </div>
-			</>
-			)}
-
-            {/* Alert box for Warning / Throttled */}
-            {status !== 'Healthy' && (
-                <div style={{
-                    borderRadius: 8,
-                    padding: '14px 16px',
-                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    marginBottom: 16,
-                }}>
-                    <Typography variant="body2" style={{ color: '#f59e0b', fontWeight: 700, marginBottom: 6, fontSize: 14 }}>
-                        {isThrottled ? 'Running slow \u2014 workflows are still running' : 'Approaching your monthly limit'}
-                    </Typography>
-                    <Typography variant="body2" style={{ color: theme.palette.text.primary, fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>
-                        {isThrottled
-                            ? isAirGapped
-                                ? `You've exceeded the burst threshold of ${hardPauseLimit.toLocaleString()} runs (2\u00d7 your plan limit). Your workflows are still running \u2014 there is no hard stop. Executions slow to 1 per minute until next month.`
-                                : `You've exceeded your ${limit.toLocaleString()} monthly limit. Your instance keeps running \u2014 executions slow to 1 per minute until next month. Nothing is lost. You can view or clear the queue from the Locations tab.`
-                            : isAirGapped
-                                ? `You've used ${totalRuns.toLocaleString()} of ${limit.toLocaleString()} app runs. Workflows run normally \u2014 slowdown only begins at ${hardPauseLimit.toLocaleString()} runs (2\u00d7 your plan limit). No action needed.`
-                                : `You've used ${totalRuns.toLocaleString()} of ${limit.toLocaleString()} app runs (${Math.max(0, limit - totalRuns).toLocaleString()} remaining). If you reach 100%, executions continue at a reduced rate of 1 per minute, nothing stops or is lost.`
-                        }
-                    </Typography>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        sx={{
-                            borderColor: '#f59e0b',
-                            color: '#f59e0b',
-                            textTransform: 'none',
-                            fontSize: 13,
-                            borderRadius: '6px',
-                            padding: '5px 14px',
-                        }}
-                        onClick={() => {
-                            if (isThrottled) navigate('/admin?tab=locations');
-                            else window.open('https://shuffler.io/contact', '_blank', 'noopener,noreferrer');
-                        }}
-                    >
-                        {isThrottled ? 'Manage queue' : 'Contact Us'}
-                    </Button>
-                </div>
-            )}
-
-            {/* Stats row */}
-            <div style={{ display: 'flex', borderTop: `1px solid ${borderColor}`, paddingTop: 16 }}>
-                {[
-                    { label: 'Queued jobs', value: queueSize },
-                    { label: 'Throttle rate', value: throttleRate },
-                    { label: 'Est. clear time', value: estClearTime },
-                ].map((stat, i) => (
-                    <div key={i} style={{
-                        flex: 1,
-                        paddingRight: i < 2 ? 16 : 0,
-                        borderRight: i < 2 ? `1px solid ${borderColor}` : 'none',
-                        marginRight: i < 2 ? 16 : 0,
-                    }}>
-                        <Typography variant="caption" style={{ color: mutedText, fontSize: 12, display: 'block', marginBottom: 4 }}>
-                            {stat.label}
-                        </Typography>
-                        <Typography style={{ fontWeight: 700, fontSize: 18, color: theme.palette.text.primary }}>
-                            {stat.value}
-                        </Typography>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-});
 
 const Billing = memo((props) => {
 	const { globalUrl, userdata, serverside, billingInfo, stripeKey,isLoaded, selectedOrganization, handleGetOrg, clickedFromOrgTab, removeCookie} = props;
@@ -672,7 +413,7 @@ const Billing = memo((props) => {
 	const [statistics, setStatistics] = useState([])
 	const [monthlyAppRunsParent, setMonthlyAppRunsParent] = useState(0)
 	const [monthlyAllSuborgExecutions, setMonthlyAllSuborgExecutions] = useState(0)
-	const [billingEnvironments, setBillingEnvironments] = useState([])
+
 	useEffect(() => {
 		if (monthlyAppRunsParent > 0 || monthlyAllSuborgExecutions > 0) {
 			const percentage = ((monthlyAppRunsParent + monthlyAllSuborgExecutions) / userdata.app_execution_limit) * 100;
@@ -784,29 +525,6 @@ const Billing = memo((props) => {
 	}, [])
 
 
-	const getBillingEnvironments = () => {
-		fetch(globalUrl + "/api/v1/getenvironments", {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			credentials: "include",
-		})
-		.then((response) => {
-			if (response.status !== 200) return;
-			return response.json();
-		})
-		.then((responseJson) => {
-			if (responseJson && Array.isArray(responseJson)) {
-				setBillingEnvironments(responseJson);
-			}
-		})
-		.catch((error) => {
-			console.log("Error fetching environments for billing:", error);
-		});
-	};
-
 	const getStats = (orgid) => {
 		
 		if (orgid === undefined || orgid === null) {
@@ -845,9 +563,6 @@ const Billing = memo((props) => {
 	useEffect(() => {
 		if (selectedOrganization && selectedOrganization?.id?.length > 0) {
 			getStats(selectedOrganization.id);
-			if (!isCloud) {
-				getBillingEnvironments();
-			}
 		}
 	}, [selectedOrganization]);
 
@@ -2672,17 +2387,6 @@ const Billing = memo((props) => {
 
 	const isChildOrg = userdata?.active_org?.creator_org !== "" && userdata?.active_org?.creator_org !== undefined && userdata?.active_org?.creator_org !== null
 
-	const activeQueueEnvs = Array.isArray(billingEnvironments) ? billingEnvironments.filter(env => env != null && !env.archived && env.Type !== 'cloud') : [];
-	const totalQueueSize = activeQueueEnvs.reduce((sum, env) => sum + Math.max(0, env?.queue || 0), 0);
-	const aggregatedQueueEnv = {
-		Name: `${activeQueueEnvs.length} Runtime Location${activeQueueEnvs.length !== 1 ? 's' : ''}`,
-		run_type: 'on-prem',
-		queue: totalQueueSize,
-	};
-	const appExecLimit = selectedOrganization?.sync_features?.app_executions?.limit ?? 0;
-	const isAirGapped = selectedOrganization != null && (selectedOrganization.cloud_sync_active === true || selectedOrganization.cloud_sync === true) ? false : appExecLimit < 300000 ? false : true;
-	const isCloudSynching = selectedOrganization != null && selectedOrganization.cloud_sync === true && appExecLimit >= 300000;
-
 	useEffect(() => {
 		if (isChildOrg && currentTab === 0) {
 			setCurrentTab(1);
@@ -3096,28 +2800,6 @@ const Billing = memo((props) => {
 
 			  </div>
             ) : null*/}
-
-			{/* Queue Management */}
-			{!isCloud && activeQueueEnvs.length > 0 && !isChildOrg && (
-				<div style={{ maxWidth: 800, marginTop: 32, marginBottom: 8 }}>
-					<Typography variant="h6" style={{ marginBottom: 6, fontSize: 20, fontWeight: 600 }}>
-						Queue Management
-					</Typography>
-					<Typography variant="body2" color="textSecondary" style={{ marginBottom: 16, fontSize: 14 }}>
-						Real-time status of your app run usage and workflow queue across all runtime locations.
-					</Typography>
-					<AppRunsQueueCard
-						environment={aggregatedQueueEnv}
-						totalRuns={Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}
-						limit={selectedOrganization?.sync_features?.app_executions?.limit || 25000}
-						theme={theme}
-						navigate={navigate}
-						isAirGapped={isAirGapped}
-						isCloudSynching={isCloudSynching}
-					/>
-				</div>
-			)}
-
 			{!isChildOrg && isCloud && (
 				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }} id="professional-services">
 					<Typography variant="h6" style={{ marginBottom: 5, fontSize: 24, fontWeight: 500 }}>
