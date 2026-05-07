@@ -38,6 +38,7 @@ import aa from 'search-insights'
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 //import { InstantSearch, SearchBox, Hits, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 
+import { HotKeys } from 'react-hotkeys';
 // https://www.algolia.com/doc/api-reference/widgets/search-box/react/
 const chipStyle = {
 	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",

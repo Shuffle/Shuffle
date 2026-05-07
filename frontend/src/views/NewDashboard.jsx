@@ -375,7 +375,7 @@ const NewDashboard = (props) => {
 
   return (
     <div style={{ maxWidth: 1366, margin: '0 auto', padding: 16, paddingTop: 50, paddingBottom: 30, paddingLeft: leftSideBarOpenByClick ? 270 : 80, transition: 'padding-left 0.3s ease', position: 'relative' }}>
-       {/*(onboardingOpen && !loadingSelectedOrgStats) && (
+       {(onboardingOpen && !loadingSelectedOrgStats) && (
       <DashboardOnboarding
         open={onboardingOpen}
         globalUrl={globalUrl}
@@ -396,7 +396,7 @@ const NewDashboard = (props) => {
         headerTitle="Unlock your Dashboard"
         headerSubtitle="Complete these steps to start seeing insights."
       />
-      )*/}
+      )}
 
       {showOverlay && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,17,17,0.6)', backdropFilter: 'blur(2px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>

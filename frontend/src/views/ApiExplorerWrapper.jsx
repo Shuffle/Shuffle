@@ -47,11 +47,10 @@ import Markdown from "react-markdown";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import algoliasearch from "algoliasearch/lite";
 import { green } from "../views/AngularWorkflow.jsx"
-import { setAppCache } from "../views/AppExplorer.jsx"
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "363e707135ea95f5523ec1b262d96b03"
+  "c8f882473ff42d41158430be09ec2b4e"
 )
 
 // Lazy loading of ApiExplorer component to reduce initial load time
@@ -140,90 +139,57 @@ const ApiExplorerWrapper = (props) => {
   }
 
   const runAlgoliaAppSearch = (appname) => {
-    if (appname === "HTTP" || appname === "http") {
-      navigate("/apis")
-      return
-    }
+    const index = searchClient.initIndex("appsearch");
 
-    // Check if appname is likely an ID (hash/UUID) or null - skip cache entirely
-    const isLikelyId = !appname || appname === "null" || (appname.length >= 32 && /^[a-f0-9\-]+$/i.test(appname));
+	if (appname === "HTTP" || appname === "http") {
+		navigate("/apis")
+		return
+	}
 
-    // Skip cache for IDs/null, proceed directly to Algolia
-    if (!isLikelyId) {
-      // Check backend cache first to save Algolia costs
-      fetch(globalUrl + "/api/v1/apps/" + appname + "/cache")
-        .then((response) => {
-          if (!response.ok) {
-            return { success: false };
-          }
-          return response.json();
-        })
-        .catch((error) => {
-          return { success: false };
-        })
-        .then((cacheData) => {
-          if (cacheData && cacheData.success && (cacheData.id || cacheData.objectID)) {
-            const appId = cacheData.id || cacheData.objectID;
-            setAppCache(globalUrl, appId, appname);
-            getAppData(appId);
-            return;
-          }
+    index
+      .search(appname)
+      .then(({ hits }) => {
 
-          // Cache miss, fall through to Algolia
-          runAlgoliaSearch();
-        });
-      return;
-    }
+		if (hits !== undefined && hits !== null && hits.length > 0) {
+        	const appsearchname = appname.replaceAll("_", " ").toLowerCase()
+			var found = false
+			for (var key in hits) {
+				const hit = hits[key]
+				const newname = hit.name.replaceAll("_", " ").toLowerCase()
 
-    // For IDs/null, skip cache and go straight to Algolia
-    runAlgoliaSearch();
+				if (newname?.includes(appsearchname)) {
+					found = true
 
-    function runAlgoliaSearch() {
-      // Fallback to Algolia if not in cache
-      const index = searchClient.initIndex("appsearch");
-      index
-        .search(appname)
-        .then(({ hits }) => {
-          if (hits !== undefined && hits !== null && hits.length > 0) {
-            const appsearchname = appname.toLowerCase().replace(/[_ \-]/g, "");
-            var found = false
-            for (var key in hits) {
-              const hit = hits[key]
-              const newname = hit.name?.toLowerCase().replace(/[_ \-]/g, "");
+					getAppData(hit.objectID)
+					break
+				}
+			}
 
-              if (newname?.includes(appsearchname)) {
-                found = true
-                if (!isLikelyId) setAppCache(globalUrl, hit.objectID, appname);
-                getAppData(hit.objectID, appname)  // pass alias so backend caches 'outlook' → real app
-                break
-              }
-            }
+			if (!found) {
+				toast.error(`Failed to get API data for '${appname}' (1). Contact ${supportEmail} if this persists.`, {
+					"autoClose": 10000,
+				})
 
-            if (!found) {
-              toast.error(`Failed to get API data for '${appname}' (1). Contact ${supportEmail} if this persists.`, {
-                "autoClose": 10000,
-              })
-              setTimeout(()=>{
-                navigate("/search?tab=apps");
-              },3000)
-            }
-          } else {
-            toast.error(`Failed to get API data for '${appname}' (2). Contact ${supportEmail} if this persists.`, {
-              "autoClose": 10000,
-            })
-            setTimeout(()=>{
-              navigate("/search?tab=apps");
-            },3000)
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }
+				setTimeout(()=>{
+					navigate("/search?tab=apps");
+				},3000)
+			}
+		} else {
+			toast.error(`Failed to get API data for '${appname}' (2). Contact ${supportEmail} if this persists.`, {
+				"autoClose": 10000,
+			})
+			setTimeout(()=>{
+				navigate("/search?tab=apps");
+			},3000)
+		}
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   // Fetch data when appid is available
-  const getAppData = useCallback((appid, alias) => {
+  const getAppData = useCallback((appid) => {
     if (appid === undefined || appid === null || appid.length === 0) {
 	  toast.warning("No app ID loaded. Showing default API testing window. ") 
   	  setOpenapi({
@@ -251,10 +217,10 @@ const ApiExplorerWrapper = (props) => {
       return
     }
 	
-    if (appid.length !== 32 && appid.length !== 36) {
-      runAlgoliaAppSearch(appid)
-      return
-    }
+	if (appid.length !== 32) {
+        runAlgoliaAppSearch(appid)
+		return
+	}
 
     const url = `${globalUrl}/api/v1/apps/${appid}/config`
 
@@ -711,7 +677,7 @@ const ApiExplorerWrapper = (props) => {
 					toast.info(`This API is being rebuilt due to missing functionality. Please wait a minute or two, then try again. If this persists, please report to ${supportEmail}`, {
 						"autoClose": 90000,
 					})
-				} else if (data.result.includes("authentication") && data.result.includes("Oauth2") && validate?.result?.status !== 200) {
+				} else if (data.result.includes("authentication") && data.result.includes("Oauth2")) {
 					toast.error("Oauth2 apps require authentication") 
 
 					setAuthHighlighted(true)

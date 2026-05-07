@@ -1977,7 +1977,7 @@ const Action = memo((
                                   const actionId = action.name.replace(/ /g, "-").replace(/_/g, "-");
                                   window.history.pushState(null, "", `#${actionId}`);
                                   setExampleBody(action?.example_response);
-                                  document.getElementById(`action-list-${nextSelectedActionIndex}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  document.getElementById(`action-list-${nextSelectedActionIndex}`).scrollIntoView({ behavior: "smooth", block: "center" });
                               }
                           }, 300);
                       }

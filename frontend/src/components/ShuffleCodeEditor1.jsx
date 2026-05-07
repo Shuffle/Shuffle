@@ -61,6 +61,8 @@ import PaperComponent from "../components/PaperComponent.jsx";
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
 import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom";
+import { tags as t } from '@lezer/highlight';
+
 
 import AceEditor from "react-ace";
 import ace from "ace-builds";
@@ -147,10 +149,7 @@ const CodeEditor = (props) => {
 
 	// Auto-indent JSON-like content (with safety hehe)
 	const autoIndentContent = React.useCallback((content) => {
-		if (!isFileEditor) {
-			console.log("Autoindent disabled")
-			return content
-		}
+		return content
 
 		// Safety checks :)
 		if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -238,24 +237,6 @@ const CodeEditor = (props) => {
 		highlight_variables(localcodedata)
 		expectedOutput(localcodedata)
 	}, [localcodedata])
-
-	useEffect(() => {
-		if (!isFileEditor) { 
-			return
-		}
-
-		if (codedata === undefined || codedata === null || typeof codedata !== 'string') {
-			return
-		}
-
-		const indentedContent = autoIndentContent(codedata);
-		if (indentedContent !== undefined && indentedContent !== null) {
-			console.log("SETTING: ", indentedContent)
-			setlocalcodedata(indentedContent);
-		} else {
-			console.log("INDENT FAILED")
-		}
-	}, [])
 
 	// Auto-indent when codedata prop changes
 	useEffect(() => {
@@ -1616,7 +1597,7 @@ const CodeEditor = (props) => {
 				  if (e.srcElement.className === "ace_content") {
 					  console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
 
-					  const usedposition = e.offsetY
+					  let usedposition = e.offsetY
 					  if (usedposition  === undefined || usedposition === null) {
 						  toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
 						  return
@@ -1803,8 +1784,8 @@ const CodeEditor = (props) => {
 					// zIndex: 12501,
 					pointerEvents: "auto",
 					color: theme.palette.DialogStyle.color,
-					minWidth: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : isFileEditor ? 800 : "80%",
-					maxWidth: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : isFileEditor ? 800 : "1100px",
+					minWidth: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : isFileEditor ? "650px" : "80%",
+					maxWidth: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : isFileEditor ? "650px" : "1100px",
 					minHeight: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : "auto",
 					maxHeight: isMobile || isWorkflowEditor || fullScreenModeEnabled ? "100%" : "700px",
 					border: "3px solid rgba(255,255,255,0.3)",
@@ -2000,8 +1981,7 @@ const CodeEditor = (props) => {
 										paddingLeft: 10,
 									}}
 								>
-								{/* cba positioning */}
-									File Editor ({localcodedata.length})&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{validation === true ? <span style={{ color: "lightgreen" }}>Valid JSON</span> : <span style={{ color: "red" }}>Invalid JSON</span>}
+									File Editor ({localcodedata.length})
 								</DialogTitle>
 							</div>
 
@@ -2531,7 +2511,7 @@ const CodeEditor = (props) => {
 										}
 									</Tooltip>
 								</IconButton>
-								{/*(actionId || triggerId || conditionId) && !isWorkflowEditor && !isFileEditor ?
+								{(actionId || triggerId || conditionId) && !isWorkflowEditor && !isFileEditor ?
 									<>
 										<IconButton
 											style={{
@@ -2577,7 +2557,7 @@ const CodeEditor = (props) => {
 										</IconButton>
 									</>
 									: null
-								*/}
+								}
 							</div>
 						</div>
 					}
@@ -2603,7 +2583,7 @@ const CodeEditor = (props) => {
 								mode={isWorkflowEditor ? "yaml" : selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
 								theme="gruvbox"
 								height={fullScreenModeEnabled ? "84vh" : isFileEditor ? 450 : isWorkflowEditor ? "90vh" : 550}
-								width={isFileEditor ? 800 : fullScreenModeEnabled ? isFileEditor ? "100%" : "50vw" : isWorkflowEditor ? "90vw" : "100%"}
+								width={isFileEditor ? 650 : fullScreenModeEnabled ? "50vw" : isWorkflowEditor ? "90vw" : "100%"}
 
 								markers={markers}
 								highlightActiveLine={false}
@@ -2737,7 +2717,7 @@ const CodeEditor = (props) => {
 												</div>
 												: 
 												<span style={{ color: theme.palette.text.primary }}>
-												{selectedAction?.name === "execute_python" || selectedAction?.name === "execute_bash" ? 
+												{selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? 
 													"Code to run" : 
 													triggerId ? 
 														`Output: ${triggerName?.replaceAll("_", " ").slice(0, 1).toUpperCase() + triggerName?.replaceAll("_", " ").slice(1)} (${triggerField})` :

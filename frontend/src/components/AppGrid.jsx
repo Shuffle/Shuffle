@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 import theme from "../theme.jsx";
 import ReactGA from "react-ga4";
 import { Link } from "react-router-dom";
 import { removeQuery } from "../components/ScrollToTop.jsx";
+import { useMemo } from "react";
 
 import { Tabs, Tab, Collapse } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -26,7 +27,7 @@ import {
   InstantSearch,
   Configure,
   connectSearchBox,
-  connectInfiniteHits,
+  connectHits,
   connectHitInsights,
   RefinementList,
   ClearRefinements,
@@ -38,7 +39,6 @@ import aa from "search-insights";
 import { useLocation } from 'react-router-dom';
 
 import "./FilterCSS.css";
-import SearchContactForm from "../components/SearchContactForm.jsx";
 
 import {
   Zoom,
@@ -54,7 +54,7 @@ import {
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "eb5fd80aa6ed5ab4730d836cff3ea283"
+  "c8f882473ff42d41158430be09ec2b4e"
 );
 //const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
 
@@ -77,12 +77,61 @@ const AppGrid = (props) => {
   const xs =
     parsedXs === undefined || parsedXs === null ? (isMobile ? 6 : 3) : parsedXs;
 
+  const [formMail, setFormMail] = React.useState("");
+  const [message, setMessage] = React.useState("");
+  const [formMessage, setFormMessage] = React.useState("");
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
 
+  const buttonStyle = {
+    borderRadius: 30,
+    height: 50,
+    width: 220,
+    margin: isMobile ? "15px auto 15px auto" : 20,
+    fontSize: 18,
+  };
   const innerColor = "rgba(255,255,255,0.65)";
   const borderRadius = 3;
   window.title = "Shuffle | Apps | Find and integrate any app";
   const noImage = "/public/no_image.png";
+
+  const submitContact = (email, message) => {
+    const data = {
+      firstname: "",
+      lastname: "",
+      title: "",
+      companyname: "",
+      email: email,
+      phone: "",
+      message: message,
+    };
+
+    const errorMessage =
+      "Something went wrong. Please contact frikky@shuffler.io directly.";
+
+    fetch(globalUrl + "/api/v1/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((response) => {
+        if (response?.success === true) {
+          setFormMessage(response.reason);
+          //toast("Thanks for submitting!")
+        } else {
+          setFormMessage(errorMessage);
+        }
+
+        setFormMail("");
+        setMessage("");
+      })
+      .catch((error) => {
+        setFormMessage(errorMessage);
+        console.log(error);
+      });
+  };
 
   const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, setSearchQuery }) => {
     var defaultSearch = "";
@@ -99,11 +148,10 @@ const AppGrid = (props) => {
       const params = Object.fromEntries(urlSearchParams.entries());
       const foundQuery = params["q"];
       if (foundQuery !== null && foundQuery !== undefined) {
+        console.log("Got query: ", foundQuery);
         refine(foundQuery);
         defaultSearch = foundQuery;
-        if (searchQuery !== foundQuery) {
-          setSearchQuery(foundQuery);
-        }
+        searchQuery = foundQuery
       }
     }
     //}, [])
@@ -186,13 +234,7 @@ const AppGrid = (props) => {
           onChange={(event) => {
             const value = event.currentTarget.value;
             setSearchQuery(value);
-            const urlSearchParams = new URLSearchParams(window.location.search);
-            if (value) {
-              urlSearchParams.set("q", value);
-            } else {
-              urlSearchParams.delete("q");
-            }
-            window.history.replaceState({}, '', `${window.location.pathname}?${urlSearchParams.toString()}`);
+            removeQuery("q");
             debouncedRefine(value);
           }}
           onKeyDown={(event) => {
@@ -209,21 +251,6 @@ const AppGrid = (props) => {
 
   const [currTab, setCurrTab] = useState(0);
   const location = useLocation();
-
-  const conditionalSearchClient = useMemo(() => ({
-    ...searchClient,
-    search(requests) {
-      if (currTab !== 0) {
-        return Promise.resolve({
-          results: requests.map(() => ({
-            hits: [], nbHits: 0, page: 0, nbPages: 0, hitsPerPage: 0,
-            processingTimeMS: 0, exhaustiveNbHits: true, query: "", params: "",
-          })),
-        });
-      }
-      return searchClient.search(requests);
-    },
-  }), [currTab]);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -242,6 +269,7 @@ const AppGrid = (props) => {
     const newQueryParam = newTab === 0 ? 'all_apps' : newTab === 1 ? 'org_apps' : 'my_apps';
     const queryParams = new URLSearchParams(location.search);
     queryParams.set('tab', newQueryParam);
+    queryParams.delete('q');
     window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
   };
 
@@ -253,8 +281,6 @@ const AppGrid = (props) => {
   // Component to fetch all public app from the algolia.
   const Hits = ({
     hits,
-    hasMore,
-    refineNext,
     insights,
     setIsAnyAppActivated,
     searchQuery
@@ -262,32 +288,6 @@ const AppGrid = (props) => {
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
     var counted = 0;
     const [hoverEffect, setHoverEffect] = useState(-1);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const loadMoreRef = useRef(null);
-    const scrollContainerRef = useRef(null);
-    const isFetchingMore = useRef(false);
-
-    useEffect(() => {
-      isFetchingMore.current = false;
-      setIsLoadingMore(false);
-    }, [hits.length]);
-
-    useEffect(() => {
-      return; // infinite scroll disabled
-      if (!loadMoreRef.current || !scrollContainerRef.current) return;
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting && hasMore && !isFetchingMore.current) {
-            isFetchingMore.current = true;
-            setIsLoadingMore(true);
-            refineNext();
-          }
-        },
-        { root: scrollContainerRef.current, rootMargin: "200px" }
-      );
-      observer.observe(loadMoreRef.current);
-      return () => observer.disconnect();
-    }, [hasMore, refineNext]);
 
     const normalizedString = (name) => {
       if (typeof name === 'string') {
@@ -359,11 +359,11 @@ const AppGrid = (props) => {
           } else {
             //toast.success(`App ${type}d Successfully!`);
             if (type === 'activate') {
-              setAllActivatedAppIds(prev => [...(prev || []), data.objectID]);
+              setAllActivatedAppIds(prev => [...prev, data.objectID]);
               setIsAnyAppActivated(true);
             }
             if (type === 'deactivate') {
-              const updatedIds = (allActivatedAppIds || []).filter(id => id !== data.objectID);
+              const updatedIds = allActivatedAppIds.filter(id => id !== data.objectID);
               setAllActivatedAppIds(updatedIds);
             }
           }
@@ -372,16 +372,6 @@ const AppGrid = (props) => {
           console.log("app error: ", error.toString());
         });
     }
-
-    const sortedHits = useMemo(() => {
-      const list = [...(hits || [])];
-      if (!allActivatedAppIds?.length) return list;
-      return list.sort((a, b) => {
-        const aActive = allActivatedAppIds.includes(a.objectID) ? 1 : 0;
-        const bActive = allActivatedAppIds.includes(b.objectID) ? 1 : 0;
-        return bActive - aActive;
-      });
-    }, [hits, hits?.length, allActivatedAppIds]);
 
     let workflowDelay = 0;
     const isHeader = true;
@@ -414,7 +404,6 @@ const AppGrid = (props) => {
             ) : (
               <Grid item spacing={2} justifyContent="flex-start">
                 <div
-                  ref={scrollContainerRef}
                   style={{
                     gap: 16,
                     marginTop: 16,
@@ -429,7 +418,7 @@ const AppGrid = (props) => {
                     scrollbarColor: "#494949 #2f2f2f",
                   }}
                 >
-                  {sortedHits.map((data, index) => {
+                  {hits?.map((data, index) => {
                     const appUrl =
                               isCloud === true ?
                               `/apps/${data.objectID}`
@@ -640,12 +629,6 @@ const AppGrid = (props) => {
                     );
                   })
                   }
-                  <div ref={loadMoreRef} style={{ width: "100%", height: 10 }} />
-                  {isLoadingMore && (
-                    <div style={{ width: "100%", display: "flex", justifyContent: "center", padding: 10 }}>
-                      <CircularProgress size={24} />
-                    </div>
-                  )}
                 </div>
               </Grid >
             )}
@@ -943,7 +926,7 @@ const AppGrid = (props) => {
 
   //Component to display all apps.
   const AllApps = ({ setIsAnyAppActivated }) => {
-    var [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || "");
+    var [searchQuery, setSearchQuery] = useState("");
 
     return (
       <div
@@ -1004,7 +987,6 @@ const AppGrid = (props) => {
                     }}
                     onClick={() => {
                       setSearchQuery('');
-                      removeQuery("q");
                     }}
                   />
                 )}
@@ -1033,15 +1015,7 @@ const AppGrid = (props) => {
           placeholder="Search your Activated or self-built apps"
           id="shuffle_search_field"
           onChange={(event) => {
-            const value = event.currentTarget.value;
-            setSearchQuery(value);
-            const urlSearchParams = new URLSearchParams(window.location.search);
-            if (value) {
-              urlSearchParams.set("q", value);
-            } else {
-              urlSearchParams.delete("q");
-            }
-            window.history.replaceState({}, '', `${window.location.pathname}?${urlSearchParams.toString()}`);
+            setSearchQuery(event.currentTarget.value);
           }}
           onKeyDown={(event) => {
 						if(event.key === "Enter") {
@@ -1618,7 +1592,7 @@ const AppGrid = (props) => {
   //Component to fetch all apps created by user and Org
   const UserAndOrgApps = ({ selectedCategoryForUsersAndOgsApps, selectedTagsForUserAndOrgApps, selectedOptionOfCreatedWith, setselectedCategoryForUsersAndOgsApps, setSelectedTagsForUserAndOrgApps, setSelectedOptionOfCreatedWith }) => {
 
-    const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || "");
+    const [searchQuery, setSearchQuery] = useState("");
     const [appsToShow, setAppsToShow] = useState([]);
     useEffect(() => {
       if (currTab === 1) {
@@ -2029,7 +2003,7 @@ const AppGrid = (props) => {
   };
 
   const CustomSearchBox = connectSearchBox(SearchBox);
-  const CustomHits = connectInfiniteHits(Hits);
+  const CustomHits = connectHits(Hits);
 
   const DisplayAllAppsTab = () => {
     const [selectedCategoryForUsersAndOgsApps, setselectedCategoryForUsersAndOgsApps] = useState([]);
@@ -2038,7 +2012,7 @@ const AppGrid = (props) => {
 
     return (
       <div>
-        <InstantSearch key={currTab === 0 ? "active" : "inactive"} searchClient={conditionalSearchClient} indexName="appsearch">
+        <InstantSearch searchClient={searchClient} indexName="appsearch">
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', paddingRight: 215 }}>
             {currTab === 0 ? (
               <FilterForAllApps />
@@ -2063,7 +2037,7 @@ const AppGrid = (props) => {
             />
 
           </div>
-          {currTab === 0 && <Configure clickAnalytics hitsPerPage={20} />}
+          <Configure clickAnalytics />
         </InstantSearch>
       </div>
     );
@@ -2086,7 +2060,80 @@ const AppGrid = (props) => {
       >
         <DisplayAllAppsTab />
         {showSuggestion === true ? (
-          <SearchContactForm globalUrl={globalUrl} isMobile={isMobile} tabName="apps" />
+          <div
+            style={{
+              paddingTop: 0,
+              maxWidth: isMobile ? "100%" : "60%",
+              margin: "auto",
+            }}
+          >
+            <Typography variant="h6" style={{ color: "white", marginTop: 50 }}>
+              Can't find what you're looking for?
+            </Typography>
+            <div
+              style={{
+                flex: "1",
+                display: "flex",
+                flexDirection: "row",
+                textAlign: "center",
+              }}
+            >
+              <TextField
+                required
+                style={{
+                  flex: "1",
+                  marginRight: 15,
+                  backgroundColor: theme.palette.inputColor,
+                }}
+                InputProps={{
+                  style: {
+                    color: "#ffffff",
+                  },
+                }}
+                color="primary"
+                fullWidth={true}
+                placeholder="Email (optional)"
+                type="email"
+                id="email-handler"
+                autoComplete="email"
+                margin="normal"
+                variant="outlined"
+                onChange={(e) => setFormMail(e.target.value)}
+              />
+              <TextField
+                required
+                style={{ flex: "1", backgroundColor: theme.palette.inputColor }}
+                InputProps={{
+                  style: {
+                    color: "#ffffff",
+                  },
+                }}
+                color="primary"
+                fullWidth={true}
+                placeholder="What apps do you want to see?"
+                type=""
+                id="standard-required"
+                margin="normal"
+                variant="outlined"
+                autoComplete="off"
+                onChange={(e) => setMessage(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="contained"
+              color="primary"
+              style={buttonStyle}
+              disabled={message.length === 0}
+              onClick={() => {
+                submitContact(formMail, message);
+              }}
+            >
+              Submit
+            </Button>
+            <Typography style={{ color: "white" }} variant="body2">
+              {formMessage}
+            </Typography>
+          </div>
         ) : null}
       </div>
     </div>
