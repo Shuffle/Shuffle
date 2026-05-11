@@ -1831,6 +1831,11 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
 		}
 
+		proxyConfigOverride := os.Getenv("SHUFFLE_APP_PROXY_CONFIG_OVERRIDE")
+		if proxyConfigOverride != "" {
+			env = append(env, fmt.Sprintf("SHUFFLE_APP_PROXY_CONFIG_OVERRIDE=%s", proxyConfigOverride))
+		}
+
 		if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
 			env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
 		}
@@ -3634,11 +3639,16 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 		log.Printf("[DEBUG] Starting webserver (1) on port %d with hostname: %s", baseport, hostname)
 
 		os.Setenv("WORKER_PORT", fmt.Sprintf("%d", baseport))
-		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
-		if os.Getenv("IS_KUBERNETES") == "true" {
+		workerServerUrl := os.Getenv("SHUFFLE_WORKER_SERVER_URL")
+		if len(workerServerUrl) > 0 {
+			appCallbackUrl = workerServerUrl
+			log.Printf("[DEBUG] Using SHUFFLE_WORKER_SERVER_URL for callback: %s", appCallbackUrl)
+		} else if os.Getenv("IS_KUBERNETES") == "true" {
 			appCallbackUrl = fmt.Sprintf("http://%s:%d", "shuffle-workers", baseport)
 			log.Printf("[DEBUG] NEW WORKER APP: %s", appCallbackUrl)
 			hostname = "shuffle-workers"
+		} else {
+			appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 		}
 
 		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", baseport))
@@ -3861,6 +3871,11 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 
 	if overrideHttpsProxy != "" {
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+	}
+
+	proxyConfigOverride := os.Getenv("SHUFFLE_APP_PROXY_CONFIG_OVERRIDE")
+	if proxyConfigOverride != "" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_APP_PROXY_CONFIG_OVERRIDE=%s", proxyConfigOverride))
 	}
 
 	/*
