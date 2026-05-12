@@ -7,6 +7,11 @@ on:
         description: "Orborus version to sync"
         required: true
         default: "latest"
+  workflow_call:
+    inputs:
+      orborus_version:
+        required: true
+        type: string
 
 jobs:
   sync-orborus:
@@ -14,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["${{ github.event.inputs.orborus_version }}"]
+        version: ["${{ inputs.orborus_version }}"]
     steps:
       - name: Login to DockerHub
         uses: docker/login-action@v3

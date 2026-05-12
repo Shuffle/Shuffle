@@ -93,36 +93,7 @@ jobs:
 
   sync-orborus:
     if: github.event.release.target_commitish == 'nightly'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set version
-        id: set_version
-        run: |
-          if [[ ${{ github.event_name }} == 'release' ]]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            VERSION=${VERSION#v}
-            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=nightly-untagged-latest" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Login to Ghcr
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull, retag and push orborus
-        run: |
-          docker pull ghcr.io/shuffle/orborus:${{ steps.set_version.outputs.VERSION }}
-          docker tag ghcr.io/shuffle/orborus:${{ steps.set_version.outputs.VERSION }} ghcr.io/shuffle/shuffle-orborus:${{ steps.set_version.outputs.VERSION }}
-          docker tag ghcr.io/shuffle/orborus:${{ steps.set_version.outputs.VERSION }} ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ steps.set_version.outputs.VERSION }}
-          docker push ghcr.io/shuffle/shuffle-orborus:${{ steps.set_version.outputs.VERSION }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ steps.set_version.outputs.VERSION }}
+    uses: ./.github/workflows/sync-orborus.yaml
+    secrets: inherit
+    with:
+      orborus_version: ${{ github.event.release.tag_name }}
