@@ -45,7 +45,7 @@ jobs:
             CHART_VERSION="${VERSION}"
           else
             APP_VERSION="latest"
-            CHART_VERSION="2.1.2"
+            CHART_VERSION="2.2.0"
           fi
 
           echo "APP_VERSION set to ${APP_VERSION}"
