@@ -1,15 +1,10 @@
-name: dockerbuild
-
+name: Tagged Release
 on:
-  workflow_dispatch:
-  push:
+  release:
+    types: [published]
     branches:
       - main
-    paths:
-      - "**"
-      - "!.github/**"
-      - "!**.md"
-      - "!docker-compose.yml"
+
 jobs:
   main:
     runs-on: ubuntu-latest
@@ -20,23 +15,21 @@ jobs:
         include:
           - app: frontend
             path: frontend
-            version: 2.2.1
             experimental: true
           - app: backend
             path: backend
-            version: 2.2.1
-            experimental: true
-          - app: orborus
-            path: functions/onprem/orborus
-            version: 2.2.1
             experimental: true
           - app: worker
             path: functions/onprem/worker
-            version: 2.2.1
             experimental: true
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set version
+        id: set_version
+        run: |
+          echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -73,7 +66,10 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ steps.set_version.outputs.VERSION }}
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ steps.set_version.outputs.VERSION }}
+            frikky/shuffle-${{ matrix.app }}:${{ steps.set_version.outputs.VERSION }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
