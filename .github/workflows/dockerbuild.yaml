@@ -2,6 +2,11 @@ name: dockerbuild
 
 on:
   workflow_dispatch:
+    inputs:
+      orborus_version:
+        description: "Orborus version to sync (default: latest)"
+        required: false
+        default: "latest"
   push:
     branches:
       - main
@@ -23,9 +28,6 @@ jobs:
             experimental: true
           - app: backend
             path: backend
-            experimental: true
-          - app: orborus
-            path: functions/onprem/orborus
             experimental: true
           - app: worker
             path: functions/onprem/worker
@@ -73,3 +75,31 @@ jobs:
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+
+  sync-orborus:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["${{ github.event.inputs.orborus_version || 'latest' }}"]
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull, retag and push orborus
+        run: |
+          docker pull ghcr.io/shuffle/orborus:${{ matrix.version }}
+          docker tag ghcr.io/shuffle/orborus:${{ matrix.version }} ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
+          docker tag ghcr.io/shuffle/orborus:${{ matrix.version }} ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }}
+          docker push ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }}
