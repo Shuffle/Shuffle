@@ -11,7 +11,8 @@ COPY ./app_gen /app_gen
 
 RUN wget -O /app_sdk/app_base.py https://raw.githubusercontent.com/Shuffle/app_sdk/refs/heads/main/shuffle_sdk/shuffle_sdk.py
 
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o shufflebackend .
+RUN go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux go build -o shufflebackend .
 
 FROM alpine:3.22.2
 RUN apk add --no-cache libc6-compat libstdc++ ca-certificates

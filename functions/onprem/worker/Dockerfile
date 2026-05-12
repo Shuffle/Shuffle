@@ -6,7 +6,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY worker.go ./
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o worker .
+RUN go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux go build -o worker .
 
 FROM alpine:3.22.2
 
