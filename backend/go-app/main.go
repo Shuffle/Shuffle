@@ -893,7 +893,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	childOrgs := []shuffle.Org{}
 	if len(org.CreatorOrg) > 0 {
-		childOrgs, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
+		childOrgs, _, err = shuffle.GetAllChildOrgs(ctx, org.CreatorOrg)
 		if err != nil {
 			log.Printf("[ERROR] Failed to get child orgs during getinfo: %s", err)
 			childOrgs = []shuffle.Org{}
@@ -1263,11 +1263,10 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			// baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org)
-			// if err != nil {
-			// 	log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
-			// }
 			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
+			}
 			break
 		}
 
@@ -4344,7 +4343,8 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 				return
 			}
 
-			go shuffle.HandleAiAgentExecutionStart(parentExec, agentNode, false)
+			callerName := "deployAppShuffleOnprem"
+			go shuffle.HandleAiAgentExecutionStart(parentExec, agentNode, false, callerName)
 
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s", "mode": "hybrid"}`, parentExec.ExecutionId, parentExec.Authorization)))
@@ -4352,7 +4352,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 
 		} else {
 			//standalone mode
-			workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, "agent_starter", marshalledAction, false, "")
+			workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent_starter", marshalledAction, false, "")
 			if err != nil {
 				log.Printf("[ERROR] Failed to prepare standalone agent execution: %s", err)
 				resp.WriteHeader(500)
@@ -4368,7 +4368,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// For non-agent calls (MCP or other apps): continue with existing flow
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, "agent", marshalledAction, false, "")
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent", marshalledAction, false, "")
 	if fileId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
@@ -5893,6 +5893,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/mcp", runMCPAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/agent", runMCPAction).Methods("POST", "OPTIONS")
 
+
 	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
@@ -5999,13 +6000,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
 	// Specific triggers
-	r.HandleFunc("/api/v1/workflows/{key}/outlook", shuffle.HandleCreateOutlookSub).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", shuffle.HandleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/outlook/register", shuffle.HandleNewOutlookRegister).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/outlook/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
+//	r.HandleFunc("/api/v1/workflows/{key}/outlook", shuffle.HandleCreateOutlookSub).Methods("POST", "OPTIONS")
+//	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", shuffle.HandleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
+//	r.HandleFunc("/api/v1/triggers/outlook/register", shuffle.HandleNewOutlookRegister).Methods("GET", "OPTIONS")
+//	r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
+//	r.HandleFunc("/api/v1/triggers/outlook/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
+//	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
+//	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/github/register", shuffle.HandleNewGithubRegister).Methods("PUT", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
@@ -6015,8 +6016,8 @@ func initHandlers() {
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/gmail", shuffle.HandleCreateGmailSub).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/gmail/{triggerId}", shuffle.HandleDeleteGmailSub).Methods("DELETE", "OPTIONS")
+//	r.HandleFunc("/api/v1/workflows/{key}/gmail", shuffle.HandleCreateGmailSub).Methods("POST", "OPTIONS")
+//	r.HandleFunc("/api/v1/workflows/{key}/gmail/{triggerId}", shuffle.HandleDeleteGmailSub).Methods("DELETE", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/triggers/gmail/{key}", handleGetSpecificGmailTrigger).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")

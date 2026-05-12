@@ -771,6 +771,16 @@
                         }
                     }
                 },
+                "debug": {
+                    "type": "boolean",
+                    "description": "Enable debug mode for backend, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.",
+                    "default": false
+                },
+                "autoGOMEMLIMIT": {
+                    "type": "boolean",
+                    "description": "Automatically set GOMEMLIMIT environment variable to 90% of the container memory limit.",
+                    "default": true
+                },
                 "cleanupSchedule": {
                     "type": "number",
                     "description": "The interval in seconds at which the cleanup job runs",
@@ -2059,6 +2069,16 @@
                         }
                     }
                 },
+                "debug": {
+                    "type": "boolean",
+                    "description": "Enable debug mode for orborus, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.",
+                    "default": false
+                },
+                "autoGOMEMLIMIT": {
+                    "type": "boolean",
+                    "description": "Automatically set GOMEMLIMIT environment variable to 90% of the container memory limit.",
+                    "default": true
+                },
                 "executionConcurrency": {
                     "type": "number",
                     "description": "The maximum amount of concurrent workflow executions per worker",
@@ -2703,6 +2723,16 @@
                         }
                     }
                 },
+                "debug": {
+                    "type": "boolean",
+                    "description": "Enable debug mode for worker, which enables extra logging. orborus.debug, worker.debug, and app.debug should be set to identical values, if shuffle manages these deployments.",
+                    "default": false
+                },
+                "autoGOMEMLIMIT": {
+                    "type": "boolean",
+                    "description": "Automatically set GOMEMLIMIT environment variable to 90% of the container memory limit.",
+                    "default": true
+                },
                 "manageAppDeployments": {
                     "type": "boolean",
                     "description": "Whether apps are deployed and managed by worker. When disabled, every used app is expected to to be already deployed (see apps.enabled).",
@@ -3321,6 +3351,11 @@
                             "items": {}
                         }
                     }
+                },
+                "debug": {
+                    "type": "boolean",
+                    "description": "Enable debug mode for app, which enables extra logging",
+                    "default": false
                 },
                 "mountTmpVolume": {
                     "type": "boolean",

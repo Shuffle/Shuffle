@@ -692,6 +692,7 @@ const AngularWorkflow = (defaultprops) => {
   const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
   const [executionTimeline, setExecutionTimeline] = React.useState([]);
   const [workflowExecutionCount, setWorkflowExecutionCount] = React.useState(0);
+  const [executionsLoading, setExecutionsLoading] = React.useState(false);
   const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
   const [workflowRecommendations, setWorkflowRecommendations] = React.useState(undefined);
   const [showErrors, setShowErrors] = React.useState(true);
@@ -2343,6 +2344,8 @@ const AngularWorkflow = (defaultprops) => {
 		return
 	}
 
+    setExecutionsLoading(true);
+
     var url = `${globalUrl}/api/v2/workflows/${id}/executions`
     var method = "GET"
     if (filter === undefined || filter === null || filter.toUpperCase() === "ALL") {
@@ -2413,7 +2416,11 @@ const AngularWorkflow = (defaultprops) => {
           const newkeys = sortByKey(responseJson.executions, "-started_at");
           setWorkflowExecutions(newkeys);
 
-          var tmpView = new URLSearchParams(cursearch).get("execution_id");
+          // If an explicit orgId is passed (suborg context), don't read execution_id from the URL
+          // because that execution_id belongs to a different org's context.
+          var tmpView = (orgId !== undefined && orgId !== null && orgId.length > 0)
+            ? null
+            : new URLSearchParams(window.location.search).get("execution_id");
           if (execution_id !== undefined && execution_id !== null && execution_id.length > 0 && (tmpView === undefined || tmpView === null || tmpView.length === 0)) {
             tmpView = execution_id;
           }
@@ -2422,6 +2429,7 @@ const AngularWorkflow = (defaultprops) => {
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
             // Don't clean up if it's already open
             if (executionModalOpen === true) {
+              setExecutionsLoading(false);
               return
             }
 
@@ -2468,8 +2476,8 @@ const AngularWorkflow = (defaultprops) => {
             }
           }
         } else {
-          var tmpView = new URLSearchParams(cursearch).get("execution_id");
-          if (tmpView === undefined || tmpView === null || tmpView.length === 0) {
+          var tmpView = new URLSearchParams(window.location.search).get("execution_id");
+          if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
             const execution_id = tmpView;
             setExecutionModalView(1);
             setExecutionRequest({
@@ -2479,10 +2487,12 @@ const AngularWorkflow = (defaultprops) => {
             start()
           }
         }
+        setExecutionsLoading(false);
       })
       .catch((error) => {
         //toast(error.toString());
         console.log("Get execution error: ", error.toString());
+        setExecutionsLoading(false);
       });
   };
 
@@ -10265,7 +10275,15 @@ const AngularWorkflow = (defaultprops) => {
         }
       }else if(!action.isStartNode) {
         // This is to round the corners of the image
-        const originalBase64 = action.large_image !== undefined && action.large_image !== null && action.large_image !== "" ? action.large_image : theme.palette.defaultImage
+        // If action has no large_image (e.g. imported/synced workflow where it was stripped),
+        // inject it from the available apps in the sidebar
+        let imageSource = (action.large_image !== undefined && action.large_image !== null && action.large_image !== "") ? action.large_image : ""
+        if (!imageSource) {
+          const foundApp = apps.find((a) => a.id === action.app_id) ||
+            apps.find((a) => a.name === action.app_name)
+          imageSource = (foundApp && foundApp.large_image) ? foundApp.large_image : ""
+        }
+        const originalBase64 = imageSource !== "" ? imageSource : theme.palette.defaultImage
         const roundedImage = await roundBase64Image(originalBase64, 16);
         action = {...action, large_image: roundedImage}
 
@@ -21318,6 +21336,21 @@ const AngularWorkflow = (defaultprops) => {
 	}
 
     if (inputworkflow !== undefined && inputworkflow !== null && inputworkflow.id !== undefined && inputworkflow.id !== null) {
+      const isOrgChange = currentWorkflow.org_id !== undefined && currentWorkflow.org_id !== null && currentWorkflow.org_id.length > 0 && currentWorkflow.org_id !== inputworkflow.org_id;
+
+      if (isOrgChange) {
+        // Switching to a different suborg: clear stale execution state and URL param
+        const currentExecutionId = new URLSearchParams(window.location.search).get("execution_id");
+        if (currentExecutionId) {
+          const newSearch = removeParam("execution_id", window.location.search);
+          navigate(curpath + newSearch);
+        }
+        setExecutionModalView(0);
+        setExecutionData({});
+        setExecutionRunning(false);
+        stop();
+      }
+
       getRevisionHistory(inputworkflow.id, 50, 0, inputworkflow.org_id)
       getWorkflowExecution(inputworkflow.id, "", executionFilter, inputworkflow.org_id)
 	  loadTriggers(inputworkflow.org_id)
@@ -23634,7 +23667,7 @@ const AngularWorkflow = (defaultprops) => {
           )}
         </div>
       ) : (
-        <div style={{ backgroundColor: theme.palette.drawer.backgroundColor, padding: isMobile ? "0px 10px 50px 10px" : "25px 15px 150px 15px", maxWidth: isMobile ? "100%" : "100%", overflowX: "hidden", height: "100%"}}>
+        <div style={{ backgroundColor: theme.palette.drawer.backgroundColor, padding: isMobile ? "0px 10px 50px 10px" : "25px 15px 150px 15px", maxWidth: isMobile ? "100%" : "100%", overflowX: "hidden", height: "100%" }}>
 
 
           <Breadcrumbs
@@ -23647,10 +23680,12 @@ const AngularWorkflow = (defaultprops) => {
               onClick={() => {
                 setExecutionRunning(false);
                 stop();
-                // getWorkflowExecution(currentWorkflow.id, "");
-                getWorkflowExecution(props.match.params.key, "");
                 setExecutionModalView(0);
                 setLastExecution(executionData.execution_id);
+                // getWorkflowExecution(currentWorkflow.id, "");
+                setTimeout(() => {
+                  getWorkflowExecution(props.match.params.key, "");
+                }, 100);
               }}
             >
               <IconButton
@@ -23660,6 +23695,8 @@ const AngularWorkflow = (defaultprops) => {
                   marginBottom: "auto",
                 }}
                 onClick={() => {
+                  const newitem = removeParam("execution_id", cursearch);
+                  navigate(curpath + newitem)
                   setExecutionRunning(false);
                   stop()
                 }}
@@ -24078,7 +24115,6 @@ const AngularWorkflow = (defaultprops) => {
                   {environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
                     <Typography variant="body2" color="textSecondary" style={{}}>
                       No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=locations" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Find out here</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href={`mailto:${supportEmail}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>{supportEmail}</a>
-                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=locations" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor }}>Find out here</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: theme.palette.linkColor}}>support@shuffler.io</a>
                     </Typography>
                     : null}
                 </div>
@@ -24160,6 +24196,14 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
 
+                // Fallback: if large_image is still missing, look up by app_id in the apps state
+                if ((imgSrc === undefined || imgSrc === null || imgSrc.length === 0) && data.action.label && apps.length > 0) {
+                  const appById = apps.find((a) => a.name === data.action.label);
+                  if (appById !== undefined && appById !== null && appById.large_image) {
+                    imgSrc = appById.large_image;
+                  }
+                }
+
                 var actionimg =
                   curapp === null ? null : (
                     <img
@@ -24219,6 +24263,7 @@ const AngularWorkflow = (defaultprops) => {
                 if (data.action.app_name === "Shuffle Tools" && data.action.id !== undefined && cy !== undefined) {
                   const nodedata = cy.getElementById(data.action.id).data();
                   //if (nodedata !== undefined && nodedata !== null && nodedata.fillstyle === "linear-gradient") {
+                  const img = apps.find((a) => a.name === "Shuffle Tools")?.large_image
                   if (nodedata !== undefined && nodedata !== null) {
                     var imgStyle = {
                       marginRight: 20,
@@ -24232,7 +24277,7 @@ const AngularWorkflow = (defaultprops) => {
                     actionimg = (
                       <img
                         alt={nodedata.label}
-                        src={nodedata.large_image}
+                        src={nodedata.large_image || img}
                         style={imgStyle}
                       />
                     );
@@ -24241,7 +24286,7 @@ const AngularWorkflow = (defaultprops) => {
                     actionimg = (
                       <img
                         alt={data.action.app_name}
-                        src={data.action.large_image}
+                        src={data.action.large_image || img}
                         style={{
                           marginRight: 20,
                           width: imgsize,
@@ -24468,7 +24513,7 @@ const AngularWorkflow = (defaultprops) => {
 
                       {data?.action?.name === "run_schemaless" || data?.action?.name === "run_singul" || data?.action?.name === "singul" && data?.action?.parameters?.length > 4 ?  
 							<div
-						  		style={{position: "relative", flex: 10, float: "right", textAlign: "right", }}
+                          style={{ position: "relative", flex: 10, float: "right", textAlign: "right", }}
 							>
 							  <Tooltip title={`Explore the raw debug-output: ${data?.action?.parameters?.find((param) => param?.name === "x-debug-url")?.value || ""}`}>
 								  <a
@@ -24747,7 +24792,7 @@ const AngularWorkflow = (defaultprops) => {
 			}}
 			edge="end"
 		  >
-			<ContentCopyIcon style={{heigth: 15, }}/>
+              <ContentCopyIcon style={{ heigth: 15, }} />
 		  </IconButton>
 		  </span>
           :
@@ -24755,7 +24800,7 @@ const AngularWorkflow = (defaultprops) => {
             variant="body1"
             style={{}}
           >
-            <b>{data.name}</b>: <span style={{color: "rgba(255,255,255,0.5)" }}>
+            <b>{data.name}</b>: <span style={{ color: "rgba(255,255,255,0.5)" }}>
 				{showVariable ? data.value : null}
 			</span>
           </Typography>

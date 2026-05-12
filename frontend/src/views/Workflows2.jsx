@@ -36,6 +36,8 @@ import {
     Button,
     TextField,
     FormControl,
+    FormControlLabel,
+    Switch,
     IconButton,
     Menu,
     MenuItem,
@@ -53,6 +55,12 @@ import {
     Zoom,
     Collapse,
     Skeleton,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
 } from "@mui/material";
 
 // Material UI Icons
@@ -1075,6 +1083,10 @@ const Workflows2 = (props) => {
     const [downloadBranch, setDownloadBranch] = React.useState("main");
     const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] =
         React.useState(false);
+    const [syncMode, setSyncMode] = React.useState(false);
+    const [remoteWorkflows, setRemoteWorkflows] = React.useState([]);
+    const [remoteWorkflowsLoading, setRemoteWorkflowsLoading] = React.useState(false);
+    const [syncListModalOpen, setSyncListModalOpen] = React.useState(false);
     const [exportModalOpen, setExportModalOpen] = React.useState(false);
     const [exportData, setExportData] = React.useState("");
     const [dialogModalOpen, setDialogModalOpen] = React.useState(false);
@@ -5967,6 +5979,78 @@ const Workflows2 = (props) => {
         );
     });
 
+    const listRemoteWorkflows = () => {
+        const parsedData = {
+            url: downloadUrl,
+            branch: downloadBranch || "master",
+            list_only: true,
+        };
+        if (field1.length > 0) parsedData["username"] = field1;
+        if (field2.length > 0) parsedData["password"] = field2;
+
+        setRemoteWorkflowsLoading(true);
+        fetch(globalUrl + "/api/v1/workflows/download_remote", {
+            method: "POST",
+            mode: "cors",
+            headers: { Accept: "application/json" },
+            body: JSON.stringify(parsedData),
+            credentials: "include",
+        })
+            .then((r) => r.json())
+            .then((responseJson) => {
+                setRemoteWorkflowsLoading(false);
+                if (responseJson.success && Array.isArray(responseJson.workflows)) {
+                    setRemoteWorkflows(responseJson.workflows);
+                    setLoadWorkflowsModalOpen(false);
+                    setSyncListModalOpen(true);
+                } else {
+                    toast("Failed to list remote workflows: " + (responseJson.reason || "Unknown error"));
+                }
+            })
+            .catch((err) => {
+                setRemoteWorkflowsLoading(false);
+                toast(err.toString());
+            });
+    };
+
+    const handleRemoteWorkflowAction = (remoteWf, action) => {
+        const parsedData = {
+            url: downloadUrl,
+            branch: downloadBranch || "master",
+            original_workflow_id: remoteWf.id,
+        };
+        if (action === "sync") {
+            parsedData["sync_to_id"] = remoteWf.org_workflow_id || remoteWf.id;
+        }
+        if (field1.length > 0) parsedData["username"] = field1;
+        if (field2.length > 0) parsedData["password"] = field2;
+
+        toast(action === "sync" ? `Syncing "${remoteWf.name}"...` : `Importing "${remoteWf.name}"...`);
+        fetch(globalUrl + "/api/v1/workflows/download_remote", {
+            method: "POST",
+            mode: "cors",
+            headers: { Accept: "application/json" },
+            body: JSON.stringify(parsedData),
+            credentials: "include",
+        })
+            .then((r) => r.json())
+            .then((responseJson) => {
+                if (responseJson.success) {
+                    toast.success(action === "sync" ? `"${remoteWf.name}" synced successfully` : `"${remoteWf.name}" imported successfully`);
+                    // Refresh org workflow list and update local exists_in_org state
+                    getAvailableWorkflows();
+                    setRemoteWorkflows((prev) =>
+                        prev.map((w) =>
+                            w.id === remoteWf.id ? { ...w, exists_in_org: true, org_workflow_id: w.id } : w
+                        )
+                    );
+                } else {
+                    toast("Failed: " + (responseJson.reason || "Unknown error"));
+                }
+            })
+            .catch((err) => toast(err.toString()));
+    };
+
     const importWorkflowsFromUrl = (url) => {
         console.log("IMPORT WORKFLOWS FROM ", downloadUrl);
 
@@ -6018,8 +6102,12 @@ const Workflows2 = (props) => {
     };
 
     const handleGithubValidation = () => {
-        importWorkflowsFromUrl(downloadUrl);
-        setLoadWorkflowsModalOpen(false);
+        if (syncMode) {
+            listRemoteWorkflows();
+        } else {
+            importWorkflowsFromUrl(downloadUrl);
+            setLoadWorkflowsModalOpen(false);
+        }
     }
 
     const workflowDownloadModalOpen = loadWorkflowsModalOpen ? (
@@ -6141,6 +6229,22 @@ const Workflows2 = (props) => {
                         fullWidth
                     />
                 </div>
+                <div style={{ display: "flex", alignItems: "center", marginTop: 16 }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={syncMode}
+                                onChange={(e) => setSyncMode(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label={
+                            <Typography variant="body2" style={{ color: theme.palette.text.primary }}>
+                                Sync — list workflows before importing
+                            </Typography>
+                        }
+                    />
+                </div>
             </DialogContent>
             <DialogActions>
                 <Button
@@ -6153,12 +6257,107 @@ const Workflows2 = (props) => {
                 <Button
                     variant="contained"
                     color="primary"
-                    disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")}
+                    disabled={downloadUrl.length === 0 || !downloadUrl.includes("http") || remoteWorkflowsLoading}
                     onClick={() => {
                         handleGithubValidation();
                     }}
                 >
-                    Submit
+                    {remoteWorkflowsLoading ? <CircularProgress size={20} color="inherit" /> : (syncMode ? "List & Sync" : "Submit")}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    ) : null;
+
+    const syncListModal = syncListModalOpen ? (
+        <Dialog
+            open={syncListModalOpen}
+            onClose={() => setSyncListModalOpen(false)}
+            PaperProps={{
+                sx: {
+                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                    border: theme?.palette?.DialogStyle?.border,
+                    minWidth: "700px",
+                    maxWidth: "900px",
+                    fontFamily: theme?.typography?.fontFamily,
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    zIndex: 1000,
+                    '& .MuiDialogContent-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogTitle-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogActions-root': {
+                        backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                }
+            }}
+        >
+            <DialogTitle>
+                <div style={{ color: theme.palette.text.primary, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span>Workflows from remote repository</span>
+                    <IconButton size="small" onClick={() => setSyncListModalOpen(false)}>
+                        <CloseIcon />
+                    </IconButton>
+                </div>
+            </DialogTitle>
+            <DialogContent style={{ color: theme.palette.text.primary, paddingTop: 0 }}>
+                {remoteWorkflows.length === 0 ? (
+                    <Typography variant="body2" style={{ marginTop: 8 }}>No workflow JSON files found in the repository.</Typography>
+                ) : (
+                    <TableContainer>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Name</TableCell>
+                                    {/* <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Folder</TableCell> */}
+                                    <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }}>Last Updated</TableCell>
+                                    <TableCell style={{ color: theme.palette.text.primary, fontWeight: 600 }} align="right">Action</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {remoteWorkflows.map((wf) => (
+                                    <TableRow key={wf.id}>
+                                        <TableCell style={{ color: theme.palette.text.primary }}>{wf.name}</TableCell>
+                                        {/* <TableCell style={{ color: theme.palette.text.secondary }}>{wf.folder_name || "—"}</TableCell> */}
+                                        <TableCell style={{ color: theme.palette.text.secondary }}>
+                                            {wf.updated_at && wf.updated_at > 0
+                                                ? new Date(wf.updated_at * 1000).toLocaleDateString()
+                                                : "—"}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {wf.exists_in_org ? (
+                                                <Button
+                                                    variant="outlined"
+                                                    color="primary"
+                                                    size="small"
+                                                    startIcon={<CachedIcon />}
+                                                    onClick={() => handleRemoteWorkflowAction(wf, "sync")}
+                                                >
+                                                    Sync
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    variant="contained"
+                                                    color="primary"
+                                                    size="small"
+                                                    startIcon={<CloudDownloadIcon />}
+                                                    onClick={() => handleRemoteWorkflowAction(wf, "import")}
+                                                >
+                                                    Import
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setSyncListModalOpen(false)} color="primary">
+                    Close
                 </Button>
             </DialogActions>
         </Dialog>
@@ -6330,6 +6529,7 @@ const Workflows2 = (props) => {
                 {publishModal}
                 {aiAnnouncementModal}
                 {workflowDownloadModalOpen}
+                {syncListModal}
 
                 {/*!drawerOpen ? 
 			<div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius, }}>

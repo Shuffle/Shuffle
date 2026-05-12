@@ -389,6 +389,10 @@ func buildImage(tags []string, dockerfileLocation string) error {
 
 		backendNodeName := backendPodList.Items[0].Spec.NodeName
 		log.Printf("[INFO] Backend running on: %s", backendNodeName)
+		kanikoImage := os.Getenv("SHUFFLE_BUILDER_IMAGE")
+		if len(kanikoImage) == 0 {
+			kanikoImage = "gcr.io/kaniko-project/executor:latest"
+		}
 
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -400,7 +404,7 @@ func buildImage(tags []string, dockerfileLocation string) error {
 						Containers: []corev1.Container{
 							{
 								Name:  "kaniko",
-								Image: "gcr.io/kaniko-project/executor:latest",
+								Image: kanikoImage,
 								Args: []string{
 									"--verbosity=debug",
 									"--log-format=text",

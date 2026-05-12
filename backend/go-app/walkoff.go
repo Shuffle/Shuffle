@@ -300,8 +300,18 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	var env *shuffle.Environment
 	found := false
+	//for i := range envs {
+	//	if envs[i].Name == environment {
+	//		env = &envs[i]
+	//		found = true
+	//		break
+	//	}
+	//}
+
+	parsedEnvName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-"))
 	for i := range envs {
-		if envs[i].Name == environment {
+		parsedInnerName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(envs[i].Name, " ", "-"), "_", "-"))
+		if parsedInnerName == parsedEnvName {
 			env = &envs[i]
 			found = true
 			break
@@ -344,7 +354,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		if len(executionRequests.Data) > 50 {
 			executionRequests.Data = executionRequests.Data[0:49]
 		}
-
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -813,15 +822,15 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			//	log.Printf("Failed to delete webhook: %s", err)
 			//}
 		} else if item.TriggerType == "EMAIL" {
-			err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
-			if err != nil {
-				log.Printf("[DEBUG] Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
-			}
+		//	err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
+		//	if err != nil {
+		//		log.Printf("[DEBUG] Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
+		//	}
 
-			err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
-			if err != nil {
-				log.Printf("Failed to delete gmail email sub: %s", err)
-			}
+		//	err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
+		//	if err != nil {
+		//		log.Printf("Failed to delete gmail email sub: %s", err)
+		//	}
 		}
 	}
 
@@ -2143,6 +2152,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
+
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
@@ -2211,6 +2221,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				}
 
 				// 1. This parses OpenAPI v2 to v3 etc, for use.
+				// Always returns an ID as well
 				parsedOpenApi, err := handleSwaggerValidation(readFile)
 				if err != nil {
 					log.Printf("[WARNING] Validation error for %s: %s", filename, err)
@@ -2653,7 +2664,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, appId, body, runValidationAction, decisionId)
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, appId, body, runValidationAction, decisionId)
 	if appId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
@@ -3322,6 +3333,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate, false)
+		iterateOpenApiGithub(fs, dir, "", "") 
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
