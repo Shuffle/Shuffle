@@ -3,10 +3,10 @@ FROM golang:1.25 AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download && go mod tidy
+RUN go mod download
 
 COPY worker.go ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o worker .
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o worker .
 
 FROM alpine:3.22.2
 
