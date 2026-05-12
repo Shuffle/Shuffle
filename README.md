@@ -3,21 +3,23 @@
 [![Shuffle Logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
 
 Shuffle Automation
-  <div>
-    <a
-    href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
-    target="_blank"
-    style="text-decoration: none; display: flex; align-items: center; gap: 8px;"
-  >
-    <img
-      src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg"
-      height="20"
-      alt="Google Cloud Platform"
-    />
-  </a>
-  </div>
 
 </h1><h4 align="center">
+  
+  <p>Deploy On<p/>
+<p align="center">
+  <a href="https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle">
+    <img src="https://github.com/user-attachments/assets/37858273-eaeb-42a9-b228-a425026ca82d"
+         height="80"/>
+  </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://aws.amazon.com/marketplace/pp/prodview-typ7upg6kwntk">
+    <img src="https://github.com/user-attachments/assets/250e00d7-2a23-4b4e-95e1-5db4db1f7864"
+         height="80"/>
+  </a>
+</p>
+
+
 
 [Shuffle](https://shuffler.io) is an open source automation platform, built for and by the security professionals. Security operations is complex, but it doesn't have to be. Built to work well with MSSP's and other service providers in mind.
 
@@ -36,10 +38,6 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 </h4>
 
 ![Example Shuffle webhook integration](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
-
-## Deployment
-
-**Shuffle can be deployed using the following cloud marketplaces:**
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
