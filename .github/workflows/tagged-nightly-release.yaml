@@ -14,6 +14,7 @@ on:
 
 jobs:
   main:
+    if: github.event.release.target_commitish == 'nightly'
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     strategy:
