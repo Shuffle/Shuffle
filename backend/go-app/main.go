@@ -1,4 +1,4 @@
-package main
+package main 
 
 import (
 	uuid "github.com/satori/go.uuid"
