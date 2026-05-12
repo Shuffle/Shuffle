@@ -29,7 +29,9 @@ jobs:
       - name: Set version
         id: set_version
         run: |
-          echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
