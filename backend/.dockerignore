@@ -1,0 +1,4 @@
+.git
+**/*_test.go
+*.md
+tests/

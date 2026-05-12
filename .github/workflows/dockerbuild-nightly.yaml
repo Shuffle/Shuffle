@@ -36,7 +36,7 @@ jobs:
             experimental: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -61,7 +61,7 @@ jobs:
 
       - name: Ghcr Build and push
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         env:
           BUILDX_NO_DEFAULT_LOAD: true
         with:
@@ -70,8 +70,8 @@ jobs:
           file: ${{ matrix.path }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
