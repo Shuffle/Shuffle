@@ -1,0 +1,268 @@
+name: Manual Docker Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "'build' from source or 'sync' to retag existing images"
+        required: true
+        default: "build"
+        type: choice
+        options:
+          - build
+          - sync
+      ref:
+        description: "Git ref to build from — commit SHA, branch, or tag (build mode only)"
+        required: false
+        default: ""
+        type: string
+      image_tag:
+        description: "Destination tag for built/synced images (e.g. '1.2.3', 'test-fix')"
+        required: true
+        type: string
+      source_tag:
+        description: "Source tag to retag from (sync mode only)"
+        required: false
+        default: ""
+        type: string
+      build_frontend:
+        description: "Include frontend"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      build_backend:
+        description: "Include backend"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      build_worker:
+        description: "Include worker"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      push_to_dockerhub:
+        description: "Also push to DockerHub"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: "build"
+      ref:
+        required: false
+        type: string
+        default: ""
+      image_tag:
+        required: true
+        type: string
+      source_tag:
+        required: false
+        type: string
+        default: ""
+      build_frontend:
+        required: false
+        type: string
+        default: "true"
+      build_backend:
+        required: false
+        type: string
+        default: "true"
+      build_worker:
+        required: false
+        type: string
+        default: "true"
+      push_to_dockerhub:
+        required: false
+        type: string
+        default: "false"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Validate inputs
+        run: |
+          if [[ "${{ inputs.mode }}" != "build" && "${{ inputs.mode }}" != "sync" ]]; then
+            echo "::error::mode must be 'build' or 'sync', got '${{ inputs.mode }}'"
+            exit 1
+          fi
+          if [[ -z "${{ inputs.image_tag }}" ]]; then
+            echo "::error::image_tag is required"
+            exit 1
+          fi
+          if [[ "${{ inputs.build_frontend }}" != "true" && "${{ inputs.build_backend }}" != "true" && "${{ inputs.build_worker }}" != "true" ]]; then
+            echo "::error::At least one component must be selected (build_frontend, build_backend, or build_worker)"
+            exit 1
+          fi
+          if [[ "${{ inputs.mode }}" == "sync" && -z "${{ inputs.source_tag }}" ]]; then
+            echo "::error::source_tag is required when mode is 'sync'"
+            exit 1
+          fi
+
+          echo "## Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Mode | \`${{ inputs.mode }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Tag | \`${{ inputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.mode }}" == "build" ]]; then
+            echo "| Ref | \`${{ inputs.ref || 'HEAD' }}\` |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Source Tag | \`${{ inputs.source_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| Frontend | ${{ inputs.build_frontend }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ inputs.build_backend }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Worker | ${{ inputs.build_worker }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| DockerHub | ${{ inputs.push_to_dockerhub }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          MATRIX='{"include":['
+          FIRST=true
+          if [[ "${{ inputs.build_frontend }}" == "true" ]]; then
+            MATRIX+='{"app":"frontend","path":"frontend"}'
+            FIRST=false
+          fi
+          if [[ "${{ inputs.build_backend }}" == "true" ]]; then
+            [[ "$FIRST" == "false" ]] && MATRIX+=','
+            MATRIX+='{"app":"backend","path":"backend"}'
+            FIRST=false
+          fi
+          if [[ "${{ inputs.build_worker }}" == "true" ]]; then
+            [[ "$FIRST" == "false" ]] && MATRIX+=','
+            MATRIX+='{"app":"worker","path":"functions/onprem/worker"}'
+          fi
+          MATRIX+=']}'
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  build:
+    needs: setup
+    if: inputs.mode == 'build'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref || '' }}
+
+      - name: Print commit info
+        id: commit
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "Building ${{ matrix.app }} from commit $SHA"
+          echo "### ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`$SHA\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: \`${{ inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: "amd64,arm64,arm"
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate tags
+        id: tags
+        run: |
+          TAGS="ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ inputs.image_tag }}"
+          if [[ "${{ inputs.push_to_dockerhub }}" == "true" ]]; then
+            TAGS+=$'\n'"${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ inputs.image_tag }}"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v4
+        env:
+          BUILDX_NO_DEFAULT_LOAD: true
+        with:
+          logout: false
+          context: ${{ matrix.path }}/
+          file: ${{ matrix.path }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
+  sync:
+    needs: setup
+    if: inputs.mode == 'sync'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull, retag and push
+        run: |
+          echo "Syncing ${{ matrix.app }}: ${{ inputs.source_tag }} -> ${{ inputs.image_tag }}"
+
+          docker pull ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ inputs.source_tag }}
+          docker tag ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ inputs.source_tag }} ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ inputs.image_tag }}
+          docker push ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ inputs.image_tag }}
+
+          if [[ "${{ inputs.push_to_dockerhub }}" == "true" ]]; then
+            docker tag ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ inputs.source_tag }} ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ inputs.image_tag }}
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ inputs.image_tag }}
+          fi
+
+          echo "### ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Source: \`${{ inputs.source_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Destination: \`${{ inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
