@@ -5059,6 +5059,20 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
+		const opensearchHealthInterval = 10
+		log.Printf("[INFO] Starting OpenSearch resource health monitor every %d minutes. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", opensearchHealthInterval)
+		opensearchHealthJob := func() {
+			shuffle.ScheduleOpensearchResourceHealth()
+		}
+		_, err := newscheduler.Every(opensearchHealthInterval).Minutes().NotImmediately().Run(opensearchHealthJob)
+		if err != nil {
+			log.Printf("[ERROR] Failed to schedule OpenSearch resource health monitor: %s", err)
+		} else {
+			log.Printf("[DEBUG] Successfully started OpenSearch resource health monitor interval of %d minutes", opensearchHealthInterval)
+		}
+	}
+
 	// Self-cleaning
 	go func() {
 		cursor := ""
@@ -5830,6 +5844,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/health/opensearch", shuffle.RunOpensearchResourceHealthCheck).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/opensearch-prefix", shuffle.HandleFixOpensearchPrefix).Methods("POST", "OPTIONS")
 
 	// Make user related locations
