@@ -3962,6 +3962,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 					} else {
 						log.Printf("[WARNING] Network %s exists but is not swarm scoped (scope=%s)", networkName, net.Scope)
 					}
+
 					break
 				}
 			}
@@ -3975,22 +3976,38 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		services, serr := dockercli.ServiceList(ctx, types.ServiceListOptions{})
 		if serr == nil {
 			for _, svc := range services {
-				if svc.ID == service.ID {
-					log.Printf("[DEBUG] Found service %s (%s) — patching network attach", service.ID, svc.ID)
-
-					spec := svc.Spec
-					spec.TaskTemplate.Networks = append(spec.TaskTemplate.Networks, swarm.NetworkAttachmentConfig{
-						Target: networkID,
-					})
-
-					_, uerr := dockercli.ServiceUpdate(ctx, svc.ID, svc.Version, spec, types.ServiceUpdateOptions{})
-					if uerr != nil {
-						log.Printf("[WARNING] Failed to patch service %s with network %s: %v", service.ID, networkID, uerr)
-					} else {
-						log.Printf("[INFO] Successfully attached network %s to service %s", networkID, service.ID)
-					}
-					break
+				if svc.ID != service.ID {
+					continue
 				}
+
+				// Check if the network is already in there or not
+				foundNetwork := false
+				for _, netAttach := range svc.Spec.TaskTemplate.Networks {
+					if netAttach.Target == networkID {
+						foundNetwork = true
+						break
+					}
+				}
+
+				if foundNetwork {
+					log.Printf("[DEBUG] Service %s (%s) already attached to network %s, skipping patch", service.ID, svc.ID, networkID)
+					continue
+				}
+
+				log.Printf("[DEBUG] Found service %s (%s) — patching network attach", service.ID, svc.ID)
+
+				spec := svc.Spec
+				spec.TaskTemplate.Networks = append(spec.TaskTemplate.Networks, swarm.NetworkAttachmentConfig{
+					Target: networkID,
+				})
+
+				_, uerr := dockercli.ServiceUpdate(ctx, svc.ID, svc.Version, spec, types.ServiceUpdateOptions{})
+				if uerr != nil {
+					log.Printf("[WARNING] Failed to patch service %s with network %s: %v", service.ID, networkID, uerr)
+				} else {
+					log.Printf("[INFO] Successfully attached network %s to service %s", networkID, service.ID)
+				}
+				break
 			}
 		} else {
 			log.Printf("[WARNING] Failed to list services for patching network attach: %v", serr)
