@@ -615,9 +615,6 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 					Id:      uuid.NewV4().String(),
 					Auth:    os.Getenv("SHUFFLE_ENVIRONMENT_AUTH"),
 				}
-				if len(item.Auth) == 0 {
-					item.Auth = uuid.NewV4().String()
-				}
 
 				err = shuffle.SetEnvironment(ctx, &item)
 				if err != nil {
@@ -4773,9 +4770,6 @@ func runInitEs(ctx context.Context) {
 					Id:      uuid.NewV4().String(),
 					Auth:    os.Getenv("SHUFFLE_ENVIRONMENT_AUTH"),
 				}
-				if len(item.Auth) == 0 {
-					item.Auth = uuid.NewV4().String()
-				}
 
 				err = shuffle.SetEnvironment(ctx, &item)
 				if err != nil {
@@ -5559,9 +5553,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 					OrgId:      org.Id,
 					Id:         uuid.NewV4().String(),
 					Auth:       os.Getenv("SHUFFLE_ENVIRONMENT_AUTH"),
-				}
-				if len(newEnv.Auth) == 0 {
-					newEnv.Auth = uuid.NewV4().String()
 				}
 
 				err = shuffle.SetEnvironment(ctx, &newEnv)
