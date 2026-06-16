@@ -3268,7 +3268,17 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	fs := memfs.New()
 	ctx := context.Background()
-	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
+	tmpUrl, err := url.Parse(tmpBody.URL)
+	if err != nil {
+		log.Printf("[WARNING] Failed to parse url for remote app download: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid git URL"}`))
+		return
+	}
+
+	host := strings.ToLower(tmpUrl.Hostname())
+
+	if tmpUrl.Scheme == "https" && (host == "github.com" || host == "gitlab.com" || host == "bitbucket.org" || host == "dev.azure.com") {
 		cloneOptions := &git.CloneOptions{
 			URL: tmpBody.URL,
 		}
