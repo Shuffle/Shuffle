@@ -52,15 +52,29 @@ var scheduledOrgs = map[string]*newscheduler.Job{}
 
 var CronScheduler = gocron.NewScheduler(time.UTC)
 
+
+// Took inspiration from https://github.com/robfig/cron/blob/master/parser.go#L88
+func checkCronSyntax(cron string) bool {
+	if len(cron) == 0 {
+		return false
+	}
+
+	cron = strings.TrimSpace(cron)
+	fileds := strings.Fields(cron)
+
+	return len(fileds) == 5 || len(fileds) == 6
+}
+
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
 	var err error
-	testSplit := strings.Split(frequency, "*")
+	//testSplit := strings.Split(frequency, "*")
 	cronJob := ""
 	isCron := false
 	newfrequency := 0
 
-	if len(testSplit) > 5 {
+	// if len(testSplit) > 5 {
+	if checkCronSyntax(frequency) {
 		cronJob = frequency
 		isCron = true
 	} else {
