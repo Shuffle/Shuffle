@@ -2746,7 +2746,7 @@ const CacheView = memo((props) => {
 				setSelectedRows(newSelection);
 				}}
 				keepNonExistentRowsSelected={false}
-				getRowId={(row) => `${row?.key}_${row?.category}`}
+				getRowId={(row) => encodeURIComponent(`${row?.key}_${row?.category || ""}`)}
 
 				autoHeight={true}
 				sx={{
@@ -2878,17 +2878,12 @@ const CacheView = memo((props) => {
 							style={{ marginLeft: 50, }}
 							onClick={() => {
 								setCachedLoaded(false)
+								// selectedRows holds DataGrid row ids (getRowId = key_category),
+								// not the raw key. Resolve each back to its item before deleting.
 								for (var key in selectedRows) {
-									// Find the item and its category
-									var foundCategory = ""
-									for (var i = 0; i < listCache.length; i++) {
-										if (listCache[i].key === selectedRows[key]) {
-											foundCategory = listCache[i].category
-											break
-										}
-									}
-
-									deleteEntry(orgId, selectedRows[key], foundCategory, false)
+									const item = listCache.find(it => encodeURIComponent(`${it.key}_${it.category || ""}`) === selectedRows[key])
+									if (!item) continue
+									deleteEntry(orgId, item.key, item.category, false)
 								}
 
 								setSelectedRows([])
