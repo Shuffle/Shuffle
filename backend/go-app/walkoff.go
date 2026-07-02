@@ -2587,6 +2587,12 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 			executionId := request.URL.Query().Get("execution_id")
 			authorization := request.URL.Query().Get("authorization")
 			if len(executionId) == 0 || len(authorization) == 0 {
+				if shuffle.GetProject().Environment != "cloud" {
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false, "reason": "Api authentication failed!"}`))
+					return
+				}
+
 				log.Printf("[WARNING] Bad execution id/auth in single action validate (1): %#v, %#v. Continuing with the 'public' org id", executionId, authorization)
 				err := shuffle.ValidateRequestOverload(resp, request)
 				if err != nil {
