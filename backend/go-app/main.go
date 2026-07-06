@@ -1,4 +1,4 @@
-package main 
+package main
 
 import (
 	uuid "github.com/satori/go.uuid"
@@ -772,16 +772,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	go shuffle.CheckSessionOrgs(ctx, userInfo)
 
 	//log.Printf("%s  %s", session.Session, UserInfo.Session)
-	//if session.Session != userInfo.Session {
-	//	log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false, "reason": ""}`))
-	//	return
-	//}
-
-	expiration := time.Now().Add(3600 * time.Second)
-	sessionCookie := shuffle.ConstructSessionCookie(userInfo.Session, expiration)
-	http.SetCookie(resp, sessionCookie)
 
 	// Updating user info if there's something wrong
 	if len(userInfo.ActiveOrg.Name) == 0 || len(userInfo.ActiveOrg.Id) == 0 {
@@ -1176,19 +1166,12 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	aiEnabled := os.Getenv("OPENAI_API_URL") != "" && os.Getenv("AI_MODEL") != ""
 
 	returnValue := shuffle.HandleInfo{
-		Success:   true,
-		Username:  userInfo.Username,
-		Admin:     parsedAdmin,
-		Id:        userInfo.Id,
-		Orgs:      userOrgs,
-		ActiveOrg: userInfo.ActiveOrg,
-		Cookies: []shuffle.SessionCookie{
-			shuffle.SessionCookie{
-				Key:        "session_token",
-				Value:      userInfo.Session,
-				Expiration: expiration.Unix(),
-			},
-		},
+		Success:      true,
+		Username:     userInfo.Username,
+		Admin:        parsedAdmin,
+		Id:           userInfo.Id,
+		Orgs:         userOrgs,
+		ActiveOrg:    userInfo.ActiveOrg,
 		EthInfo:      userInfo.EthInfo,
 		ChatDisabled: chatDisabled,
 		Tutorials:    tutorialsFinished,
@@ -5893,7 +5876,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/mcp", runMCPAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/agent", runMCPAction).Methods("POST", "OPTIONS")
 
-
 	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
@@ -6000,13 +5982,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
 	// Specific triggers
-//	r.HandleFunc("/api/v1/workflows/{key}/outlook", shuffle.HandleCreateOutlookSub).Methods("POST", "OPTIONS")
-//	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", shuffle.HandleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
-//	r.HandleFunc("/api/v1/triggers/outlook/register", shuffle.HandleNewOutlookRegister).Methods("GET", "OPTIONS")
-//	r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
-//	r.HandleFunc("/api/v1/triggers/outlook/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
-//	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
-//	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
+	//	r.HandleFunc("/api/v1/workflows/{key}/outlook", shuffle.HandleCreateOutlookSub).Methods("POST", "OPTIONS")
+	//	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", shuffle.HandleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
+	//	r.HandleFunc("/api/v1/triggers/outlook/register", shuffle.HandleNewOutlookRegister).Methods("GET", "OPTIONS")
+	//	r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
+	//	r.HandleFunc("/api/v1/triggers/outlook/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	//	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
+	//	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/github/register", shuffle.HandleNewGithubRegister).Methods("PUT", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
@@ -6016,8 +5998,8 @@ func initHandlers() {
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
-//	r.HandleFunc("/api/v1/workflows/{key}/gmail", shuffle.HandleCreateGmailSub).Methods("POST", "OPTIONS")
-//	r.HandleFunc("/api/v1/workflows/{key}/gmail/{triggerId}", shuffle.HandleDeleteGmailSub).Methods("DELETE", "OPTIONS")
+	//	r.HandleFunc("/api/v1/workflows/{key}/gmail", shuffle.HandleCreateGmailSub).Methods("POST", "OPTIONS")
+	//	r.HandleFunc("/api/v1/workflows/{key}/gmail/{triggerId}", shuffle.HandleDeleteGmailSub).Methods("DELETE", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/triggers/gmail/{key}", handleGetSpecificGmailTrigger).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
