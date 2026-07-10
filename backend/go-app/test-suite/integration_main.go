@@ -5,11 +5,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	//"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"regexp"
 	"slices"
@@ -22,19 +24,25 @@ import (
 	"cloud.google.com/go/storage"
 	gomemcache "github.com/bradfitz/gomemcache/memcache"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shuffle/opensearch-go/v4/opensearchapi"
 	shuffle "github.com/shuffle/shuffle-shared"
 )
 
 // This suite is a focused integration check for Shuffle's OpenSearch and
 // Memcached storage behavior. It is not intended to cover the entire backend.
 
-const defaultTestIndexPrefix = ""
+const (
+	defaultTestIndexPrefix    = ""
+	integrationOrganizationID = "d080eb37-2f1e-4ed5-af12-f526c48372ec"
+)
 
 func main() {
 	testing.Main(regexp.MatchString, []testing.InternalTest{
-//		{Name: "TestMemcacheCounterUpdate", F: TestMemcacheCounterUpdate},
+		{Name: "TestOpensearchInit", F: TestOpensearchInit},
+		//		{Name: "TestMemcacheCounterUpdate", F: TestMemcacheCounterUpdate},
 		{Name: "TestWorkflowStorageRoundTrip", F: TestWorkflowStorageRoundTrip},
 		{Name: "TestWorkflowExecutionPreparation", F: TestWorkflowExecutionPreparation},
+		{Name: "TestDatastoreIntegration", F: TestDatastoreIntegration},
 	}, nil, nil)
 }
 
@@ -88,6 +96,52 @@ func initializeIntegrationBackends(t *testing.T) {
 	}
 }
 
+func TestOpensearchInit(t *testing.T) {
+	initializeIntegrationBackends(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	projectdb := shuffle.GetProject()
+	if projectdb.DbType != "opensearch" {
+		t.Fatalf("Shuffle database type is %q, want opensearch", projectdb.DbType)
+	}
+	if projectdb.Es.Client == nil {
+		t.Fatal("OpenSearch client was not initialized")
+	}
+
+	baseIndexes := shuffle.GetOpensearchBaseIndexes()
+	if len(baseIndexes) == 0 {
+		t.Fatal("Shuffle returned no base OpenSearch indexes")
+	}
+
+	// Get Alias -> Base Alias match or not
+	// Index Association -> Base Alias has index or not and one write
+	
+	aliasResponse, err := projectdb.Es.Cat.Aliases(ctx, &opensearchapi.CatAliasesReq{Aliases: baseIndexes})
+	if err != nil {
+		t.Fatalf("get OpenSearch aliases: %v", err)
+	}
+
+	if len(baseIndexes) > len(aliasResponse.Aliases) {
+		t.Fatalf("OpenSearch returned %d aliases, want %d", len(aliasResponse.Aliases), len(baseIndexes))
+	}
+
+	for _, alias := range aliasResponse.Aliases {
+		if !slices.Contains(baseIndexes, alias.Alias) {
+			t.Fatalf("OpenSearch alias %q is not in the expected base index list %v", alias.Alias, baseIndexes)
+		}
+
+		if len(alias.Index) == 0 {
+			t.Fatalf("OpenSearch alias %q has no associated index", alias.Alias)
+		}
+
+		if alias.IsWriteIndex != "true" {
+			t.Fatalf("OpenSearch alias %q has no write index associated", alias.Alias)
+		}
+	}
+}
+
 func TestMemcacheCounterUpdate(t *testing.T) {
 	initializeIntegrationBackends(t)
 
@@ -108,8 +162,8 @@ func TestWorkflowStorageRoundTrip(t *testing.T) {
 	initializeIntegrationBackends(t)
 
 	workflowID := uuid.NewV4().String()
-	organizationID := "d080eb37-2f1e-4ed5-af12-f526c48372ec"
-	actionID :=  uuid.NewV4().String()
+	organizationID := integrationOrganizationID
+	actionID := uuid.NewV4().String()
 	workflowCacheKey := "workflow_" + workflowID
 
 	cleanupWorkflow := func() {
@@ -146,7 +200,6 @@ func TestWorkflowStorageRoundTrip(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-
 
 	if err := shuffle.SetWorkflow(ctx, workflow, workflowID); err != nil {
 		t.Fatalf("save workflow: %v", err)
@@ -192,7 +245,7 @@ func TestWorkflowExecutionPreparation(t *testing.T) {
 	defer cancel()
 
 	workflowID := uuid.NewV4().String()
-	organizationID := "d080eb37-2f1e-4ed5-af12-f526c48372ec"
+	organizationID := integrationOrganizationID
 	actionID := uuid.NewV4().String()
 	environmentID := uuid.NewV4().String()
 	executionID := uuid.NewV4().String()
@@ -331,9 +384,439 @@ func TestWorkflowExecutionPreparation(t *testing.T) {
 func TestDatastoreIntegration(t *testing.T) {
 	initializeIntegrationBackends(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	_ = ctx
+
+	orgID := integrationOrganizationID
+	testRunID := uuid.NewV4().String()
+	category := "integration_large_" + strings.ReplaceAll(testRunID, "-", "")
+	keyPrefix := "integration-bulk-" + testRunID
+	// The current OpenSearch mapping indexes Value as one term, whose hard limit
+	// is 32,766 bytes. Exercise close to that boundary without exceeding it.
+	// FIX IT PLEASE
+	largeEntries := make([]string, 1500)
+	for index := range largeEntries {
+		largeEntries[index] = fmt.Sprintf("created-%05d", index)
+	}
+	largeJSON, err := json.Marshal(largeEntries)
+	if err != nil {
+		t.Fatalf("build large datastore value: %v", err)
+	}
+
+	largeValue := string(largeJSON)
+
+	fixtures := []shuffle.CacheKeyData{
+		{
+			OrgId:    orgID,
+			Key:      keyPrefix + "-large",
+			Value:    largeValue,
+			Category: category,
+			Tags:     []string{"integration", "large", "created"},
+		},
+	}
+
+	for index := 0; index < 5; index++ {
+		fixtures = append(fixtures, shuffle.CacheKeyData{
+			OrgId:    orgID,
+			Key:      fmt.Sprintf("%s-item-%02d", keyPrefix, index),
+			Value:    fmt.Sprintf("item-%02d|%s|end", index, strings.Repeat(string(rune('a'+index)), 8*1024)),
+			Category: category,
+			Tags:     []string{"integration", "bulk", fmt.Sprintf("item-%02d", index)},
+		})
+	}
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+
+		for _, fixture := range fixtures {
+			documentID := datastoreDocumentID(orgID, fixture.Key, category)
+			if err := shuffle.DeleteKey(cleanupCtx, "org_cache", documentID, orgID); err != nil {
+				t.Errorf("clean up datastore key %s: %v", fixture.Key, err)
+			}
+		}
+
+		categoryConfig, err := shuffle.GetDatastoreCategoryConfig(cleanupCtx, orgID, category)
+		if err == nil && categoryConfig.Id != "" {
+			if err := shuffle.DeleteKey(cleanupCtx, "datastore_category", categoryConfig.Id); err != nil {
+				t.Errorf("clean up datastore category %s: %v", category, err)
+			}
+		}
+		_ = shuffle.DeleteCache(cleanupCtx, datastoreCategoryCacheKey(orgID, category))
+		_ = shuffle.DeleteCache(cleanupCtx, "datastore_category_"+orgID)
+		_ = shuffle.DeleteCache(cleanupCtx, datastoreQueryCacheKey(orgID, category, 50))
+	})
+
+	createdInfo, err := shuffle.SetDatastoreKeyBulk(ctx, fixtures)
+	if err != nil {
+		t.Fatalf("bulk-create datastore category: %v", err)
+	}
+
+	assertBulkResult(t, createdInfo, fixtures, false)
+	for _, fixture := range fixtures {
+		requireCachedDatastoreKey(t, ctx, "org_cache_"+datastoreDocumentID(orgID, fixture.Key, category), fixture)
+	}
+
+	categoryConfig, err := shuffle.GetDatastoreCategoryConfig(ctx, orgID, category)
+	if err != nil {
+		t.Fatalf("get automatically-created datastore category: %v", err)
+	}
+
+	if categoryConfig.Id == "" || categoryConfig.OrgId != orgID || categoryConfig.Category != category {
+		t.Fatalf("unexpected category config: %#v", categoryConfig)
+	}
+
+	requireCachedDatastoreCategory(t, ctx, datastoreCategoryCacheKey(orgID, category), orgID, category)
+
+	queryCacheKey := datastoreQueryCacheKey(orgID, category, 50)
+	listed, _, err := shuffle.GetAllCacheKeys(ctx, orgID, category, 50, "")
+	if err != nil {
+		t.Fatalf("query bulk-created datastore category: %v", err)
+	}
+
+	assertDatastoreCollection(t, listed, fixtures)
+	requireCachedDatastoreQuery(t, ctx, queryCacheKey, fixtures)
+
+	prefixMatches, _, err := shuffle.GetCacheKeysByPrefix(ctx, orgID, category, fixtures[0].Key, 10, "")
+	if err != nil {
+		t.Fatalf("query datastore category by prefix: %v", err)
+	}
+	if len(prefixMatches) != 1 {
+		t.Fatalf("prefix query returned %d keys, want 1", len(prefixMatches))
+	}
+
+	assertDatastoreKey(t, &prefixMatches[0], fixtures[0])
+
+	primaryLookupID := fmt.Sprintf("%s_%s", orgID, fixtures[0].Key)
+	primaryCacheKey := "org_cache_" + datastoreDocumentID(orgID, fixtures[0].Key, category)
+	if err := shuffle.DeleteCache(ctx, primaryCacheKey); err != nil {
+		t.Fatalf("evict large datastore cache key %s: %v", primaryCacheKey, err)
+	}
+
+	if _, err := shuffle.GetCache(ctx, primaryCacheKey); err == nil {
+		t.Fatalf("expected datastore cache key %s to be absent after eviction", primaryCacheKey)
+	}
+
+	fromOpenSearch, err := shuffle.GetDatastoreKey(ctx, primaryLookupID, category)
+	if err != nil {
+		t.Fatalf("get large datastore value from OpenSearch after cache eviction: %v", err)
+	}
+
+	assertDatastoreKey(t, fromOpenSearch, fixtures[0])
+	if fromOpenSearch.Created == 0 || fromOpenSearch.Edited == 0 || fromOpenSearch.PublicAuthorization == "" {
+		t.Fatalf("OpenSearch document is missing generated metadata: %#v", fromOpenSearch)
+	}
+
+	requireCachedDatastoreKey(t, ctx, primaryCacheKey, fixtures[0])
+
+	updated := *fromOpenSearch
+	updatedEntries := append([]string(nil), largeEntries...)
+	for index := 0; index < 450; index++ {
+		updatedEntries = append(updatedEntries, fmt.Sprintf("updated-%05d", index))
+	}
+
+	updatedJSON, err := json.Marshal(updatedEntries)
+	if err != nil {
+		t.Fatalf("grow large datastore value: %v", err)
+	}
+
+	updated.Value = string(updatedJSON)
+	updated.Tags = []string{"integration", "large", "updated"}
+	added := []shuffle.CacheKeyData{
+		{
+			OrgId:    orgID,
+			Key:      keyPrefix + "-added-01",
+			Value:    "added-01|" + strings.Repeat("X", 8*1024),
+			Category: category,
+			Tags:     []string{"integration", "added"},
+		},
+		{
+			OrgId:    orgID,
+			Key:      keyPrefix + "-added-02",
+			Value:    "added-02|" + strings.Repeat("Y", 8*1024),
+			Category: category,
+			Tags:     []string{"integration", "added"},
+		},
+	}
+	fixtures[0] = updated
+	fixtures = append(fixtures, added...)
+	updateBatch := append([]shuffle.CacheKeyData{updated}, added...)
+
+	updatedInfo, err := shuffle.SetDatastoreKeyBulk(ctx, updateBatch)
+	if err != nil {
+		t.Fatalf("bulk-update large value and add category entries: %v", err)
+	}
+
+	assertMixedBulkResult(t, updatedInfo, updated.Key, added)
+	if _, err := shuffle.GetCache(ctx, queryCacheKey); err == nil {
+		t.Fatalf("bulk update did not invalidate category query cache %s", queryCacheKey)
+	}
+
+	for _, fixture := range updateBatch {
+		requireCachedDatastoreKey(t, ctx, "org_cache_"+datastoreDocumentID(orgID, fixture.Key, category), fixture)
+	}
+
+	if err := shuffle.DeleteCache(ctx, primaryCacheKey); err != nil {
+		t.Fatalf("evict updated large datastore cache key: %v", err)
+	}
+
+	storedUpdate, err := shuffle.GetDatastoreKey(ctx, primaryLookupID, category)
+	if err != nil {
+		t.Fatalf("get updated large datastore key from OpenSearch: %v", err)
+	}
+
+	assertDatastoreKey(t, storedUpdate, updated)
+	if len(storedUpdate.Value) <= len(largeValue) {
+		t.Fatalf("large value did not grow: got %d bytes, original %d", len(storedUpdate.Value), len(largeValue))
+	}
+
+	if storedUpdate.Created != fromOpenSearch.Created {
+		t.Fatalf("bulk update changed created timestamp: got %d, want %d", storedUpdate.Created, fromOpenSearch.Created)
+	}
+
+	requireCachedDatastoreKey(t, ctx, primaryCacheKey, updated)
+
+	listed, _, err = shuffle.GetAllCacheKeys(ctx, orgID, category, 50, "")
+	if err != nil {
+		t.Fatalf("query datastore category after bulk update: %v", err)
+	}
+
+	assertDatastoreCollection(t, listed, fixtures)
+	requireCachedDatastoreQuery(t, ctx, queryCacheKey, fixtures)
+
+	categories, err := shuffle.GetDatastoreCategories(ctx, orgID)
+	if err != nil {
+		t.Fatalf("list datastore categories: %v", err)
+	}
+
+	categoryFound := false
+	for _, candidate := range categories {
+		if candidate.Category == category && candidate.OrgId == orgID {
+			categoryFound = true
+			break
+		}
+	}
+
+	if !categoryFound {
+		t.Fatalf("category %s was not returned by category listing", category)
+	}
+
+	if _, err := shuffle.GetCache(ctx, "datastore_category_"+orgID); err != nil {
+		t.Fatalf("category list was not cached: %v", err)
+	}
+
+	for _, fixture := range fixtures {
+		documentID := datastoreDocumentID(orgID, fixture.Key, category)
+		if err := shuffle.DeleteKey(ctx, "org_cache", documentID, orgID); err != nil {
+			t.Fatalf("delete datastore key %s: %v", fixture.Key, err)
+		}
+	}
+
+	_ = shuffle.DeleteCache(ctx, queryCacheKey)
+	listed, _, err = shuffle.GetAllCacheKeys(ctx, orgID, category, 50, "")
+	if err != nil {
+		t.Fatalf("query datastore category after deletion: %v", err)
+	}
+
+	if len(listed) != 0 {
+		t.Fatalf("category still contains %d keys after deletion", len(listed))
+	}
+
+	for _, fixture := range fixtures {
+		lookupID := fmt.Sprintf("%s_%s", orgID, fixture.Key)
+		if _, err := shuffle.GetDatastoreKey(ctx, lookupID, category); err == nil {
+			t.Errorf("deleted datastore key %s is still readable", fixture.Key)
+		}
+
+		cacheKey := "org_cache_" + datastoreDocumentID(orgID, fixture.Key, category)
+		if _, err := shuffle.GetCache(ctx, cacheKey); err == nil {
+			t.Errorf("deleted datastore key %s is still cached", fixture.Key)
+		}
+	}
+}
+
+func datastoreDocumentID(orgID, key, category string) string {
+	documentID := fmt.Sprintf("%s_%s", orgID, key)
+	if category != "" && category != "default" {
+		documentID += "_" + strings.ReplaceAll(strings.ToLower(category), " ", "_")
+	}
+	documentID = url.QueryEscape(documentID)
+	if len(documentID) > 127 {
+		documentID = documentID[:127]
+	}
+	return documentID
+}
+
+func datastoreQueryCacheKey(orgID, category string, max int) string {
+	return fmt.Sprintf("org_cache__%s_%s_%d", orgID, category, max)
+}
+
+func datastoreCategoryCacheKey(orgID, category string) string {
+	return fmt.Sprintf("datastore_category_%s_%s", orgID, category)
+}
+
+func assertDatastoreKey(t *testing.T, actual *shuffle.CacheKeyData, expected shuffle.CacheKeyData) {
+	t.Helper()
+
+	if actual == nil {
+		t.Fatal("expected datastore key, got nil")
+	}
+	if actual.OrgId != expected.OrgId {
+		t.Errorf("datastore org ID: got %q, want %q", actual.OrgId, expected.OrgId)
+	}
+	if actual.Key != expected.Key {
+		t.Errorf("datastore key: got %q, want %q", actual.Key, expected.Key)
+	}
+	if actual.Value != expected.Value {
+		actualHash := sha256.Sum256([]byte(actual.Value))
+		expectedHash := sha256.Sum256([]byte(expected.Value))
+		t.Errorf(
+			"datastore value mismatch: got length=%d sha256=%x, want length=%d sha256=%x",
+			len(actual.Value), actualHash, len(expected.Value), expectedHash,
+		)
+	}
+	if actual.Category != expected.Category {
+		t.Errorf("datastore category: got %q, want %q", actual.Category, expected.Category)
+	}
+	if len(actual.Tags) != len(expected.Tags) {
+		t.Errorf("datastore tag count: got %d (%v), want %d (%v)", len(actual.Tags), actual.Tags, len(expected.Tags), expected.Tags)
+	}
+	for _, tag := range expected.Tags {
+		if !slices.Contains(actual.Tags, tag) {
+			t.Errorf("datastore tags %v do not contain %q", actual.Tags, tag)
+		}
+	}
+}
+
+// Bit hacky
+func assertDatastoreCollection(t *testing.T, actual, expected []shuffle.CacheKeyData) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Fatalf("datastore collection size: got %d, want %d", len(actual), len(expected))
+	}
+	actualByKey := make(map[string]shuffle.CacheKeyData, len(actual))
+	for _, item := range actual {
+		if _, duplicate := actualByKey[item.Key]; duplicate {
+			t.Errorf("datastore collection contains duplicate key %q", item.Key)
+		}
+		actualByKey[item.Key] = item
+	}
+	for _, wanted := range expected {
+		item, found := actualByKey[wanted.Key]
+		if !found {
+			t.Errorf("datastore collection is missing key %q", wanted.Key)
+			continue
+		}
+		assertDatastoreKey(t, &item, wanted)
+	}
+}
+
+func assertBulkResult(t *testing.T, result []shuffle.DatastoreKeyMini, expected []shuffle.CacheKeyData, existed bool) {
+	t.Helper()
+
+	if len(result) != len(expected) {
+		t.Fatalf("bulk result size: got %d, want %d", len(result), len(expected))
+	}
+	resultByKey := make(map[string]shuffle.DatastoreKeyMini, len(result))
+	for _, item := range result {
+		resultByKey[item.Key] = item
+	}
+	for _, wanted := range expected {
+		item, found := resultByKey[wanted.Key]
+		if !found {
+			t.Errorf("bulk result is missing key %q", wanted.Key)
+			continue
+		}
+		if item.Existed != existed {
+			t.Errorf("bulk result existed flag for %q: got %t, want %t", wanted.Key, item.Existed, existed)
+		}
+	}
+}
+
+func assertMixedBulkResult(t *testing.T, result []shuffle.DatastoreKeyMini, updatedKey string, added []shuffle.CacheKeyData) {
+	t.Helper()
+
+	if len(result) != 1+len(added) {
+		t.Fatalf("mixed bulk result size: got %d, want %d", len(result), 1+len(added))
+	}
+	expected := map[string]bool{updatedKey: true}
+	for _, item := range added {
+		expected[item.Key] = false
+	}
+	for _, item := range result {
+		wantExisted, found := expected[item.Key]
+		if !found {
+			t.Errorf("mixed bulk result contains unexpected key %q", item.Key)
+			continue
+		}
+		if item.Existed != wantExisted {
+			t.Errorf("mixed bulk existed flag for %q: got %t, want %t", item.Key, item.Existed, wantExisted)
+		}
+		delete(expected, item.Key)
+	}
+	for missing := range expected {
+		t.Errorf("mixed bulk result is missing key %q", missing)
+	}
+}
+
+func requireCachedDatastoreKey(t *testing.T, ctx context.Context, cacheKey string, expected shuffle.CacheKeyData) {
+	t.Helper()
+
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("get datastore cache key %s: %v", cacheKey, err)
+	}
+	cachedBytes, ok := cached.([]byte)
+	if !ok {
+		t.Fatalf("datastore cache key %s has type %T, want []byte", cacheKey, cached)
+	}
+
+	var datastoreKey shuffle.CacheKeyData
+	if err := json.Unmarshal(cachedBytes, &datastoreKey); err != nil {
+		t.Fatalf("decode datastore cache key %s: %v", cacheKey, err)
+	}
+	assertDatastoreKey(t, &datastoreKey, expected)
+}
+
+func requireCachedDatastoreQuery(t *testing.T, ctx context.Context, cacheKey string, expected []shuffle.CacheKeyData) {
+	t.Helper()
+
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("get datastore query cache key %s: %v", cacheKey, err)
+	}
+	cachedBytes, ok := cached.([]byte)
+	if !ok {
+		t.Fatalf("datastore query cache key %s has type %T, want []byte", cacheKey, cached)
+	}
+
+	var result shuffle.CacheReturn
+	if err := json.Unmarshal(cachedBytes, &result); err != nil {
+		t.Fatalf("decode datastore query cache key %s: %v", cacheKey, err)
+	}
+	assertDatastoreCollection(t, result.Keys, expected)
+}
+
+func requireCachedDatastoreCategory(t *testing.T, ctx context.Context, cacheKey, orgID, category string) {
+	t.Helper()
+
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("get datastore category cache key %s: %v", cacheKey, err)
+	}
+	cachedBytes, ok := cached.([]byte)
+	if !ok {
+		t.Fatalf("datastore category cache key %s has type %T, want []byte", cacheKey, cached)
+	}
+
+	var config shuffle.DatastoreCategoryUpdate
+	if err := json.Unmarshal(cachedBytes, &config); err != nil {
+		t.Fatalf("decode datastore category cache key %s: %v", cacheKey, err)
+	}
+	if config.Id == "" || config.OrgId != orgID || config.Category != category {
+		t.Fatalf("unexpected cached datastore category: %#v", config)
+	}
 }
 
 func registerCacheCleanup(t *testing.T, key string) {
