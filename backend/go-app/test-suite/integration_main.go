@@ -43,6 +43,7 @@ func main() {
 		{Name: "TestWorkflowStorageRoundTrip", F: TestWorkflowStorageRoundTrip},
 		{Name: "TestWorkflowExecutionPreparation", F: TestWorkflowExecutionPreparation},
 		{Name: "TestDatastoreIntegration", F: TestDatastoreIntegration},
+		{Name: "TestUserManagement", F: TestUserManagement},
 	}, nil, nil)
 }
 
@@ -117,7 +118,7 @@ func TestOpensearchInit(t *testing.T) {
 
 	// Get Alias -> Base Alias match or not
 	// Index Association -> Base Alias has index or not and one write
-	
+
 	aliasResponse, err := projectdb.Es.Cat.Aliases(ctx, &opensearchapi.CatAliasesReq{Aliases: baseIndexes})
 	if err != nil {
 		t.Fatalf("get OpenSearch aliases: %v", err)
@@ -612,7 +613,9 @@ func TestDatastoreIntegration(t *testing.T) {
 		}
 	}
 
-	_ = shuffle.DeleteCache(ctx, queryCacheKey)
+	if cached, err := shuffle.GetCache(ctx, queryCacheKey); err == nil {
+		t.Errorf("datastore deletion left stale category query cache %s: %#v", queryCacheKey, cached)
+	}
 	listed, _, err = shuffle.GetAllCacheKeys(ctx, orgID, category, 50, "")
 	if err != nil {
 		t.Fatalf("query datastore category after deletion: %v", err)
@@ -633,6 +636,392 @@ func TestDatastoreIntegration(t *testing.T) {
 			t.Errorf("deleted datastore key %s is still cached", fixture.Key)
 		}
 	}
+}
+
+func TestUserManagement(t *testing.T) {
+	initializeIntegrationBackends(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	testRunID := uuid.NewV4().String()
+	userID := uuid.NewV4().String()
+	username := fmt.Sprintf("integration-user-%s@example.com", testRunID)
+	idCacheKey := "user_" + strings.ToLower(userID)
+	usernameCacheKey := "user_" + strings.ToLower(username)
+
+	user := shuffle.User{
+		Id:                userID,
+		Username:          username,
+		GeneratedUsername: username,
+		Password:          "integration-test-password-hash-" + testRunID,
+		Session:           uuid.NewV4().String(),
+		ApiKey:            uuid.NewV4().String(),
+		Verified:          true,
+		Role:              "user",
+		Roles:             []string{"user"},
+		Orgs:              []string{integrationOrganizationID},
+		ActiveOrg: shuffle.OrgMini{
+			Id:   integrationOrganizationID,
+			Name: "Integration Test Organization",
+			Role: "user",
+		},
+		Active:       true,
+		CreationTime: time.Now().Unix(),
+		LoginType:    "integration_test",
+		Theme:        "light",
+		Regions:      []string{"integration-test"},
+	}
+	apiKeys := []string{user.ApiKey}
+	sessions := []string{user.Session}
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cleanupCancel()
+
+		if err := shuffle.DeleteKey(cleanupCtx, "Users", userID); err != nil {
+			t.Errorf("clean up integration user %s: %v", userID, err)
+		}
+		for _, apiKey := range apiKeys {
+			_ = shuffle.DeleteKey(cleanupCtx, "apikey", apiKey)
+			_ = shuffle.DeleteCache(cleanupCtx, apiKey)
+			_ = shuffle.DeleteCache(cleanupCtx, "Users_"+apiKey)
+		}
+		for _, session := range sessions {
+			_ = shuffle.DeleteKey(cleanupCtx, "sessions", session)
+			_ = shuffle.DeleteCache(cleanupCtx, session)
+			_ = shuffle.DeleteCache(cleanupCtx, "session_"+session)
+		}
+		for _, cacheKey := range []string{idCacheKey, usernameCacheKey} {
+			_ = shuffle.DeleteCache(cleanupCtx, cacheKey)
+		}
+	})
+
+	if err := shuffle.SetUser(ctx, &user, false); err != nil {
+		t.Fatalf("create integration user: %v", err)
+	}
+	requireCachedUser(t, ctx, idCacheKey, user)
+	requireCachedUser(t, ctx, usernameCacheKey, user)
+	if err := shuffle.SetApikey(ctx, user); err != nil {
+		t.Fatalf("create API-key lookup document: %v", err)
+	}
+	if err := shuffle.SetSession(ctx, user, user.Session); err != nil {
+		t.Fatalf("create session lookup document: %v", err)
+	}
+	requireIndexedUser(t, ctx, "apikey", user.ApiKey, user)
+	requireIndexedSession(t, ctx, user.Session, user)
+
+	apiKeyUser, err := shuffle.GetApikey(ctx, user.ApiKey)
+	if err != nil {
+		t.Fatalf("authenticate newly-created API key: %v", err)
+	}
+	assertUser(t, &apiKeyUser, user)
+	assertAPIKeyLookupIsUncached(t, ctx, user.ApiKey)
+
+	sessionUser, err := shuffle.GetSessionNew(ctx, user.Session)
+	if err != nil {
+		t.Fatalf("authenticate newly-created session: %v", err)
+	}
+	assertUser(t, &sessionUser, user)
+	initialSessionCacheKey := "session_" + user.Session
+	requireCachedUser(t, ctx, initialSessionCacheKey, user)
+	if err := shuffle.DeleteCache(ctx, initialSessionCacheKey); err != nil {
+		t.Fatalf("evict initial session cache: %v", err)
+	}
+	sessionUser, err = shuffle.GetSessionNew(ctx, user.Session)
+	if err != nil {
+		t.Fatalf("authenticate session through OpenSearch after cache eviction: %v", err)
+	}
+	assertUser(t, &sessionUser, user)
+	requireCachedUser(t, ctx, initialSessionCacheKey, user)
+
+	stored, err := shuffle.GetUser(ctx, userID)
+	if err != nil {
+		t.Fatalf("get newly-created user by ID: %v", err)
+	}
+	assertUser(t, stored, user)
+
+	if err := shuffle.DeleteCache(ctx, idCacheKey); err != nil {
+		t.Fatalf("evict user ID cache: %v", err)
+	}
+	if _, err := shuffle.GetCache(ctx, idCacheKey); err == nil {
+		t.Fatalf("expected user ID cache %s to be absent after eviction", idCacheKey)
+	}
+
+	fromOpenSearch, err := shuffle.GetUser(ctx, userID)
+	if err != nil {
+		t.Fatalf("get user from OpenSearch after cache eviction: %v", err)
+	}
+	assertUser(t, fromOpenSearch, user)
+	requireCachedUser(t, ctx, idCacheKey, user)
+
+	foundUsers, err := shuffle.FindUser(ctx, username)
+	if err != nil {
+		t.Fatalf("find integration user by username: %v", err)
+	}
+	if len(foundUsers) != 1 {
+		t.Fatalf("find user returned %d users, want 1", len(foundUsers))
+	}
+	assertUser(t, &foundUsers[0], user)
+
+	updated := *fromOpenSearch
+	updated.Role = "admin"
+	updated.Roles = []string{"user", "admin"}
+	updated.SupportAccess = true
+	updated.Active = false
+	updated.Theme = "dark"
+	updated.Session = uuid.NewV4().String()
+	updated.ApiKey = uuid.NewV4().String()
+	oldSession := user.Session
+	oldAPIKey := user.ApiKey
+	user = updated
+	apiKeys = append(apiKeys, updated.ApiKey)
+	sessions = append(sessions, updated.Session)
+
+	if err := shuffle.SetUser(ctx, &updated, false); err != nil {
+		t.Fatalf("update integration user: %v", err)
+	}
+	if err := shuffle.SetApikey(ctx, updated); err != nil {
+		t.Fatalf("create rotated API-key lookup document: %v", err)
+	}
+	if err := shuffle.SetSession(ctx, updated, updated.Session); err != nil {
+		t.Fatalf("create rotated session lookup document: %v", err)
+	}
+	requireCachedUser(t, ctx, idCacheKey, updated)
+	requireCachedUser(t, ctx, usernameCacheKey, updated)
+	requireIndexedUser(t, ctx, "apikey", updated.ApiKey, updated)
+	requireIndexedSession(t, ctx, updated.Session, updated)
+
+	rotatedAPIKeyUser, err := shuffle.GetApikey(ctx, updated.ApiKey)
+	if err != nil {
+		t.Fatalf("authenticate rotated API key: %v", err)
+	}
+	assertUser(t, &rotatedAPIKeyUser, updated)
+	assertAPIKeyLookupIsUncached(t, ctx, updated.ApiKey)
+	if staleUser, err := shuffle.GetApikey(ctx, oldAPIKey); err == nil {
+		t.Fatalf("old API key still authenticates after rotation: %#v", staleUser)
+	}
+
+	rotatedSessionUser, err := shuffle.GetSessionNew(ctx, updated.Session)
+	if err != nil {
+		t.Fatalf("authenticate rotated session: %v", err)
+	}
+	assertUser(t, &rotatedSessionUser, updated)
+	rotatedSessionCacheKey := "session_" + updated.Session
+	requireCachedUser(t, ctx, rotatedSessionCacheKey, updated)
+	if err := shuffle.DeleteCache(ctx, rotatedSessionCacheKey); err != nil {
+		t.Fatalf("evict rotated session cache: %v", err)
+	}
+	rotatedSessionUser, err = shuffle.GetSessionNew(ctx, updated.Session)
+	if err != nil {
+		t.Fatalf("authenticate rotated session through OpenSearch: %v", err)
+	}
+	assertUser(t, &rotatedSessionUser, updated)
+	requireCachedUser(t, ctx, rotatedSessionCacheKey, updated)
+
+	if staleUser, err := shuffle.GetSessionNew(ctx, oldSession); err == nil {
+		t.Fatalf("old session still authenticates after rotation: %#v", staleUser)
+	}
+
+	if err := shuffle.DeleteCache(ctx, idCacheKey); err != nil {
+		t.Fatalf("evict updated user ID cache: %v", err)
+	}
+	storedUpdate, err := shuffle.GetUser(ctx, userID)
+	if err != nil {
+		t.Fatalf("get updated user from OpenSearch: %v", err)
+	}
+	assertUser(t, storedUpdate, updated)
+	requireCachedUser(t, ctx, idCacheKey, updated)
+
+	foundUsers, err = shuffle.FindUser(ctx, username)
+	if err != nil {
+		t.Fatalf("find updated integration user: %v", err)
+	}
+	if len(foundUsers) != 1 {
+		t.Fatalf("find updated user returned %d users, want 1", len(foundUsers))
+	}
+	assertUser(t, &foundUsers[0], updated)
+	requireCachedUser(t, ctx, idCacheKey, updated)
+	requireCachedUser(t, ctx, usernameCacheKey, updated)
+
+	deleteUser := updated
+	deleteUser.Orgs = nil // Avoid modifying the real integration organization.
+	if err := shuffle.DeleteUsersAccount(ctx, &deleteUser); err != nil {
+		t.Fatalf("delete integration user: %v", err)
+	}
+	for _, cacheKey := range []string{
+		idCacheKey,
+		usernameCacheKey,
+		updated.ApiKey,
+		updated.Session,
+		"session_" + updated.Session,
+	} {
+		if cached, err := shuffle.GetCache(ctx, cacheKey); err == nil {
+			t.Errorf("account deletion left cache %s: %#v", cacheKey, cached)
+		}
+	}
+
+	project := shuffle.GetProject()
+	refreshResponse, err := project.Es.Indices.Refresh(ctx, &opensearchapi.IndicesRefreshReq{
+		Indices: []string{strings.ToLower(shuffle.GetESIndexPrefix("Users"))},
+	})
+	if err != nil {
+		t.Fatalf("refresh Users index after account deletion: %v", err)
+	}
+	if rawResponse := refreshResponse.Inspect().Response; rawResponse != nil {
+		rawResponse.Body.Close()
+	}
+
+	if deleted, err := shuffle.GetUser(ctx, userID); err == nil {
+		t.Fatalf("deleted user is still readable: %#v", deleted)
+	}
+	if users, err := shuffle.FindUser(ctx, username); err != nil {
+		t.Fatalf("find deleted integration user: %v", err)
+	} else if len(users) != 0 {
+		t.Fatalf("deleted user is still returned by username query: %#v", users)
+	}
+	if authenticated, err := shuffle.GetApikey(ctx, updated.ApiKey); err == nil {
+		t.Fatalf("deleted user's API key still authenticates: %#v", authenticated)
+	}
+	if authenticated, err := shuffle.GetSessionNew(ctx, updated.Session); err == nil {
+		t.Fatalf("deleted user's session still authenticates: %#v", authenticated)
+	}
+}
+
+func requireIndexedUser(t *testing.T, ctx context.Context, index, documentID string, expected shuffle.User) {
+	t.Helper()
+
+	project := shuffle.GetProject()
+	response, err := project.Es.Document.Get(ctx, opensearchapi.DocumentGetReq{
+		Index:      strings.ToLower(shuffle.GetESIndexPrefix(index)),
+		DocumentID: documentID,
+	})
+	if err != nil {
+		t.Fatalf("get indexed user document %s/%s: %v", index, documentID, err)
+	}
+	if rawResponse := response.Inspect().Response; rawResponse != nil {
+		defer rawResponse.Body.Close()
+	}
+	if !response.Found {
+		t.Fatalf("indexed user document %s/%s was not found", index, documentID)
+	}
+
+	var user shuffle.User
+	if err := json.Unmarshal(response.Source, &user); err != nil {
+		t.Fatalf("decode indexed user document %s/%s: %v", index, documentID, err)
+	}
+	assertUser(t, &user, expected)
+}
+
+func requireIndexedSession(t *testing.T, ctx context.Context, sessionID string, expected shuffle.User) {
+	t.Helper()
+
+	project := shuffle.GetProject()
+	response, err := project.Es.Document.Get(ctx, opensearchapi.DocumentGetReq{
+		Index:      strings.ToLower(shuffle.GetESIndexPrefix("sessions")),
+		DocumentID: sessionID,
+	})
+	if err != nil {
+		t.Fatalf("get indexed session %s: %v", sessionID, err)
+	}
+	if rawResponse := response.Inspect().Response; rawResponse != nil {
+		defer rawResponse.Body.Close()
+	}
+	if !response.Found {
+		t.Fatalf("indexed session %s was not found", sessionID)
+	}
+
+	var session shuffle.Session
+	if err := json.Unmarshal(response.Source, &session); err != nil {
+		t.Fatalf("decode indexed session %s: %v", sessionID, err)
+	}
+	if session.Session != sessionID {
+		t.Errorf("indexed session token: got %q, want %q", session.Session, sessionID)
+	}
+	if session.UserId != strings.ToLower(expected.Id) {
+		t.Errorf("indexed session user ID: got %q, want %q", session.UserId, strings.ToLower(expected.Id))
+	}
+	if session.Username != strings.ToLower(expected.Username) {
+		t.Errorf("indexed session username: got %q, want %q", session.Username, strings.ToLower(expected.Username))
+	}
+}
+
+func assertAPIKeyLookupIsUncached(t *testing.T, ctx context.Context, apiKey string) {
+	t.Helper()
+
+	// GetApikey intentionally bypasses Memcached in shuffle-shared. Ensure a
+	// lookup did not create either of the historical API-key cache formats.
+	for _, cacheKey := range []string{apiKey, "Users_" + apiKey} {
+		if cached, err := shuffle.GetCache(ctx, cacheKey); err == nil {
+			t.Errorf("API-key lookup unexpectedly populated cache %s: %#v", cacheKey, cached)
+		}
+	}
+}
+
+func assertUser(t *testing.T, actual *shuffle.User, expected shuffle.User) {
+	t.Helper()
+
+	if actual == nil {
+		t.Fatal("expected user, got nil")
+	}
+	if actual.Id != expected.Id {
+		t.Errorf("user ID: got %q, want %q", actual.Id, expected.Id)
+	}
+	if actual.Username != expected.Username {
+		t.Errorf("username: got %q, want %q", actual.Username, expected.Username)
+	}
+	if actual.GeneratedUsername != expected.GeneratedUsername {
+		t.Errorf("generated username: got %q, want %q", actual.GeneratedUsername, expected.GeneratedUsername)
+	}
+	if actual.Role != expected.Role {
+		t.Errorf("user role: got %q, want %q", actual.Role, expected.Role)
+	}
+	if !slices.Equal(actual.Roles, expected.Roles) {
+		t.Errorf("user roles: got %v, want %v", actual.Roles, expected.Roles)
+	}
+	if actual.ActiveOrg.Id != expected.ActiveOrg.Id {
+		t.Errorf("active organization: got %q, want %q", actual.ActiveOrg.Id, expected.ActiveOrg.Id)
+	}
+	if actual.Active != expected.Active {
+		t.Errorf("user active state: got %t, want %t", actual.Active, expected.Active)
+	}
+	if actual.Verified != expected.Verified {
+		t.Errorf("user verified state: got %t, want %t", actual.Verified, expected.Verified)
+	}
+	if actual.SupportAccess != expected.SupportAccess {
+		t.Errorf("support access: got %t, want %t", actual.SupportAccess, expected.SupportAccess)
+	}
+	if actual.Theme != expected.Theme {
+		t.Errorf("user theme: got %q, want %q", actual.Theme, expected.Theme)
+	}
+	if actual.Session != expected.Session {
+		t.Errorf("user session: got %q, want %q", actual.Session, expected.Session)
+	}
+	if actual.ApiKey != expected.ApiKey {
+		t.Errorf("user API key: got %q, want %q", actual.ApiKey, expected.ApiKey)
+	}
+	if actual.Password != expected.Password {
+		t.Error("user password hash did not round-trip")
+	}
+}
+
+func requireCachedUser(t *testing.T, ctx context.Context, cacheKey string, expected shuffle.User) {
+	t.Helper()
+
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("get user cache key %s: %v", cacheKey, err)
+	}
+	cachedBytes, ok := cached.([]byte)
+	if !ok {
+		t.Fatalf("user cache key %s has type %T, want []byte", cacheKey, cached)
+	}
+
+	var user shuffle.User
+	if err := json.Unmarshal(cachedBytes, &user); err != nil {
+		t.Fatalf("decode user cache key %s: %v", cacheKey, err)
+	}
+	assertUser(t, &user, expected)
 }
 
 func datastoreDocumentID(orgID, key, category string) string {
