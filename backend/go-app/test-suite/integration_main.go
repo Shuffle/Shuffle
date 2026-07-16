@@ -39,7 +39,7 @@ const (
 func main() {
 	testing.Main(regexp.MatchString, []testing.InternalTest{
 		{Name: "TestOpensearchInit", F: TestOpensearchInit},
-		//		{Name: "TestMemcacheCounterUpdate", F: TestMemcacheCounterUpdate},
+		{Name: "TestMemcacheCounterUpdate", F: TestMemcacheCounterUpdate},
 		{Name: "TestWorkflowStorageRoundTrip", F: TestWorkflowStorageRoundTrip},
 		{Name: "TestWorkflowExecutionPreparation", F: TestWorkflowExecutionPreparation},
 		{Name: "TestDatastoreIntegration", F: TestDatastoreIntegration},
@@ -115,22 +115,26 @@ func TestOpensearchInit(t *testing.T) {
 	if len(baseIndexes) == 0 {
 		t.Fatal("Shuffle returned no base OpenSearch indexes")
 	}
+	expectedAliases := make([]string, 0, len(baseIndexes))
+	for _, baseIndex := range baseIndexes {
+		expectedAliases = append(expectedAliases, shuffle.GetESIndexPrefix(baseIndex))
+	}
 
 	// Get Alias -> Base Alias match or not
 	// Index Association -> Base Alias has index or not and one write
 
-	aliasResponse, err := projectdb.Es.Cat.Aliases(ctx, &opensearchapi.CatAliasesReq{Aliases: baseIndexes})
+	aliasResponse, err := projectdb.Es.Cat.Aliases(ctx, &opensearchapi.CatAliasesReq{Aliases: expectedAliases})
 	if err != nil {
 		t.Fatalf("get OpenSearch aliases: %v", err)
 	}
 
-	if len(baseIndexes) > len(aliasResponse.Aliases) {
-		t.Fatalf("OpenSearch returned %d aliases, want %d", len(aliasResponse.Aliases), len(baseIndexes))
+	if len(expectedAliases) > len(aliasResponse.Aliases) {
+		t.Fatalf("OpenSearch returned %d aliases, want %d", len(aliasResponse.Aliases), len(expectedAliases))
 	}
 
 	for _, alias := range aliasResponse.Aliases {
-		if !slices.Contains(baseIndexes, alias.Alias) {
-			t.Fatalf("OpenSearch alias %q is not in the expected base index list %v", alias.Alias, baseIndexes)
+		if !slices.Contains(expectedAliases, alias.Alias) {
+			t.Fatalf("OpenSearch alias %q is not in the expected alias list %v", alias.Alias, expectedAliases)
 		}
 
 		if len(alias.Index) == 0 {

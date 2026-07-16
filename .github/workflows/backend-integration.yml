@@ -1,0 +1,168 @@
+name: Backend Integration
+
+on:
+  pull_request:
+    paths:
+      - "backend/go-app/**"
+      - ".github/workflows/backend-integration.yml"
+  push:
+    paths:
+      - "backend/go-app/**"
+      - ".github/workflows/backend-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_WORKING_DIRECTORY: backend/go-app
+  SHUFFLE_TEST_TIMEOUT_SECONDS: "300"
+  SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX: shuffle_ci_${{ github.run_id }}_${{ github.run_attempt }}
+  OPENSEARCH_USE_ISM_ROLLOVER: "false"
+  OPENSEARCH_INDEX_CONFIG: >-
+    {"settings":{"number_of_shards":1,"number_of_replicas":0,"refresh_interval":"1s"},"mappings":{"dynamic_templates":[{"strings_as_keywords":{"match_mapping_type":"string","mapping":{"type":"keyword"}}}]}}
+
+jobs:
+  remote-services:
+    name: Integration / remote services
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: shuffle-integration-vm
+    concurrency:
+      group: shuffle-backend-remote-integration
+      cancel-in-progress: false
+
+    defaults:
+      run:
+        working-directory: ${{ env.GO_WORKING_DIRECTORY }}
+
+    env:
+      SHUFFLE_OPENSEARCH_URL: ${{ vars.SHUFFLE_INTEGRATION_OPENSEARCH_URL }}
+      SHUFFLE_OPENSEARCH_USERNAME: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_USERNAME }}
+      SHUFFLE_OPENSEARCH_PASSWORD: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_PASSWORD }}
+      SHUFFLE_OPENSEARCH_APIKEY: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_APIKEY }}
+      SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: ${{ vars.SHUFFLE_INTEGRATION_OPENSEARCH_SKIPSSL_VERIFY || 'false' }}
+      SHUFFLE_MEMCACHED: ${{ vars.SHUFFLE_INTEGRATION_MEMCACHED }}
+
+    steps:
+      - name: Reject forked pull requests
+        if: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
+        shell: bash
+        run: |
+          echo "Remote integration tests cannot expose VM credentials to forked or Dependabot pull requests." >&2
+          echo "A maintainer must move the commit to a trusted branch in this repository." >&2
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Connect to the integration tailnet
+        if: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_TAILSCALE == 'true' }}
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: ${{ vars.TS_CI_TAG || 'tag:ci' }}
+          ping: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_HOST }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go-app/go.mod
+          cache-dependency-path: backend/go-app/go.sum
+
+      - name: Validate remote configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SHUFFLE_OPENSEARCH_URL:?Set SHUFFLE_INTEGRATION_OPENSEARCH_URL as a repository variable}"
+          : "${SHUFFLE_MEMCACHED:?Set SHUFFLE_INTEGRATION_MEMCACHED as a repository variable}"
+
+          if [[ -z "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]] &&
+             [[ -z "${SHUFFLE_OPENSEARCH_USERNAME:-}" || -z "${SHUFFLE_OPENSEARCH_PASSWORD:-}" ]]; then
+            echo "Configure either SHUFFLE_INTEGRATION_OPENSEARCH_APIKEY or both OpenSearch username/password secrets." >&2
+            exit 1
+          fi
+
+      - name: Wait for remote OpenSearch and Memcached
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl_args=(--silent --show-error --fail)
+          if [[ "${SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY}" == "true" ]]; then
+            curl_args+=(--insecure)
+          fi
+          if [[ -n "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]]; then
+            curl_args+=(-H "Authorization: ApiKey ${SHUFFLE_OPENSEARCH_APIKEY}")
+          else
+            curl_args+=(-u "${SHUFFLE_OPENSEARCH_USERNAME}:${SHUFFLE_OPENSEARCH_PASSWORD}")
+          fi
+
+          for attempt in $(seq 1 60); do
+            if curl "${curl_args[@]}" \
+              "${SHUFFLE_OPENSEARCH_URL%/}/_cluster/health?wait_for_status=yellow&timeout=2s" \
+              >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" -eq 60 ]]; then
+              echo "Remote OpenSearch did not become ready within 120 seconds." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+          memcached_host="${SHUFFLE_MEMCACHED%:*}"
+          memcached_port="${SHUFFLE_MEMCACHED##*:}"
+          for attempt in $(seq 1 30); do
+            if timeout 1 bash -c "</dev/tcp/${memcached_host}/${memcached_port}" 2>/dev/null; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 30 ]]; then
+              echo "Remote Memcached did not become ready within 60 seconds." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Run backend integration tests
+        run: ./test-suite/run_integration.sh
+
+      - name: Delete this run's remote OpenSearch indexes
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${SHUFFLE_OPENSEARCH_URL:-}" ]]; then
+            exit 0
+          fi
+
+          curl_args=(--silent --show-error --fail)
+          if [[ "${SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY}" == "true" ]]; then
+            curl_args+=(--insecure)
+          fi
+          if [[ -n "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]]; then
+            curl_args+=(-H "Authorization: ApiKey ${SHUFFLE_OPENSEARCH_APIKEY}")
+          elif [[ -n "${SHUFFLE_OPENSEARCH_USERNAME:-}" && -n "${SHUFFLE_OPENSEARCH_PASSWORD:-}" ]]; then
+            curl_args+=(-u "${SHUFFLE_OPENSEARCH_USERNAME}:${SHUFFLE_OPENSEARCH_PASSWORD}")
+          else
+            exit 0
+          fi
+
+          all_indexes="$(
+            curl "${curl_args[@]}" \
+              "${SHUFFLE_OPENSEARCH_URL%/}/_cat/indices?h=index"
+          )"
+          while IFS= read -r index; do
+            case "$index" in
+              "${SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX}_"*)
+                curl "${curl_args[@]}" -X DELETE \
+                  "${SHUFFLE_OPENSEARCH_URL%/}/${index}" >/dev/null
+                ;;
+            esac
+          done <<< "$all_indexes"
