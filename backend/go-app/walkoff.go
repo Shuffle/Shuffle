@@ -3328,18 +3328,27 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			dockercli, _, err := shuffle.GetDockerClient()
 			if err == nil {
 
-				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
-				if len(appSdk) == 0 {
-					_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", image.PullOptions{})
-					if err != nil {
-						log.Printf("[WARNING] Failed to download new App SDK: %s", err)
-					}
-				} else {
-					_, err := dockercli.ImagePull(ctx, fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", "ghcr.io", "frikky", appSdk), image.PullOptions{})
-					if err != nil {
-						log.Printf("[WARNING] Failed to download new App SDK %s: %s", err)
-					}
+				registry := os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
+				name := os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+				if name == "" {
+					name = "frikky/shuffle"
+				}
 
+				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
+				appSdkImage := ""
+				if len(appSdk) == 0 {
+					appSdkImage = fmt.Sprintf("%s:app_sdk", name)
+				} else {
+					appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
+				}
+
+				if registry != "" {
+					appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+				}
+
+				_, err = dockercli.ImagePull(ctx, appSdkImage, image.PullOptions{})
+				if err != nil {
+					log.Printf("[WARNING] Failed to download new App SDK: %s", err)
 				}
 			} else {
 				log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
