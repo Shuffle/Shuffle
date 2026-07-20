@@ -64,9 +64,7 @@ jobs:
         if: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_TAILSCALE == 'true' }}
         uses: tailscale/github-action@v4
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: ${{ vars.TS_CI_TAG || 'tag:ci' }}
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           ping: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_HOST }}
 
       - name: Set up Go
@@ -89,11 +87,12 @@ jobs:
           fi
 
       - name: Wait for remote OpenSearch and Memcached
+        id: remote-ready
         shell: bash
         run: |
           set -euo pipefail
 
-          curl_args=(--silent --show-error --fail)
+          curl_args=(--silent --show-error --fail --connect-timeout 3 --max-time 5)
           if [[ "${SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY}" == "true" ]]; then
             curl_args+=(--insecure)
           fi
@@ -133,7 +132,7 @@ jobs:
         run: ./test-suite/run_integration.sh
 
       - name: Delete this run's remote OpenSearch indexes
-        if: always()
+        if: ${{ always() && steps.remote-ready.outcome == 'success' }}
         continue-on-error: true
         shell: bash
         run: |
@@ -142,7 +141,7 @@ jobs:
             exit 0
           fi
 
-          curl_args=(--silent --show-error --fail)
+          curl_args=(--silent --show-error --fail --connect-timeout 5 --max-time 30)
           if [[ "${SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY}" == "true" ]]; then
             curl_args+=(--insecure)
           fi
