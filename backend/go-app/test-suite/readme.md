@@ -153,6 +153,12 @@ go test -tags=e2e ./test-suite \
   -run '^$' -fuzz '^FuzzDecodeSubflowResults$' -fuzztime 30s
 ```
 
+The GitHub workflow runs both `FuzzDecodeSubflowResults` and
+`FuzzExecutionArgumentJSONEnvelope` for 30 seconds. They are an independent job
+and do not need VM credentials, so they still run when OpenSearch, Memcached, or
+the remote backend is unavailable. Both fuzz steps complete before the job
+reports failure, allowing one run to expose failures in both protocol surfaces.
+
 The campaign is capped at 100 real executions per invocation. A failing case
 writes a redacted JSON artifact. Set `SHUFFLE_E2E_ARTIFACT_DIR` to retain those
 artifacts outside Go's temporary directory.

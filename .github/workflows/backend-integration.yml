@@ -27,6 +27,64 @@ env:
     {"settings":{"number_of_shards":1,"number_of_replicas":0,"refresh_interval":"1s"},"mappings":{"dynamic_templates":[{"strings_as_keywords":{"match_mapping_type":"string","mapping":{"type":"keyword"}}}]}}
 
 jobs:
+  execution-fuzz:
+    name: Fuzz / execution protocol
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: ${{ env.GO_WORKING_DIRECTORY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go-app/go.mod
+          cache-dependency-path: backend/go-app/go.sum
+
+      - name: Fuzz subflow result decoding
+        id: subflow-fuzz
+        continue-on-error: true
+        run: >-
+          go test -tags=e2e ./test-suite
+          -run '^$'
+          -fuzz '^FuzzDecodeSubflowResults$'
+          -fuzztime 30s
+
+      - name: Fuzz execution argument envelopes
+        id: argument-fuzz
+        continue-on-error: true
+        run: >-
+          go test -tags=e2e ./test-suite
+          -run '^$'
+          -fuzz '^FuzzExecutionArgumentJSONEnvelope$'
+          -fuzztime 30s
+
+      - name: Upload fuzz failures
+        if: ${{ steps.subflow-fuzz.outcome == 'failure' || steps.argument-fuzz.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shuffle-execution-fuzz-failures-${{ github.run_id }}-${{ github.run_attempt }}
+          path: backend/go-app/test-suite/testdata/fuzz
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce fuzz results
+        if: ${{ always() }}
+        env:
+          SUBFLOW_FUZZ_OUTCOME: ${{ steps.subflow-fuzz.outcome }}
+          ARGUMENT_FUZZ_OUTCOME: ${{ steps.argument-fuzz.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$SUBFLOW_FUZZ_OUTCOME" != "success" || "$ARGUMENT_FUZZ_OUTCOME" != "success" ]]; then
+            echo "Execution fuzzing failed: subflow=${SUBFLOW_FUZZ_OUTCOME}, argument=${ARGUMENT_FUZZ_OUTCOME}" >&2
+            exit 1
+          fi
+
   remote-services:
     name: Integration / remote services
     runs-on: ubuntu-latest
