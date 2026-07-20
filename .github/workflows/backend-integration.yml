@@ -189,7 +189,6 @@ jobs:
       SHUFFLE_E2E_CONCURRENCY: "8"
       SHUFFLE_E2E_HEALTH_WORKFLOW: "true"
       SHUFFLE_E2E_TEST_TIMEOUT: "18m"
-      SHUFFLE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/shuffle-e2e-artifacts
 
     steps:
       - name: Reject forked pull requests
@@ -242,6 +241,8 @@ jobs:
           done
 
       - name: Run backend E2E tests
+        env:
+          SHUFFLE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/shuffle-e2e-artifacts
         run: ./test-suite/run_e2e.sh
 
       - name: Upload redacted E2E failure artifacts
