@@ -720,7 +720,7 @@ func TestUserManagement(t *testing.T) {
 		t.Fatalf("authenticate newly-created API key: %v", err)
 	}
 	assertUser(t, &apiKeyUser, user)
-	assertAPIKeyLookupIsUncached(t, ctx, user.ApiKey)
+	requireCachedAPIKeyLookup(t, ctx, user.ApiKey, user)
 
 	sessionUser, err := shuffle.GetSessionNew(ctx, user.Session)
 	if err != nil {
@@ -788,7 +788,9 @@ func TestUserManagement(t *testing.T) {
 	if err := shuffle.SetApikey(ctx, updated); err != nil {
 		t.Fatalf("create rotated API-key lookup document: %v", err)
 	}
-	if err := shuffle.SetSession(ctx, updated, updated.Session); err != nil {
+	sessionUser = updated
+	sessionUser.Session = oldSession
+	if err := shuffle.SetSession(ctx, sessionUser, updated.Session); err != nil {
 		t.Fatalf("create rotated session lookup document: %v", err)
 	}
 	requireCachedUser(t, ctx, idCacheKey, updated)
@@ -801,7 +803,7 @@ func TestUserManagement(t *testing.T) {
 		t.Fatalf("authenticate rotated API key: %v", err)
 	}
 	assertUser(t, &rotatedAPIKeyUser, updated)
-	assertAPIKeyLookupIsUncached(t, ctx, updated.ApiKey)
+	requireCachedAPIKeyLookup(t, ctx, updated.ApiKey, updated)
 	if staleUser, err := shuffle.GetApikey(ctx, oldAPIKey); err == nil {
 		t.Fatalf("old API key still authenticates after rotation: %#v", staleUser)
 	}
@@ -857,6 +859,7 @@ func TestUserManagement(t *testing.T) {
 		idCacheKey,
 		usernameCacheKey,
 		updated.ApiKey,
+		"Users_" + updated.ApiKey,
 		updated.Session,
 		"session_" + updated.Session,
 	} {
@@ -950,16 +953,29 @@ func requireIndexedSession(t *testing.T, ctx context.Context, sessionID string, 
 	}
 }
 
-func assertAPIKeyLookupIsUncached(t *testing.T, ctx context.Context, apiKey string) {
+func requireCachedAPIKeyLookup(t *testing.T, ctx context.Context, apiKey string, expected shuffle.User) {
 	t.Helper()
 
-	// GetApikey intentionally bypasses Memcached in shuffle-shared. Ensure a
-	// lookup did not create either of the historical API-key cache formats.
-	for _, cacheKey := range []string{apiKey, "Users_" + apiKey} {
-		if cached, err := shuffle.GetCache(ctx, cacheKey); err == nil {
-			t.Errorf("API-key lookup unexpectedly populated cache %s: %#v", cacheKey, cached)
-		}
+	cacheKey := "Users_" + apiKey
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("API-key lookup did not populate cache %s: %v", cacheKey, err)
 	}
+
+	cacheData, ok := cached.([]byte)
+	if !ok {
+		t.Fatalf("API-key cache %s has type %T, want []byte", cacheKey, cached)
+	}
+
+	var users []shuffle.User
+	if err := json.Unmarshal(cacheData, &users); err != nil {
+		t.Fatalf("decode API-key cache %s: %v", cacheKey, err)
+	}
+	if len(users) == 0 {
+		t.Fatalf("API-key cache %s contains no users", cacheKey)
+	}
+
+	assertUser(t, &users[0], expected)
 }
 
 func assertUser(t *testing.T, actual *shuffle.User, expected shuffle.User) {
