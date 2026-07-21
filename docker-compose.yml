@@ -111,19 +111,50 @@ services:
   #   networks:
   #     - shuffle
 
-  #memcached:
-  #  image: memcached:latest
-  #  container_name: shuffle-cache
-  #  hostname: shuffle-cache
-  #  command: memcached -m 2048 -c 2500
-  #  environment:
-  #    - MEMCACHED_MEMORY=2048
-  #    - MEMCACHED_MAX_CONNECTIONS=2500
-  #  ports:
-  #    - 11211:11211
-  #  networks:
-  #  -  shuffle
-  #  -  swarm_executions
+  memcache-1:
+    profiles:
+      - memcached-ha
+    image: memcached:1.6-alpine
+    command: ["memcached", "-m", "1024", "-c", "2048", "-I", "2m"]
+    mem_limit: 1200m
+    restart: unless-stopped
+    networks:
+      - shuffle
+    healthcheck:
+      test: ["CMD-SHELL", "printf 'version\\r\\n' | nc -w 1 127.0.0.1 11211 | grep -q VERSION"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+
+  memcache-2:
+    profiles:
+      - memcached-ha
+    image: memcached:1.6-alpine
+    command: ["memcached", "-m", "1024", "-c", "2048", "-I", "2m"]
+    mem_limit: 1200m
+    restart: unless-stopped
+    networks:
+      - shuffle
+    healthcheck:
+      test: ["CMD-SHELL", "printf 'version\\r\\n' | nc -w 1 127.0.0.1 11211 | grep -q VERSION"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+
+  memcache-3:
+    profiles:
+      - memcached-ha
+    image: memcached:1.6-alpine
+    command: ["memcached", "-m", "1024", "-c", "2048", "-I", "2m"]
+    mem_limit: 1200m
+    restart: unless-stopped
+    networks:
+      - shuffle
+    healthcheck:
+      test: ["CMD-SHELL", "printf 'version\\r\\n' | nc -w 1 127.0.0.1 11211 | grep -q VERSION"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
 
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy

@@ -40,6 +40,7 @@ func main() {
 	testing.Main(regexp.MatchString, []testing.InternalTest{
 		{Name: "TestOpensearchInit", F: TestOpensearchInit},
 		{Name: "TestMemcacheCounterUpdate", F: TestMemcacheCounterUpdate},
+		{Name: "TestMemcacheHighAvailability", F: TestMemcacheHighAvailability},
 		{Name: "TestWorkflowStorageRoundTrip", F: TestWorkflowStorageRoundTrip},
 		{Name: "TestWorkflowExecutionPreparation", F: TestWorkflowExecutionPreparation},
 		{Name: "TestDatastoreIntegration", F: TestDatastoreIntegration},
@@ -79,10 +80,29 @@ func initializeIntegrationBackends(t *testing.T) {
 	}
 
 	initializeOnce.Do(func() {
-		mc := gomemcache.New(memcacheAddress)
-		mc.Timeout = 10 * time.Second
-		if err := mc.Ping(); err != nil {
-			initializeErr = fmt.Errorf("ping Memcached at %s: %w", memcacheAddress, err)
+		memcacheAvailable := false
+		var memcacheError error
+		for _, address := range strings.Split(memcacheAddress, ",") {
+			address = strings.TrimSpace(address)
+			if address == "" {
+				continue
+			}
+
+			mc := gomemcache.New(address)
+			mc.Timeout = 2 * time.Second
+			if err := mc.Ping(); err != nil {
+				memcacheError = err
+				continue
+			}
+
+			memcacheAvailable = true
+			break
+		}
+		if !memcacheAvailable {
+			if memcacheError == nil {
+				memcacheError = gomemcache.ErrNoServers
+			}
+			initializeErr = fmt.Errorf("ping Memcached at %s: %w", memcacheAddress, memcacheError)
 			return
 		}
 
@@ -168,6 +188,87 @@ func TestMemcacheCounterUpdate(t *testing.T) {
 
 	shuffle.IncrementCache(ctx, organizationID, dataType, 3)
 	requireCacheCounter(t, ctx, key, 5)
+}
+
+func TestMemcacheHighAvailability(t *testing.T) {
+	initializeIntegrationBackends(t)
+
+	originalAddress := strings.TrimSpace(os.Getenv("SHUFFLE_MEMCACHED"))
+	liveAddress := ""
+	for _, address := range strings.Split(originalAddress, ",") {
+		address = strings.TrimSpace(address)
+		if address == "" {
+			continue
+		}
+
+		client := gomemcache.New(address)
+		client.Timeout = 2 * time.Second
+		if err := client.Ping(); err == nil {
+			liveAddress = address
+			break
+		}
+	}
+	if liveAddress == "" {
+		t.Fatalf("no reachable Memcached server in SHUFFLE_MEMCACHED=%q", originalAddress)
+	}
+
+	project := shuffle.GetProject()
+	t.Cleanup(func() {
+		if err := os.Setenv("SHUFFLE_MEMCACHED", originalAddress); err != nil {
+			t.Errorf("restore SHUFFLE_MEMCACHED: %v", err)
+			return
+		}
+		if _, err := shuffle.RunInit(project.Dbclient, project.StorageClient, project.GceProject, project.Environment, project.CacheDb, project.DbType, false, 0); err != nil {
+			t.Errorf("restore Shuffle cache client: %v", err)
+		}
+	})
+
+	failedAddress := "127.0.0.1:1"
+	if err := os.Setenv("SHUFFLE_MEMCACHED", failedAddress+","+liveAddress); err != nil {
+		t.Fatalf("configure multiple Memcached servers: %v", err)
+	}
+	if _, err := shuffle.RunInit(project.Dbclient, project.StorageClient, project.GceProject, project.Environment, project.CacheDb, project.DbType, false, 0); err != nil {
+		t.Fatalf("initialize multiple Memcached servers: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cacheKey := "integration_memcache_ha_" + uuid.NewV4().String()
+	payload := []byte("available-with-one-node-down")
+	liveClient := gomemcache.New(liveAddress)
+	liveClient.Timeout = 2 * time.Second
+	t.Cleanup(func() {
+		if err := liveClient.Delete(cacheKey); err != nil && err != gomemcache.ErrCacheMiss {
+			t.Errorf("clean up HA cache key: %v", err)
+		}
+	})
+
+	if err := shuffle.SetCache(ctx, cacheKey, payload, 5); err != nil {
+		t.Fatalf("set cache with failed server %s and live server %s: %v", failedAddress, liveAddress, err)
+	}
+	directItem, err := liveClient.Get(cacheKey)
+	if err != nil {
+		t.Fatalf("cache write was not replicated to live server %s: %v", liveAddress, err)
+	}
+	if !bytes.Equal(directItem.Value, payload) {
+		t.Fatalf("unexpected value on live server: got %q, want %q", directItem.Value, payload)
+	}
+
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("get cache after failed server was ejected: %v", err)
+	}
+	cachedBytes, ok := cached.([]byte)
+	if !ok || !bytes.Equal(cachedBytes, payload) {
+		t.Fatalf("unexpected HA cache value: type=%T value=%q, want %q", cached, cachedBytes, payload)
+	}
+
+	if err := shuffle.DeleteCache(ctx, cacheKey); err != nil {
+		t.Fatalf("delete cache with failed server ejected: %v", err)
+	}
+	if _, err := liveClient.Get(cacheKey); err != gomemcache.ErrCacheMiss {
+		t.Fatalf("cache delete was not replicated to live server: got %v, want %v", err, gomemcache.ErrCacheMiss)
+	}
 }
 
 func TestWorkflowStorageRoundTrip(t *testing.T) {
