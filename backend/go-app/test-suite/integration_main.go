@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -43,6 +44,7 @@ func main() {
 		{Name: "TestWorkflowStorageRoundTrip", F: TestWorkflowStorageRoundTrip},
 		{Name: "TestWorkflowExecutionPreparation", F: TestWorkflowExecutionPreparation},
 		{Name: "TestDatastoreIntegration", F: TestDatastoreIntegration},
+		{Name: "TestNotificationIntegration", F: TestNotificationIntegration},
 		{Name: "TestUserManagement", F: TestUserManagement},
 	}, nil, nil)
 }
@@ -639,6 +641,365 @@ func TestDatastoreIntegration(t *testing.T) {
 		if _, err := shuffle.GetCache(ctx, cacheKey); err == nil {
 			t.Errorf("deleted datastore key %s is still cached", fixture.Key)
 		}
+	}
+}
+
+func TestNotificationIntegration(t *testing.T) {
+	initializeIntegrationBackends(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	orgID := uuid.NewV4().String()
+	userID := uuid.NewV4().String()
+	orgCacheKey := "notifications_" + orgID
+	userCacheKey := "notifications_" + userID
+	startedAt := time.Now().Unix()
+	organizationNotification := shuffle.Notification{
+		Image:             "https://example.com/integration-notification.png",
+		CreatedAt:         startedAt - 3600,
+		Title:             "Integration notification " + uuid.NewV4().String(),
+		Description:       "Organization notification created by the integration suite",
+		OrgId:             orgID,
+		OrgName:           "Integration Test Organization",
+		UserId:            userID,
+		Tags:              []string{"integration", "notification", "organization"},
+		Amount:            2,
+		BucketDescription: "Two matching failures",
+		Id:                uuid.NewV4().String(),
+		ReferenceUrl:      "/workflows/" + uuid.NewV4().String() + "/executions/" + uuid.NewV4().String(),
+		OrgNotificationId: uuid.NewV4().String(),
+		Dismissable:       true,
+		Personal:          false,
+		Read:              false,
+		ModifiedBy:        "integration-suite",
+		Ignored:           false,
+		ExecutionId:       uuid.NewV4().String(),
+		WorkflowId:        uuid.NewV4().String(),
+		NodeId:            uuid.NewV4().String(),
+		NodeLabel:         "Integration notification node",
+		ActionName:        "integration_notification_action",
+		AppName:           "integration-notification-app",
+		NodeStatus:        "FAILURE",
+		FailureReason:     "Expected integration-test failure",
+		Severity:          "high",
+		Origin:            "integration_test",
+	}
+	personalNotification := shuffle.Notification{
+		Image:             "https://example.com/personal-notification.png",
+		Title:             "Personal integration notification " + uuid.NewV4().String(),
+		Description:       "Personal notification created by the integration suite",
+		OrgId:             orgID,
+		OrgName:           "Integration Test Organization",
+		UserId:            userID,
+		Tags:              []string{"integration", "notification", "personal"},
+		Amount:            1,
+		BucketDescription: "One personal failure",
+		Id:                uuid.NewV4().String(),
+		ReferenceUrl:      "/notifications/" + uuid.NewV4().String(),
+		OrgNotificationId: organizationNotification.Id,
+		Dismissable:       false,
+		Personal:          true,
+		Read:              false,
+		ModifiedBy:        "integration-user",
+		Ignored:           false,
+		ExecutionId:       uuid.NewV4().String(),
+		WorkflowId:        uuid.NewV4().String(),
+		NodeId:            uuid.NewV4().String(),
+		NodeLabel:         "Personal notification node",
+		ActionName:        "personal_notification_action",
+		AppName:           "integration-notification-app",
+		NodeStatus:        "ABORTED",
+		FailureReason:     "Expected personal integration-test failure",
+		Severity:          "warning",
+		Origin:            "integration_test_personal",
+	}
+	notifications := []*shuffle.Notification{&organizationNotification, &personalNotification}
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cleanupCancel()
+
+		for _, notification := range notifications {
+			if err := shuffle.DeleteKey(cleanupCtx, "notifications", notification.Id, orgID); err != nil {
+				t.Errorf("clean up notification %s: %v", notification.Id, err)
+			}
+		}
+		for _, cacheKey := range []string{orgCacheKey, userCacheKey} {
+			err := shuffle.DeleteCache(cleanupCtx, cacheKey)
+			if err != nil && err != gomemcache.ErrCacheMiss {
+				t.Errorf("clean up notification cache %s: %v", cacheKey, err)
+			}
+		}
+	})
+
+	staleNotifications, err := json.Marshal([]shuffle.Notification{})
+	if err != nil {
+		t.Fatalf("marshal stale notification cache: %v", err)
+	}
+	for _, cacheKey := range []string{orgCacheKey, userCacheKey} {
+		if err := shuffle.SetCache(ctx, cacheKey, staleNotifications, 5); err != nil {
+			t.Fatalf("seed stale notification cache %s: %v", cacheKey, err)
+		}
+		if _, err := shuffle.GetCache(ctx, cacheKey); err != nil {
+			t.Fatalf("verify stale notification cache fixture %s: %v", cacheKey, err)
+		}
+	}
+
+	if err := shuffle.SetNotification(ctx, organizationNotification); err != nil {
+		t.Fatalf("store organization notification: %v", err)
+	}
+	assertNotificationCachesInvalidated(t, ctx, "write", orgCacheKey, userCacheKey)
+	if err := shuffle.SetNotification(ctx, personalNotification); err != nil {
+		t.Fatalf("store personal notification: %v", err)
+	}
+
+	for _, expected := range notifications {
+		stored, err := shuffle.GetNotification(ctx, expected.Id)
+		if err != nil {
+			t.Fatalf("get notification %s: %v", expected.Id, err)
+		}
+		if stored.CreatedAt == 0 || stored.UpdatedAt < startedAt || stored.UpdatedAt > time.Now().Unix() {
+			t.Fatalf("notification %s has invalid timestamps: created=%d updated=%d", stored.Id, stored.CreatedAt, stored.UpdatedAt)
+		}
+		if expected.CreatedAt != 0 && stored.CreatedAt != expected.CreatedAt {
+			t.Errorf("notification %s creation timestamp changed: got %d, want %d", stored.Id, stored.CreatedAt, expected.CreatedAt)
+		}
+		expected.CreatedAt = stored.CreatedAt
+		expected.UpdatedAt = stored.UpdatedAt
+		assertNotification(t, stored, *expected)
+		requireIndexedNotification(t, ctx, *expected)
+	}
+
+	orgNotifications, err := shuffle.GetOrgNotifications(ctx, orgID)
+	if err != nil {
+		t.Fatalf("get organization notifications: %v", err)
+	}
+	assertNotificationPresent(t, orgNotifications, organizationNotification)
+	assertNotificationAbsent(t, orgNotifications, personalNotification.Id)
+	requireCachedNotificationList(t, ctx, orgCacheKey, []shuffle.Notification{organizationNotification}, []string{personalNotification.Id})
+
+	userNotifications, err := shuffle.GetUserNotifications(ctx, userID)
+	if err != nil {
+		t.Fatalf("get unread user notifications: %v", err)
+	}
+	if len(userNotifications) != 2 {
+		t.Fatalf("unread user notification count: got %d, want 2", len(userNotifications))
+	}
+	assertNotificationPresent(t, userNotifications, organizationNotification)
+	assertNotificationPresent(t, userNotifications, personalNotification)
+	userSnapshot, err := json.Marshal(userNotifications)
+	if err != nil {
+		t.Fatalf("marshal user notification cache fixture: %v", err)
+	}
+	if err := shuffle.SetCache(ctx, userCacheKey, userSnapshot, 5); err != nil {
+		t.Fatalf("seed user notification cache before update: %v", err)
+	}
+
+	previousUpdatedAt := organizationNotification.UpdatedAt
+	if wait := time.Until(time.Unix(previousUpdatedAt+1, 0)); wait > 0 {
+		time.Sleep(wait)
+	}
+	organizationNotification.Description = "Updated organization notification description"
+	organizationNotification.Tags = []string{"integration", "notification", "updated"}
+	organizationNotification.Amount = 7
+	organizationNotification.BucketDescription = "Seven matching failures"
+	organizationNotification.ReferenceUrl = "/notifications/updated/" + uuid.NewV4().String()
+	organizationNotification.Read = true
+	organizationNotification.Ignored = true
+	organizationNotification.ModifiedBy = "integration-updater"
+	organizationNotification.FailureReason = "Updated integration-test failure"
+	organizationNotification.Severity = "critical"
+	if err := shuffle.SetNotification(ctx, organizationNotification); err != nil {
+		t.Fatalf("update notification %s: %v", organizationNotification.Id, err)
+	}
+	assertNotificationCachesInvalidated(t, ctx, "update", orgCacheKey, userCacheKey)
+
+	updated, err := shuffle.GetNotification(ctx, organizationNotification.Id)
+	if err != nil {
+		t.Fatalf("get updated notification %s: %v", organizationNotification.Id, err)
+	}
+	if updated.UpdatedAt <= previousUpdatedAt {
+		t.Errorf("notification update timestamp did not advance: got %d, previous %d", updated.UpdatedAt, previousUpdatedAt)
+	}
+	organizationNotification.UpdatedAt = updated.UpdatedAt
+	assertNotification(t, updated, organizationNotification)
+	requireIndexedNotification(t, ctx, organizationNotification)
+
+	orgNotifications, err = shuffle.GetOrgNotifications(ctx, orgID)
+	if err != nil {
+		t.Fatalf("get organization notifications after update: %v", err)
+	}
+	assertNotificationPresent(t, orgNotifications, organizationNotification)
+	requireCachedNotificationList(t, ctx, orgCacheKey, []shuffle.Notification{organizationNotification}, []string{personalNotification.Id})
+
+	userNotifications, err = shuffle.GetUserNotifications(ctx, userID)
+	if err != nil {
+		t.Fatalf("get user notifications after read update: %v", err)
+	}
+	if len(userNotifications) != 1 {
+		t.Fatalf("unread user notification count after update: got %d, want 1", len(userNotifications))
+	}
+	assertNotificationPresent(t, userNotifications, personalNotification)
+	assertNotificationAbsent(t, userNotifications, organizationNotification.Id)
+
+	if err := shuffle.SetCache(ctx, orgCacheKey, []byte("{invalid-notification-cache"), 1); err != nil {
+		t.Fatalf("seed malformed notification cache: %v", err)
+	}
+	orgNotifications, err = shuffle.GetOrgNotifications(ctx, orgID)
+	if err != nil {
+		t.Fatalf("recover organization notifications from malformed cache: %v", err)
+	}
+	assertNotificationPresent(t, orgNotifications, organizationNotification)
+	requireCachedNotificationList(t, ctx, orgCacheKey, []shuffle.Notification{organizationNotification}, []string{personalNotification.Id})
+	if err := shuffle.SetCache(ctx, userCacheKey, userSnapshot, 5); err != nil {
+		t.Fatalf("seed user notification cache before deletion: %v", err)
+	}
+
+	for _, expected := range notifications {
+		if err := shuffle.DeleteKey(ctx, "notifications", expected.Id, orgID); err != nil {
+			t.Fatalf("delete notification %s: %v", expected.Id, err)
+		}
+		requireNotificationDeleted(t, ctx, expected.Id)
+	}
+	assertNotificationCachesInvalidated(t, ctx, "deletion", orgCacheKey, userCacheKey)
+
+	orgNotifications, err = shuffle.GetOrgNotifications(ctx, orgID)
+	if err != nil {
+		t.Fatalf("get organization notifications after deletion: %v", err)
+	}
+	for _, expected := range notifications {
+		assertNotificationAbsent(t, orgNotifications, expected.Id)
+	}
+	requireCachedNotificationList(t, ctx, orgCacheKey, nil, []string{organizationNotification.Id, personalNotification.Id})
+
+	userNotifications, err = shuffle.GetUserNotifications(ctx, userID)
+	if err != nil {
+		t.Fatalf("get user notifications after deletion: %v", err)
+	}
+	if len(userNotifications) != 0 {
+		t.Fatalf("deleted user notifications are still queryable: %#v", userNotifications)
+	}
+}
+
+func requireIndexedNotification(t *testing.T, ctx context.Context, expected shuffle.Notification) {
+	t.Helper()
+
+	project := shuffle.GetProject()
+	response, err := project.Es.Document.Get(ctx, opensearchapi.DocumentGetReq{
+		Index:      strings.ToLower(shuffle.GetESIndexPrefix("notifications")),
+		DocumentID: expected.Id,
+	})
+	if err != nil {
+		t.Fatalf("get indexed notification %s: %v", expected.Id, err)
+	}
+	if rawResponse := response.Inspect().Response; rawResponse != nil {
+		defer rawResponse.Body.Close()
+	}
+	if !response.Found {
+		t.Fatalf("indexed notification %s was not found", expected.Id)
+	}
+
+	var notification shuffle.Notification
+	if err := json.Unmarshal(response.Source, &notification); err != nil {
+		t.Fatalf("decode indexed notification %s: %v", expected.Id, err)
+	}
+	assertNotification(t, &notification, expected)
+}
+
+func assertNotificationCachesInvalidated(t *testing.T, ctx context.Context, operation string, cacheKeys ...string) {
+	t.Helper()
+
+	for _, cacheKey := range cacheKeys {
+		if cached, err := shuffle.GetCache(ctx, cacheKey); err == nil {
+			cachedBytes, _ := cached.([]byte)
+			t.Errorf("notification %s left stale cache %s (type=%T bytes=%d)", operation, cacheKey, cached, len(cachedBytes))
+			if err := shuffle.DeleteCache(ctx, cacheKey); err != nil {
+				t.Fatalf("clear recorded stale notification cache %s: %v", cacheKey, err)
+			}
+		}
+	}
+}
+
+func requireNotificationDeleted(t *testing.T, ctx context.Context, notificationID string) {
+	t.Helper()
+
+	project := shuffle.GetProject()
+	response, err := project.Es.Document.Get(ctx, opensearchapi.DocumentGetReq{
+		Index:      strings.ToLower(shuffle.GetESIndexPrefix("notifications")),
+		DocumentID: notificationID,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not_found") {
+			return
+		}
+		t.Fatalf("verify deleted notification %s: %v", notificationID, err)
+	}
+	if rawResponse := response.Inspect().Response; rawResponse != nil {
+		defer rawResponse.Body.Close()
+	}
+	if response.Found {
+		t.Errorf("deleted notification %s is still present in OpenSearch", notificationID)
+	}
+}
+
+func requireCachedNotificationList(t *testing.T, ctx context.Context, cacheKey string, expected []shuffle.Notification, absentIDs []string) {
+	t.Helper()
+
+	cached, err := shuffle.GetCache(ctx, cacheKey)
+	if err != nil {
+		t.Fatalf("get notification cache key %s: %v", cacheKey, err)
+	}
+	cachedBytes, ok := cached.([]byte)
+	if !ok {
+		t.Fatalf("notification cache key %s has type %T, want []byte", cacheKey, cached)
+	}
+
+	var notifications []shuffle.Notification
+	if err := json.Unmarshal(cachedBytes, &notifications); err != nil {
+		t.Fatalf("decode notification cache key %s: %v", cacheKey, err)
+	}
+	for _, notification := range expected {
+		assertNotificationPresent(t, notifications, notification)
+	}
+	for _, notificationID := range absentIDs {
+		assertNotificationAbsent(t, notifications, notificationID)
+	}
+}
+
+func assertNotificationPresent(t *testing.T, notifications []shuffle.Notification, expected shuffle.Notification) {
+	t.Helper()
+
+	for index := range notifications {
+		if notifications[index].Id == expected.Id {
+			assertNotification(t, &notifications[index], expected)
+			return
+		}
+	}
+	t.Errorf("notification list does not contain %s", expected.Id)
+}
+
+func assertNotificationAbsent(t *testing.T, notifications []shuffle.Notification, notificationID string) {
+	t.Helper()
+
+	for _, notification := range notifications {
+		if notification.Id == notificationID {
+			t.Errorf("notification list unexpectedly contains %s: %#v", notificationID, notification)
+			return
+		}
+	}
+}
+
+func assertNotification(t *testing.T, actual *shuffle.Notification, expected shuffle.Notification) {
+	t.Helper()
+
+	if actual == nil {
+		t.Fatal("expected notification, got nil")
+	}
+	if !reflect.DeepEqual(*actual, expected) {
+		actualJSON, _ := json.Marshal(actual)
+		expectedJSON, _ := json.Marshal(expected)
+		t.Errorf("notification mismatch:\n got: %s\nwant: %s", actualJSON, expectedJSON)
 	}
 }
 
