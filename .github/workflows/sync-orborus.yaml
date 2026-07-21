@@ -1,0 +1,43 @@
+name: Sync Orborus
+
+on:
+  workflow_dispatch:
+    inputs:
+      orborus_version:
+        description: "Orborus version to sync"
+        required: true
+        default: "latest"
+  workflow_call:
+    inputs:
+      orborus_version:
+        required: true
+        type: string
+
+jobs:
+  sync-orborus:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["${{ inputs.orborus_version }}"]
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull, retag and push orborus
+        run: |
+          docker pull ghcr.io/shuffle/orborus:${{ matrix.version }}
+          docker tag ghcr.io/shuffle/orborus:${{ matrix.version }} ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
+          docker tag ghcr.io/shuffle/orborus:${{ matrix.version }} ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }}
+          docker push ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }}
