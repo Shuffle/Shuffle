@@ -715,12 +715,16 @@ func TestNotificationIntegration(t *testing.T) {
 		Origin:            "integration_test_personal",
 	}
 	notifications := []*shuffle.Notification{&organizationNotification, &personalNotification}
+	deletedNotifications := make(map[string]bool, len(notifications))
 
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cleanupCancel()
 
 		for _, notification := range notifications {
+			if deletedNotifications[notification.Id] {
+				continue
+			}
 			if err := shuffle.DeleteKey(cleanupCtx, "notifications", notification.Id, orgID); err != nil {
 				t.Errorf("clean up notification %s: %v", notification.Id, err)
 			}
@@ -860,6 +864,7 @@ func TestNotificationIntegration(t *testing.T) {
 		if err := shuffle.DeleteKey(ctx, "notifications", expected.Id, orgID); err != nil {
 			t.Fatalf("delete notification %s: %v", expected.Id, err)
 		}
+		deletedNotifications[expected.Id] = true
 		requireNotificationDeleted(t, ctx, expected.Id)
 	}
 	assertNotificationCachesInvalidated(t, ctx, "deletion", orgCacheKey, userCacheKey)
