@@ -13,6 +13,7 @@ require (
 	cloud.google.com/go/datastore v1.20.0
 	cloud.google.com/go/storage v1.55.0
 	github.com/basgys/goxml2json v1.1.0
+	github.com/bradfitz/gomemcache v0.0.0-20250403215159-8d39553ac7cf
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/frikky/kin-openapi v0.42.0
@@ -24,6 +25,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
+	github.com/shuffle/opensearch-go/v4 v4.0.0
 	github.com/shuffle/shuffle-shared v1.2.83
 	github.com/shuffle/singul v0.0.32
 	golang.org/x/crypto v0.48.0
@@ -54,7 +56,6 @@ require (
 	github.com/algolia/algoliasearch-client-go/v3 v3.31.4 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bitly/go-simplejson v0.5.1 // indirect
-	github.com/bradfitz/gomemcache v0.0.0-20250403215159-8d39553ac7cf // indirect
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
@@ -130,7 +131,6 @@ require (
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shuffle/opensearch-go/v4 v4.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
