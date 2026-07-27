@@ -1053,7 +1053,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		appName = strings.ToLower(appName)
 		//log.Printf("[INFO][%s] New appname: %s, image: %s", workflowExecution.ExecutionId, appName, image)
 
-		if !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
+		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" && !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
 			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
 			// FIXME: Not caring if it's ok or not. Just continuing
 			// This is working as intended, just designed to download an updated
@@ -1905,21 +1905,23 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					return
 				}
 
-				err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
 				executed := false
-				if err == nil {
-					log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
-					downloadedImages = append(downloadedImages, imageName)
-					//err = deployApp(dockercli, image, identifier, env, workflow, action)
-					err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
-					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-						if strings.Contains(err.Error(), "exited prematurely") {
-							log.Printf("[DEBUG] Shutting down (41)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-							return
+				if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" {
+					err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
+					if err == nil {
+						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
+						downloadedImages = append(downloadedImages, imageName)
+						//err = deployApp(dockercli, image, identifier, env, workflow, action)
+						err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+							if strings.Contains(err.Error(), "exited prematurely") {
+								log.Printf("[DEBUG] Shutting down (41)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+								return
+							}
+						} else {
+							executed = true
 						}
-					} else {
-						executed = true
 					}
 				}
 
@@ -1936,6 +1938,12 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 						//log.Printf("[WARNING] Failed CLEANUP execution. Downloading image %s remotely.", image)
 
 						log.Printf("[WARNING] Failed to download image %s (CLEANUP): %s", imageName, err)
+						if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+							message := fmt.Sprintf("image %s is not available locally and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", imageName)
+							log.Printf("[ERROR] %s", message)
+							shutdown(workflowExecution, action.ID, message, true)
+							return
+						}
 
 						reader, err := dockercli.ImagePull(context.Background(), imageName, pullOptions)
 						if err != nil {
@@ -2019,23 +2027,24 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					}
 
 					log.Printf("[DEBUG][%s] Failed deploy. Downloading image %s: %s", workflowExecution.ExecutionId, imageName, err)
-					err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
-
 					executed := false
-					if err == nil {
-						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
-						downloadedImages = append(downloadedImages, imageName)
-						//err = deployApp(dockercli, image, identifier, env, workflow, action)
-						err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
-						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-							log.Printf("[ERROR] Err: %s", err)
-							if strings.Contains(err.Error(), "exited prematurely") {
-								log.Printf("[DEBUG] Shutting down (40)")
-								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-								return
+					if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" {
+						err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
+						if err == nil {
+							log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
+							downloadedImages = append(downloadedImages, imageName)
+							//err = deployApp(dockercli, image, identifier, env, workflow, action)
+							err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
+							if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+								log.Printf("[ERROR] Err: %s", err)
+								if strings.Contains(err.Error(), "exited prematurely") {
+									log.Printf("[DEBUG] Shutting down (40)")
+									shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+									return
+								}
+							} else {
+								executed = true
 							}
-						} else {
-							executed = true
 						}
 					}
 
@@ -2054,6 +2063,12 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 							if isKubernetes == "true" {
 								log.Printf("[ERROR] Image %s doesn't exist. Returning error for now")
+								return
+							}
+							if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+								message := fmt.Sprintf("image %s is not available locally and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", imageName)
+								log.Printf("[ERROR] %s", message)
+								shutdown(workflowExecution, action.ID, message, true)
 								return
 							}
 
