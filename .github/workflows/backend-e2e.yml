@@ -89,7 +89,7 @@ name: Backend E2E
 
 on:
   workflow_run:
-    workflows: ["dockerbuild", "nightly-dockerbuild"]
+    workflows: ["nightly-dockerbuild"]
     types:
       - completed
 
@@ -106,10 +106,14 @@ env:
 
 jobs:
   backend-e2e:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: E2E / execution and backend APIs
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     environment: shuffle-integration-vm
+    concurrency:
+      group: shuffle-backend-remote-integration
+      cancel-in-progress: false
 
     defaults:
       run:
@@ -127,23 +131,38 @@ jobs:
       SHUFFLE_E2E_TEST_TIMEOUT: "18m"
 
     steps:
-      - name: Wait for the backed to pull new image
+      - name: Deploy nightly images to the E2E VM
+        working-directory: ${{ github.workspace }}
+        env:
+          SHUFFLE_DEPLOY_WEBHOOK_URL: ${{ vars.SHUFFLE_DEPLOY_WEBHOOK_URL }}
+          SHUFFLE_DEPLOY_WEBHOOK_TOKEN: ${{ secrets.SHUFFLE_DEPLOY_WEBHOOK_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          sleep 300
-          for attempt in $(seq 1 60); do
-            if curl --silent --show-error --fail \
-              --connect-timeout 3 --max-time 10 \
-              "${SHUFFLE_TEST_BASE_URL%/}/api/v1/health" >/dev/null; then
-              exit 0
-            fi
-            if [[ "$attempt" -eq 60 ]]; then
-              echo "Remote Shuffle backend did not become reachable within 420 seconds." >&2
-              exit 1
-            fi
-            sleep 2
-          done
+          : "${SHUFFLE_DEPLOY_WEBHOOK_URL:?Set SHUFFLE_DEPLOY_WEBHOOK_URL as an environment variable}"
+          : "${SHUFFLE_DEPLOY_WEBHOOK_TOKEN:?Set SHUFFLE_DEPLOY_WEBHOOK_TOKEN as an environment secret}"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          status_code="$(
+            curl --silent --show-error \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 900 \
+              --request POST \
+              --header "Authorization: Bearer ${SHUFFLE_DEPLOY_WEBHOOK_TOKEN}" \
+              "${SHUFFLE_DEPLOY_WEBHOOK_URL%/}/run?wait=true"
+          )"
+          cat "$response_file"
+          echo
+
+          if [[ "$status_code" != "200" ]]; then
+            echo "Nightly deployment webhook returned HTTP ${status_code}." >&2
+            exit 1
+          fi
+
       - name: Reject forked pull requests
         if: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
         shell: bash
@@ -154,6 +173,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Connect to the integration tailnet
         if: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_TAILSCALE == 'true' }}
@@ -176,21 +197,31 @@ jobs:
           : "${SHUFFLE_TEST_API_KEY:?Set SHUFFLE_INTEGRATION_API_KEY as an environment secret}"
           : "${SHUFFLE_TEST_ORG_ID:?Set SHUFFLE_INTEGRATION_ORG_ID as an environment variable}"
 
-      - name: Wait for the remote backend
+      - name: Wait for the authenticated remote backend
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 60); do
-            if curl --silent --show-error --fail \
-              --connect-timeout 3 --max-time 10 \
-              "${SHUFFLE_TEST_BASE_URL%/}/api/v1/health" >/dev/null; then
+          status_code="000"
+          for attempt in $(seq 1 180); do
+            status_code="$(
+              curl --silent --show-error \
+                --output /dev/null \
+                --write-out "%{http_code}" \
+                --connect-timeout 3 \
+                --max-time 10 \
+                --header "Authorization: Bearer ${SHUFFLE_TEST_API_KEY}" \
+                --header "Org-Id: ${SHUFFLE_TEST_ORG_ID}" \
+                "${SHUFFLE_TEST_BASE_URL%/}/api/v1/workflows?top=1" \
+                || true
+            )"
+            if [[ "$status_code" == "200" ]]; then
               exit 0
             fi
-            if [[ "$attempt" -eq 60 ]]; then
-              echo "Remote Shuffle backend did not become reachable within 120 seconds." >&2
+            if [[ "$attempt" -eq 180 ]]; then
+              echo "Remote Shuffle backend did not become authenticated and ready within 540 seconds; last HTTP status was ${status_code}." >&2
               exit 1
             fi
-            sleep 2
+            sleep 3
           done
 
       - name: Run backend E2E tests

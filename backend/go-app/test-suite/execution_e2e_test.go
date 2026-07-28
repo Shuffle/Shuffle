@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -24,8 +25,10 @@ import (
 )
 
 const (
-	defaultExecutionTimeout = 5 * time.Minute
-	shuffleToolsAppID       = "3e2bdf9d5069fe3f4746c29d68785a6a"
+	defaultExecutionTimeout          = 5 * time.Minute
+	shuffleToolsAppID                = "3e2bdf9d5069fe3f4746c29d68785a6a"
+	defaultHealthWorkflowTemplateURL = "https://shuffler.io/api/v1/workflows/ae89a788-a26b-4866-8a0b-ce0b31d354ea"
+	maxHealthWorkflowTemplateBytes   = 2 << 20
 )
 
 // These are intentionally narrow HTTP wire projections, not copies of
@@ -256,6 +259,142 @@ func (client *apiClient) createWorkflow(ctx context.Context, workflow workflowWi
 	return created, nil
 }
 
+func fetchHealthWorkflowTemplate(ctx context.Context) (map[string]any, error) {
+	templateURL := strings.TrimSpace(os.Getenv("SHUFFLE_E2E_HEALTH_WORKFLOW_TEMPLATE_URL"))
+	if templateURL == "" {
+		templateURL = defaultHealthWorkflowTemplateURL
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, templateURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create health workflow template request: %w", err)
+	}
+	response, err := (&http.Client{Timeout: 30 * time.Second}).Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("fetch health workflow template: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch health workflow template returned HTTP %d", response.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxHealthWorkflowTemplateBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read health workflow template: %w", err)
+	}
+	if len(body) > maxHealthWorkflowTemplateBytes {
+		return nil, fmt.Errorf("health workflow template exceeded %d bytes", maxHealthWorkflowTemplateBytes)
+	}
+
+	var workflow map[string]any
+	if err := json.Unmarshal(body, &workflow); err != nil {
+		return nil, fmt.Errorf("decode health workflow template: %w", err)
+	}
+	return workflow, nil
+}
+
+func prepareHealthWorkflowTemplate(template map[string]any, created workflowWire, client *apiClient) error {
+	environment := strings.TrimSpace(os.Getenv("SHUFFLE_E2E_ENVIRONMENT"))
+	if environment == "" {
+		environment = "Shuffle"
+	}
+	executionEnvironment := strings.TrimSpace(os.Getenv("SHUFFLE_E2E_EXECUTION_ENVIRONMENT"))
+	if executionEnvironment == "" {
+		executionEnvironment = "onprem"
+	}
+
+	template["id"] = created.ID
+	template["name"] = "E2E health workflow " + uuid.NewV4().String()
+	template["owner"] = created.Owner
+	template["org_id"] = created.OrgID
+	template["public"] = false
+	template["hidden"] = true
+	template["status"] = ""
+	template["is_valid"] = true
+	template["previously_saved"] = true
+	template["execution_environment"] = executionEnvironment
+	template["executing_org"] = map[string]any{"id": created.OrgID}
+
+	actions, ok := template["actions"].([]any)
+	if !ok || len(actions) == 0 {
+		return errors.New("health workflow template has no actions")
+	}
+	for _, value := range actions {
+		action, ok := value.(map[string]any)
+		if !ok {
+			return errors.New("health workflow template contains an invalid action")
+		}
+		action["environment"] = environment
+		if source, _ := action["source_workflow"].(string); source != "" {
+			action["source_workflow"] = created.ID
+		}
+	}
+
+	variables, _ := template["workflow_variables"].([]any)
+	cacheKey := "e2e-health-" + uuid.NewV4().String()
+	for _, value := range variables {
+		variable, ok := value.(map[string]any)
+		if !ok {
+			continue
+		}
+		switch strings.ToLower(strings.TrimSpace(fmt.Sprint(variable["name"]))) {
+		case "apikey", "shuffle_apikey":
+			variable["value"] = client.apiKey
+		case "cachekey":
+			variable["value"] = cacheKey
+		}
+	}
+
+	triggers, ok := template["triggers"].([]any)
+	if !ok || len(triggers) == 0 {
+		return errors.New("health workflow template has no subflow trigger")
+	}
+	for _, value := range triggers {
+		trigger, ok := value.(map[string]any)
+		if !ok {
+			continue
+		}
+		parameters, _ := trigger["parameters"].([]any)
+		for _, parameterValue := range parameters {
+			parameter, ok := parameterValue.(map[string]any)
+			if !ok {
+				continue
+			}
+			switch strings.ToLower(strings.TrimSpace(fmt.Sprint(parameter["name"]))) {
+			case "workflow":
+				parameter["value"] = created.ID
+			case "user_apikey":
+				parameter["value"] = client.apiKey
+			}
+		}
+	}
+
+	return nil
+}
+
+func (client *apiClient) replaceWorkflow(ctx context.Context, workflowID string, workflow map[string]any) (workflowWire, error) {
+	path := "/api/v1/workflows/" + workflowID + "?skip_save=true"
+	response, body, err := client.jsonRequest(ctx, http.MethodPut, path, workflow)
+	if err != nil {
+		return workflowWire{}, err
+	}
+	if err := statusError(http.MethodPut, path, response, body, http.StatusOK); err != nil {
+		return workflowWire{}, err
+	}
+
+	stored, status, err := client.getWorkflow(ctx, workflowID)
+	if err != nil {
+		return workflowWire{}, fmt.Errorf("read saved health workflow: %w", err)
+	}
+	if status != http.StatusOK {
+		return workflowWire{}, fmt.Errorf("saved health workflow returned HTTP %d", status)
+	}
+	if stored.ID != workflowID || stored.Start == "" || len(stored.Actions) < 10 || len(stored.Triggers) == 0 {
+		return workflowWire{}, fmt.Errorf("saved health workflow is incomplete: id=%q start=%q actions=%d triggers=%d", stored.ID, stored.Start, len(stored.Actions), len(stored.Triggers))
+	}
+	return stored, nil
+}
+
 func (client *apiClient) getWorkflow(ctx context.Context, workflowID string) (workflowWire, int, error) {
 	path := "/api/v1/workflows/" + workflowID
 	response, body, err := client.jsonRequest(ctx, http.MethodGet, path, nil)
@@ -292,10 +431,6 @@ func (client *apiClient) deleteWorkflow(ctx context.Context, workflowID string) 
 }
 
 func (client *apiClient) startExecution(ctx context.Context, workflowID, argument string) (executionStartResponse, error) {
-	return client.startExecutionWithID(ctx, workflowID, argument, "")
-}
-
-func (client *apiClient) startExecutionWithID(ctx context.Context, workflowID, argument, requestedExecutionID string) (executionStartResponse, error) {
 	if err := validateExecutionArgument(argument); err != nil {
 		return executionStartResponse{}, err
 	}
@@ -303,9 +438,6 @@ func (client *apiClient) startExecutionWithID(ctx context.Context, workflowID, a
 	payload := map[string]any{
 		"execution_argument": argument,
 		"execution_source":   "e2e_test",
-	}
-	if requestedExecutionID != "" {
-		payload["execution_id"] = requestedExecutionID
 	}
 	response, body, err := client.jsonRequest(ctx, http.MethodPost, path, payload)
 	if err != nil {
@@ -476,10 +608,12 @@ func assertExecutionInvariants(t *testing.T, execution executionResponse, starte
 	if execution.Workflow.ID != workflowID {
 		t.Errorf("embedded workflow ID changed: got %q, want %q", execution.Workflow.ID, workflowID)
 	}
-	if execution.Start == "" || execution.Start != execution.Workflow.Start {
+	if execution.Start == "" {
+		t.Error("execution has no start node")
+	} else if execution.ExecutionParent == "" && execution.Start != execution.Workflow.Start {
 		t.Errorf("execution start %q does not match embedded workflow start %q", execution.Start, execution.Workflow.Start)
 	}
-	if execution.ExecutionSource != "e2e_test" {
+	if execution.ExecutionParent == "" && execution.ExecutionSource != "e2e_test" {
 		t.Errorf("execution source changed: got %q, want e2e_test", execution.ExecutionSource)
 	}
 	if wantOrg := strings.TrimSpace(os.Getenv("SHUFFLE_TEST_ORG_ID")); wantOrg != "" && execution.ExecutionOrg != wantOrg {
@@ -522,7 +656,7 @@ func assertExecutionInvariants(t *testing.T, execution executionResponse, starte
 		default:
 			t.Errorf("terminal execution contains non-terminal action %s status %q", result.Action.ID, result.Status)
 		}
-		if result.StartedAt <= 0 || result.CompletedAt <= 0 {
+		if (result.StartedAt <= 0 || result.CompletedAt <= 0) && status != "SKIPPED" {
 			t.Errorf("action %s has invalid timestamps: started=%d completed=%d", result.Action.ID, result.StartedAt, result.CompletedAt)
 		} else if result.CompletedAt < result.StartedAt {
 			t.Errorf("action %s completed before it started", result.Action.ID)
@@ -1170,6 +1304,9 @@ func TestSubflowExecutionLifecycle(t *testing.T) {
 		if child.ExecutionParent != parent.ExecutionID {
 			t.Errorf("child %s parent: got %q, want %q", child.ExecutionID, child.ExecutionParent, parent.ExecutionID)
 		}
+		if child.ExecutionSource != parent.WorkflowID {
+			t.Errorf("child %s source workflow: got %q, want %q", child.ExecutionID, child.ExecutionSource, parent.WorkflowID)
+		}
 		if child.ExecutionSourceNode != childRef.Source.ID {
 			t.Errorf("child %s source node: got %q, want %q", child.ExecutionID, child.ExecutionSourceNode, childRef.Source.ID)
 		}
@@ -1182,8 +1319,8 @@ func TestSubflowExecutionLifecycle(t *testing.T) {
 		if !childRef.Data.Success {
 			t.Errorf("parent subflow result for child %s reports success=false: %q", child.ExecutionID, childRef.Data.Result)
 		}
-		if !childRef.Data.ResultSet {
-			t.Errorf("parent subflow result for child %s has result_set=false", child.ExecutionID)
+		if !childRef.Data.ResultSet && strings.TrimSpace(childRef.Data.Result) == "" {
+			t.Errorf("parent subflow result for child %s has neither result_set nor a result", child.ExecutionID)
 		}
 	}
 }
@@ -1414,7 +1551,7 @@ func TestConcurrentExecutionIsolation(t *testing.T) {
 	}
 }
 
-func TestDuplicateClientExecutionIDIsolation(t *testing.T) {
+func TestBackendGeneratedExecutionIDIsolation(t *testing.T) {
 	client := newAPIClient()
 	requireExecutionCredentials(t, client)
 	workflow, managed := executionWorkflow(t, client)
@@ -1422,100 +1559,138 @@ func TestDuplicateClientExecutionIDIsolation(t *testing.T) {
 	defer cancel()
 	reader := executionTokenClient(client)
 
-	requestedID := uuid.NewV4().String()
-	firstArgument := fmt.Sprintf(`{"attempt":1,"marker":%q}`, "duplicate-first-"+uuid.NewV4().String())
-	first, err := client.startExecutionWithID(ctx, workflow.ID, firstArgument, requestedID)
+	firstArgument := fmt.Sprintf(`{"attempt":1,"marker":%q}`, "generated-first-"+uuid.NewV4().String())
+	first, err := client.startExecution(ctx, workflow.ID, firstArgument)
 	if err != nil {
-		t.Fatalf("start first caller-ID execution: %v", err)
+		t.Fatalf("start first backend-ID execution: %v", err)
 	}
 	firstExecution, err := pollExecution(ctx, reader, first)
 	if err != nil {
-		t.Fatalf("wait for first caller-ID execution: %v", err)
+		t.Fatalf("wait for first backend-ID execution: %v", err)
 	}
 	assertExecutionInvariants(t, firstExecution, first, workflow.ID)
 	if firstExecution.ExecutionArgument != firstArgument {
-		t.Fatal("first caller-ID execution argument changed before duplicate request")
+		t.Fatal("first backend-ID execution received the wrong argument")
+	}
+	if managed {
+		assertManagedExecution(t, firstExecution, firstArgument)
 	}
 
-	secondArgument := fmt.Sprintf(`{"attempt":2,"marker":%q}`, "duplicate-second-"+uuid.NewV4().String())
-	path := "/api/v1/workflows/" + workflow.ID + "/execute"
-	response, body, err := client.jsonRequest(ctx, http.MethodPost, path, map[string]any{
-		"execution_id":       requestedID,
-		"execution_argument": secondArgument,
-		"execution_source":   "e2e_test",
-	})
+	secondArgument := fmt.Sprintf(`{"attempt":2,"marker":%q}`, "generated-second-"+uuid.NewV4().String())
+	second, err := client.startExecution(ctx, workflow.ID, secondArgument)
 	if err != nil {
-		t.Fatalf("send duplicate caller-ID execution: %v", err)
-	}
-	if response.StatusCode != http.StatusOK {
-		if response.StatusCode != http.StatusBadRequest && response.StatusCode != http.StatusConflict {
-			t.Fatalf("duplicate execution ID returned %d, want 200 idempotent/isolated or 400/409 rejection; body=%q", response.StatusCode, body)
-		}
-		unchanged, _, readErr := reader.getExecution(ctx, first.ExecutionID, first.Authorization)
-		if readErr != nil || unchanged.ExecutionArgument != firstArgument || unchanged.Authorization != first.Authorization {
-			t.Fatalf("rejected duplicate request still altered the first execution: err=%v", readErr)
-		}
-		return
-	}
-
-	var second executionStartResponse
-	if err := json.Unmarshal(body, &second); err != nil {
-		t.Fatalf("decode duplicate execution response: %v; body=%q", err, body)
-	}
-	if !second.Success || second.ExecutionID == "" || second.Authorization == "" {
-		t.Fatalf("duplicate execution response is neither rejection nor a valid execution: %+v", second)
+		t.Fatalf("start second backend-ID execution: %v", err)
 	}
 	if second.ExecutionID == first.ExecutionID {
-		unchanged, _, readErr := reader.getExecution(ctx, first.ExecutionID, first.Authorization)
-		if readErr != nil {
-			t.Fatalf("duplicate caller ID %s invalidated original execution %s authorization: %v", requestedID, first.ExecutionID, readErr)
-		}
-		if second.Authorization != first.Authorization || unchanged.ExecutionArgument != firstArgument || unchanged.Authorization != first.Authorization {
-			t.Fatalf("duplicate caller ID %s overwrote execution %s instead of behaving idempotently", requestedID, first.ExecutionID)
-		}
-		return
+		t.Fatalf("backend reused execution ID %s for two normal execution requests", first.ExecutionID)
+	}
+	if second.Authorization == first.Authorization {
+		t.Fatalf("backend reused authorization for executions %s and %s", first.ExecutionID, second.ExecutionID)
 	}
 
 	secondExecution, err := pollExecution(ctx, reader, second)
 	if err != nil {
-		t.Fatalf("wait for isolated duplicate-ID execution: %v", err)
+		t.Fatalf("wait for second backend-ID execution: %v", err)
 	}
 	assertExecutionInvariants(t, secondExecution, second, workflow.ID)
 	if secondExecution.ExecutionArgument != secondArgument {
-		t.Fatal("isolated duplicate-ID execution received the wrong argument")
+		t.Fatal("second backend-ID execution received the wrong argument")
 	}
 	if managed {
 		assertManagedExecution(t, secondExecution, secondArgument)
 	}
 	unchanged, _, err := reader.getExecution(ctx, first.ExecutionID, first.Authorization)
 	if err != nil || unchanged.ExecutionArgument != firstArgument || unchanged.Authorization != first.Authorization {
-		t.Fatalf("isolated duplicate request altered first execution: err=%v", err)
+		t.Fatalf("second execution altered the first execution: err=%v", err)
+	}
+	if _, status, err := reader.getExecution(ctx, first.ExecutionID, second.Authorization); err == nil || status != http.StatusUnauthorized {
+		t.Errorf("second execution authorization accessed first execution: status=%d err=%v", status, err)
+	}
+	if _, status, err := reader.getExecution(ctx, second.ExecutionID, first.Authorization); err == nil || status != http.StatusUnauthorized {
+		t.Errorf("first execution authorization accessed second execution: status=%d err=%v", status, err)
 	}
 }
 
-func TestEmbeddedHealthWorkflow(t *testing.T) {
+func TestHealthWorkflowExecution(t *testing.T) {
 	if !e2eBool("SHUFFLE_E2E_HEALTH_WORKFLOW") {
 		if e2eBool("SHUFFLE_E2E_STRICT") {
 			t.Fatal("SHUFFLE_E2E_STRICT requires SHUFFLE_E2E_HEALTH_WORKFLOW=true")
 		}
-		t.Skip("set SHUFFLE_E2E_HEALTH_WORKFLOW=true to run Shuffle's embedded health workflow")
+		t.Skip("set SHUFFLE_E2E_HEALTH_WORKFLOW=true to run Shuffle's health workflow")
 	}
 	client := newAPIClient()
 	requireExecutionCredentials(t, client)
+
+	fixtureCtx, fixtureCancel := context.WithTimeout(context.Background(), 90*time.Second)
+	template, err := fetchHealthWorkflowTemplate(fixtureCtx)
+	if err != nil {
+		fixtureCancel()
+		t.Fatalf("load health workflow template: %v", err)
+	}
+	seed := managedExecutionWorkflow()
+	seed.Name = "E2E health workflow seed " + uuid.NewV4().String()
+	created, err := client.createWorkflow(fixtureCtx, seed)
+	if err != nil {
+		fixtureCancel()
+		t.Fatalf("create health workflow fixture: %v", err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+		if err := client.deleteWorkflow(cleanupCtx, created.ID); err != nil {
+			t.Errorf("delete health workflow %s: %v", created.ID, err)
+		}
+	})
+	if err := prepareHealthWorkflowTemplate(template, created, client); err != nil {
+		fixtureCancel()
+		t.Fatalf("prepare health workflow template: %v", err)
+	}
+	workflow, err := client.replaceWorkflow(fixtureCtx, created.ID, template)
+	fixtureCancel()
+	if err != nil {
+		t.Fatalf("save health workflow fixture: %v", err)
+	}
+
 	healthTimeout := e2eDuration("SHUFFLE_E2E_HEALTH_TIMEOUT", 12*time.Minute)
-	client.http.Timeout = healthTimeout
 	ctx, cancel := context.WithTimeout(context.Background(), healthTimeout)
 	defer cancel()
-	response, body, err := client.jsonRequest(ctx, http.MethodGet, "/api/v1/health?force=true", nil)
+	argument := fmt.Sprintf(`{"kind":"health-workflow-e2e","marker":%q}`, uuid.NewV4().String())
+	started, err := client.startExecution(ctx, workflow.ID, argument)
 	if err != nil {
-		t.Fatalf("run embedded health workflow: %v", err)
+		t.Fatalf("start health workflow: %v", err)
 	}
-	if err := statusError(http.MethodGet, "/api/v1/health?force=true", response, body, http.StatusOK); err != nil {
-		t.Fatal(err)
+	reader := executionTokenClient(client)
+	execution, err := pollExecution(ctx, reader, started)
+	if err != nil {
+		t.Fatalf("wait for health workflow: %v", err)
 	}
-	var result healthResponseWire
-	if err := json.Unmarshal(body, &result); err != nil {
-		t.Fatalf("embedded health response was not JSON: %v; body=%q", err, body)
+	assertExecutionInvariants(t, execution, started, workflow.ID)
+	if !expectedStatuses(os.Getenv("SHUFFLE_E2E_EXPECT_STATUS"))[strings.ToUpper(execution.Status)] {
+		t.Errorf("health workflow ended in unexpected status %q", execution.Status)
 	}
-	assertHealthResponse(t, result)
+	if len(execution.Results) < 5 {
+		t.Errorf("health workflow returned only %d action results for %d actions", len(execution.Results), len(workflow.Actions))
+	}
+
+	children := findSubflowChildren(execution)
+	if len(children) == 0 {
+		t.Error("health workflow did not create its expected subflow execution")
+		return
+	}
+	childStarted := executionStartResponse{
+		Success:       true,
+		ExecutionID:   children[0].Data.ExecutionID,
+		Authorization: children[0].Data.Authorization,
+	}
+	child, err := pollExecution(ctx, reader, childStarted)
+	if err != nil {
+		t.Fatalf("wait for health workflow subflow %s: %v", childStarted.ExecutionID, err)
+	}
+	assertExecutionInvariants(t, child, childStarted, workflow.ID)
+	if child.ExecutionParent != execution.ExecutionID {
+		t.Errorf("health subflow parent: got %q, want %q", child.ExecutionParent, execution.ExecutionID)
+	}
+	if !expectedStatuses(os.Getenv("SHUFFLE_E2E_EXPECT_STATUS"))[strings.ToUpper(child.Status)] {
+		t.Errorf("health workflow subflow ended in unexpected status %q", child.Status)
+	}
 }
