@@ -33,8 +33,7 @@ import (
 // Memcached storage behavior. It is not intended to cover the entire backend.
 
 const (
-	defaultTestIndexPrefix    = ""
-	integrationOrganizationID = "d080eb37-2f1e-4ed5-af12-f526c48372ec"
+	defaultIntegrationOrganizationID = "d080eb37-2f1e-4ed5-af12-f526c48372ec"
 )
 
 func main() {
@@ -50,8 +49,9 @@ func main() {
 }
 
 var (
-	initializeOnce sync.Once
-	initializeErr  error
+	integrationOrganizationID = defaultIntegrationOrganizationID
+	initializeOnce            sync.Once
+	initializeErr             error
 )
 
 func initializeIntegrationBackends(t *testing.T) {
@@ -64,13 +64,18 @@ func initializeIntegrationBackends(t *testing.T) {
 	if memcacheAddress == "" {
 		t.Fatal("SHUFFLE_MEMCACHED must be set before go test starts so shuffle-shared uses the test Memcached instance")
 	}
-
-	prefix := strings.TrimSpace(os.Getenv("SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX"))
-	if prefix == "" {
-		prefix = defaultTestIndexPrefix
+	if configuredOrgID := strings.TrimSpace(os.Getenv("SHUFFLE_TEST_ORG_ID")); configuredOrgID != "" {
+		if _, err := uuid.FromString(configuredOrgID); err != nil {
+			t.Fatalf("SHUFFLE_TEST_ORG_ID must be a UUID: %v", err)
+		}
+		integrationOrganizationID = configuredOrgID
 	}
-	if err := os.Setenv("SHUFFLE_OPENSEARCH_INDEX_PREFIX", prefix); err != nil {
-		t.Fatalf("set integration-test OpenSearch index prefix: %v", err)
+
+	if err := os.Unsetenv("SHUFFLE_OPENSEARCH_INDEX_PREFIX"); err != nil {
+		t.Fatalf("clear OpenSearch index prefix: %v", err)
+	}
+	if err := os.Unsetenv("SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX"); err != nil {
+		t.Fatalf("clear integration-test OpenSearch index prefix: %v", err)
 	}
 
 	initializeOnce.Do(func() {

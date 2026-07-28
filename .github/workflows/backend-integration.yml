@@ -21,7 +21,6 @@ concurrency:
 env:
   GO_WORKING_DIRECTORY: backend/go-app
   SHUFFLE_TEST_TIMEOUT_SECONDS: "300"
-  SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX: shuffle_ci_${{ github.run_id }}_${{ github.run_attempt }}
   OPENSEARCH_USE_ISM_ROLLOVER: "false"
   OPENSEARCH_INDEX_CONFIG: >-
     {"settings":{"number_of_shards":1,"number_of_replicas":0,"refresh_interval":"1s"},"mappings":{"dynamic_templates":[{"strings_as_keywords":{"match_mapping_type":"string","mapping":{"type":"keyword"}}}]}}
@@ -105,6 +104,7 @@ jobs:
       SHUFFLE_OPENSEARCH_APIKEY: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_APIKEY }}
       SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: ${{ vars.SHUFFLE_INTEGRATION_OPENSEARCH_SKIPSSL_VERIFY || 'false' }}
       SHUFFLE_MEMCACHED: ${{ vars.SHUFFLE_INTEGRATION_MEMCACHED }}
+      SHUFFLE_TEST_ORG_ID: ${{ vars.SHUFFLE_INTEGRATION_ORG_ID }}
 
     steps:
       - name: Reject forked pull requests
@@ -137,6 +137,7 @@ jobs:
           set -euo pipefail
           : "${SHUFFLE_OPENSEARCH_URL:?Set SHUFFLE_INTEGRATION_OPENSEARCH_URL as a repository variable}"
           : "${SHUFFLE_MEMCACHED:?Set SHUFFLE_INTEGRATION_MEMCACHED as a repository variable}"
+          : "${SHUFFLE_TEST_ORG_ID:?Set SHUFFLE_INTEGRATION_ORG_ID as an environment variable}"
 
           if [[ -z "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]] &&
              [[ -z "${SHUFFLE_OPENSEARCH_USERNAME:-}" || -z "${SHUFFLE_OPENSEARCH_PASSWORD:-}" ]]; then
@@ -188,38 +189,3 @@ jobs:
 
       - name: Run backend integration tests
         run: ./test-suite/run_integration.sh
-
-      - name: Delete this run's remote OpenSearch indexes
-        if: ${{ always() && steps.remote-ready.outcome == 'success' }}
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "${SHUFFLE_OPENSEARCH_URL:-}" ]]; then
-            exit 0
-          fi
-
-          curl_args=(--silent --show-error --fail --connect-timeout 5 --max-time 30)
-          if [[ "${SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY}" == "true" ]]; then
-            curl_args+=(--insecure)
-          fi
-          if [[ -n "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]]; then
-            curl_args+=(-H "Authorization: ApiKey ${SHUFFLE_OPENSEARCH_APIKEY}")
-          elif [[ -n "${SHUFFLE_OPENSEARCH_USERNAME:-}" && -n "${SHUFFLE_OPENSEARCH_PASSWORD:-}" ]]; then
-            curl_args+=(-u "${SHUFFLE_OPENSEARCH_USERNAME}:${SHUFFLE_OPENSEARCH_PASSWORD}")
-          else
-            exit 0
-          fi
-
-          all_indexes="$(
-            curl "${curl_args[@]}" \
-              "${SHUFFLE_OPENSEARCH_URL%/}/_cat/indices?h=index"
-          )"
-          while IFS= read -r index; do
-            case "$index" in
-              "${SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX}_"*)
-                curl "${curl_args[@]}" -X DELETE \
-                  "${SHUFFLE_OPENSEARCH_URL%/}/${index}" >/dev/null
-                ;;
-            esac
-          done <<< "$all_indexes"

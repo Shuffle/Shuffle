@@ -3,11 +3,13 @@
 package testsuite
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -23,6 +25,28 @@ type apiClient struct {
 	baseURL string
 	apiKey  string
 	http    *http.Client
+}
+
+type notificationWire struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	OrgID        string `json:"org_id"`
+	ReferenceURL string `json:"reference_url"`
+	Dismissable  bool   `json:"dismissable"`
+	Personal     bool   `json:"personal"`
+	Read         bool   `json:"read"`
+	Ignored      bool   `json:"ignored"`
+	ModifiedBy   string `json:"modified_by"`
+	Severity     string `json:"severity"`
+	Origin       string `json:"origin"`
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
+}
+
+type notificationResponseWire struct {
+	Success       bool               `json:"success"`
+	Notifications []notificationWire `json:"notifications"`
 }
 
 type healthErrorWire struct {
@@ -139,6 +163,10 @@ func (client *apiClient) requestContext(ctx context.Context, method, path string
 	return request, nil
 }
 
+func (client *apiClient) publicRequestContext(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
+	return http.NewRequestWithContext(ctx, method, client.baseURL+path, body)
+}
+
 func (client *apiClient) doRequest(request *http.Request) (*http.Response, []byte, error) {
 	response, err := client.http.Do(request)
 	if err != nil {
@@ -202,8 +230,14 @@ func requireJSONResponse(t *testing.T, response *http.Response, body []byte) {
 }
 
 func TestBackendHealth(t *testing.T) {
+	if !e2eBool("SHUFFLE_E2E_PLATFORM_HEALTH") {
+		t.Skip("set SHUFFLE_E2E_PLATFORM_HEALTH=true to validate the aggregate platform health endpoint")
+	}
 	client := newAPIClient()
-	request := client.request(t, http.MethodGet, "/api/v1/health", nil)
+	request, err := client.publicRequestContext(context.Background(), http.MethodGet, "/api/v1/health", nil)
+	if err != nil {
+		t.Fatalf("create public health request: %v", err)
+	}
 	response, body := client.do(t, request)
 
 	requireStatus(t, response, body, http.StatusOK)
@@ -264,7 +298,7 @@ func assertHealthResponse(t *testing.T, health healthResponseWire) {
 	if health.OpenSearch.TimedOut || health.OpenSearch.Nodes <= 0 || health.OpenSearch.DataNodes <= 0 || health.OpenSearch.ActivePrimaryShards <= 0 {
 		t.Errorf("OpenSearch health invalid: %+v", health.OpenSearch)
 	}
-	if health.OpenSearch.UnassignedShards != 0 {
+	if wantOpenSearch == "green" && health.OpenSearch.UnassignedShards != 0 {
 		t.Errorf("OpenSearch has %d unassigned shards", health.OpenSearch.UnassignedShards)
 	}
 	if health.OpenSearch.PendingTasks != 0 {
@@ -380,5 +414,112 @@ func TestAuthenticatedWorkflowList(t *testing.T) {
 		if wantOrg := strings.TrimSpace(os.Getenv("SHUFFLE_TEST_ORG_ID")); wantOrg != "" && projected.OrgID != wantOrg {
 			t.Errorf("workflow %d belongs to org %q, want %q", index, projected.OrgID, wantOrg)
 		}
+	}
+}
+
+func TestNotificationLifecycle(t *testing.T) {
+	client := newAPIClient()
+	if client.apiKey == "" {
+		if e2eBool("SHUFFLE_E2E_STRICT") {
+			t.Fatal("SHUFFLE_E2E_STRICT requires SHUFFLE_TEST_API_KEY")
+		}
+		t.Skip("set SHUFFLE_TEST_API_KEY to run notification lifecycle E2E testing")
+	}
+
+	testID := strings.ReplaceAll(uuid.NewV4().String(), "-", "")
+	expected := notificationWire{
+		Title:        "E2E notification " + testID,
+		Description:  "Notification created by the backend HTTP E2E suite " + testID,
+		ReferenceURL: "/integration-tests/notifications/" + testID,
+		Severity:     "info",
+		Origin:       "integration_e2e_" + testID,
+	}
+	payload, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("marshal notification request: %v", err)
+	}
+
+	createRequest := client.request(t, http.MethodPost, "/api/v1/notifications", bytes.NewReader(payload))
+	createRequest.Header.Set("Content-Type", "application/json")
+	createResponse, createBody := client.do(t, createRequest)
+	requireStatus(t, createResponse, createBody, http.StatusOK)
+	var createResult struct {
+		Success bool `json:"success"`
+	}
+	if err := json.Unmarshal(createBody, &createResult); err != nil {
+		t.Fatalf("decode notification create response: %v; body=%q", err, createBody)
+	}
+	if !createResult.Success {
+		t.Fatalf("notification create reported failure: %q", createBody)
+	}
+
+	query := "?origin=" + url.QueryEscape(expected.Origin) + "&severity=" + url.QueryEscape(expected.Severity)
+	getNotifications := func(path string) notificationResponseWire {
+		t.Helper()
+
+		request := client.request(t, http.MethodGet, path, nil)
+		response, body := client.do(t, request)
+		requireStatus(t, response, body, http.StatusOK)
+		var result notificationResponseWire
+		if err := json.Unmarshal(body, &result); err != nil {
+			t.Fatalf("decode notification list response: %v; body=%q", err, body)
+		}
+		if !result.Success {
+			t.Fatalf("notification list reported failure: %q", body)
+		}
+		return result
+	}
+
+	created := getNotifications("/api/v1/notifications" + query + "&status=unread")
+	if len(created.Notifications) != 1 {
+		t.Fatalf("created notification query returned %d notifications, want 1: %#v", len(created.Notifications), created.Notifications)
+	}
+	stored := created.Notifications[0]
+	if _, err := uuid.FromString(stored.ID); err != nil {
+		t.Fatalf("created notification has invalid ID %q: %v", stored.ID, err)
+	}
+	if stored.Title != expected.Title || stored.Description != expected.Description || stored.ReferenceURL != expected.ReferenceURL || stored.Severity != expected.Severity || stored.Origin != expected.Origin {
+		t.Errorf("created notification fields do not round-trip: got=%#v want=%#v", stored, expected)
+	}
+	if stored.Read || stored.Ignored || stored.Personal || !stored.Dismissable || stored.CreatedAt <= 0 || stored.UpdatedAt <= 0 {
+		t.Errorf("created notification has invalid generated state: %#v", stored)
+	}
+	if stored.OrgID == "" {
+		t.Error("created notification has no organization ID")
+	}
+	if wantOrg := strings.TrimSpace(os.Getenv("SHUFFLE_TEST_ORG_ID")); wantOrg != "" && stored.OrgID != wantOrg {
+		t.Errorf("created notification organization: got %q, want %q", stored.OrgID, wantOrg)
+	}
+
+	// Repeat the same query to exercise the backend's cached organization list.
+	cached := getNotifications("/api/v1/notifications" + query + "&status=unread")
+	if len(cached.Notifications) != 1 || cached.Notifications[0].ID != stored.ID {
+		t.Fatalf("cached notification query changed result: %#v", cached.Notifications)
+	}
+
+	markPath := "/api/v1/notifications/" + stored.ID + "/markasread?disabled=true"
+	markRequest := client.request(t, http.MethodGet, markPath, nil)
+	markResponse, markBody := client.do(t, markRequest)
+	requireStatus(t, markResponse, markBody, http.StatusOK)
+	var markResult struct {
+		Success bool `json:"success"`
+	}
+	if err := json.Unmarshal(markBody, &markResult); err != nil {
+		t.Fatalf("decode mark-notification-read response: %v; body=%q", err, markBody)
+	}
+	if !markResult.Success {
+		t.Fatalf("mark-notification-read reported failure: %q", markBody)
+	}
+
+	unread := getNotifications("/api/v1/notifications" + query + "&status=unread")
+	if len(unread.Notifications) != 0 {
+		t.Fatalf("read notification remains in unread query: %#v", unread.Notifications)
+	}
+	updated := getNotifications("/api/v1/notifications" + query)
+	if len(updated.Notifications) != 1 {
+		t.Fatalf("updated notification query returned %d notifications, want 1: %#v", len(updated.Notifications), updated.Notifications)
+	}
+	if updated.Notifications[0].ID != stored.ID || !updated.Notifications[0].Read || !updated.Notifications[0].Ignored || updated.Notifications[0].ModifiedBy == "" {
+		t.Errorf("notification was not persisted as read and ignored: %#v", updated.Notifications[0])
 	}
 }

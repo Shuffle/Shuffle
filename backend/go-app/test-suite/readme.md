@@ -33,17 +33,10 @@ cannot silently connect to the connector's default hostname.
 `shuffle-shared` reads it during package initialization. The similarly named
 `SHUFFLE_MEMCACHED_URL` variable is not used by `shuffle-shared`.
 
-Test documents use the `shuffle_integration_test` index prefix by default. It
-can be changed without affecting the backend's normal prefix:
-
-```sh
-SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX=my_shuffle_tests \
-  go run -tags=integration ./test-suite -test.v
-```
-
-Every workflow, execution, environment, and cache entry uses unique IDs and is
-deleted with `t.Cleanup`. OpenSearch may retain the empty test indexes after the
-documents are removed.
+The suite uses the backend's normal OpenSearch indexes so organization, user,
+and other shared records remain available during integration tests. Every
+workflow, execution, environment, and cache entry created by the suite uses
+unique IDs and is deleted with `t.Cleanup`.
 
 The direct suite uses a normal runner instead of `go test` because
 `shuffle-shared` versions through v1.2.77 reject Go test binaries during package
@@ -242,12 +235,11 @@ Add the test account API key as the environment secret
 and API key to the same `SHUFFLE_TEST_BASE_URL`, `SHUFFLE_TEST_ORG_ID`, and
 `SHUFFLE_TEST_API_KEY` variables used by `run_e2e.sh`.
 
-Each workflow run uses a unique `shuffle_ci_<run>_<attempt>` OpenSearch prefix.
-The remote job is serialized and deletes only indexes belonging to its own run.
-The test functions also use unique object and cache keys. Even so, the remote
-OpenSearch and especially Memcached instance should be dedicated to tests:
-Memcached does not provide server-side namespaces or access controls, and a
-flush/restart or key collision could affect other users of the same instance.
+The remote job is serialized, and the test functions use unique object and
+cache keys with targeted cleanup. Even so, the remote OpenSearch and especially
+Memcached instance should be dedicated to tests: Memcached does not provide
+server-side namespaces or access controls, and a flush/restart or key collision
+could affect other users of the same instance.
 
 The workflow invokes `test-suite/run_integration.sh`, which gives both the
 compile and test phases a five-minute timeout by default. On a test timeout it

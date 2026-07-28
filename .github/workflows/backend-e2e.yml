@@ -99,7 +99,6 @@ permissions:
 env:
   GO_WORKING_DIRECTORY: backend/go-app
   SHUFFLE_TEST_TIMEOUT_SECONDS: "300"
-  SHUFFLE_TEST_OPENSEARCH_INDEX_PREFIX: shuffle_ci_${{ github.run_id }}_${{ github.run_attempt }}
   OPENSEARCH_USE_ISM_ROLLOVER: "false"
   OPENSEARCH_INDEX_CONFIG: >-
     {"settings":{"number_of_shards":1,"number_of_replicas":0,"refresh_interval":"1s"},"mappings":{"dynamic_templates":[{"strings_as_keywords":{"match_mapping_type":"string","mapping":{"type":"keyword"}}}]}}
