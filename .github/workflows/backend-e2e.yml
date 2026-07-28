@@ -1,0 +1,238 @@
+#  backend-e2e:
+#    name: E2E / execution and backend APIs
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 25
+#    environment: shuffle-integration-vm
+#    concurrency:
+#      group: shuffle-backend-remote-integration
+#      cancel-in-progress: false
+#
+#    defaults:
+#      run:
+#        working-directory: ${{ env.GO_WORKING_DIRECTORY }}
+#
+#    env:
+#      SHUFFLE_TEST_BASE_URL: ${{ vars.SHUFFLE_INTEGRATION_BACKEND_URL }}
+#      SHUFFLE_TEST_API_KEY: ${{ secrets.SHUFFLE_INTEGRATION_API_KEY }}
+#      SHUFFLE_TEST_ORG_ID: ${{ vars.SHUFFLE_INTEGRATION_ORG_ID }}
+#      SHUFFLE_E2E_STRICT: "true"
+#      SHUFFLE_E2E_MANAGED_WORKFLOW: "true"
+#      SHUFFLE_E2E_MUTATION_CASES: "9"
+#      SHUFFLE_E2E_CONCURRENCY: "8"
+#      SHUFFLE_E2E_HEALTH_WORKFLOW: "true"
+#      SHUFFLE_E2E_TEST_TIMEOUT: "18m"
+#
+#    steps:
+#      - name: Reject forked pull requests
+#        if: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
+#        shell: bash
+#        run: |
+#          echo "Remote E2E tests cannot expose VM credentials to forked or Dependabot pull requests." >&2
+#          echo "A maintainer must move the commit to a trusted branch in this repository." >&2
+#          exit 1
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Connect to the integration tailnet
+#        if: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_TAILSCALE == 'true' }}
+#        uses: tailscale/github-action@v4
+#        with:
+#          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+#          ping: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_HOST }}
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version-file: backend/go-app/go.mod
+#          cache-dependency-path: backend/go-app/go.sum
+#
+#      - name: Validate E2E configuration
+#        shell: bash
+#        run: |
+#          set -euo pipefail
+#          : "${SHUFFLE_TEST_BASE_URL:?Set SHUFFLE_INTEGRATION_BACKEND_URL as an environment variable}"
+#          : "${SHUFFLE_TEST_API_KEY:?Set SHUFFLE_INTEGRATION_API_KEY as an environment secret}"
+#          : "${SHUFFLE_TEST_ORG_ID:?Set SHUFFLE_INTEGRATION_ORG_ID as an environment variable}"
+#
+#      - name: Wait for the remote backend
+#        shell: bash
+#        run: |
+#          set -euo pipefail
+#          for attempt in $(seq 1 60); do
+#            if curl --silent --show-error --fail \
+#              --connect-timeout 3 --max-time 10 \
+#              "${SHUFFLE_TEST_BASE_URL%/}/api/v1/health" >/dev/null; then
+#              exit 0
+#            fi
+#            if [[ "$attempt" -eq 60 ]]; then
+#              echo "Remote Shuffle backend did not become reachable within 120 seconds." >&2
+#              exit 1
+#            fi
+#            sleep 2
+#          done
+#
+#      - name: Run backend E2E tests
+#        env:
+#          SHUFFLE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/shuffle-e2e-artifacts
+#        run: ./test-suite/run_e2e.sh
+#
+#      - name: Upload redacted E2E failure artifacts
+#        if: ${{ always() }}
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: shuffle-e2e-failures-${{ github.run_id }}-${{ github.run_attempt }}
+#          path: ${{ runner.temp }}/shuffle-e2e-artifacts
+#          if-no-files-found: ignore
+#          retention-days: 14
+name: Backend E2E
+
+on:
+  workflow_run:
+    workflows: ["nightly-dockerbuild"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+env:
+  GO_WORKING_DIRECTORY: backend/go-app
+  SHUFFLE_TEST_TIMEOUT_SECONDS: "300"
+  OPENSEARCH_USE_ISM_ROLLOVER: "false"
+  OPENSEARCH_INDEX_CONFIG: >-
+    {"settings":{"number_of_shards":1,"number_of_replicas":0,"refresh_interval":"1s"},"mappings":{"dynamic_templates":[{"strings_as_keywords":{"match_mapping_type":"string","mapping":{"type":"keyword"}}}]}}
+
+jobs:
+  backend-e2e:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: E2E / execution and backend APIs
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: shuffle-integration-vm
+    concurrency:
+      group: shuffle-backend-remote-integration
+      cancel-in-progress: false
+
+    defaults:
+      run:
+        working-directory: ${{ env.GO_WORKING_DIRECTORY }}
+
+    env:
+      SHUFFLE_TEST_BASE_URL: ${{ vars.SHUFFLE_INTEGRATION_BACKEND_URL }}
+      SHUFFLE_TEST_API_KEY: ${{ secrets.SHUFFLE_INTEGRATION_API_KEY }}
+      SHUFFLE_TEST_ORG_ID: ${{ vars.SHUFFLE_INTEGRATION_ORG_ID }}
+      SHUFFLE_E2E_STRICT: "true"
+      SHUFFLE_E2E_MANAGED_WORKFLOW: "true"
+      SHUFFLE_E2E_MUTATION_CASES: "9"
+      SHUFFLE_E2E_CONCURRENCY: "8"
+      SHUFFLE_E2E_HEALTH_WORKFLOW: "true"
+      SHUFFLE_E2E_TEST_TIMEOUT: "18m"
+
+    steps:
+      - name: Deploy nightly images to the E2E VM
+        working-directory: ${{ github.workspace }}
+        env:
+          SHUFFLE_DEPLOY_WEBHOOK_URL: ${{ vars.SHUFFLE_DEPLOY_WEBHOOK_URL }}
+          SHUFFLE_DEPLOY_WEBHOOK_TOKEN: ${{ secrets.SHUFFLE_DEPLOY_WEBHOOK_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SHUFFLE_DEPLOY_WEBHOOK_URL:?Set SHUFFLE_DEPLOY_WEBHOOK_URL as an environment variable}"
+          : "${SHUFFLE_DEPLOY_WEBHOOK_TOKEN:?Set SHUFFLE_DEPLOY_WEBHOOK_TOKEN as an environment secret}"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          status_code="$(
+            curl --silent --show-error \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 900 \
+              --request POST \
+              --header "Authorization: Bearer ${SHUFFLE_DEPLOY_WEBHOOK_TOKEN}" \
+              "${SHUFFLE_DEPLOY_WEBHOOK_URL%/}/run?wait=true"
+          )"
+          cat "$response_file"
+          echo
+
+          if [[ "$status_code" != "200" ]]; then
+            echo "Nightly deployment webhook returned HTTP ${status_code}." >&2
+            exit 1
+          fi
+
+      - name: Reject forked pull requests
+        if: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
+        shell: bash
+        run: |
+          echo "Remote E2E tests cannot expose VM credentials to forked or Dependabot pull requests." >&2
+          echo "A maintainer must move the commit to a trusted branch in this repository." >&2
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Connect to the integration tailnet
+        if: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_TAILSCALE == 'true' }}
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          ping: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_HOST }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go-app/go.mod
+          cache-dependency-path: backend/go-app/go.sum
+
+      - name: Validate E2E configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SHUFFLE_TEST_BASE_URL:?Set SHUFFLE_INTEGRATION_BACKEND_URL as an environment variable}"
+          : "${SHUFFLE_TEST_API_KEY:?Set SHUFFLE_INTEGRATION_API_KEY as an environment secret}"
+          : "${SHUFFLE_TEST_ORG_ID:?Set SHUFFLE_INTEGRATION_ORG_ID as an environment variable}"
+
+      - name: Wait for the authenticated remote backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          status_code="000"
+          for attempt in $(seq 1 180); do
+            status_code="$(
+              curl --silent --show-error \
+                --output /dev/null \
+                --write-out "%{http_code}" \
+                --connect-timeout 3 \
+                --max-time 10 \
+                --header "Authorization: Bearer ${SHUFFLE_TEST_API_KEY}" \
+                --header "Org-Id: ${SHUFFLE_TEST_ORG_ID}" \
+                "${SHUFFLE_TEST_BASE_URL%/}/api/v1/workflows?top=1" \
+                || true
+            )"
+            if [[ "$status_code" == "200" ]]; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 180 ]]; then
+              echo "Remote Shuffle backend did not become authenticated and ready within 540 seconds; last HTTP status was ${status_code}." >&2
+              exit 1
+            fi
+            sleep 3
+          done
+
+      - name: Run backend E2E tests
+        env:
+          SHUFFLE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/shuffle-e2e-artifacts
+        run: ./test-suite/run_e2e.sh
+
+      - name: Upload redacted E2E failure artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shuffle-e2e-failures-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shuffle-e2e-artifacts
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,191 @@
+name: Backend Integration
+
+on:
+  pull_request:
+    paths:
+      - "backend/go-app/**"
+      - ".github/workflows/backend-integration.yml"
+  push:
+    paths:
+      - "backend/go-app/**"
+      - ".github/workflows/backend-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_WORKING_DIRECTORY: backend/go-app
+  SHUFFLE_TEST_TIMEOUT_SECONDS: "300"
+  OPENSEARCH_USE_ISM_ROLLOVER: "false"
+  OPENSEARCH_INDEX_CONFIG: >-
+    {"settings":{"number_of_shards":1,"number_of_replicas":0,"refresh_interval":"1s"},"mappings":{"dynamic_templates":[{"strings_as_keywords":{"match_mapping_type":"string","mapping":{"type":"keyword"}}}]}}
+
+jobs:
+  execution-fuzz:
+    name: Fuzz / execution protocol
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: ${{ env.GO_WORKING_DIRECTORY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go-app/go.mod
+          cache-dependency-path: backend/go-app/go.sum
+
+      - name: Fuzz subflow result decoding
+        id: subflow-fuzz
+        continue-on-error: true
+        run: >-
+          go test -tags=e2e ./test-suite
+          -run '^$'
+          -fuzz '^FuzzDecodeSubflowResults$'
+          -fuzztime 30s
+
+      - name: Fuzz execution argument envelopes
+        id: argument-fuzz
+        continue-on-error: true
+        run: >-
+          go test -tags=e2e ./test-suite
+          -run '^$'
+          -fuzz '^FuzzExecutionArgumentJSONEnvelope$'
+          -fuzztime 30s
+
+      - name: Upload fuzz failures
+        if: ${{ steps.subflow-fuzz.outcome == 'failure' || steps.argument-fuzz.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shuffle-execution-fuzz-failures-${{ github.run_id }}-${{ github.run_attempt }}
+          path: backend/go-app/test-suite/testdata/fuzz
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce fuzz results
+        if: ${{ always() }}
+        env:
+          SUBFLOW_FUZZ_OUTCOME: ${{ steps.subflow-fuzz.outcome }}
+          ARGUMENT_FUZZ_OUTCOME: ${{ steps.argument-fuzz.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$SUBFLOW_FUZZ_OUTCOME" != "success" || "$ARGUMENT_FUZZ_OUTCOME" != "success" ]]; then
+            echo "Execution fuzzing failed: subflow=${SUBFLOW_FUZZ_OUTCOME}, argument=${ARGUMENT_FUZZ_OUTCOME}" >&2
+            exit 1
+          fi
+
+  remote-services:
+    name: Integration / remote services
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: shuffle-integration-vm
+    concurrency:
+      group: shuffle-backend-remote-integration
+      cancel-in-progress: false
+
+    defaults:
+      run:
+        working-directory: ${{ env.GO_WORKING_DIRECTORY }}
+
+    env:
+      SHUFFLE_OPENSEARCH_URL: ${{ vars.SHUFFLE_INTEGRATION_OPENSEARCH_URL }}
+      SHUFFLE_OPENSEARCH_USERNAME: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_USERNAME }}
+      SHUFFLE_OPENSEARCH_PASSWORD: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_PASSWORD }}
+      SHUFFLE_OPENSEARCH_APIKEY: ${{ secrets.SHUFFLE_INTEGRATION_OPENSEARCH_APIKEY }}
+      SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: ${{ vars.SHUFFLE_INTEGRATION_OPENSEARCH_SKIPSSL_VERIFY || 'false' }}
+      SHUFFLE_MEMCACHED: ${{ vars.SHUFFLE_INTEGRATION_MEMCACHED }}
+      SHUFFLE_TEST_ORG_ID: ${{ vars.SHUFFLE_INTEGRATION_ORG_ID }}
+
+    steps:
+      - name: Reject forked pull requests
+        if: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
+        shell: bash
+        run: |
+          echo "Remote integration tests cannot expose VM credentials to forked or Dependabot pull requests." >&2
+          echo "A maintainer must move the commit to a trusted branch in this repository." >&2
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Connect to the integration tailnet
+        if: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_TAILSCALE == 'true' }}
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          ping: ${{ vars.SHUFFLE_INTEGRATION_REMOTE_HOST }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go-app/go.mod
+          cache-dependency-path: backend/go-app/go.sum
+
+      - name: Validate remote configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SHUFFLE_OPENSEARCH_URL:?Set SHUFFLE_INTEGRATION_OPENSEARCH_URL as a repository variable}"
+          : "${SHUFFLE_MEMCACHED:?Set SHUFFLE_INTEGRATION_MEMCACHED as a repository variable}"
+          : "${SHUFFLE_TEST_ORG_ID:?Set SHUFFLE_INTEGRATION_ORG_ID as an environment variable}"
+
+          if [[ -z "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]] &&
+             [[ -z "${SHUFFLE_OPENSEARCH_USERNAME:-}" || -z "${SHUFFLE_OPENSEARCH_PASSWORD:-}" ]]; then
+            echo "Configure either SHUFFLE_INTEGRATION_OPENSEARCH_APIKEY or both OpenSearch username/password secrets." >&2
+            exit 1
+          fi
+
+      - name: Wait for remote OpenSearch and Memcached
+        id: remote-ready
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl_args=(--silent --show-error --fail --connect-timeout 3 --max-time 5)
+          if [[ "${SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY}" == "true" ]]; then
+            curl_args+=(--insecure)
+          fi
+          if [[ -n "${SHUFFLE_OPENSEARCH_APIKEY:-}" ]]; then
+            curl_args+=(-H "Authorization: ApiKey ${SHUFFLE_OPENSEARCH_APIKEY}")
+          else
+            curl_args+=(-u "${SHUFFLE_OPENSEARCH_USERNAME}:${SHUFFLE_OPENSEARCH_PASSWORD}")
+          fi
+
+          for attempt in $(seq 1 60); do
+            if curl "${curl_args[@]}" \
+              "${SHUFFLE_OPENSEARCH_URL%/}/_cluster/health?wait_for_status=yellow&timeout=2s" \
+              >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" -eq 60 ]]; then
+              echo "Remote OpenSearch did not become ready within 120 seconds." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+          memcached_host="${SHUFFLE_MEMCACHED%:*}"
+          memcached_port="${SHUFFLE_MEMCACHED##*:}"
+          for attempt in $(seq 1 30); do
+            if timeout 1 bash -c "</dev/tcp/${memcached_host}/${memcached_port}" 2>/dev/null; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 30 ]]; then
+              echo "Remote Memcached did not become ready within 60 seconds." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Run backend integration tests
+        run: ./test-suite/run_integration.sh
