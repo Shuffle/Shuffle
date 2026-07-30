@@ -71,14 +71,15 @@ var debug = false
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
-	Success         bool                          `json:"success"`
-	SyncFeatures    shuffle.SyncFeatures          `json:"sync_features"`
-	SessionKey      string                        `json:"session_key"`
-	IntervalSeconds int64                         `json:"interval_seconds"`
-	Reason          string                        `json:"reason"`
-	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
-	Licensed        bool                          `json:"licensed"`
-	CloudSyncUrl    string                        `json:"cloud_sync_url,omitempty"`
+	Success          bool                          `json:"success"`
+	SyncFeatures     shuffle.SyncFeatures          `json:"sync_features"`
+	SessionKey       string                        `json:"session_key"`
+	IntervalSeconds  int64                         `json:"interval_seconds"`
+	Reason           string                        `json:"reason"`
+	Subscriptions    []shuffle.PaymentSubscription `json:"subscriptions"`
+	Licensed         bool                          `json:"licensed"`
+	CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
+	AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
 }
 
 type Contact struct {
@@ -3854,13 +3855,14 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success       bool                          `json:"success"`
-		Reason        string                        `json:"reason"`
-		Jobs          []shuffle.CloudSyncJob        `json:"jobs"`
-		SyncFeatures  shuffle.SyncFeatures          `json:"sync_features"`
-		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
-		Licensed      bool                          `json:"licensed"`
-		CloudSyncUrl  string                        `json:"cloud_sync_url,omitempty"`
+		Success          bool                          `json:"success"`
+		Reason           string                        `json:"reason"`
+		Jobs             []shuffle.CloudSyncJob        `json:"jobs"`
+		SyncFeatures     shuffle.SyncFeatures          `json:"sync_features"`
+		Subscriptions    []shuffle.PaymentSubscription `json:"subscriptions"`
+		Licensed         bool                          `json:"licensed"`
+		CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
+		AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
 	}
 
 	responseData := retStruct{}
@@ -3950,6 +3952,14 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	} else {
 
 		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
+	}
+
+	appRunsHardLimitCacheKey := fmt.Sprintf("org_app_runs_hard_limit_%s", org.Id)
+	appRunsHardLimitBytes, err := json.Marshal(responseData.AppRunsHardLimit)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal AppRunsHardLimit for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, appRunsHardLimitCacheKey, appRunsHardLimitBytes, 1800)
 	}
 
 	for _, job := range responseData.Jobs {
@@ -5373,6 +5383,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 			licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
 			shuffle.DeleteCache(ctx, licenseCacheKey)
 
+			appRunsHardLimitCacheKey := fmt.Sprintf("org_app_runs_hard_limit_%s", org.Id)
+			shuffle.DeleteCache(ctx, appRunsHardLimitCacheKey)
+
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
 		}
@@ -5484,6 +5497,13 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	if len(responseData.CloudSyncUrl) > 0 {
 		cloudSyncRegionUrlCacheKey := fmt.Sprintf("org_cloudsync_region_url_%s", org.Id)
 		shuffle.SetCache(ctx, cloudSyncRegionUrlCacheKey, []byte(responseData.CloudSyncUrl), 1800)
+	}
+	if responseData.AppRunsHardLimit > 0 {
+		appRunsHardLimitCacheKey := fmt.Sprintf("org_app_runs_hard_limit_%s", org.Id)
+		appRunsHardLimitBytes, err := json.Marshal(responseData.AppRunsHardLimit)
+		if err == nil {
+			shuffle.SetCache(ctx, appRunsHardLimitCacheKey, appRunsHardLimitBytes, 1800)
+		}
 	}
 
 	org.SyncConfig = shuffle.SyncConfig{
