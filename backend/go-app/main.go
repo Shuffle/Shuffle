@@ -4655,62 +4655,21 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
 	} else {
 		log.Printf("[INFO] Setting up %d schedule(s)", len(schedules))
-
-		url := &url.URL{}
-		job := func(schedule shuffle.ScheduleOld) func() {
-			return func() {
-				log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
-
-				request := &http.Request{
-					URL:    url,
-					Method: "POST",
-					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
-				}
-
-				orgId := ""
-				if len(activeOrgs) > 0 {
-					orgId = activeOrgs[0].Id
-				}
-
-				if len(schedule.Org) == 36 {
-					orgId = schedule.Org
-				}
-
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
-				if err != nil {
-					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
-				}
-			}
+		fallbackOrgID := ""
+		if len(activeOrgs) > 0 {
+			fallbackOrgID = activeOrgs[0].Id
 		}
 
 		for _, schedule := range schedules {
-			if strings.ToLower(schedule.Environment) == "cloud" {
-				log.Printf("[DEBUG] Skipping cloud schedule")
+			if strings.EqualFold(schedule.Environment, "cloud") {
 				continue
 			}
 
-			// FIXME: Add a randomized timer to avoid all schedules running at the same time
-			// Many are at 5 minutes / 1 hour. The point is to spread these out
-			// a bit instead of all of them starting at the exact same time
-
-			//log.Printf("Schedule: %#v", schedule)
-			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
-			if schedule.Seconds == 0 && len(schedule.Frequency) > 0 {
-				cronJob, err := CronScheduler.Cron(schedule.Frequency).Do(job(schedule))
-				if err != nil {
-					log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
-				} else {
-					log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
-				}
-				cronJobs[schedule.Id] = cronJob
-			} else {
-				jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
-				if err != nil {
-					log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
-				} else {
-					log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
-				}
-				scheduledJobs[schedule.Id] = jobret
+			created, err := registerScheduleRuntime(schedule, fallbackOrgID)
+			if err != nil {
+				log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+			} else if created {
+				log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
 			}
 		}
 	}

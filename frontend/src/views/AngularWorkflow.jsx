@@ -706,6 +706,8 @@ const AngularWorkflow = (defaultprops) => {
   const [distributedFromParent, setDistributedFromParent] = React.useState("")
   const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
   const [allTriggers, setAllTriggers] = React.useState(undefined)
+  const [scheduleRequestPending, setScheduleRequestPending] = React.useState(false)
+  const scheduleRequestPendingRef = React.useRef(false)
 
   const [suggestionBox, setSuggestionBox] = React.useState({
     "position": {
@@ -10933,7 +10935,7 @@ const AngularWorkflow = (defaultprops) => {
 		headers["Org-Id"] = orgId
 	}
 
-    fetch(url,
+    return fetch(url,
       {
         method: "GET",
         headers: headers,
@@ -11392,9 +11394,16 @@ const AngularWorkflow = (defaultprops) => {
   //})
 
   const stopSchedule = (trigger, triggerindex) => {
+	if (scheduleRequestPendingRef.current) {
+		return
+	}
+
 	if (cy !== undefined && cy !== null) {
 		cy.$(":selected").unselect()
 	}
+
+	scheduleRequestPendingRef.current = true
+	setScheduleRequestPending(true)
 
 	var headers = {
 		"Content-Type": "application/json",
@@ -11421,7 +11430,6 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        // No matter what, it's being stopped.
         if (!responseJson.success) {
           if (responseJson.reason !== undefined) {
             toast("Failed to stop schedule: " + responseJson.reason);
@@ -11430,22 +11438,15 @@ const AngularWorkflow = (defaultprops) => {
           toast("Successfully stopped schedule");
         }
 
-		if (triggerindex !== undefined && triggerindex !== null && triggerindex >= 0) {
-        	workflow.triggers[triggerindex].status = "stopped";
-		}
-
-        //trigger.status = "stopped";
-		//console.log("TRIGGER: ", trigger)
-        //setSelectedTrigger(trigger);
-
-        setWorkflow(workflow);
-        saveWorkflow(workflow)
-
-  		loadTriggers(workflow.org_id)
+		return loadTriggers(workflow.org_id)
       })
       .catch((error) => {
         console.log("Stop schedule error: ", error.toString())
       })
+	  .finally(() => {
+		scheduleRequestPendingRef.current = false
+		setScheduleRequestPending(false)
+	  })
   }
 
   const submitPipeline = (trigger, triggerindex, usecase) => {
@@ -11519,6 +11520,10 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const submitSchedule = (trigger, triggerindex) => {
+	if (scheduleRequestPendingRef.current) {
+		return;
+	}
+
     if (trigger.name.length <= 0) {
       toast("Error: name can't be empty");
       return;
@@ -11567,6 +11572,9 @@ const AngularWorkflow = (defaultprops) => {
 		headers["Org-Id"] = workflow.org_id
 	}
 
+	scheduleRequestPendingRef.current = true
+	setScheduleRequestPending(true)
+
     fetch(
       `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule`,
       {
@@ -11588,19 +11596,18 @@ const AngularWorkflow = (defaultprops) => {
           toast.error("Failed to set schedule: " + responseJson.reason);
         } else {
           toast.success("Successfully created schedule");
-          workflow.triggers[triggerindex].status = "running";
-          trigger.status = "running";
-          setSelectedTrigger(trigger);
-          setWorkflow(workflow);
-          saveWorkflow(workflow);
-
-  		  loadTriggers(workflow.org_id)
         }
+
+		return loadTriggers(workflow.org_id)
       })
       .catch((error) => {
         //toast(error.toString());
         console.log("Get schedule error: ", error.toString());
-      });
+      })
+	  .finally(() => {
+		scheduleRequestPendingRef.current = false
+		setScheduleRequestPending(false)
+	  });
   };
 
   const getSigmaInfo = () => {
@@ -19849,7 +19856,7 @@ const AngularWorkflow = (defaultprops) => {
             <Button
               style={{ flex: "1" }}
               variant="contained"
-              disabled={selectedTrigger.status === "running"}
+              disabled={scheduleRequestPending || selectedTrigger.status === "running"}
               onClick={() => {
                 submitSchedule(selectedTrigger, selectedTriggerIndex);
               }}
@@ -19860,7 +19867,7 @@ const AngularWorkflow = (defaultprops) => {
             <Button
               style={{ flex: "1" }}
               variant="contained"
-              disabled={selectedTrigger.status !== "running"}
+              disabled={scheduleRequestPending || selectedTrigger.status !== "running"}
               onClick={() => {
                 stopSchedule(selectedTrigger, selectedTriggerIndex);
               }}

@@ -64,6 +64,7 @@ type workflowTriggerWire struct {
 	ID             string                  `json:"id"`
 	Name           string                  `json:"name"`
 	Label          string                  `json:"label"`
+	Environment    string                  `json:"environment"`
 	TriggerType    string                  `json:"trigger_type"`
 	IsValid        bool                    `json:"is_valid"`
 	ExecutionDelay int64                   `json:"execution_delay,omitempty"`

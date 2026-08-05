@@ -40,6 +40,7 @@ func main() {
 	testing.Main(regexp.MatchString, []testing.InternalTest{
 		{Name: "TestOpensearchInit", F: TestOpensearchInit},
 		{Name: "TestMemcacheCounterUpdate", F: TestMemcacheCounterUpdate},
+		{Name: "TestMemcacheAtomicClaim", F: TestMemcacheAtomicClaim},
 		{Name: "TestMemcacheHighAvailability", F: TestMemcacheHighAvailability},
 		{Name: "TestWorkflowStorageRoundTrip", F: TestWorkflowStorageRoundTrip},
 		{Name: "TestWorkflowExecutionPreparation", F: TestWorkflowExecutionPreparation},
@@ -190,11 +191,52 @@ func TestMemcacheCounterUpdate(t *testing.T) {
 	requireCacheCounter(t, ctx, key, 5)
 }
 
+func TestMemcacheAtomicClaim(t *testing.T) {
+	initializeIntegrationBackends(t)
+
+	key := "integration_memcache_claim_" + uuid.NewV4().String()
+	registerCacheCleanup(t, key)
+
+	const contenders = 32
+	results := make(chan bool, contenders)
+	errs := make(chan error, contenders)
+	var waitGroup sync.WaitGroup
+	for range contenders {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			claimed, err := shuffle.ClaimCacheKey(key, 30)
+			if err != nil {
+				errs <- err
+				return
+			}
+			results <- claimed
+		}()
+	}
+
+	waitGroup.Wait()
+	close(results)
+	close(errs)
+	for err := range errs {
+		t.Fatal(err)
+	}
+
+	winners := 0
+	for claimed := range results {
+		if claimed {
+			winners++
+		}
+	}
+	if winners != 1 {
+		t.Fatalf("atomic cache claim had %d winners, want 1", winners)
+	}
+}
+
 func TestMemcacheHighAvailability(t *testing.T) {
 	initializeIntegrationBackends(t)
 
 	originalAddress := strings.TrimSpace(os.Getenv("SHUFFLE_MEMCACHED"))
-	liveAddress := ""
+	liveAddresses := []string{}
 	for _, address := range strings.Split(originalAddress, ",") {
 		address = strings.TrimSpace(address)
 		if address == "" {
@@ -204,11 +246,10 @@ func TestMemcacheHighAvailability(t *testing.T) {
 		client := gomemcache.New(address)
 		client.Timeout = 2 * time.Second
 		if err := client.Ping(); err == nil {
-			liveAddress = address
-			break
+			liveAddresses = append(liveAddresses, address)
 		}
 	}
-	if liveAddress == "" {
+	if len(liveAddresses) == 0 {
 		t.Fatalf("no reachable Memcached server in SHUFFLE_MEMCACHED=%q", originalAddress)
 	}
 
@@ -224,7 +265,7 @@ func TestMemcacheHighAvailability(t *testing.T) {
 	})
 
 	failedAddress := "127.0.0.1:1"
-	if err := os.Setenv("SHUFFLE_MEMCACHED", failedAddress+","+liveAddress); err != nil {
+	if err := os.Setenv("SHUFFLE_MEMCACHED", strings.Join(append([]string{failedAddress}, liveAddresses...), ",")); err != nil {
 		t.Fatalf("configure multiple Memcached servers: %v", err)
 	}
 	if _, err := shuffle.RunInit(project.Dbclient, project.StorageClient, project.GceProject, project.Environment, project.CacheDb, project.DbType, false, 0); err != nil {
@@ -235,23 +276,29 @@ func TestMemcacheHighAvailability(t *testing.T) {
 	defer cancel()
 	cacheKey := "integration_memcache_ha_" + uuid.NewV4().String()
 	payload := []byte("available-with-one-node-down")
-	liveClient := gomemcache.New(liveAddress)
-	liveClient.Timeout = 2 * time.Second
-	t.Cleanup(func() {
-		if err := liveClient.Delete(cacheKey); err != nil && err != gomemcache.ErrCacheMiss {
-			t.Errorf("clean up HA cache key: %v", err)
-		}
-	})
+	liveClients := make(map[string]*gomemcache.Client, len(liveAddresses))
+	for _, address := range liveAddresses {
+		client := gomemcache.New(address)
+		client.Timeout = 2 * time.Second
+		liveClients[address] = client
+		t.Cleanup(func() {
+			if err := client.Delete(cacheKey); err != nil && err != gomemcache.ErrCacheMiss {
+				t.Errorf("clean up HA cache key from %s: %v", address, err)
+			}
+		})
+	}
 
 	if err := shuffle.SetCache(ctx, cacheKey, payload, 5); err != nil {
-		t.Fatalf("set cache with failed server %s and live server %s: %v", failedAddress, liveAddress, err)
+		t.Fatalf("set cache with failed server %s and live servers %v: %v", failedAddress, liveAddresses, err)
 	}
-	directItem, err := liveClient.Get(cacheKey)
-	if err != nil {
-		t.Fatalf("cache write was not replicated to live server %s: %v", liveAddress, err)
-	}
-	if !bytes.Equal(directItem.Value, payload) {
-		t.Fatalf("unexpected value on live server: got %q, want %q", directItem.Value, payload)
+	for address, client := range liveClients {
+		directItem, err := client.Get(cacheKey)
+		if err != nil {
+			t.Fatalf("cache write was not replicated to live server %s: %v", address, err)
+		}
+		if !bytes.Equal(directItem.Value, payload) {
+			t.Fatalf("unexpected value on live server %s: got %q, want %q", address, directItem.Value, payload)
+		}
 	}
 
 	cached, err := shuffle.GetCache(ctx, cacheKey)
@@ -266,8 +313,10 @@ func TestMemcacheHighAvailability(t *testing.T) {
 	if err := shuffle.DeleteCache(ctx, cacheKey); err != nil {
 		t.Fatalf("delete cache with failed server ejected: %v", err)
 	}
-	if _, err := liveClient.Get(cacheKey); err != gomemcache.ErrCacheMiss {
-		t.Fatalf("cache delete was not replicated to live server: got %v, want %v", err, gomemcache.ErrCacheMiss)
+	for address, client := range liveClients {
+		if _, err := client.Get(cacheKey); err != gomemcache.ErrCacheMiss {
+			t.Fatalf("cache delete was not replicated to live server %s: got %v, want %v", address, err, gomemcache.ErrCacheMiss)
+		}
 	}
 }
 
