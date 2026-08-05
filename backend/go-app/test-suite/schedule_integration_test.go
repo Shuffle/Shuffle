@@ -163,6 +163,17 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 	if matchingSchedules != 1 {
 		t.Fatalf("admin trigger response contains %d copies of schedule %s, want 1", matchingSchedules, scheduleID)
 	}
+	if e2eBool("SHUFFLE_E2E_EXPECT_SCHEDULE_SKIP") {
+		time.Sleep(6 * time.Second)
+		executions, err := scheduleExecutions(ctx, client, workflow.ID, argument)
+		if err != nil {
+			t.Fatalf("get executions while schedule claims are unavailable: %v", err)
+		}
+		if len(executions) != 0 {
+			t.Fatalf("schedule ran without a cache quorum: got %d executions, want 0", len(executions))
+		}
+		return
+	}
 
 	var executions []executionResponse
 	for {
@@ -170,7 +181,7 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 		if err == nil && len(executions) > 1 {
 			t.Fatalf("concurrent starts created %d scheduled executions, want 1", len(executions))
 		}
-		if err == nil && len(executions) == 1 && isTerminalExecutionStatus(executions[0].Status) {
+		if err == nil && len(executions) == 1 {
 			break
 		}
 		select {
@@ -182,11 +193,6 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 	if len(executions) != 1 {
 		t.Fatalf("concurrent starts created %d scheduled executions, want 1", len(executions))
 	}
-	if !expectedStatuses(os.Getenv("SHUFFLE_E2E_EXPECT_STATUS"))[strings.ToUpper(executions[0].Status)] {
-		t.Errorf("scheduled execution finished with unexpected status %q", executions[0].Status)
-	}
-	assertManagedExecution(t, executions[0], argument)
-
 	for stopAttempt := 0; stopAttempt < 2; stopAttempt++ {
 		response, body, err = client.jsonRequest(ctx, http.MethodDelete, stopPath, nil)
 		if err != nil {
@@ -203,6 +209,25 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 			t.Fatalf("schedule stop attempt %d failed: %s", stopAttempt+1, result.Reason)
 		}
 	}
+
+	for {
+		executions, err = scheduleExecutions(ctx, client, workflow.ID, argument)
+		if err == nil && len(executions) != 1 {
+			t.Fatalf("schedule execution count changed after stop: got %d, want 1", len(executions))
+		}
+		if err == nil && isTerminalExecutionStatus(executions[0].Status) {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatalf("wait for scheduled execution to finish: %v (last error: %v)", ctx.Err(), err)
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	if !expectedStatuses(os.Getenv("SHUFFLE_E2E_EXPECT_STATUS"))[strings.ToUpper(executions[0].Status)] {
+		t.Errorf("scheduled execution finished with unexpected status %q", executions[0].Status)
+	}
+	assertManagedExecution(t, executions[0], argument)
 
 	time.Sleep(6 * time.Second)
 	executions, err = scheduleExecutions(ctx, client, workflow.ID, argument)
