@@ -257,7 +257,7 @@ func (client *apiClient) createWorkflow(ctx context.Context, workflow workflowWi
 		return workflowWire{}, fmt.Errorf("created workflow belongs to org %q, want %q", stored.OrgID, wantOrg)
 	}
 
-	return created, nil
+	return stored, nil
 }
 
 func fetchHealthWorkflowTemplate(ctx context.Context) (map[string]any, error) {

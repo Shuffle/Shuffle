@@ -75,6 +75,10 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 	scheduleID := uuid.NewV4().String()
 	argument := fmt.Sprintf(`{"schedule_test":%q}`, uuid.NewV4().String())
 	workflow := createManagedFixture(t, client, managedScheduleWorkflow(scheduleID, frequency, argument))
+	if len(workflow.Triggers) != 1 {
+		t.Fatalf("persisted workflow has %d schedule triggers, want 1", len(workflow.Triggers))
+	}
+	scheduleID = workflow.Triggers[0].ID
 	schedulePath := "/api/v1/workflows/" + workflow.ID + "/schedule"
 	stopPath := schedulePath + "/" + scheduleID
 	payload := map[string]string{
