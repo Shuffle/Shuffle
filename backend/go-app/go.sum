@@ -376,6 +376,8 @@ github.com/shuffle/shuffle-shared v1.2.84 h1:PgNy0Rs0wK6mZAMw+Bv2FgJ8Vz4p1F6d57D
 github.com/shuffle/shuffle-shared v1.2.84/go.mod h1:ZTL36MOOLV60jgZDvxd8GpR6z8hbWmDI5SnTpuZQS9I=
 github.com/shuffle/shuffle-shared v1.2.88-memcache-test h1:zG7HquLge8GePvC1rPekkAGSZnhcWs2TGXw880bCN2Y=
 github.com/shuffle/shuffle-shared v1.2.88-memcache-test/go.mod h1:6Bj+bVjaxYyhy/y3SZA8YlRNkAuhnISfMR3Fdv1uUr8=
+github.com/shuffle/shuffle-shared v1.2.88-memcache-test.0.20260805084925-40aead795119 h1:sVpuqGKh6N4B9a8KEkjbSajW1R1G67SSl/LsRPgkgVY=
+github.com/shuffle/shuffle-shared v1.2.88-memcache-test.0.20260805084925-40aead795119/go.mod h1:6Bj+bVjaxYyhy/y3SZA8YlRNkAuhnISfMR3Fdv1uUr8=
 github.com/shuffle/singul v0.0.32 h1:EoJjKCWfbtHqjo/UgofSvTp7rcYEH7k3eGXrZgXcMt8=
 github.com/shuffle/singul v0.0.32/go.mod h1:An0DHl+E+bAO1ziIbqUJdLXhjixN6DOyv0GwlXwsKHc=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=

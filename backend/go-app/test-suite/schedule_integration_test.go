@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -96,7 +98,7 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 		_, _, _ = client.jsonRequest(cleanupCtx, http.MethodDelete, stopPath, nil)
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), e2eDuration("SHUFFLE_E2E_TIMEOUT", defaultExecutionTimeout))
 	defer cancel()
 
 	const starts = 16
@@ -165,7 +167,10 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 	var executions []executionResponse
 	for {
 		executions, err = scheduleExecutions(ctx, client, workflow.ID, argument)
-		if err == nil && len(executions) > 0 {
+		if err == nil && len(executions) > 1 {
+			t.Fatalf("concurrent starts created %d scheduled executions, want 1", len(executions))
+		}
+		if err == nil && len(executions) == 1 && isTerminalExecutionStatus(executions[0].Status) {
 			break
 		}
 		select {
@@ -177,6 +182,10 @@ func TestScheduleConcurrentStartAndStopIntegration(t *testing.T) {
 	if len(executions) != 1 {
 		t.Fatalf("concurrent starts created %d scheduled executions, want 1", len(executions))
 	}
+	if !expectedStatuses(os.Getenv("SHUFFLE_E2E_EXPECT_STATUS"))[strings.ToUpper(executions[0].Status)] {
+		t.Errorf("scheduled execution finished with unexpected status %q", executions[0].Status)
+	}
+	assertManagedExecution(t, executions[0], argument)
 
 	for stopAttempt := 0; stopAttempt < 2; stopAttempt++ {
 		response, body, err = client.jsonRequest(ctx, http.MethodDelete, stopPath, nil)

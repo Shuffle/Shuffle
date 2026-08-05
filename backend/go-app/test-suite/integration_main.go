@@ -196,7 +196,11 @@ func TestMemcacheAtomicClaim(t *testing.T) {
 
 	key := "integration_memcache_claim_" + uuid.NewV4().String()
 	registerCacheCleanup(t, key)
+	requireSingleCacheClaimWinner(t, key)
+}
 
+func requireSingleCacheClaimWinner(t *testing.T, key string) {
+	t.Helper()
 	const contenders = 32
 	results := make(chan bool, contenders)
 	errs := make(chan error, contenders)
@@ -317,6 +321,34 @@ func TestMemcacheHighAvailability(t *testing.T) {
 		if _, err := client.Get(cacheKey); err != gomemcache.ErrCacheMiss {
 			t.Fatalf("cache delete was not replicated to live server %s: got %v, want %v", address, err, gomemcache.ErrCacheMiss)
 		}
+	}
+
+	if len(liveAddresses) < 2 {
+		t.Log("need at least two live Memcached servers to test claim quorum with one node down")
+		return
+	}
+
+	claimAddresses := []string{failedAddress, liveAddresses[0], liveAddresses[1]}
+	if err := os.Setenv("SHUFFLE_MEMCACHED", strings.Join(claimAddresses, ",")); err != nil {
+		t.Fatalf("configure claim quorum: %v", err)
+	}
+	if _, err := shuffle.RunInit(project.Dbclient, project.StorageClient, project.GceProject, project.Environment, project.CacheDb, project.DbType, false, 0); err != nil {
+		t.Fatalf("initialize claim quorum: %v", err)
+	}
+	claimKey := "integration_memcache_ha_claim_" + uuid.NewV4().String()
+	registerCacheCleanup(t, claimKey)
+	requireSingleCacheClaimWinner(t, claimKey)
+
+	noQuorumAddresses := []string{"127.0.0.1:1", "127.0.0.1:2", liveAddresses[0]}
+	if err := os.Setenv("SHUFFLE_MEMCACHED", strings.Join(noQuorumAddresses, ",")); err != nil {
+		t.Fatalf("configure unavailable claim quorum: %v", err)
+	}
+	if _, err := shuffle.RunInit(project.Dbclient, project.StorageClient, project.GceProject, project.Environment, project.CacheDb, project.DbType, false, 0); err != nil {
+		t.Fatalf("initialize unavailable claim quorum: %v", err)
+	}
+	claimed, err := shuffle.ClaimCacheKey("integration_memcache_no_quorum_"+uuid.NewV4().String(), 30)
+	if err == nil || claimed {
+		t.Fatalf("claim without quorum returned claimed=%t error=%v", claimed, err)
 	}
 }
 
