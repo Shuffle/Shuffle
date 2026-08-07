@@ -3863,6 +3863,7 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		Licensed         bool                          `json:"licensed"`
 		CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
 		AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
+		CloudStats    *shuffle.ExecutionInfo        `json:"cloud_stats,omitempty"`
 	}
 
 	responseData := retStruct{}
@@ -3961,6 +3962,21 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	} else {
 		shuffle.SetCache(ctx, appRunsHardLimitCacheKey, appRunsHardLimitBytes, 1800)
 	}
+	
+	// Store cloud stats in OnpremStats so the Cloud (Cloud-Sync) stats tab can show them.
+	// Overwrite instead of merging - cloud is the source of truth for its own stats.
+	if responseData.CloudStats != nil && len(responseData.CloudStats.DailyStatistics) > 0 {
+		orgStats, err := shuffle.GetOrgStatistics(ctx, org.Id)
+		if err == nil {
+			orgStats.OnpremStats = responseData.CloudStats.DailyStatistics
+			err = shuffle.SetOrgStatistics(ctx, *orgStats, org.Id)
+			if err != nil {
+				// log.Printf("[WARNING] Failed saving cloud stats during sync for org %s: %s", org.Id, err)
+			}
+		} else {
+			// log.Printf("[WARNING] Failed getting org stats during cloud stats sync for org %s: %s", org.Id, err)
+		}
+	}
 
 	for _, job := range responseData.Jobs {
 		err = handleCloudJob(job)
@@ -4038,6 +4054,24 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		if err != nil {
 			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
 		} else {
+			info.OnpremStats = nil // holds cloud's stats locally - don't echo them back
+
+			// Append today's running counters so cloud sees current data.
+			// The cloud merge updates same-date entries on every sync, and the
+			// real daily entry replaces this after the day rolls over.
+			info.DailyStatistics = append(info.DailyStatistics, shuffle.DailyStatistics{
+				Date:                       time.Now(),
+				AppExecutions:              info.DailyAppExecutions,
+				ChildAppExecutions:         info.DailyChildAppExecutions,
+				WorkflowExecutions:         info.DailyWorkflowExecutions,
+				WorkflowExecutionsFinished: info.DailyWorkflowExecutionsFinished,
+				WorkflowExecutionsFailed:   info.DailyWorkflowExecutionsFailed,
+				AppExecutionsFailed:        info.DailyAppExecutionsFailed,
+				SubflowExecutions:          info.DailySubflowExecutions,
+				AgentInputTokens:           info.DailyAgentInputTokens,
+				AgentOutputTokens:          info.DailyAgentOutputTokens,
+			})
+
 			backupJob.Stats = *info
 		}
 	}
