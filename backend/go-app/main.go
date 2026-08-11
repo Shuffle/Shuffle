@@ -6420,9 +6420,7 @@ func initHandlers() {
 	CronScheduler.StartAsync()
 
 	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
-	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
 
-	//es := shuffle.GetEsConfig()
 	elasticConfig := "elasticsearch"
 	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
 		elasticConfig = ""
