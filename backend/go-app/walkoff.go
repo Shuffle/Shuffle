@@ -2793,8 +2793,6 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		decisionId = decision[0]
 	}
 
-	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
-
 	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, appId, body, runValidationAction, decisionId)
 	if appId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
