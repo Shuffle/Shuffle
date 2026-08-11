@@ -5446,13 +5446,15 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	org.SyncConfig = shuffle.SyncConfig{
-		URL: responseData.CloudSyncUrl,
-
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
 
 		WorkflowBackup: true,
 		AppBackup:      true,
+	}
+
+	if strings.Contains("https://", responseData.CloudSyncUrl) && strings.Contains("shuffler.io", responseData.CloudSyncUrl) {
+		org.SyncConfig.URL = responseData.CloudSyncUrl
 	}
 
 	interval := int(responseData.IntervalSeconds)
