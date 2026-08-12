@@ -6743,7 +6743,7 @@ func initHandlers() {
 
 	r.HandleFunc("/api/v1/conversation", shuffle.RunActionAI).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orborus", shuffle.GetOrborusDownloadCommand).Methods("GET")
-	r.HandleFunc("/api/v1/chat/completions", shuffle.RunAiQueryHandler).Methods("POST")
+	r.HandleFunc("/api/v1/chat/completions", shuffle.RunAiQueryHandler).Methods("POST", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
