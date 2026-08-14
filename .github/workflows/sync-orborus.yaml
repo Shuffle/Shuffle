@@ -21,6 +21,9 @@ jobs:
       matrix:
         version: ["${{ inputs.orborus_version }}"]
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
@@ -34,10 +37,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull, retag and push orborus
+      # imagetools copies the full manifest list (amd64 + arm64) registry-to-registry.
+      # A docker pull/tag/push would flatten it to the runner's arch only.
+      - name: Retag and push orborus
         run: |
-          docker pull ghcr.io/shuffle/orborus:${{ matrix.version }}
-          docker tag ghcr.io/shuffle/orborus:${{ matrix.version }} ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
-          docker tag ghcr.io/shuffle/orborus:${{ matrix.version }} ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }}
-          docker push ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }}
+          docker buildx imagetools create \
+            -t ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }} \
+            ghcr.io/shuffle/orborus:${{ matrix.version }}
+
+      - name: Inspect result
+        run: docker buildx imagetools inspect ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
