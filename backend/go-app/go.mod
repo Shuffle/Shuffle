@@ -26,7 +26,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/opensearch-go/v4 v4.0.0
-	github.com/shuffle/shuffle-shared v1.2.89-memcache
+	github.com/shuffle/shuffle-shared v1.2.93-memcache
 	github.com/shuffle/singul v0.0.32
 	golang.org/x/crypto v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
