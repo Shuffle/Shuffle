@@ -90,6 +90,37 @@ services:
       - shuffle
     restart: unless-stopped
 
+  # OPTIONAL: OpenSearch Dashboards at http://localhost:5601
+  # Uncomment this service and sign in with the OpenSearch credentials from .env.
+  # opensearch-dashboards:
+  #   image: opensearchproject/opensearch-dashboards:3.2.0
+  #   hostname: shuffle-opensearch-dashboards
+  #   container_name: shuffle-opensearch-dashboards
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     OPENSEARCH_HOSTS: '["https://shuffle-opensearch:9200"]'
+  #     OPENSEARCH_SSL_VERIFICATIONMODE: none
+  #   depends_on:
+  #     - opensearch
+  #   networks:
+  #     - shuffle
+  #   restart: unless-stopped
+
+  # memcached:
+  #  image: memcached:latest
+  #  container_name: shuffle-cache
+  #  hostname: shuffle-cache
+  #  command: memcached -m 2048 -c 2500
+  #  environment:
+  #    - MEMCACHED_MEMORY=2048
+  #    - MEMCACHED_MAX_CONNECTIONS=2500
+  #  ports:
+  #    - 11211:11211
+  #  networks:
+  #  -  shuffle
+  #  -  swarm_executions
+
   # OPTIONAL: advanced monitoring with cAdvisor
   # If you have a seperate orborus config YAML on another server,
   # Please add it there as well if you want to monitor that server too.
@@ -110,20 +141,6 @@ services:
   #     - /dev/kmsg:/dev/kmsg
   #   networks:
   #     - shuffle
-
-  #memcached:
-  #  image: memcached:latest
-  #  container_name: shuffle-cache
-  #  hostname: shuffle-cache
-  #  command: memcached -m 2048 -c 2500
-  #  environment:
-  #    - MEMCACHED_MEMORY=2048
-  #    - MEMCACHED_MAX_CONNECTIONS=2500
-  #  ports:
-  #    - 11211:11211
-  #  networks:
-  #  -  shuffle
-  #  -  swarm_executions
 
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy

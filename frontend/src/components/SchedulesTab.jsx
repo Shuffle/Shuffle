@@ -37,6 +37,8 @@ const SchedulesTab = memo((props) => {
   const {globalUrl, users, } = props;
   const [webHooks, setWebHooks] = React.useState([]);
   const [allSchedules, setAllSchedules] = React.useState([]);
+  const [pendingScheduleIds, setPendingScheduleIds] = React.useState([]);
+  const pendingScheduleIdsRef = React.useRef(new Set());
   const [pipelines, setPipelines] = React.useState([]);
   const [showLoader, setShowLoader] = React.useState(true);
   const [workflows, setWorkflows] = React.useState([]);
@@ -426,6 +428,12 @@ const SchedulesTab = memo((props) => {
   }
 
   const deleteSchedule = (data) => {
+    if (pendingScheduleIdsRef.current.has(data.id)) {
+      return;
+    }
+
+    pendingScheduleIdsRef.current.add(data.id);
+    setPendingScheduleIds((current) => [...current, data.id]);
     // FIXME - add some check here ROFL
     console.log("INPUT: ", data);
 
@@ -444,15 +452,17 @@ const SchedulesTab = memo((props) => {
           if (responseJson["success"] === false) {
             toast("Failed stopping schedule");
           } else {
-            setTimeout(() => {
-              handleGetAllTriggers();
-            }, 1500);
+            return handleGetAllTriggers();
             //toast("Successfully stopped schedule!")
           }
         })
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
+      })
+      .finally(() => {
+        pendingScheduleIdsRef.current.delete(data.id);
+        setPendingScheduleIds((current) => current.filter((id) => id !== data.id));
       });
   };
 
@@ -535,7 +545,7 @@ const SchedulesTab = memo((props) => {
   }
 
   const handleGetAllTriggers = () => {
-    fetch(globalUrl + "/api/v1/triggers", {
+    return fetch(globalUrl + "/api/v1/triggers", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -562,12 +572,18 @@ const SchedulesTab = memo((props) => {
   };
 
   const startSchedule = (trigger) => {
+    if (pendingScheduleIdsRef.current.has(trigger.id)) {
+      return;
+    }
+
     if (trigger.name.length <= 0) {
       toast("Error: name can't be empty");
       return;
     }
 
     toast("Creating schedule");
+    pendingScheduleIdsRef.current.add(trigger.id);
+    setPendingScheduleIds((current) => [...current, trigger.id]);
     const data = {
       name: trigger.name,
       frequency: trigger.frequency,
@@ -599,11 +615,16 @@ const SchedulesTab = memo((props) => {
         } else {
           toast("Successfully created schedule");
         }
-        setTimeout(handleGetAllTriggers, 1000);
+
+        return handleGetAllTriggers();
       })
       .catch((error) => {
         //toast(error.toString());
         console.log("Get schedule error: ", error.toString());
+      })
+      .finally(() => {
+        pendingScheduleIdsRef.current.delete(trigger.id);
+        setPendingScheduleIds((current) => current.filter((id) => id !== trigger.id));
       });
   } 
   
@@ -1084,7 +1105,7 @@ const SchedulesTab = memo((props) => {
                           }}
                           color={schedule.status === "running" ? "secondary" : "primary"}
                           variant={schedule.status === "running" ? "contained" : "outlined"}
-                          disabled={schedule.status === "uninitialized"}
+                          disabled={schedule.status === "uninitialized" || pendingScheduleIds.includes(schedule.id)}
                           onClick={() => {
                             if (schedule.status === "running") {
                               deleteSchedule(schedule);
@@ -1315,4 +1336,3 @@ const SchedulesTab = memo((props) => {
 });
 
 export default SchedulesTab;
-

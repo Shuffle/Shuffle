@@ -19,6 +19,7 @@ import (
 
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"net/url"
@@ -52,6 +53,9 @@ var scheduledOrgs = map[string]*newscheduler.Job{}
 
 var CronScheduler = gocron.NewScheduler(time.UTC)
 
+// @yashsinghcodes: One global lock keeps schedule lifecycle changes atomic.
+// Use per-schedule locks if schedule API throughput becomes a bottleneck.
+var scheduleJobsMu sync.Mutex
 
 // Took inspiration from https://github.com/robfig/cron/blob/master/parser.go#L88
 func checkCronSyntax(cron string) bool {
@@ -65,79 +69,156 @@ func checkCronSyntax(cron string) bool {
 	return len(fileds) == 5 || len(fileds) == 6
 }
 
-// Frequency = cronjob OR minutes between execution
-func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
-	var err error
-	//testSplit := strings.Split(frequency, "*")
-	cronJob := ""
-	isCron := false
-	newfrequency := 0
-
-	// if len(testSplit) > 5 {
+func parseScheduleFrequency(frequency string) (int, error) {
 	if checkCronSyntax(frequency) {
-		cronJob = frequency
-		isCron = true
-	} else {
-		newfrequency, err = strconv.Atoi(frequency)
-		if err != nil {
-			log.Printf("Failed to parse time: %s", err)
-			return err
-		}
-
-		//if int(newfrequency) < 60 {
-		//	cronJob = fmt.Sprintf("*/%s * * * *")
-		//} else if int(newfrequency) <
+		return 0, nil
 	}
 
-	if newfrequency < 1 && !isCron {
-		return errors.New("Frequency has to be more than 0")
+	seconds, err := strconv.Atoi(frequency)
+	if err != nil {
+		return 0, err
+	}
+
+	if seconds < 1 {
+		return 0, errors.New("frequency has to be more than 0")
+	}
+
+	return seconds, nil
+}
+
+func scheduleRuntimeExistsLocked(scheduleID string) bool {
+	_, intervalExists := scheduledJobs[scheduleID]
+	_, cronExists := cronJobs[scheduleID]
+	return intervalExists || cronExists
+}
+
+func registerScheduleRuntimeLocked(schedule shuffle.ScheduleOld, fallbackOrgID string) (bool, error) {
+	if scheduleRuntimeExistsLocked(schedule.Id) {
+		log.Printf("[INFO] Schedule %s is already registered. Skipping duplicate start", schedule.Id)
+		return false, nil
+	}
+
+	if checkCronSyntax(schedule.Frequency) {
+		cronJob, err := CronScheduler.Cron(schedule.Frequency).Do(scheduleExecutionJob(schedule, fallbackOrgID))
+		if err != nil {
+			return false, err
+		}
+
+		cronJobs[schedule.Id] = cronJob
+		return true, nil
+	}
+
+	seconds := schedule.Seconds
+	if seconds < 1 {
+		var err error
+		seconds, err = parseScheduleFrequency(schedule.Frequency)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	intervalJob, err := newscheduler.Every(seconds).Seconds().NotImmediately().Run(scheduleExecutionJob(schedule, fallbackOrgID))
+	if err != nil {
+		return false, err
+	}
+
+	scheduledJobs[schedule.Id] = intervalJob
+	return true, nil
+}
+
+func registerScheduleRuntime(schedule shuffle.ScheduleOld, fallbackOrgID string) (bool, error) {
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+	return registerScheduleRuntimeLocked(schedule, fallbackOrgID)
+}
+
+func stopScheduleRuntimeLocked(scheduleID string) (bool, error) {
+	found := false
+
+	if intervalJob, exists := scheduledJobs[scheduleID]; exists {
+		select {
+		case intervalJob.Quit <- true:
+		default:
+		}
+		delete(scheduledJobs, scheduleID)
+		found = true
+	}
+
+	if cronJob, exists := cronJobs[scheduleID]; exists {
+		if err := CronScheduler.RemoveByID(cronJob); err != nil && !errors.Is(err, gocron.ErrJobNotFound) {
+			return found, err
+		}
+		delete(cronJobs, scheduleID)
+		found = true
+	}
+	return found, nil
+}
+
+func scheduleExecutionJob(schedule shuffle.ScheduleOld, fallbackOrgID string) func() {
+	return func() {
+		if strings.TrimSpace(os.Getenv("SHUFFLE_MEMCACHED")) != "" {
+			windowSeconds := schedule.Seconds
+			if windowSeconds < 1 {
+				windowSeconds = 60
+			}
+			claimTTL := windowSeconds
+			if claimTTL < 60 {
+				claimTTL = 60
+			} else if claimTTL > 2592000 {
+				claimTTL = 2592000
+			}
+
+			claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
+			claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
+			if err != nil {
+				log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
+				return
+			}
+			if !claimed {
+				log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
+				return
+			}
+
+			storedSchedule, err := shuffle.GetSchedule(context.Background(), schedule.Id)
+			if err != nil || storedSchedule.WorkflowId != schedule.WorkflowId {
+				log.Printf("[INFO] Skipping removed schedule %s", schedule.Id)
+				return
+			}
+		}
+
+		orgID := schedule.Org
+		if len(orgID) != 36 {
+			orgID = fallbackOrgID
+		}
+		request := &http.Request{
+			URL:    &url.URL{},
+			Method: "POST",
+			Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
+		}
+
+		log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
+		_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgID}}, request, orgID)
+		if err != nil {
+			log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
+		}
+	}
+}
+
+// Frequency = cronjob OR minutes between execution
+func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
+	newfrequency, err := parseScheduleFrequency(frequency)
+	if err != nil {
+		log.Printf("Failed to parse time: %s", err)
+		return err
 	}
 
 	//log.Printf("CRON: %s, body: %s", cronJob, string(body))
 
-	// FIXME:
-	// This may run multiple places if multiple servers,
-	// but that's a future problem
 	//log.Printf("BODY: %s", string(body))
 	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
 	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "schedule", "execution_argument": "%s"}`, startNode, parsedArgument)
 	log.Printf("[INFO] Body for schedule %s in workflow %s: \n%s", scheduleId, workflowId, bodyWrapper)
-	job := func() {
-		request := &http.Request{
-			URL:    &url.URL{},
-			Method: "POST",
-			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
-		}
 
-		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request, orgId)
-		if err != nil {
-			log.Printf("Failed to execute %s: %s", workflowId, err)
-		}
-	}
-
-	log.Printf("[INFO] Starting frequency for execution: %s", frequency)
-
-	if isCron {
-		cronJob, err := CronScheduler.Cron(cronJob).Do(job)
-		if err != nil {
-			log.Printf("[ERROR] Failed to start schedule with cron(%s): %s", cronJob, err)
-		}
-
-		cronJobs[scheduleId] = cronJob
-	} else {
-		//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
-		jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
-		if err != nil {
-			log.Printf("Failed to schedule workflow: %s", err)
-			return err
-		}
-
-		scheduledJobs[scheduleId] = jobret
-	}
-
-	//scheduledJobs = append(scheduledJobs, jobret)
-
-	// Doesn't need running/not running. If stopped, we just delete it.
 	timeNow := int64(time.Now().Unix())
 	schedule := shuffle.ScheduleOld{
 		Id:                   scheduleId,
@@ -153,10 +234,26 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		Org:                  orgId,
 		Environment:          "onprem",
 	}
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+
+	if scheduleRuntimeExistsLocked(scheduleId) {
+		log.Printf("[INFO] Schedule %s is already registered. Skipping duplicate start", scheduleId)
+		return nil
+	}
 
 	err = shuffle.SetSchedule(ctx, schedule)
 	if err != nil {
 		log.Printf("Failed to set schedule: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Starting frequency for execution: %s", frequency)
+	_, err = registerScheduleRuntimeLocked(schedule, orgId)
+	if err != nil {
+		if deleteErr := shuffle.DeleteKey(ctx, "schedules", scheduleId); deleteErr != nil {
+			return fmt.Errorf("failed starting schedule: %w (rollback failed: %v)", err, deleteErr)
+		}
 		return err
 	}
 
@@ -1374,8 +1471,17 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+
 	schedule, err := shuffle.GetSchedule(ctx, scheduleId)
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "doesn't exist") || strings.Contains(strings.ToLower(err.Error()), "not_found") || strings.Contains(strings.ToLower(err.Error()), "not found") {
+			resp.WriteHeader(200)
+			resp.Write([]byte(`{"success": true}`))
+			return
+		}
+
 		log.Printf("[WARNING] Failed finding schedule %s", scheduleId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -1383,6 +1489,11 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Schedule: %#v", schedule)
+	if schedule.WorkflowId != "" && schedule.WorkflowId != fileId {
+		resp.WriteHeader(http.StatusNotFound)
+		resp.Write([]byte(`{"success": false, "reason": "Schedule does not belong to workflow"}`))
+		return
+	}
 
 	if schedule.Environment == "cloud" {
 		log.Printf("[INFO] Should STOP a cloud schedule for workflow %s with schedule ID %s", fileId, scheduleId)
@@ -1404,7 +1515,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
-		if err != nil {
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "not found") && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			log.Printf("[WARNING] Failed cloud action STOP schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -1425,7 +1536,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = deleteSchedule(ctx, scheduleId)
+	err = deleteScheduleLocked(ctx, scheduleId)
 	if err != nil {
 		log.Printf("[WARNING] Failed deleting schedule: %s", err)
 		if strings.Contains(err.Error(), "Job not found") {
@@ -1541,23 +1652,17 @@ func deleteKeySchedule(ctx context.Context, id string) error {
 }
 
 func deleteSchedule(ctx context.Context, id string) error {
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+	return deleteScheduleLocked(ctx, id)
+}
+
+func deleteScheduleLocked(ctx context.Context, id string) error {
 	log.Printf("[DEBUG] Should stop schedule %s!", id)
-	if value, exists := scheduledJobs[id]; exists {
-		// Stops the schedule properly
-		value.Lock()
-	} else {
-		// FIXME - allow it to kind of stop anyway?
-		if j, ok := cronJobs[id]; ok {
-			err := CronScheduler.RemoveByID(j)
-			if err != nil {
-				log.Printf("[ERROR] Failed to remove the scheduler %s", err)
-				return err
-			}
-		} else {
-			// Just stop and delete anyway if not in memory
-			deleteKeySchedule(ctx, id)
-			return errors.New("Can't find the schedule.")
-		}
+
+	if _, err := stopScheduleRuntimeLocked(id); err != nil {
+		log.Printf("[ERROR] Failed to stop scheduler %s: %s", id, err)
+		return err
 	}
 
 	err := deleteKeySchedule(ctx, id)
@@ -1716,6 +1821,15 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if schedule.Environment == "cloud" {
+		scheduleJobsMu.Lock()
+		defer scheduleJobsMu.Unlock()
+
+		if existingSchedule, existingErr := shuffle.GetSchedule(ctx, schedule.Id); existingErr == nil && existingSchedule.Id == schedule.Id {
+			resp.WriteHeader(200)
+			resp.Write([]byte(`{"success": true, "reason": "Already running"}`))
+			return
+		}
+
 		log.Printf("[INFO] Should START a cloud schedule for workflow %s with schedule ID %s", workflow.ID, schedule.Id)
 		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
@@ -1763,7 +1877,10 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		//log.Printf("Starting Cloud schedule Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
-		if err != nil {
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") && !strings.Contains(strings.ToLower(err.Error()), "alreadyexists") {
+			if deleteErr := shuffle.DeleteKey(ctx, "schedules", schedule.Id); deleteErr != nil {
+				log.Printf("[ERROR] Failed rolling back cloud schedule %s: %s", schedule.Id, deleteErr)
+			}
 			log.Printf("[WARNING] Failed cloud action START schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -2676,8 +2793,6 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		decisionId = decision[0]
 	}
 
-	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
-
 	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, appId, body, runValidationAction, decisionId)
 	if appId == "agent_starter" {
 		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
@@ -3328,18 +3443,27 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			dockercli, _, err := shuffle.GetDockerClient()
 			if err == nil {
 
-				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
-				if len(appSdk) == 0 {
-					_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", image.PullOptions{})
-					if err != nil {
-						log.Printf("[WARNING] Failed to download new App SDK: %s", err)
-					}
-				} else {
-					_, err := dockercli.ImagePull(ctx, fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", "ghcr.io", "frikky", appSdk), image.PullOptions{})
-					if err != nil {
-						log.Printf("[WARNING] Failed to download new App SDK %s: %s", err)
-					}
+				registry := os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
+				name := os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+				if name == "" {
+					name = "frikky/shuffle"
+				}
 
+				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
+				appSdkImage := ""
+				if len(appSdk) == 0 {
+					appSdkImage = fmt.Sprintf("%s:app_sdk", name)
+				} else {
+					appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
+				}
+
+				if registry != "" {
+					appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+				}
+
+				_, err = dockercli.ImagePull(ctx, appSdkImage, image.PullOptions{})
+				if err != nil {
+					log.Printf("[WARNING] Failed to download new App SDK: %s", err)
 				}
 			} else {
 				log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
