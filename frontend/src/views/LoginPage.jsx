@@ -296,7 +296,7 @@ const MarketplaceCard = ({ classes, isCloud }) => {
 
 
 const LoginPage = props => {
-	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, inregister, serverside, checkLogin, embedded = false, onSuccess, } = props;
+	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, inregister, serverside, checkLogin, userdata, } = props;
 	let navigate = useNavigate();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -480,7 +480,9 @@ const LoginPage = props => {
 				return;
 			}
 
-			window.location.pathname = "/dashboard"
+			// Default landing page follows the same convention as LeftSideBar:
+			// support/internal accounts go to /new-dashboard, everyone else to /workflows.
+			window.location.pathname = userdata?.support === true ? "/new-dashboard" : "/workflows"
 		}, 2000);
 	}
 
@@ -666,7 +668,9 @@ const LoginPage = props => {
 							}
 						}
 
-						window.location.pathname = "/dashboard"
+						// Default landing page follows the same convention as LeftSideBar:
+						// support/internal accounts go to /new-dashboard, everyone else to /workflows.
+						window.location.pathname = userdata?.support === true ? "/new-dashboard" : "/workflows"
 					}, 2000);
 				}
 			})

@@ -389,6 +389,7 @@ const App = (message, props) => {
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
         	      checkLogin={checkLogin}
+        	      userdata={userdata}
         	      {...props}
         	    />
         	  }
@@ -1094,6 +1095,7 @@ const App = (message, props) => {
         	      register={true}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
+        	      userdata={userdata}
         	      {...props}
         	    />
         	  }
