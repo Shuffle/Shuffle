@@ -213,6 +213,32 @@ Alternatively, you can disable the built-in OpenSearch installation using `opens
 Provide your own OpenSearch url and username with `backend.openSearch.url` and `backend.openSearch.username`.
 The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env variable to the backend.
 
+### Index management and the `workflowexecution` hot/cold split
+
+The backend automatically manages OpenSearch index/mapping/ISM rollover policies on startup
+(`InitOpensearchIndices`), and runs background jobs that keep the high-volume
+`workflowexecution` index split into a small "live" index (in-flight + recently-finished
+executions) and a rolling, retention-managed "archive" index (everything else). None of this
+requires any Helm chart changes to enable — it is controlled entirely through backend
+environment variables, which you can set via `backend.extraEnvVars` (see the
+`@param backend.extraEnvVars` example in `values.yaml`) or `backend.extraEnvVarsCM` /
+`backend.extraEnvVarsSecret`:
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `SHUFFLE_SKIP_OPENSEARCH_INDEX_INIT` | unset (runs) | Fully disables Shuffle's OpenSearch index/mapping/ISM management. Set to `true` only if you provision and manage all Shuffle OpenSearch indexes, mappings, and ISM policies yourself (e.g. via your own Terraform/IaC). |
+| `SHUFFLE_SKIP_EXECUTION_LIVE_MIGRATION` | unset (runs) | Skips only the one-time startup migration of pre-upgrade in-flight executions into the new live index. Safe to disable on very large deployments that want to run this manually during a maintenance window instead of automatically on every restart. |
+| `SHUFFLE_SKIP_EXECUTION_ARCHIVAL_SWEEP` | unset (runs) | Skips only the recurring sweep that moves finished executions from the live index to the archive. Disabling this defeats the point of the hot/cold split (the live index grows unbounded) — only disable if you have your own equivalent process. |
+| `OPENSEARCH_EXECUTION_GRACE_PERIOD` | `1h` | How long a finished execution stays in the live index before it becomes eligible for archival. |
+| `OPENSEARCH_EXECUTION_ARCHIVE_SWEEP_INTERVAL` | `30m` | How often the archival sweep runs. |
+| `OPENSEARCH_INDEX_RETENTION_DAYS` | unset (code default: `workflowexecution` = `365` days) | Per-index ISM retention override, e.g. `{"workflowexecution": 180}`. Same mechanism used for `shuffle_logs`. The 365-day default for `workflowexecution` is a built-in code default (`getOpensearchRetentionDays`), not an env var default — this JSON var only needs to be set to override it. |
+| `OPENSEARCH_NOTIFICATION_RETENTION_DAYS` | `0` (disabled) | Opt-in only: deletes read/ignored notifications older than this many days. Notifications are kept forever unless you explicitly set this. |
+
+`SHUFFLE_SKIP_OPENSEARCH_INDEX_INIT` only affects index/mapping/ISM *infrastructure*
+management — it does **not** disable the migration/sweep jobs above, which run independently so
+that self-managed-infrastructure deployments still get the scaling benefit of the hot/cold
+split.
+
 ## Parameters
 
 #### Global parameters

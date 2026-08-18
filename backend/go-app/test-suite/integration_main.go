@@ -118,7 +118,7 @@ func initializeIntegrationBackends(t *testing.T) {
 			0,
 		)
 
-		shuffle.InitOpensearchIndexes()
+		shuffle.InitOpensearchIndices()
 	})
 	if initializeErr != nil {
 		t.Fatalf("initialize Shuffle integration backends: %v", initializeErr)
@@ -139,12 +139,12 @@ func TestOpensearchInit(t *testing.T) {
 		t.Fatal("OpenSearch client was not initialized")
 	}
 
-	baseIndexes := shuffle.GetOpensearchBaseIndexes()
-	if len(baseIndexes) == 0 {
-		t.Fatal("Shuffle returned no base OpenSearch indexes")
+	baseIndices := shuffle.GetOpensearchBaseIndices()
+	if len(baseIndices) == 0 {
+		t.Fatal("Shuffle returned no base OpenSearch indices")
 	}
-	expectedAliases := make([]string, 0, len(baseIndexes))
-	for _, baseIndex := range baseIndexes {
+	expectedAliases := make([]string, 0, len(baseIndices))
+	for _, baseIndex := range baseIndices {
 		expectedAliases = append(expectedAliases, shuffle.GetESIndexPrefix(baseIndex))
 	}
 
@@ -585,7 +585,7 @@ func TestDatastoreIntegration(t *testing.T) {
 	testRunID := uuid.NewV4().String()
 	category := "integration_large_" + strings.ReplaceAll(testRunID, "-", "")
 	keyPrefix := "integration-bulk-" + testRunID
-	// The current OpenSearch mapping indexes Value as one term, whose hard limit
+	// The current OpenSearch mapping indices Value as one term, whose hard limit
 	// is 32,766 bytes. Exercise close to that boundary without exceeding it.
 	// FIX IT PLEASE
 	largeEntries := make([]string, 1500)
