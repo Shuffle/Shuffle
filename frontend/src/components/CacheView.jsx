@@ -507,6 +507,11 @@ const CacheView = memo((props) => {
 					if (responseJson?.category_config?.automations !== undefined && responseJson?.category_config?.automations !== null && responseJson?.category_config?.automations.length > 0) {
 						// Find icons if they exist
 						for (var key in responseJson.category_config.automations) {
+							// Options may be null if an automation was stored without any (no omitempty on the backend field)
+							if (!Array.isArray(responseJson.category_config.automations[key].options)) {
+								responseJson.category_config.automations[key].options = []
+							}
+
 							//if (responseJson.category_config.automations[key].icon === undefined || responseJson.category_config.automations[key].icon === null || responseJson.category_config.automations[key].icon === "") {
 							const foundItem = defaultAutomation.find((automation) => automation.name === responseJson.category_config.automations[key].name)
 							if (foundItem) {
@@ -1171,7 +1176,7 @@ const CacheView = memo((props) => {
 								style={{ marginRight: 10, marginTop: -10, }}
 								checked={automation.enabled}
 								// Check if automation options have a value
-								disabled={automation.name !== "Enrich" && automation.name != "Run AI Agent" && (automation?.disabled === true || automation.options.length === 0 || automation.options.some((option) => option.value === ""))}
+								disabled={automation.name !== "Enrich" && automation.name != "Run AI Agent" && (automation?.disabled === true || (automation?.options || []).length === 0 || (automation?.options || []).some((option) => option.value === ""))}
 								onChange={(e) => {
 									e.stopPropagation()
 									e.preventDefault()
