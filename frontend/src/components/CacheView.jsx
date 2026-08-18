@@ -418,12 +418,13 @@ const CacheView = memo((props) => {
 		.then((responseJson) => {
             setCachedLoaded(true);
 			if (responseJson?.success === true) {
-				setListCache(responseJson.keys);
+				const responseKeys = responseJson.keys || [];
+				setListCache(responseKeys);
 
 				if (responseJson.total_amount !== undefined && responseJson.total_amount !== null && responseJson.total_amount > 0) {
 					setTotalAmount(responseJson.total_amount)
 				} else {
-					setTotalAmount(responseJson.keys.length)
+					setTotalAmount(responseKeys.length)
 				}
 
 				if (responseJson?.cursor !== undefined && responseJson?.cursor !== null && responseJson?.cursor !== "") {
@@ -598,7 +599,7 @@ const CacheView = memo((props) => {
 
 		}
 
-        if (listCache.length > 0) {
+        if (listCache?.length > 0) {
             const selectedCache = listCache.find((data) => data.key === dataValue.key);
             if (selectedCache?.suborg_distribution?.length > 0) {
                 entry.suborg_distribution = selectedCache.suborg_distribution;
@@ -2734,7 +2735,7 @@ const CacheView = memo((props) => {
             />}
 
 		      <DataGrid
-				rows={listCache}
+				rows={listCache || []}
 				columns={columns}
 				checkboxSelection
 				disableRowSelectionOnClick
@@ -2751,7 +2752,7 @@ const CacheView = memo((props) => {
 				autoHeight={true}
 				sx={{
 					marginTop: 1, 
-					height: listCache.length*52+500,
+					height: (listCache?.length || 0)*52+500,
 					width: "100%",
 					'.MuiTablePagination-selectLabel, .MuiTablePagination-select, .MuiTablePagination-selectIcon': {
 					  display: 'none',
@@ -2881,7 +2882,7 @@ const CacheView = memo((props) => {
 								// selectedRows holds DataGrid row ids (getRowId = key_category),
 								// not the raw key. Resolve each back to its item before deleting.
 								for (var key in selectedRows) {
-									const item = listCache.find(it => encodeURIComponent(`${it.key}_${it.category || ""}`) === selectedRows[key])
+									const item = listCache?.find(it => encodeURIComponent(`${it.key}_${it.category || ""}`) === selectedRows[key])
 									if (!item) continue
 									deleteEntry(orgId, item.key, item.category, false)
 								}
