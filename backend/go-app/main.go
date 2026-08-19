@@ -3354,7 +3354,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	//log.Println(stitched)
 
 	// 3. Zip and stream it directly in the directory
-	_, err = shuffle.StreamZipdata(ctx, identifier, stitched, shuffle.GetAppRequirements(), "")
+	_, err = shuffle.StreamZipdata(ctx, user.ActiveOrg.Id, identifier, stitched, shuffle.GetAppRequirements(), "")
 	if err != nil {
 		log.Printf("[ERROR] Zipfile error: %s", err)
 		resp.WriteHeader(500)
