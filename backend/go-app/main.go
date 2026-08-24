@@ -4664,7 +4664,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		// Reset body cursor
 		request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 		if templateName == "workflow-edit" { 
-			shuffle.AgentWorkflowEditor(resp, request) 
+			//shuffle.AgentWorkflowEditor(resp, request) 
 			return
 		} else {
 			log.Printf("[INFO] No agent template with name '%s' found. Continuing with default MCP handler.", templateName)
