@@ -37,7 +37,6 @@ const LoginDialog = (props) => {
     isLoaded,
     isLoggedIn,
     setIsLoggedIn,
-    setCookie,
     register,
     checkLogin,
   } = props;
@@ -184,13 +183,6 @@ const LoginDialog = (props) => {
               }
 
               setLoginInfo("Successful login, rerouting");
-              for (var key in responseJson["cookies"]) {
-                setCookie(
-                  responseJson["cookies"][key].key,
-                  responseJson["cookies"][key].value,
-                  { path: "/" }
-                );
-              }
 
 			  if (responseJson.tutorials === undefined || responseJson.tutorials === null || !responseJson.tutorials.includes("welcome")) {
 			  	console.log("RUN Welcome!!")

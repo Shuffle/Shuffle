@@ -292,7 +292,7 @@ const MarketplaceCard = ({ classes, isCloud }) => {
 
 
 const LoginPage = props => {
-	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, inregister, serverside, checkLogin, } = props;
+	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, inregister, serverside, checkLogin, userdata, } = props;
 	let navigate = useNavigate();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -476,7 +476,9 @@ const LoginPage = props => {
 				return;
 			}
 
-			window.location.pathname = "/new-dashboard"
+			// Default landing page follows the same convention as LeftSideBar:
+			// support/internal accounts go to /new-dashboard, everyone else to /workflows.
+			window.location.pathname = userdata?.support === true ? "/new-dashboard" : "/workflows"
 		}, 2000);
 	}
 
@@ -620,9 +622,6 @@ const LoginPage = props => {
 					}
 
 					setLoginInfo("Successful login! Redirecting you in 3 seconds...")
-					for (var key in responseJson["cookies"]) {
-						setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
-					}
 
 					setTimeout(() => {
 						const tmpView = new URLSearchParams(window.location.search).get("view");
@@ -658,7 +657,9 @@ const LoginPage = props => {
 							}
 						}
 
-						window.location.pathname = "/new-dashboard"
+						// Default landing page follows the same convention as LeftSideBar:
+						// support/internal accounts go to /new-dashboard, everyone else to /workflows.
+						window.location.pathname = userdata?.support === true ? "/new-dashboard" : "/workflows"
 					}, 2000);
 				}
 			})
@@ -697,10 +698,6 @@ const LoginPage = props => {
 							//var newpath = "/login?message=Successfully signed up. You can now sign in."
 							//const tmpMessage = new URLSearchParams(window.location.search).get("message")
 							
-							for (var key in responseJson["cookies"]) {
-								setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
-							}
-
 							setLoginLoading(false)
 							
 							// Track successful registration event

@@ -235,15 +235,6 @@ const App = (message, props) => {
 
           userInfo = responseJson;
           setIsLoggedIn(true);
-          //console.log("Cookies: ", cookies)
-          // Updating cookie every request
-          for (var key in responseJson["cookies"]) {
-            setCookie(
-              responseJson["cookies"][key].key,
-              responseJson["cookies"][key].value,
-              { path: "/" }
-            );
-          }
 		  if (responseJson?.org_status?.includes("integration_partner")) {
 			if (responseJson?.active_org?.branding?.enable_chat !== true) {
 
@@ -389,9 +380,8 @@ const App = (message, props) => {
         	      inregister={false}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
-        	      setCookie={setCookie}
-        	      cookies={cookies}
         	      checkLogin={checkLogin}
+        	      userdata={userdata}
         	      {...props}
         	    />
         	  }
@@ -408,8 +398,6 @@ const App = (message, props) => {
         	      inregister={false}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
-        	      setCookie={setCookie}
-        	      cookies={cookies}
         	      checkLogin={checkLogin}
         	      {...props}
         	    />
@@ -427,8 +415,6 @@ const App = (message, props) => {
         	      inregister={false}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
-        	      setCookie={setCookie}
-        	      cookies={cookies}
         	      checkLogin={checkLogin}
         	      {...props}
         	    />
@@ -445,8 +431,6 @@ const App = (message, props) => {
         	      inregister={true}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
-        	      setCookie={setCookie}
-        	      cookies={cookies}
         	      checkLogin={checkLogin}
         	      {...props}
         	    />
@@ -838,7 +822,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/login/:key/mfa-setup" element={<MFASetUp setCookie={setCookie} serverside={false} mainColor={currentTheme.palette.backgroundColor} userdata={userdata} stripeKey={undefined} globalUrl={globalUrl} inputColor={currentTheme.palette.inputColor} isLoaded={isLoaded} {...props} />} />
+			<Route exact path="/login/:key/mfa-setup" element={<MFASetUp serverside={false} mainColor={currentTheme.palette.backgroundColor} userdata={userdata} stripeKey={undefined} globalUrl={globalUrl} inputColor={currentTheme.palette.inputColor} isLoaded={isLoaded} {...props} />} />
         	<Route
         	  exact
         	  path="/login_sso"
@@ -1021,14 +1005,13 @@ const App = (message, props) => {
         	  exact
         	  path="/"
         	  element={
-        	    <LoginPage
+         	    <LoginPage
         	      isLoggedIn={isLoggedIn}
         	      setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
-        	      setCookie={setCookie}
-        	      cookies={cookies}
+        	      userdata={userdata}
         	      {...props}
         	    />
         	  }
