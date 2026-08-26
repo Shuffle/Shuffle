@@ -353,7 +353,7 @@ const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsec
 
   const handleCardClick = (e) => {
     // Navigate to usecase detail page
-    navigate(`/usecases/${usecase.id}`);
+    navigate(`/partner_usecases/${usecase.id}`);
   };
 
   // Article Card Layout
@@ -658,7 +658,7 @@ const UsecaseCard = ({ usecase, handleToggle, handleOpenDialog, handleDeleteUsec
               fontSize="small"
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(`${window.location.origin}/usecases/${usecase.name.toLowerCase().replaceAll(" ", "_")}`, "_blank");
+                window.open(`${window.location.origin}/partner_usecases/${usecase.name.toLowerCase().replaceAll(" ", "_")}`, "_blank");
               }}
               sx={{
                 color: theme.palette.primary.main,
@@ -846,6 +846,7 @@ const PartnersUsecasesTab = ({ isCloud, globalUrl, userdata, partnerData, setPar
     setIsLoading(true);
     if(!isCloud || !userdata?.active_org?.is_partner) {
       // If the user is not a partner or if it's not a cloud environment do not make api call :)
+      setIsLoading(false);
       return;
     }
     // Load usecase data from API

@@ -134,7 +134,7 @@ import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/Angul
 import Licensed from "../components/Licensed.jsx";
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
+const searchClient = algoliasearch("JNSS5CFDZZ", "33e4e3564f4f060e96e0531957bed552");
 
 const svgSize = 24;
 const imagesize = 23;
@@ -633,10 +633,13 @@ export const GetIconInfo = (action) => {
             svgViewBox: "0 0 48 48",
         },
         search: {
-            icon: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+            icon: "M21 29C25.4183 29 29 25.4183 29 21C29 16.5817 25.4183 13 21 13C16.5817 13 13 16.5817 13 21C13 25.4183 16.5817 29 21 29Z M33 33L26.657 26.657",
             iconColor: "white",
-            iconBackgroundColor: "green",
             originalIcon: <SearchIcon />,
+            useStroke: true,
+            svgViewBox: "0 0 48 48",
+            iconBackgroundColor: "rgba(242, 101, 59, 1)",
+            fillGradient: ["rgba(242, 101, 59, 1)", "rgba(242, 101, 59, 1)"],
         },
 		eradication: {
             icon: "",
@@ -1004,7 +1007,7 @@ const Workflows2 = (props) => {
     const [currentOrg, setCurrentOrg] = useState(null);
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") === "true") 
+	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") !== "false") 
 	const [showWorkflowImages, setShowWorkflowImages] = React.useState(localStorage?.getItem("showWorkflowImages") === "true")
 
     const imgSize = 60;
@@ -1137,7 +1140,7 @@ const Workflows2 = (props) => {
         const queryParams = new URLSearchParams(location.search);
         const tabParam = queryParams.get('tab');
         if (tabParam !== null && tabParam !== undefined) {
-            if (tabParam === 'org_workflows' && currTab !== 0) {
+            if (tabParam === 'tenant_workflows' && currTab !== 0) {
                 setCurrTab(0);
             } else if (tabParam === 'my_workflows' && currTab !== 1) {
                 setCurrTab(1);
@@ -1193,24 +1196,35 @@ const Workflows2 = (props) => {
 
         // Update URL query params based on tab index
         const tabMapping = {
-            0: 'org_workflows',
+            0: 'tenant_workflows',
             1: 'my_workflows',
             2: 'all_workflows',
             3: 'backup_apps',
             4: 'background_processes',
         };
+
         const queryParams = new URLSearchParams(location.search);
         queryParams.set('tab', tabMapping[newValue]);
-
 		if (newValue === 4) {
-			setShowExecutionStats(true)
 			setView("grid")
+			setShowExecutionStats(true)
+            localStorage.setItem("showExecutionStats", "true")
 		}
 
         navigate(`${location.pathname}?${queryParams.toString()}`);
     };
 
     const handleCreateWorkflow = () => {
+
+        if (isCloud) {
+            ReactGA.event({
+                category: "Workflow",
+                action: "Create_Workflow",
+                label: "Create New Workflow Button"
+            });
+        }
+
+
         setModalOpen(true)
         setIsEditing(false)
         setNewWorkflowName("")
@@ -2212,7 +2226,7 @@ const Workflows2 = (props) => {
 
 						if (wf?.background_processing === true) {
 							backgroundWf.push(wf)
-							continue
+							//continue
 						}
 
 						if (wf?.backup_config?.onprem_backup === true) {
@@ -2932,6 +2946,16 @@ const Workflows2 = (props) => {
     }
 
     const deleteWorkflow = (id, bulk) => {
+        // remove workflow from local state immediately
+        setWorkflows(prev => {
+            const updated = (prev || []).filter(wf => wf.id !== id);
+            try {
+                localStorage.setItem("workflows", JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+        });
+        setFilteredWorkflows(prev => (prev || []).filter(wf => wf.id !== id));
+
         fetch(globalUrl + "/api/v1/workflows/" + id, {
             method: "DELETE",
             headers: {
@@ -3158,6 +3182,14 @@ const Workflows2 = (props) => {
                     sx={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor, color: theme.palette.text.primary, "&:hover": {backgroundColor: theme.palette.hoverColor}  }}
                     disabled={isDistributed}
                     onClick={(event) => {
+        				if (isCloud) {
+        				    ReactGA.event({
+        				        category: "Workflow",
+        				        action: "Edit_Workflow_Details",
+        				        label: "Editing a workflow from the workflow list",
+        				    });
+        				}
+
                         event.stopPropagation()
                         if (data.actions !== undefined && data.actions !== null && data.actions.length > 0 && data.image !== "") {
                             setEditing(data)
@@ -3391,7 +3423,17 @@ const Workflows2 = (props) => {
 
 		//const isPublicWorkflow = data?.objectID === undefined || data?.objectID === null
 		const foundImage = currTab !== 2 && showWorkflowImages === false ? "" : data?.image_url === undefined || data?.image_url === null || data?.image_url === "" ? data?.image : data?.image_url
-		const foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id)
+		var foundTimeline = workflowTimelines.find((timeline) => timeline.id === data.id) 
+		if (foundTimeline === undefined && workflowTimelines !== undefined && workflowTimelines !== null && workflowTimelines?.length > 0) { 
+			foundTimeline = {
+				"id": data?.id,
+				"timeline": [{
+					key: "",
+					data: null,
+				}],
+			}
+		}
+
         return (
             <div 
 				id={`workflowbox-${data.id}`}
@@ -3451,6 +3493,15 @@ const Workflows2 = (props) => {
 
 
                             <Tooltip arrow
+								onClick={() => {
+									if (isCloud) { 
+										ReactGA.event({
+											category: "Workflow",
+											action: "View_Page",
+											label: "Workflow Editor",
+										});
+									}
+								}}
                                 onMouseEnter={() => {
                                     /*
                                     if (data.image === undefined || data.image === null || data.image === "" && !loadingWorkflows.includes(data.id)) {
@@ -3750,6 +3801,32 @@ const Workflows2 = (props) => {
                                 : null}
                         </Grid>
 
+                        {data?.background_processing === true ? (
+                            <Tooltip title="Managed Shuffle Security usecase" 
+                                placement="top"
+                                componentsProps={{
+                                tooltip: {
+                                sx: {
+                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                    color: "rgba(241, 241, 241, 1)",
+                                    fontSize: 12,
+                                    border: "1px solid rgba(73, 73, 73, 1)",
+                                    fontFamily: theme?.typography?.fontFamily,
+                                }
+                                },
+                                }}
+                                arrow
+                                onClick={() => {
+                                    window.open(`https://security.shuffler.io/usecases?name=${data.name}`, "_blank")
+                                }}
+                            >
+                                <img
+                                    src="/images/security/shuffle-icon.png"
+                                    alt="Shuffle Security"
+                                    style={{ position: "absolute", top: 12, right: 42, width: 24, height: 24, borderRadius: 6, border: "2.5px solid #ff8544", cursor: "pointer" }}
+                                />
+                            </Tooltip>
+                        ) : null}
                         {type !== "public" ? (
                             <div style={{ position: "absolute", top: 10, right: 10, }}>
                                 <IconButton
@@ -3834,7 +3911,7 @@ const Workflows2 = (props) => {
                     </Grid>
 
 					{showExecutionStats === true && foundTimeline !== undefined && foundTimeline?.timeline?.length > 0 && 
-					  <div style={{ margin: "40px 10px 0px 10px", paddingTop: 0, borderTop: `1px solid ${theme.palette.text.secondary}`, zoom: 1.4 }}>
+					  <div style={{ margin: "40px 10px 0px 0px", paddingTop: 0, borderTop: `1px solid ${theme.palette.text.secondary}`, zoom: 1.4 }}>
 						<LineChartWrapper 
 							inputname={""}
 							keys={foundTimeline?.timeline}
@@ -4048,7 +4125,7 @@ const Workflows2 = (props) => {
 
         setLoadWorkflowsModalOpen(false);
 
-        if (workflowids.length > 0) {
+        if (workflowids?.length > 0) {
             setHighlightIds(workflowids)
         }
     };
@@ -4072,6 +4149,7 @@ const Workflows2 = (props) => {
         return [triggers, subflows];
     };
 
+	const foundPriority = userdata === undefined || userdata === null || userdata.priorities === undefined || userdata.priorities === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
     const WorkflowListView = () => {
         let workflowData = "";
         if (workflows.length > 0) {
@@ -4413,6 +4491,7 @@ const Workflows2 = (props) => {
                 />
             );
         }
+    
         return (
             <div style={{ ...gridContainer, backgroundColor: theme.palette.platformColor }}>
                 <Tooltip title={`New Workflow`} placement="bottom">
@@ -4788,18 +4867,6 @@ const Workflows2 = (props) => {
 
     const workflowButtons = (
         <span>
-            <Tooltip color="primary" title={"Explore Workflow Runs"} placement="top">
-                <Button
-                    disabled={workflows.length === 0}
-                    color="secondary"
-                    variant="text"
-                    onClick={() => {
-                        navigate("/workflows/debug")
-                    }}
-                >
-                    <QueryStatsIcon />
-                </Button>
-            </Tooltip>
             {view === "list" && (
                 <Tooltip color="primary" title={"Grid View"} placement="top">
                     <Button
@@ -5277,7 +5344,19 @@ const Workflows2 = (props) => {
         var workflowDelay = -150
         var appDelay = -75
 
-        const foundPriority = userdata === undefined || userdata === null || userdata.priorities === undefined || userdata.priorities === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+		// Find the CORRECT priority according to severity highest
+        const foundPriorities = userdata === undefined || userdata === null || userdata.priorities === undefined || userdata.priorities === null ? null : userdata.priorities
+		var foundPriority = null
+		if (foundPriorities !== null) {
+			const sortedPriorities = foundPriorities.sort((a, b) => {
+				return b.severity - a.severity
+			})
+
+			if (sortedPriorities.length > 0) {
+				foundPriority = sortedPriorities[0]
+			}
+		}
+
         return (
             <>
                 <InstantSearch searchClient={searchClient} indexName="workflows">
@@ -5288,10 +5367,28 @@ const Workflows2 = (props) => {
                         width: "100%",
                         maxWidth: isSafari ? "100%" : "70%",
                         margin: "auto",
+						position: "relative", 
                     }}>
                         <Typography variant="h4" color="textPrimary" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme.typography?.fontFamily }}>
-							{currTab === 0 ? "Org" : currTab === 1 ? "Your" : currTab === 2 ? "Discover" : "Security Bundle" } Workflows
+							{currTab === 0 ? "Org" : currTab === 1 ? "Your" : currTab === 2 ? "Discover" : "Shuffle Security" } Workflows
                         </Typography>
+
+						<Tooltip color="primary" title={"Explore Workflow Runs"} placement="top">
+							<Button
+								disabled={workflows.length === 0}
+								style={{
+									position: "absolute", 
+									right: 0,
+								}}
+								color="secondary"
+								variant="text"
+								onClick={() => {
+									navigate("/workflows/debug")
+								}}
+							>
+								<QueryStatsIcon />
+							</Button>
+						</Tooltip>
 
                         <div style={{ borderBottom: themeMode === "dark" ? "1px solid #808080" : theme.palette.defaultBorder, marginBottom: 30 }}>
                             <Tabs
@@ -5305,7 +5402,7 @@ const Workflows2 = (props) => {
                                 TabIndicatorProps={{ style: { display: 'none' } }}
                             >
                                 <Tab
-                                    label="Org Workflows"
+                                    label="Tenant Workflows"
                                     style={{
                                         ...tabStyle,
                                         ...(currTab === 0 ? tabActive : {})
@@ -5342,7 +5439,7 @@ const Workflows2 = (props) => {
 
 								{backgroundWorkflows.length > 0 &&
 									<Tab
-										label={`Security Bundle`}
+										label={`Shuffle Security`}
 										value={4}
 										style={{
 											...tabStyle,
@@ -5583,6 +5680,7 @@ const Workflows2 = (props) => {
                         	            </Select>
                         	        )
                         	    }
+
                         	    {
                         	        currTab === 2 && (
                         	            <CustomCategoryDropdown attribute="usecase_ids" limit={20} />
@@ -5627,16 +5725,6 @@ const Workflows2 = (props) => {
                         	                    disabled={currTab === 2}
                         	                >
 												<ImageIcon />
-                        	                </IconButton>
-                        	            </Tooltip>
-
-                        	            <Tooltip title="Explore Workflow Runs (debugger)" placement="top">
-                        	                <IconButton
-                        	                    style={currTab === 2 ? iconButtonDisabledStyle : iconButtonStyle}
-                        	                    onClick={() => navigate("/workflows/debug")}
-                        	                    disabled={currTab === 2}
-                        	                >
-                        	                    <QueryStatsIcon style={{ color: theme.palette.text.primary, opacity: currTab === 2 ? 0.5 : 1 }} />
                         	                </IconButton>
                         	            </Tooltip>
 
@@ -5735,7 +5823,22 @@ const Workflows2 = (props) => {
                               showBadge={true}
 							/>
 						  </div>
-					  ) : null}
+					    ) : null}
+
+					    {foundPriority != null && userdata?.support === true ?
+					      <div style={{}}>
+							  <Typography>
+								<Link to="/admin?admin_tab=notifications" style={{ color: "#f86a3e", textDecoration: "none", }}>Suggestion(s)</Link> for this org (support only):
+							  </Typography>
+					    	  <Priority
+					    		globalUrl={globalUrl}
+					    		userdata={userdata}
+					    		priority={foundPriority}
+					    		checkLogin={checkLogin}
+					    		appFramework={appFramework}
+					    	  />
+					       </div>
+					    : null}
 
                         <div style={{
                             width: "100%",
@@ -5751,7 +5854,7 @@ const Workflows2 = (props) => {
                                     view === "grid" && currTab !== 2 ? (
                                         <>
 											{currTab === 4 && backgroundWorkflows.map((data, index) => {
-												if (data.triggers.length === 0) {
+												if (data?.triggers === null || data?.triggers === undefined || data?.triggers?.length === 0) {
 													return null
 												}
 
@@ -6530,6 +6633,7 @@ const Workflows2 = (props) => {
                 {aiAnnouncementModal}
                 {workflowDownloadModalOpen}
                 {syncListModal}
+
 
                 {/*!drawerOpen ? 
 			<div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius, }}>

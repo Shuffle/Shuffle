@@ -8,6 +8,7 @@ import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import remarkGfm from 'remark-gfm'
+import { useReactToPrint } from "react-to-print";
 import { Context } from "../context/ContextApi.jsx";
 import {
     Grid,
@@ -40,7 +41,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Search as SearchIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    Print as PrintIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
 import SearchBox from "../components/SearchData.jsx";
@@ -57,6 +59,99 @@ const Body = {
 	paddingTop: 40, 
     //textAlign: "center",
 };
+
+const printLinkColor = "#f86a3e";
+const printStyleSheet = `
+    .print-only { display: none; }
+    @media print {
+        @page { margin: 0.6in; }
+
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+
+        .print-content { background: #ffffff !important; }
+        .print-content * { background-color: transparent !important; }
+        .print-content, .print-content * {
+            color: #1a1a1a !important;
+            box-shadow: none !important;
+            font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif !important;
+            font-size: 13px !important;
+            line-height: 1.6 !important;
+        }
+
+        .print-content a, .print-content a * { color: ${printLinkColor} !important; text-decoration: underline !important; }
+
+        .print-content h1, .print-content h2, .print-content h3,
+        .print-content h4, .print-content h5, .print-content h6 {
+            font-weight: 700 !important;
+            line-height: 1.3 !important;
+        }
+        .print-content h1 { font-size: 24px !important; }
+        .print-content h2 { font-size: 19px !important; }
+        .print-content h3 { font-size: 16px !important; }
+        .print-content h4, .print-content h5, .print-content h6 { font-size: 14px !important; }
+
+        .print-content .heading-row { margin: 0 0 10px 0 !important; }
+        .print-content .heading-divider,
+        .print-content .heading-divider.MuiDivider-root {
+            border: none !important;
+            border-top: 1px solid #dddddd !important;
+            width: 100% !important;
+            margin: 28px 0 0 0 !important;
+            page-break-after: avoid;
+        }
+
+        .print-content p { margin: 0 0 12px 0 !important; }
+
+        .print-header {
+            display: flex !important;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid #e2e2e2;
+            padding-bottom: 18px;
+            margin-bottom: 28px;
+        }
+        .print-header-text { display: flex !important; flex-direction: column; justify-content: center; gap: 4px; }
+        .print-header-title { font-size: 22px !important; font-weight: 700 !important; line-height: 1.2 !important; letter-spacing: -0.01em; }
+        .print-header-date { font-size: 12px !important; color: #666666 !important; line-height: 1 !important; }
+
+        .print-toc { border: 1px solid #dddddd; border-radius: 6px; padding: 18px 22px; margin-bottom: 28px; page-break-after: always; }
+        .print-toc-title { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+        .print-toc ul { margin: 0; padding-left: 18px; line-height: 1.9; }
+        .print-toc a { color: ${printLinkColor} !important; text-decoration: underline !important; }
+
+        .print-content img { max-width: 100% !important; width: auto !important; height: auto !important; page-break-inside: avoid; }
+        .print-header img { height: 44px !important; width: 44px !important; max-width: 44px !important; border-radius: 8px; }
+
+        .video-embed-wrapper { position: static !important; padding-top: 0 !important; height: auto !important; page-break-inside: avoid; }
+        .print-video-fallback {
+            border: 1px solid #dddddd; border-radius: 6px;
+            padding: 14px 16px; margin: 8px 0 16px 0; font-size: 12px;
+        }
+
+        .print-code {
+            border: 1px solid #dddddd !important;
+            background-color: #f7f7f7 !important;
+            font-family: "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+            font-size: 12px !important;
+            page-break-inside: avoid;
+        }
+
+        .print-content table {
+            min-width: 0 !important;
+            width: 100% !important;
+            font-size: 12px !important;
+            border-collapse: collapse !important;
+        }
+        .print-content th, .print-content td {
+            border: 1px solid #bbbbbb !important;
+        }
+        .print-content th {
+            background-color: #f0f0f0 !important;
+            font-weight: 600 !important;
+        }
+    }
+`;
 
 const dividerColor = "rgb(225, 228, 232)";
 const hrefStyle = {
@@ -125,6 +220,7 @@ export const CopyToClipboard = (props) => {
 
     return (
         <div
+            className="no-print"
             style={parsedstyle}
         >
             <IconButton
@@ -138,6 +234,17 @@ export const CopyToClipboard = (props) => {
         </div>
     )
 }
+
+export const DirectVideo = ({ src }) => (
+    <div className="video-embed-wrapper">
+        <video className="no-print" width="640" height="480" controls>
+            <source src={src} type="video/mp4" />
+        </video>
+        <div className="print-only print-video-fallback">
+            Watch the video here: <a href={src}>{src}</a>
+        </div>
+    </div>
+);
 
 export const Paragraph = (props) => {
     // Filter out stray HTML artifacts like '>' or '/>' caused by HTML parsing edge-cases
@@ -159,13 +266,7 @@ export const Paragraph = (props) => {
     if (cleanedChildren[0] !== undefined) {
         if(typeof cleanedChildren[0] === "string") {
             if (cleanedChildren[0].includes('.mp4')) {
-                return (
-                    <div>
-                        <video width="640" height="480" controls>
-                            <source src={`${cleanedChildren[0]}`} type="video/mp4" />
-                        </video>
-                    </div>
-                )
+                return <DirectVideo src={cleanedChildren[0]} />
             }
         }
     }
@@ -198,6 +299,53 @@ export const OuterLink = (props) => {
             {props.children}
         </Link>
     );
+}
+
+const VideoEmbed = ({ embedUrl, allow, title = "Embedded video", watchUrl }) => (
+    <Box className="video-embed-wrapper" sx={{ position: "relative", paddingTop: "56.25%", my: 2 }}>
+        <iframe
+            className="no-print"
+            src={embedUrl}
+            title={title}
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+            allow={allow}
+            allowFullScreen
+        />
+        <div className="print-only print-video-fallback">
+            Watch the video here: <a href={watchUrl}>{watchUrl}</a>
+        </div>
+    </Box>
+);
+
+export const CustomLink = (props) => {
+    const href = props.href || "";
+
+    // Direct video file (e.g. an .mp4 uploaded to the docs repo and linked directly)
+    if (href.match(/\.mp4(\?.*)?$/i)) {
+        return <DirectVideo src={href} />;
+    }
+
+    // Loom
+    const loomMatch = href.match(/^https?:\/\/(www\.)?loom\.com\/share\/([a-zA-Z0-9]+)/);
+    if (loomMatch) {
+        return <VideoEmbed embedUrl={`https://www.loom.com/embed/${loomMatch[2]}`} allow="fullscreen; clipboard-write" title="Loom video" watchUrl={href} />;
+    }
+
+    const ytWatchMatch = href.match(/^https?:\/\/(www\.)?youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)/);
+    const ytShortMatch = href.match(/^https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+)/);
+    const ytEmbedMatch = href.match(/^https?:\/\/(www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+    const videoId = ytWatchMatch?.[2] || ytShortMatch?.[1] || ytEmbedMatch?.[2];
+    if (videoId) {
+        const tMatch = href.match(/[?&]t=(\d+)/);
+        const startSeconds = tMatch ? parseInt(tMatch[1], 10) : null;
+        const params = new URLSearchParams({ rel: 0, autoplay: 1, mute: 1 });
+        if (startSeconds !== null) {
+            params.set("start", startSeconds);
+        }
+        return <VideoEmbed embedUrl={`https://www.youtube.com/embed/${videoId}?${params}`} allow="autoplay; fullscreen; clipboard-write" title="YouTube video" watchUrl={href} />;
+    }
+
+    return <OuterLink {...props} />;
 }
 
 // Markdown table renderers for improved styling and readability
@@ -381,6 +529,7 @@ export const CodeHandler = (props) => {
 
     return (
         <div
+            className="print-code"
             style={{
                 padding: 15,
                 minWidth: "50%",
@@ -473,6 +622,29 @@ const Docs = (defaultprops) => {
     const [hasRedirected, setHasRedirected] = useState(false)
     var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
     const searchFieldRef = useRef(null);
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
+
+    const printRef = useRef(null);
+    const [isPrinting, setIsPrinting] = useState(false);
+
+    const printDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const printTitle = props.match.params.key === undefined
+        ? "Shuffle Documentation"
+        : props.match.params.key.charAt(0).toUpperCase() + props.match.params.key.substring(1).replaceAll("_", " ").replaceAll("-", " ");
+
+    const printFn = useReactToPrint({
+        contentRef: printRef,
+        documentTitle: () => `Shuffle - ${printTitle} - ${printDate}`,
+        onBeforePrint: async () => {
+            setIsPrinting(true);
+        },
+        onAfterPrint: () => {
+            setIsPrinting(false);
+        },
+        onPrintError: () => {
+            setIsPrinting(false);
+        },
+    });
 
     const handleDocRedirectForPartners = () => {
         if (hasRedirected) return;
@@ -519,6 +691,10 @@ const Docs = (defaultprops) => {
 		if (location.pathname.includes("/docs/")) {
 			if (propkey === "cookie_policy" || propkey === "compliance" || propkey === "privacy_policy" || propkey === "terms_of_service") {
 				navigate(`/legal/${propkey}`)
+			}
+
+			if (propkey === "organizations") {
+				navigate('/docs/tenants'+(window.location.hash ? window.location.hash : ""))
 			}
 
 			if (propkey === "app_creation") {
@@ -824,6 +1000,7 @@ const Docs = (defaultprops) => {
         if (props.level === 1) {
             extraInfo = (
                 <div
+                    className="no-print"
                     style={{
                         backgroundColor: theme.palette.textFieldStyle.backgroundColor,
                         padding: 15,
@@ -918,20 +1095,22 @@ const Docs = (defaultprops) => {
             >
                 {props.level !== 1 ? (
                     <Divider
+                        className="heading-divider"
                         style={{
                             width: "90%",
                             marginTop: 60,
-							marginBottom: isArticlePage ? 40 : 20, 
+							marginBottom: isArticlePage ? 40 : 20,
                             backgroundColor: theme.palette.inputColor,
                         }}
                     />
                 ) : null}
-                <div style={{
+                <div className="heading-row" style={{
                     display: "flex", marginTop: props.level === 1 ? 20 : 50,
                     marginBlock: "0.85em", alignItems: "center"
                 }}>
                     {element}
                     <Link to={`#${id}`}
+                     className="no-print"
                      onClick={(e) => {
                         e.preventDefault(); // Prevent default navigation
                         document.getElementById(id)?.scrollIntoView({
@@ -1037,7 +1216,7 @@ const Docs = (defaultprops) => {
             .then((response) => response.json())
             .then((responseJson) => {
                 if (responseJson.success) {
-                    setList(responseJson.list);
+                    setList(location.pathname.includes("/docs") ? responseJson.list.filter((doc) => doc?.name?.toLowerCase() !== "onboarding") : responseJson.list);
                 } else {
                     setList(["# Error loading documentation. Please contact us if this persists.",]);
                     toast("Failed loading documentation. Please reload the window")
@@ -1144,7 +1323,7 @@ const Docs = (defaultprops) => {
 
         if (selectedDoc !== undefined) {
             setData(selectedDoc.reason);
-            setList(selectedDoc.list);
+            setList(location.pathname.includes("/docs") ? selectedDoc.list.filter((doc) => doc?.name?.toLowerCase() !== "onboarding") : selectedDoc.list);
             setListLoaded(true);
         } else {
             if (!serverside) {
@@ -1279,6 +1458,7 @@ const Docs = (defaultprops) => {
             overflow: "hidden",
             paddingBottom: 100,
             marginLeft: mobile ? 0 : 50,
+            marginTop: 50,
             textAlign: "center",
             margin: "auto",
             marginTop: 50,
@@ -1289,6 +1469,9 @@ const Docs = (defaultprops) => {
 			{showPartnerLogo === true ? null : 
 				<div style={{ display: "flex", marginTop: 25, }}>
 					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/contact?category=support" />
+					{isCloud ? 
+					<CustomButton title="Support LLM" icon=<img src={theme.palette.singulBlackWhite} style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/chat" />
+					: null}
 					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
 				</div>
 			}
@@ -1337,7 +1520,7 @@ const Docs = (defaultprops) => {
         h4: Heading,
         h5: Heading,
         h6: Heading,
-        a:  OuterLink,
+        a:  CustomLink,
         p:  Paragraph,
         blockquote: Blockquote,
         table: TableRenderer,
@@ -1415,9 +1598,10 @@ const Docs = (defaultprops) => {
                                         marginTop: 10,
                                         marginLeft: 10,
                                         borderRadius: 4,
-                                        width: !isLoggedIn ? "14%" : !leftSideBarOpenByClick ?  "12%" : "11%",
+                                        width: "calc(100% - 20px)",
                                         maxWidth: "285px",
-                                        position: "fixed",
+                                        position: "sticky",
+                                        top: 20,
                                         zIndex: 1100,
                                     }}
                                     inputProps={{
@@ -1430,7 +1614,7 @@ const Docs = (defaultprops) => {
                             listStyle: "none", 
                             paddingLeft: "0",
                             paddingRight: isArticlePage ? 15 : undefined,
-                            paddingTop: !isArticlePage ? "60px" : undefined,
+                            paddingTop: !isArticlePage ? "15px" : undefined,
                             paddingBottom: !isArticlePage ? "30px" : undefined,
                             display: isArticlePage ? sidebarOpen ? "block" : "none" : undefined,
                             opacity: isArticlePage ? sidebarOpen ? 1 : 0 : undefined,
@@ -1521,7 +1705,33 @@ const Docs = (defaultprops) => {
                     {props.match.params.key === undefined ?
                         mainpageInfo
                         :
-                        <div id="markdown_wrapper_outer" style={markdownStyle}>
+                        <div ref={printRef} id="markdown_wrapper_outer" className="print-content" style={markdownStyle}>
+                            <div className="print-only print-header">
+                                <img src="/images/Shuffle_logo_new.png" alt="Shuffle" />
+                                <div className="print-header-text">
+                                    <div className="print-header-title">{printTitle}</div>
+                                    <div className="print-header-date">Generated on {printDate}</div>
+                                </div>
+                            </div>
+                            {tocLines.length > 0 &&
+                                <div className="print-only print-toc">
+                                    <div className="print-toc-title">Table of Contents</div>
+                                    <ul>
+                                        {tocLines.map((item, index) => (
+                                            <li key={index}>
+                                                <a href={`#${item.id}`}>{item.title}</a>
+                                                {item.items.length > 0 &&
+                                                    <ul>
+                                                        {item.items.map((sub, subIndex) => (
+                                                            <li key={subIndex}><a href={`#${sub.id}`}>{sub.title}</a></li>
+                                                        ))}
+                                                    </ul>
+                                                }
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            }
                             <Markdown
                                 components={markdownComponents}
                                 id="markdown_wrapper"
@@ -1539,6 +1749,18 @@ const Docs = (defaultprops) => {
                     }
                 </div>
                 <div style={IndexBar}>
+                    {(props.match.params.key !== undefined && userdata?.support) &&
+                        <Button
+                            variant="outlined"
+                            color="secondary"
+                            disabled={isPrinting}
+                            startIcon={isPrinting ? <CircularProgress size={16} color="inherit" /> : <PrintIcon />}
+                            onClick={printFn}
+                            style={{marginBottom: "15px"}}
+                        >
+                            {isPrinting ? "Preparing PDF..." : "Print / Export PDF"}
+                        </Button>
+                    }
                      {userdata?.support && (
                         <Tooltip 
                         title="Wait about 5 minutes after updating the file on GitHub, then click to reset the cache. (Support only) "
@@ -1566,9 +1788,21 @@ const Docs = (defaultprops) => {
                             </Button>
                         </Tooltip>
                     )}
+					<div />
+					{isCloud && window.location.pathname !== "/docs" ? 
+						 <Link to="/chat">
+							 <Button 
+								variant="outlined" 
+								color="secondary"
+								style={{marginBottom: 20, }}
+							>
+								Support LLM
+							 </Button>
+						 </Link>
+					 : null}
                     {tocLines.length > 0 ?
                         (
-                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>
+                            <h4 style={{ marginTop: 20, fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>
 
                         ) : null}
                     <div
@@ -1780,7 +2014,12 @@ const loadedCheck = (
     </DocsWrapper>
 );
 
-return <div>{loadedCheck}</div>;
+return (
+    <div>
+        <style>{printStyleSheet}</style>
+        {loadedCheck}
+    </div>
+);
 
 };
 

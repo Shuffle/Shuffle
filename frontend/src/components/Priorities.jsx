@@ -1359,7 +1359,7 @@ print('"' + encoded + '"')
 
 	return (
 		<div style={{ width: "100%", height: "100%", boxSizing: 'border-box', transition: 'width 0.3s ease', padding: clickedFromOrgTab ? "27px 10px 19px 27px" : null, height: clickedFromOrgTab ? "auto" : null, minHeight: 843, backgroundColor: clickedFromOrgTab ? theme.palette.platformColor : null, borderRadius: clickedFromOrgTab ? '16px' : null, }}>
-			<div style={{ maxHeight: 1700, overflowY: "auto", width: '100%', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
+			<div style={{ overflowY: "auto", width: '100%', scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
 				<div style={{ maxWidth: "calc(100% - 20px)" }}>
 					<Typography variant="h5" style={{ fontSize: 24, fontWeight: 500, textAlign: "left" }}>
 						Error Workflow

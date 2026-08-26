@@ -1,16 +1,16 @@
 import { useEffect, useContext } from "react";
 import React from "react";
-import { 
-    Typography, 
-    Switch, 
-    Button, 
-    Tooltip, 
-    TextField, 
-    Grid, 
+import {
+    Typography,
+    Switch,
+    Button,
+    Tooltip,
+    TextField,
+    Grid,
     Checkbox
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import theme from "../theme.jsx";
 import { toast } from "react-toastify";
 import { Context } from "../context/ContextApi.jsx";
@@ -28,7 +28,12 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 
     // Check if user is admin
     const isAdmin = userdata?.active_org?.role === "admin" || userdata?.support === true;
-    
+
+    const [searchParams] = useSearchParams();
+    const rawRegionUrl = searchParams.get("region_url");
+    const regionUrlOverride = rawRegionUrl || null;
+    const effectiveGlobalUrl = regionUrlOverride || globalUrl;
+
     // State for tracking user SSO connection status
     const [users, setUsers] = React.useState([]);
     const [userSSOConnected, setUserSSOConnected] = React.useState(false);
@@ -109,7 +114,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
     // Function to fetch users and check current user's SSO status
     const checkUserSSOStatus = () => {
         setCheckingSSOStatus(true);
-        fetch(globalUrl + "/api/v1/getusers", {
+        fetch(effectiveGlobalUrl + "/api/v1/getusers", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -196,6 +201,22 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 
     },[selectedOrganization])
 
+    const ssoRequiredRef = React.useRef(null);
+
+	const highlightSSORequiredToggle = () => {
+		if (ssoRequiredRef.current) {
+			ssoRequiredRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+			ssoRequiredRef.current.style.transition = "border 0.3s ease";
+			ssoRequiredRef.current.style.border = "1px solid #f85a3e";
+			ssoRequiredRef.current.style.borderRadius = "8px";
+			setTimeout(() => {
+				if (ssoRequiredRef.current) {
+					ssoRequiredRef.current.style.border = "1px solid transparent";
+				}
+			}, 2500);
+		}
+	};
+
     const orgSaveButton = (
 		<Tooltip title="Save any unsaved data" placement="bottom">
 			<Button
@@ -207,7 +228,36 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					userdata === null ||
 					!isAdmin
 				}
-				onClick={() =>
+				onClick={() => {
+					const hasSSOCredentials = (
+						ssoEntrypoint?.length > 0 ||
+						ssoCertificate?.length > 0 ||
+						openidAuthorization?.length > 0 ||
+						openidClientId?.length > 0
+					);
+
+					if (hasSSOCredentials) {
+						const adminHasSSO = users.some(user => {
+							const isUserAdmin = user.role === "admin";
+							const hasSSO = user.sso_infos && Array.isArray(user.sso_infos) &&
+								user.sso_infos.some(info => info.org_id === selectedOrganization?.id && info.sub);
+							return isUserAdmin && hasSSO;
+						});
+
+						if (!adminHasSSO) {
+							toast.warning(
+								"No admin has connected their account via SSO yet. Make sure at least one admin tests the SSO connection before enforcing it.",
+								{ duration: 5000 }
+							);
+						} else if (!SSORequired) {
+							toast.warning(
+								"SSO credentials are configured but 'SSO Required' is not enabled. Enable it for SSO to be enforced.",
+								{ duration: 5000 }
+							);
+							highlightSSORequiredToggle();
+						}
+					}
+
 					handleEditOrg(
 						selectedOrganization?.name,
 						selectedOrganization?.description,
@@ -243,8 +293,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						{},     
 						"sso_config"
 					)
-				}
-
+				}}
 			>
 				Save Changes
 				{/* <SaveIcon /> */}
@@ -309,7 +358,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	};	
 	
 	const HandleTestSSO = () => {
-		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
+		const url = `${effectiveGlobalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
 		const data = {
 			org_id: selectedOrganization?.id,
 			sso: true,
@@ -366,7 +415,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	};
 
 	const HandleDisconnectSSO = () => {
-		const url = `${globalUrl}/api/v1/disconnect_sso`;
+		const url = `${effectiveGlobalUrl}/api/v1/disconnect_sso`;
 		const data = {
 			org_id: selectedOrganization?.id,
 		};
@@ -440,10 +489,15 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						{checkingSSOStatus 
 							? "Checking your SSO connection status..." 
 							: userSSOConnected 
-								? "Your account is connected with this org's SSO!" 
-								: "Connect your account with this org's SSO!"
+								? "Your account is connected with this tenant's SSO!" 
+								: "Connect your account with this tenant's SSO!"
 						}
 					</Typography>
+					{regionUrlOverride && (
+						<Typography variant="body2" style={{ margin: "5px 0px 5px 0px", fontSize: 14, color: "#f85a3e" }}>
+							Using region override: {regionUrlOverride}
+						</Typography>
+					)}
 					<Tooltip
 						title={
 						checkingSSOStatus
@@ -456,7 +510,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 									openidAuthorization?.length > 0 ||
 									openidClientId?.length > 0
 								)
-								? "SSO must be configured for this organization before you can connect."
+								? "SSO must be configured for this tenant before you can connect."
 								: ""
 						}
 					>
@@ -501,12 +555,16 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					</div>
 				
 				<div
+					ref={ssoRequiredRef}
 					style={{
 						display: "flex",
 						flexDirection: "column",
 						width: "100%",
+						boxSizing: "border-box",
                         justifyContent: 'flex-start',
-						marginTop: 20
+						marginTop: 20,
+						padding: "8px",
+						border: "1px solid transparent",
 					}}
 					>
 					<Typography
@@ -514,7 +572,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						color="textSecondary"
 						style={{ marginTop: 5, marginBottom: 5, fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
 					>
-						Make SAML SSO or OpenID Authentication Required or Optional for Your Organization.
+						Make OpenID Authentication Required or Optional for your Tenant.
 					</Typography>
 					<div>
 						<Switch
@@ -524,7 +582,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						name="onOffSwitch"
 						color="primary"
 						disabled={!isAdmin}
-						title="Make SAML SSO or OpenID Authentication Required or Optional for Your Organization"
+						title="Make SAML SSO or OpenID Authentication Required or Optional for your Tenant"
 						/>
 						{SSORequired ? "Required" : "Optional"}
 					</div>
@@ -545,7 +603,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						color="textSecondary"
 						style={{ marginTop: 5, marginBottom: 5, fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
 					>
-						Auto-provisioning of users in SSO. By default, users are auto-provisioned in SSO when they login. If you enable this, no new user will be added in your organization when they login via SSO.
+						Auto-provisioning of users in SSO. By default, users are auto-provisioned in SSO when they login. If you enable this, no new user will be added in your tenant when they login via SSO.
 					</Typography>
 					<div>
 						<Switch
@@ -604,7 +662,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						color="textSecondary"
 						style={{ marginTop: 5, marginBottom: 5, color: "rgba(158, 158, 158, 1)", fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontWeight: 400 }}
 					>
-						Skip SSO for Admins. When enabled, parent org admins will be able switch to the sub-organization without SSO. 	
+						Skip SSO for Admins. When enabled, parent tenant admins will be able switch to the sub-tenants without SSO. 	
 					</Typography>
 					<div>
 						<Switch
@@ -623,7 +681,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 					<span style={{ display: "flex", flexDirection: "column" }}>
 						<Typography variant="h5" color="textPrimary" style={{ textAlign: "left", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 500, }}>OpenID connect</Typography>
 						<span style={{ marginTop: 8, color: theme.palette.text.secondary, fontSize: 16,  fontWeight: 400 }}>
-							Configure and Authorize SAML / SSO or OpenID connect. {" "}
+							Configure and Authorize OpenID connect. {" "}
 							<a
 								target="_blank"
 								href="/docs/extensions#single-signon"
@@ -824,7 +882,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 				</Grid>
 				{/**/}
 				{/*isCloud ? null : */}
-				<Grid item xs={12} sx={{ marginTop: 3.5 }} >
+				{/* <Grid item xs={12} sx={{ marginTop: 3.5 }} >
 					<Typography variant="h5" color="textPrimary" style={{ textAlign: "left", fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 24, fontWeight: 500, }}>SAML SSO (v1.1)</Typography>
 						<Typography variant="body2" color="textSecondary" style={{ textAlign: "left", marginTop: 4, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", fontSize: 16, fontWeight: 400, fontStyle: "italic", color: red }}>
 							Note: Support for SAML SSO was deprecated due to potential security issues. Please consider migrating to OpenID Connect for better compatibility and features.
@@ -933,7 +991,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 							</span>
 						</Grid>
 					</Grid>
-				</Grid>
+				</Grid> */}
                 <div style={{ textAlign: "center", margin: "50px auto 0px auto", }}>
 				    {orgSaveButton}
 			    </div>
