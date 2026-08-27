@@ -134,7 +134,7 @@ import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/Angul
 import Licensed from "../components/Licensed.jsx";
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "33e4e3564f4f060e96e0531957bed552");
+const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
 
 const svgSize = 24;
 const imagesize = 23;
