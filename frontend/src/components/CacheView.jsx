@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext, memo } from "react";
 import { makeStyles } from "@mui/styles";
 import { getTheme } from "../theme.jsx";
+import SubOrgDistributionDialog from "./SubOrgDistributionDialog.jsx";
+import DeleteConfirmDialog from "./DeleteConfirmDialog.jsx";
 import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
@@ -8,6 +10,8 @@ import {  validateJson, handleReactJsonClipboard,  GetIconInfo, } from "../views
 import { green, red } from "../views/AngularWorkflow.jsx";
 import CollectIngestModal from "../components/CollectIngestModal.jsx";
 import CorrelationGraph from "../components/CorrelationGraph.jsx";
+import { CategoryAutomationsDialog } from "@shuffleio/shuffle-core";
+import { useSyncHostBaseUrl, setRegionUrl } from "@shuffleio/shuffle-mcps";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {
 	Typography,
@@ -17,8 +21,6 @@ import {
     Button,
     Tabs,
     Tab,
-    List,
-    ListItem,
     ListItemText,
     IconButton,
     Dialog,
@@ -82,6 +84,7 @@ import {
 	Hub as HubIcon,
 	Key as KeyIcon, 
 	FlashOn as FlashOnIcon,
+	Search as SearchIcon,
 } from "@mui/icons-material";
 import { Context } from "../context/ContextApi.jsx";
 
@@ -112,6 +115,19 @@ const useStyles = makeStyles({
 //const CacheView = (props) => {
 const CacheView = memo((props) => {
     const { globalUrl, userdata, serverside, orgId, isSelectedDataStore, selectedOrganization } = props;
+
+    // CategoryAutomationsDialog (from @shuffleio/shuffle-core) makes its own internal
+    // fetches (workflows, authenticated apps) via the Shuffle-MCPs API module, which
+    // defaults to its own bundled backend URL and has no org context unless told.
+    // Register shaffuru's own globalUrl/orgId so those internal fetches hit the right
+    // backend/org instead of returning empty results.
+    useSyncHostBaseUrl(globalUrl);
+    useEffect(() => {
+        if (orgId) {
+            setRegionUrl(null, orgId);
+        }
+    }, [orgId]);
+
     const [orgCache, setOrgCache] = React.useState("");
     const [listCache, setListCache] = React.useState([]);
     const [addCache, setAddCache] = React.useState("");
@@ -127,6 +143,9 @@ const CacheView = memo((props) => {
     const [showDistributionPopup, setShowDistributionPopup] = useState(false);
     const [selectedSubOrg, setSelectedSubOrg] = useState([]);
     const [selectedCacheKey, setSelectedCacheKey] = useState("");
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
+    const [distribOrgOrder, setDistribOrgOrder] = useState([]);
 	const [totalAmount, setTotalAmount] = useState(0);
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50)
@@ -142,6 +161,7 @@ const CacheView = memo((props) => {
 	const [datastoreCategoryGroups, setDatastoreCategoryGroups] = React.useState([]);
 	const [selectedCategory, setSelectedCategory] = React.useState("default");
 	const [selectedFileId, setSelectedFileId] = React.useState("");
+	const [keySearch, setKeySearch] = React.useState("");
     const [updateToThisCategory, setUpdateToThisCategory] = useState("")
 	const [workflows, setWorkflows] = useState([]);
 	const [apps, setApps] = useState([]);
@@ -159,7 +179,7 @@ const CacheView = memo((props) => {
 			return
 		}
 
-		if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length === 0) {
+		if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories?.length === 0) {
 			return
 		}
 
@@ -233,7 +253,7 @@ const CacheView = memo((props) => {
 
 		{
 			"name": "Enrich",
-			"description": "Enriches the data. Only runs on valid JSON data AND if the 'enrichment' field does not exist.",
+			"description": "Enriches the data. Uses regex keys and runs a workflow in the background. Added to the 'enrichments' key.", 
 			"type": "singul",
 			"options": [{
 				"key": "",
@@ -321,6 +341,13 @@ const CacheView = memo((props) => {
 	}, [selectedCategory])
 
     useEffect(() => {
+		// orgId arrives late: Admin.jsx only sets it once GET /api/v1/orgs/{id} returns,
+		// which can take seconds. Without this, every fetch below runs against an
+		// undefined org and never retries.
+		if (orgId === undefined || orgId === null || orgId === "") {
+			return
+		}
+
 		getWorkflows()
 		getApps() 
 
@@ -331,6 +358,14 @@ const CacheView = memo((props) => {
 
 			// In order to make linking weird urls from workflow page work.
 			if (urlParams.get("src") == "workflow") {
+				if (categoryParam === "OCSF") {
+					const newParam = "shuffle-security incidents"
+
+					urlParams.set("category", newParam)
+					window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`)
+					categoryParam = newParam
+				}
+
 				if (categoryParam?.toLowerCase().startsWith("list")) {
 					const newParam = categoryParam.substring(5).replaceAll("%20", "_")
 
@@ -349,7 +384,7 @@ const CacheView = memo((props) => {
 		setTimeout(() => {
         	listOrgCache(orgId, chosenCategory, 0, pageSize, page)
 		}, 100)
-    }, [])
+    }, [orgId])
 
 
     const handleKeyDown = (event) => {
@@ -365,7 +400,11 @@ const CacheView = memo((props) => {
       }
     }
 
-    const listOrgCache = (orgId, category, index, amount, page, keyValue) => {
+    const listOrgCache = (orgId, category, index, amount, page, keyValue, searchValue) => {
+		if (orgId === undefined || orgId === null || orgId === "") {
+			return
+		}
+
         setCachedLoaded(false)
 		if (index === undefined || index === null) {
 			index = 0
@@ -399,6 +438,17 @@ const CacheView = memo((props) => {
 			setSelectedRows([])
 		}
 
+		// Prefix search within the category (case-insensitive "starts with").
+		if (searchValue !== undefined && searchValue !== null && searchValue !== "") {
+			url += "&search=" + encodeURIComponent(searchValue)
+
+			setCursors({
+				0: "",
+			})
+			setPage(0)
+			setSelectedRows([])
+		}
+
         fetch(url, {
             method: "GET",
             headers: {
@@ -418,13 +468,15 @@ const CacheView = memo((props) => {
 		.then((responseJson) => {
             setCachedLoaded(true);
 			if (responseJson?.success === true) {
-				const responseKeys = responseJson.keys || [];
-				setListCache(responseKeys);
+				if (responseJson?.keys === undefined || responseJson?.keys === null) {  
+					responseJson.keys = []
+				}
 
+				setListCache(responseJson.keys);
 				if (responseJson.total_amount !== undefined && responseJson.total_amount !== null && responseJson.total_amount > 0) {
 					setTotalAmount(responseJson.total_amount)
 				} else {
-					setTotalAmount(responseKeys.length)
+					setTotalAmount(responseJson.keys?.length)
 				}
 
 				if (responseJson?.cursor !== undefined && responseJson?.cursor !== null && responseJson?.cursor !== "") {
@@ -448,7 +500,7 @@ const CacheView = memo((props) => {
 					}
 				}
 
-				if ((category === undefined || category === "default" || category === "") && datastoreCategories.length === 2 && datastoreCategories[0] === "default") {
+				if ((category === undefined || category === "default" || category === "") && datastoreCategories?.length === 2 && datastoreCategories[0] === "default") {
 					var newcategories = ["default", "protected"]
 					for (var key in responseJson.keys) {
 						var foundcategory = responseJson.keys[key].category
@@ -461,8 +513,8 @@ const CacheView = memo((props) => {
 						}
 					}
 
-					if (responseJson?.categories !== undefined && responseJson?.categories !== null && responseJson?.categories.length > 0) {
-						for (var i = 0; i < responseJson.categories.length; i++) {
+					if (responseJson?.categories !== undefined && responseJson?.categories !== null && responseJson?.categories?.length > 0) {
+						for (var i = 0; i < responseJson.categories?.length; i++) {
 							const foundcategory = responseJson.categories[i].replaceAll(" ", "_")
 							if (foundcategory !== undefined && foundcategory !== null && foundcategory !== "" && foundcategory !== "default" && !newcategories.includes(foundcategory)) {
 								newcategories.push(responseJson.categories[i]);
@@ -479,7 +531,7 @@ const CacheView = memo((props) => {
 						}
 
 						const startword = category.split("_")[0]
-						if (startword.length <= 2) {
+						if (startword?.length <= 2) {
 							continue
 						}
 
@@ -504,7 +556,7 @@ const CacheView = memo((props) => {
 					}
 
 					// Handle other configs here.
-					if (responseJson?.category_config?.automations !== undefined && responseJson?.category_config?.automations !== null && responseJson?.category_config?.automations.length > 0) {
+					if (responseJson?.category_config?.automations !== undefined && responseJson?.category_config?.automations !== null && responseJson?.category_config?.automations?.length > 0) {
 						// Find icons if they exist
 						for (var key in responseJson.category_config.automations) {
 							// Options may be null if an automation was stored without any (no omitempty on the backend field)
@@ -576,17 +628,26 @@ const CacheView = memo((props) => {
             .then((response) => {
                 if (response.status === 200) {
 					if (refreshList === undefined || refreshList === null || refreshList === true) {
-
                     	toast.success("Deleted datastore entry");
 						setTimeout(() => {
 							listOrgCache(orgId, selectedCategory, 0, pageSize, page)
 						}, 1000);
 					}
                 } else {
+                    if (refreshList === undefined || refreshList === null || refreshList === true) {
+						setTimeout(() => {
+							listOrgCache(orgId, selectedCategory, 0, pageSize, page)
+						}, 1000);
+					}
                     toast.error(`Failed deleting entry ${key} in category ${itemCategory || selectedCategory}. If this persists, please contact support@shuffler.io.`)
                 }
             })
             .catch((error) => {
+                if (refreshList === undefined || refreshList === null || refreshList === true) {
+					setTimeout(() => {
+						listOrgCache(orgId, selectedCategory, 0, pageSize, page)
+					}, 1000);
+				}
                 toast(error.toString());
             });
     };
@@ -837,6 +898,11 @@ const CacheView = memo((props) => {
 								Category: {dataValue.category}
 							</Typography>
 						: null}
+						{dataValue?.enrichments !== undefined && dataValue?.enrichments !== null && dataValue.enrichments?.length > 0 ?
+							<Typography variant="body2" color="textSecondary" style={{ }}>
+								Enrichments: {dataValue.enrichments?.length}
+							</Typography>
+						: null}
 						{dataValue?.tags !== undefined && dataValue?.tags !== null && dataValue?.tags?.length > 0 ?  
 							<div style={{display: "flex", marginTop: 12, }}>
 								<Typography variant="body2" color="textSecondary" style={{ marginRight: 10, marginTop: 4, }}>
@@ -851,9 +917,9 @@ const CacheView = memo((props) => {
 											style={{ marginRight: 5, }}
 											onDelete={() => {
 												var newTags = dataValue.tags.filter((t) => t !== tag)
-												if (newTags.length === 0) {
+												if (newTags?.length === 0) {
 													newTags = ["none"]
-												} else if (newTags.length > 1) {
+												} else if (newTags?.length > 1) {
 													newTags = newTags.filter((t) => t !== "none")
 												}
 
@@ -906,33 +972,6 @@ const CacheView = memo((props) => {
         </Dialog>
     );
 
-    const handleSelectSubOrg = (id, action) => {
-        if (action === "all") {
-            const childOrgs = userdata.orgs.filter(
-                (data) => data.creator_org === userdata.active_org.id
-            );
-            setSelectedSubOrg((prev) => {
-                if (prev.length === childOrgs.length) {
-                    // If all child orgs are already selected, clear the selection
-                    return [];
-                } else {
-                    // Otherwise, select all child org IDs
-                    return childOrgs.map((data) => data.id);
-                }
-            });
-        } else if (action === "none") {
-            setSelectedSubOrg([]);
-        } else {
-            setSelectedSubOrg((prev) => {
-                if (prev.includes(id)) {
-                    return prev.filter((data) => data !== id);
-                } else {
-                    return [...prev, id];
-                }
-            });
-        }
-    };
-
     const changeDistribution = (id, selectedSubOrg) => {	
 
 		editFileConfig(id, [...new Set(selectedSubOrg)], selectedCategory)
@@ -946,8 +985,6 @@ const CacheView = memo((props) => {
 			selected_suborgs: selectedSubOrg,
 			category: category === undefined || category === "" || category === "default" ? "" : category,
 		}
-
-		console.log("data: ", data);	
 		
 		const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/config`;
 
@@ -981,98 +1018,41 @@ const CacheView = memo((props) => {
         };
 
 
-    const cacheDistributionModal = showDistributionPopup ? (
-        <Dialog
-		open={showDistributionPopup}
-		onClose={() => setShowDistributionPopup(false)}
-		PaperProps={{
-			sx: {
-				borderRadius: theme?.palette?.DialogStyle?.borderRadius,
-				border: theme?.palette?.DialogStyle?.border,
-				fontFamily: theme?.typography?.fontFamily,
-				backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				zIndex: 1000,
-				minWidth: "600px",
-				minHeight: "320px",
-				overflow: "auto",
-				'& .MuiDialogContent-root': {
-					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				},
-				'& .MuiDialogTitle-root': {
-					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				},
-				'& .MuiDialogActions-root': {
-					backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
-				},
-			},
-		}}
-	>
-		<DialogTitle>
-			<Typography variant="h5" color="textPrimary">
-				Select sub-org to distribute Datastore key
-			</Typography>
-		</DialogTitle>
-		<DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
-			<MenuItem value="none" onClick={()=> {handleSelectSubOrg(null, "none")}}>None</MenuItem>
-			<MenuItem value="all" onClick={()=> {handleSelectSubOrg(null, "all")}}>All</MenuItem>
-			{userdata.orgs.map((data, index) => {
-				if (data.creator_org !== userdata.active_org.id) {
-					return null;
-				}
 
-				const imagesize = 22;
-				const imageStyle = {
-					width: imagesize,
-					height: imagesize,
-					pointerEvents: "none",
-					marginRight: 10,
-					marginLeft: data.id === userdata.active_org.id ? 0 : 20,
-				};
 
-				const image = data.image === "" ? (
-					<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
-				) : (
-					<img alt={data.name} src={data.image} style={imageStyle} />
-				);
+    const deleteConfirmDialog = (
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => { setDeleteConfirmOpen(false); setDeleteConfirmTarget(null); }}
+        onConfirm={() => {
+          if (deleteConfirmTarget?.bulk) {
+            const itemsToDelete = selectedRows.map(rowId =>
+              listCache.find(item => encodeURIComponent(`${item.key}_${item.category || ""}`) === rowId)
+            ).filter(Boolean);
 
-				return (
-					<MenuItem
-						key={index}
-						value={data.id}
-						onClick={() => handleSelectSubOrg(data.id)}
-						style={{ display: "flex", alignItems: "center" }}
-					>
-						<Checkbox
-							checked={selectedSubOrg.includes(data.id)}
-						/>
-						{image}
-						<span style={{ marginLeft: 8 }}>{data.name}</span>
-					</MenuItem>
-				);
-			})}
+            const count = itemsToDelete?.length;
+            setSelectedRows([]);
+            itemsToDelete.forEach(item => deleteEntry(orgId, item.key, item.category, false));
 
-			<div style={{ display: "flex", marginTop: 20 }}>
-				<Button
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, color: theme.palette.primary.main  }}
-					onClick={() => setShowDistributionPopup(false)}
-					color="primary"
-				>
-					Cancel
-				</Button>
-				<Button
-					variant="contained"
-					style={{ borderRadius: "2px", textTransform: 'none', fontSize:16, marginLeft: 10 }}
-					onClick={() => {
-						changeDistribution(selectedCacheKey, selectedSubOrg);
-					}}
-					color="primary"
-				>
-					Submit
-				</Button>
-			</div>
-		</DialogContent>
-		</Dialog>
-    ) : null;
+            setTimeout(() => {
+              listOrgCache(orgId, selectedCategory, 0, pageSize, page);
+              toast.success("Deleted " + count + " keys from datastore");
+            }, 3000);
+          } else {
+            deleteEntry(orgId, deleteConfirmTarget.key, deleteConfirmTarget.category);
+          }
+          setDeleteConfirmOpen(false);
+          setDeleteConfirmTarget(null);
+        }}
+        title={deleteConfirmTarget?.bulk ? `Delete ${selectedRows?.length} Key${selectedRows?.length > 1 ? "s" : ""}?` : "Delete Key?"}
+        description={
+          deleteConfirmTarget?.bulk
+            ? <>Are you sure you want to delete <b>{selectedRows?.length} key{selectedRows?.length > 1 ? "s" : ""}</b>?</>
+            : <>Are you sure you want to delete <b>{deleteConfirmTarget?.key}</b>?</>
+        }
+        warningText="This cannot be undone. Any workflows using these keys will lose access."
+      />
+    );
 
 	const saveAutomation = (allAutomation, settings) => {
 		// Check if icon is a string. Otherwise make it empty.
@@ -1090,7 +1070,7 @@ const CacheView = memo((props) => {
 			"automations": allAutomation,
 		}
 
-		if (settings !== undefined && settings !== null && Object.keys(settings).length > 0) {
+		if (settings !== undefined && settings !== null && Object.keys(settings)?.length > 0) {
 			data["settings"] = settings 
 		}
 
@@ -1123,550 +1103,6 @@ const CacheView = memo((props) => {
 		})
 	}
 
-
-	const AutomationOptions = ({ automation, index }) => {
-		const [showOptions, setShowOptions] = useState(false);
-		const [hovered, setHovered] = useState(false);
-
-		const [updated, setUpdated] = useState(false);
-		const [updatedAutomation, setUpdatedAutomation] = useState(automation);
-		const [_, setUpdate] = useState(Math.random()) // Force re-render
-
-		if (automation.icon === undefined || automation.icon === null || automation.icon === "") {
-			for (var i = 0; i < defaultAutomation.length; i++) {
-				if (defaultAutomation[i].name === automation.name) {
-					automation.icon = defaultAutomation[i].icon
-					break;
-				}
-			}
-		}
-
-		const runSave = () => { 
-			setUpdated(false)
-
-			const newAutomations = [...categoryAutomations]
-			newAutomations[index] = updatedAutomation
-
-			setCategoryAutomations(newAutomations)
-			setUpdate(Math.random()) // Force re-render
-
-			saveAutomation(newAutomations)
-		}
-
-		return (
-			<Tooltip title={
-					<Typography style={{margin: 10, }}>
-						{automation?.description}
-					</Typography>
-				} 
-				placement="right" 
-				style={theme.palette.tooltip}
-			>
-				<div key={index} style={{ 
-						marginBottom: 10, 
-						backgroundColor: hovered ? theme.palette.hoverColor : "transparent",
-						paddingTop: 5, 
-					}} 
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<div style={{display: "flex", }}>
-						<Tooltip title={automation.enabled ? "Disable Automation" : "Enable Automation"} style={{}} aria-label={""}>
-							<Checkbox
-								style={{ marginRight: 10, marginTop: -10, }}
-								checked={automation.enabled}
-								// Check if automation options have a value
-								disabled={automation.name !== "Enrich" && automation.name != "Run AI Agent" && (automation?.disabled === true || (automation?.options || []).length === 0 || (automation?.options || []).some((option) => option.value === ""))}
-								onChange={(e) => {
-									e.stopPropagation()
-									e.preventDefault()
-
-									updatedAutomation.enabled = !updatedAutomation.enabled
-									setUpdatedAutomation(updatedAutomation)
-									setUpdated(true)
-
-									setUpdate(Math.random()) 
-								}}
-							/>
-						</Tooltip>
-						<div 
-							style={{
-								display: "flex",
-								cursor: !automation?.disabled ? "pointer" : "not-allowed",
-								width: "100%", 
-							}}
-							disabled={automation?.disabled === true}
-							onClick={() => {
-								if (automation?.disabled === true) {
-									return
-								}
-
-								if (automation?.name === "Enrich") {
-									automation.enabled = !automation.enabled
-									runSave()
-									return
-								}
-
-								setShowOptions(!showOptions)
-
-								// Auto saves when the options are closed/saved
-								if (updated && showOptions) {
-									runSave()
-								}
-							}}
-						>
-							{typeof automation?.icon === "string" && automation?.icon?.length > 0 ? 
-								<img src={automation.icon} alt={automation.name} style={{ width: 20, height: 20, }} />
-								:
-								automation.icon
-							}
-
-							<Typography variant="body1" style={{ 
-								color: automation?.disabled === true ? theme.palette.text.secondary : theme.palette.text.primary, 
-								marginLeft: 10, 
-							}}>
-								{automation.name}
-							</Typography>
-							{automation?.beta !== true ? null : 
-								<Chip
-									label="Beta"
-									size="small"
-									style={{ 
-										marginLeft: 10, 
-										height: 20,
-										fontSize: 12,
-										border: `1px solid ${green}`,
-										color: "rgba(255,255,255,0.7)",
-									}}
-								/>
-							}
-						</div>
-
-						{automation?.disabled !== true ? 
-							<Button
-								style={{ 
-									borderRadius: theme.palette.borderRadius,
-									textTransform: 'none', 
-									color: updated ? theme.palette.primary.main : theme.palette.text.secondary,
-									marginTop: -6,
-
-									position: "absolute",
-									right: 25, 
-								}}
-								disabled={!updated}
-								onClick={(e) => {
-									e.stopPropagation();
-									e.preventDefault();
-
-									runSave()
-								}}
-							>
-								Save
-							</Button>
-						: null}
-					</div>
-
-					{showOptions && 
-						<div style={{ marginTop: 20, marginBottom: 20, }}>
-						{updatedAutomation.options.map((option, optionIndex) => {
-							if (option?.key === "datastore_categories") {
-								if (datastoreCategories === undefined || datastoreCategories === null || datastoreCategories.length <= 1) {
-									return (
-										<Typography key={optionIndex} style={{ color: theme.palette.text.secondary, marginTop: 10 }}>
-											No categories available. Please add categories in the settings.
-										</Typography>
-									)
-								}
-
-								return (
-									<Autocomplete
-										key={optionIndex}
-
-										multiple
-										label="Choose Datastore Categories"
-										id="datastore_category_search"
-										autoHighlight
-										freeSolo
-										value={datastoreCategories?.filter(c => option?.value.includes(c)) || []}
-										classes={{ inputRoot: classes.inputRoot }}
-										ListboxProps={{
-											style: {
-												backgroundColor: theme.palette.surfaceColor,
-												color: theme.palette.text.primary,
-												borderRadius: theme.palette.borderRadius,
-											},
-										}}
-										onChange={(event, newValue) => {
-											console.log("New Value: ", newValue)
-
-											option.value = ""
-											for (var i = 0; i < newValue.length; i++) {
-												option.value += newValue[i] + ","
-											}
-
-											if (newValue.length > 0) {
-												updatedAutomation.enabled = true
-											} else {
-												updatedAutomation.enabled = false 
-											}
-
-											updatedAutomation.options[optionIndex] = option
-											setUpdatedAutomation(updatedAutomation)
-											setUpdated(true)
-
-											setUpdate(Math.random()) // Force re-render
-										}}
-
-										getOptionLabel={(option) => {
-											if (option === undefined || option === null) {
-												return "No Categories Selected";
-											}
-
-											return option
-										}}
-										options={datastoreCategories}
-										fullWidth
-										style={{
-											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-											borderRadius: theme.palette.textFieldStyle.borderRadius,
-											color: theme.palette.textFieldStyle.color,
-											height: 35,
-											marginBottom: 40,
-										}}
-										renderOption={(props, data, state) => {
-											const fixedname = data?.charAt(0)?.toUpperCase() + data?.slice(1)?.replaceAll("_", " ")
-											const iconDetails = GetIconInfo({
-												"app_name": fixedname,
-												"name": fixedname,
-											})
-
-											const keyfound = option?.value.includes(data)
-
-											return (
-												<Tooltip arrow placement="left" title={
-													<span style={{}}>
-														{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-															<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
-															: null}
-														<Typography>
-															Choose {data}
-														</Typography>
-													</span>
-												} >
-													<MenuItem
-														{...props}
-														style={{
-															backgroundColor: theme.palette.surfaceColor,
-														}}
-														value={data}
-													>
-														<Typography style={{
-															display: "flex", 
-															marginTop: 5, 
-															color: keyfound ? red : theme.palette.text.primary,
-														}}>
-															<div style={{marginRight: 10, }}>
-																{iconDetails?.originalIcon && (
-																	iconDetails?.originalIcon
-																)}
-															</div>
-
-															{fixedname}
-														</Typography>
-													</MenuItem>
-												</Tooltip>
-											)
-										}}
-										renderInput={(params) => {
-											return (
-												<TextField
-													{...params}
-													style={{
-														backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-														color: theme.palette.textFieldStyle.color,
-														borderRadius: theme.palette.textFieldStyle.borderRadius,
-														height: 35,
-														fontSize: 16,
-														marginTop: "16px"
-													}}
-													InputProps={{
-														...params.InputProps,
-														style: {
-															height: 35,
-															display: "flex",
-															alignItems: "center",
-															padding: "0px 8px",
-															fontSize: 16,
-															borderRadius: 4,
-														},
-														inputProps: {
-															...params.inputProps,
-															style: {
-																height: "100%",
-																boxSizing: "border-box",
-															}
-
-														}
-													}}
-													variant="outlined"
-													placeholder="Select Categories to Correlate"
-												/>
-											)
-										}}
-									/>
-								)
-							} else if (option?.key === "workflow_id") {
-								return ( 
-									<Autocomplete
-										key={optionIndex}
-
-										multiple
-										label="Find a workflow"
-										id="workflow_search"
-										autoHighlight
-										freeSolo
-										value={workflows?.filter(w => option?.value.includes(w.id)) || []}
-										classes={{ inputRoot: classes.inputRoot }}
-										ListboxProps={{
-											style: {
-												backgroundColor: theme.palette.surfaceColor,
-												color: theme.palette.text.primary,
-												borderRadius: theme.palette.borderRadius,
-											},
-										}}
-										onChange={(event, newValue) => {
-											option.value = ""
-											for (var i = 0; i < newValue.length; i++) {
-												option.value += newValue[i].id + ","
-											}
-
-											if (newValue.length > 0) {
-												updatedAutomation.enabled = true
-											} else {
-												updatedAutomation.enabled = false 
-											}
-
-											updatedAutomation.options[optionIndex] = option
-											setUpdatedAutomation(updatedAutomation)
-											setUpdated(true)
-
-											setUpdate(Math.random()) // Force re-render
-										}}
-
-										getOptionLabel={(option) => {
-											if (
-												option === undefined ||
-												option === null ||
-												option?.name === undefined ||
-												option?.name === null
-											) {
-												return "No Workflows Selected";
-											}
-
-											const newname = (
-												option.name.charAt(0).toUpperCase() + option.name.substring(1)
-											).replaceAll("_", " ")
-
-											return newname
-										}}
-										options={workflows}
-										fullWidth
-										style={{
-											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-											borderRadius: theme.palette.textFieldStyle.borderRadius,
-											color: theme.palette.textFieldStyle.color,
-											height: 35,
-											marginBottom: 40,
-										}}
-										renderOption={(props, data, state) => {
-											/*
-											if (data.id === option?.value) {
-												data = workflow;
-											}
-											*/
-
-											return (
-												<Tooltip arrow placement="left" title={
-													<span style={{}}>
-														{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-															<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
-															: null}
-														<Typography>
-															Choose {data.name}
-														</Typography>
-													</span>
-												} >
-													<MenuItem
-														{...props}
-														style={{
-															backgroundColor: theme.palette.surfaceColor,
-															color: data.id === option?.value ? red : theme.palette.text.primary,
-														}}
-														value={data}
-													>
-														{data.name}
-													</MenuItem>
-												</Tooltip>
-											)
-										}}
-										renderInput={(params) => {
-											return (
-												<TextField
-													{...params}
-													style={{
-														backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-														color: theme.palette.textFieldStyle.color,
-														borderRadius: theme.palette.textFieldStyle.borderRadius,
-														height: 35,
-														fontSize: 16,
-														marginTop: "16px"
-													}}
-													InputProps={{
-														...params.InputProps,
-														style: {
-															height: 35,
-															display: "flex",
-															alignItems: "center",
-															padding: "0px 8px",
-															fontSize: 16,
-															borderRadius: 4,
-														},
-														inputProps: {
-															...params.inputProps,
-															style: {
-																height: "100%",
-																boxSizing: "border-box",
-															}
-
-														}
-													}}
-													variant="outlined"
-													placeholder="Select workflows to run"
-												/>
-											)
-										}}
-									/>
-								)
-							} else if (updatedAutomation?.name === "Run AI Agent") { 
-								return (
-									<ButtonGroup style={{display: "flex", }}>
-										<TextField
-											key={optionIndex}
-											fullWidth
-											disabled={option?.disabled === true}
-											style={theme.palette.textFieldStyle}
-											InputProps={{
-											  disableUnderline: true,
-											  style: {
-												backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-												color: theme.palette.textFieldStyle.color,
-												height: 40,
-											  },
-											}}
-											label={option.key}
-											defaultValue={option.value}
-											onBlur={(e) => {
-												if (e.target.value === "") {
-													updatedAutomation.enabled = false 
-												} else {
-													updatedAutomation.enabled = true 
-												}
-
-												updatedAutomation.options[optionIndex].value = e.target.value;
-												setUpdatedAutomation(updatedAutomation)
-												setUpdated(true)
-											}}
-										/>
-
-										{optionIndex === updatedAutomation.options.length - 1 ?
-											<Button color="secondary" variant="outlined" style={{
-												height: 40, 
-												maxWidth: 40, 
-											}} 
-											disabled={option?.value?.length < 20} 
-											onClick={() => {
-
-												var newindex = optionIndex + 2
-												if (updatedAutomation.options.length > 0) {
-													const lastOption = updatedAutomation.options[updatedAutomation.options.length - 1]
-													const lastIndex = parseInt(lastOption.key.split("-")[1])
-													if (!isNaN(lastIndex)) {
-														newindex = lastIndex + 1
-													}
-												}
-
-												updatedAutomation.options.push({
-													"key": `action-${newindex}`,
-													"description": "Describe the action to perform on this item", 
-													"value": "",
-												})
-
-												setUpdatedAutomation(updatedAutomation)
-												setUpdate(Math.random()) 
-											}}>
-												<AddIcon/>
-											</Button>
-										: 
-											<Tooltip title={option?.disabled !== true ? "Disable action (won't run until re-enabled)" : "Re-Enable action (runs on all new edits)"} placement="top"> 
-												<Button color="secondary" variant="outlined" style={{
-													height: 40, 
-													maxWidth: 40, 
-												}} onClick={() => {
-													if (option?.disabled === true) {
-														updatedAutomation.options[optionIndex].disabled = false
-													} else {
-														updatedAutomation.options[optionIndex].disabled = true 
-													}
-
-													setUpdatedAutomation(updatedAutomation)
-													setUpdate(Math.random()) 
-												}}>
-													{option?.disabled !== true ? <RemoveIcon /> : <FlashOnIcon />}
-												</Button>
-											</Tooltip>
-										}
-										
-									</ButtonGroup>
-								)
-							}
-
-							return (
-								<TextField
-									key={optionIndex}
-									fullWidth
-									style={{
-										...theme.palette.textFieldStyle,
-										marginBottom: 20, 
-										marginTop: 10, 
-									}}
-            						InputProps={{
-									  style: {
-										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-										color: theme.palette.textFieldStyle.color,
-									  },
-									}}
-									label={option.key}
-									defaultValue={option.value}
-									onBlur={(e) => {
-										if (e.target.value === "") {
-											updatedAutomation.enabled = false 
-										} else {
-											updatedAutomation.enabled = true 
-										}
-
-										updatedAutomation.options[optionIndex].value = e.target.value;
-										setUpdatedAutomation(updatedAutomation)
-										setUpdated(true)
-									}}
-								/>
-							)
-						})}
-						</div>
-					}
-				</div>
-			</Tooltip>
-		)
-	}
 
 
 	const setCategorySettingsField = (field, value) => {
@@ -1765,6 +1201,10 @@ const CacheView = memo((props) => {
 							enableClipboard={(copy) => {
 								handleReactJsonClipboard(copy)
 							}}
+							onSelect={(select) => {
+								//currentParams.set("category", selectedCategory);
+								//HandleJsonCopy(validate.result, select, "exec");
+							}}
 							collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 							iconStyle={theme.palette.jsonIconStyle}
 							displayDataTypes={false}
@@ -1793,7 +1233,7 @@ const CacheView = memo((props) => {
 				setCategoryConfig(undefined)
 				setCategoryAutomations(defaultAutomation)
 
-				if (selectAllChecked || selectedFiles.length > 0) {
+				if (selectAllChecked || selectedFiles?.length > 0) {
 					setUpdateToThisCategory(data.category)
 					return
 				}
@@ -1941,6 +1381,7 @@ const CacheView = memo((props) => {
 											"workflow_id": data.workflow_id,
 											"category": data.category,
 											"tags": data.tags,
+											"enrichments": data.enrichments,
 										})
 										setValue(newvalue)
 										setModalOpen(true)
@@ -2025,7 +1466,8 @@ const CacheView = memo((props) => {
 									onClick={(e) => {
 										e.preventDefault()
 										e.stopPropagation()
-										deleteEntry(orgId, data.key, data.category)
+										setDeleteConfirmTarget({ key: data.key, category: data.category })
+										setDeleteConfirmOpen(true)
 									}}
 								>
 									<svg
@@ -2100,13 +1542,21 @@ const CacheView = memo((props) => {
 								  style={{ margin: "auto" }}
 								  color="secondary"
 								  onClick={() => {
-									setShowDistributionPopup(true)
+									setShowDistributionPopup(true);
+									let initialSelected = [];
 									if(data?.suborg_distribution?.length > 0){
-										setSelectedSubOrg(data.suborg_distribution)
-									}else{
-										setSelectedSubOrg([])
+										initialSelected = data.suborg_distribution;
 									}
-									setSelectedCacheKey(data.key)
+									setSelectedSubOrg(initialSelected);
+									setSelectedCacheKey(data.key);
+									const suborgs = (userdata?.orgs || []).filter(o => o.creator_org === userdata?.active_org?.id);
+									const sorted = [...suborgs].sort((a, b) => {
+										const aS = initialSelected.includes(a.id);
+										const bS = initialSelected.includes(b.id);
+										if (aS !== bS) return bS - aS;
+										return a.name.localeCompare(b.name);
+									});
+									setDistribOrgOrder(sorted.map(o => o.id));
 								  }}
 							  />
 						  </Tooltip>
@@ -2122,6 +1572,8 @@ const CacheView = memo((props) => {
 
 	var previousgroup = ""
 	const isAutomating = categoryAutomations?.find((automation) => automation.enabled) !== undefined
+	const isAutomatingAccess = categoryConfig?.settings?.timeout >= 60 || categoryConfig?.settings?.public === true ? true : false
+
     return (
         <div style={{
 			minHeight: 2000, 
@@ -2189,7 +1641,17 @@ const CacheView = memo((props) => {
 				apps={apps}
 			/>
 
-            {cacheDistributionModal}
+            <SubOrgDistributionDialog
+                open={showDistributionPopup}
+                onClose={() => { setShowDistributionPopup(false); setSelectedCacheKey(""); }}
+                title="Distribute Datastore Key to Sub-Organizations"
+                extraInfo={selectedCacheKey ? `Selected Key: ${selectedCacheKey}` : null}
+                orgs={distribOrgOrder.map(id => (userdata?.orgs || []).find(o => o.id === id)).filter(Boolean)}
+                selectedOrgIds={selectedSubOrg}
+                onSelectionChange={setSelectedSubOrg}
+                onSave={(ids) => { changeDistribution(selectedCacheKey, ids); }}
+            />
+            {deleteConfirmDialog}
 
             <div style={{height: "100%", overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
               <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'  }}>
@@ -2210,7 +1672,6 @@ const CacheView = memo((props) => {
 										height: 35, 
 										textTransform: 'none', 
 
-										//border: isAutomating ? `1px solid ${theme.palette.primary.main}` : null,
 									}}
 									variant="outlined"
 									color="secondary"
@@ -2273,17 +1734,17 @@ const CacheView = memo((props) => {
 					</Button>
 				</ButtonGroup>
 
-				<ButtonGroup style={{ position: "absolute", top: -6, }}>
+				<div style={{ position: "absolute", top: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
 				   {datastoreCategories !== undefined &&
 					datastoreCategories !== null &&
-					datastoreCategories.length > 1 ? (
+					datastoreCategories?.length > 1 ? (
 
-						<FormControl style={{ minWidth: 250, maxWidth: 250, marginTop: 8, }}>
+						<FormControl style={{ minWidth: 275, maxWidth: 275, }}>
 							<Autocomplete
 								labelId="category-choice"
 								style={{
-									minWidth: 250,
-									maxWidth: 250,
+									minWidth: 275,
+									maxWidth: 275,
 								}}
 								ListboxProps={{
 									style: {
@@ -2342,7 +1803,7 @@ const CacheView = memo((props) => {
 												setCategoryConfig(undefined)
 												setCategoryAutomations(defaultAutomation)
 
-												if (selectAllChecked || selectedFiles.length > 0) {
+												if (selectAllChecked || selectedFiles?.length > 0) {
 													setUpdateToThisCategory(data)
 													return
 												}
@@ -2437,10 +1898,10 @@ const CacheView = memo((props) => {
 								})}
 							*/}
 						</FormControl>
-					) : null}
+					) : null}	
 
-				<div style={{display: "inline-flex", position:"relative", top: 8}}>
-					{renderTextBox ? 
+				<div style={{display: "inline-flex"}}>
+					{renderTextBox ?
 						<Tooltip title={"Close"} style={{}} aria-label={""}>
 							<Button
 								style={{ 
@@ -2465,13 +1926,13 @@ const CacheView = memo((props) => {
 						:
 						<Tooltip title={"Add new category object"} style={{}} aria-label={""}>
 							<Button
-								style={{ 
-									whiteSpace: "nowrap", 
-									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? 50 : 169, 
-									height: 40, 
-									textTransform: 'none', 
+								style={{
+									whiteSpace: "nowrap",
+									width: datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories?.length > 1 ? 50 : 169,
+									height: 40,
+									textTransform: 'none',
 
-									borderRadius: "0px 5px 5px 0px",
+									borderRadius: 4,
 								}}
 								variant="outlined"
 								color="secondary"
@@ -2480,7 +1941,7 @@ const CacheView = memo((props) => {
 								}}
 							>
 								<AddIcon/>
-								{datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories.length > 1 ? "" : "Category"}
+								{datastoreCategories !== undefined && datastoreCategories !== null && datastoreCategories?.length > 1 ? "" : "Category"}
 							</Button>
 						</Tooltip> 
 					}
@@ -2522,16 +1983,16 @@ const CacheView = memo((props) => {
 						autoFocus
 					/>}
 				</div>
-				</ButtonGroup>
+				</div>
 
 
-				<ButtonGroup style={{ position: "absolute", right: 0, top: 5, }}>
+				<ButtonGroup style={{ position: "absolute", right: 0, top: 0, alignItems: "center", }}>
 					<Tooltip title={"Automate current Category"} style={{}} aria-label={""}>
 						<span>
 							<Button
 								style={{ 
 									whiteSpace: "nowrap", 
-									height: 35, 
+									height: 40, 
 									textTransform: 'none', 
 
 									border: isAutomating ? `1px solid ${green}` : null,
@@ -2558,27 +2019,26 @@ const CacheView = memo((props) => {
 						<Button
 							style={{ 
 								whiteSpace: "nowrap", 
-								height: 35, 
+								height: 40, 
 								textTransform: 'none', 
 								marginLeft: 3, 
 							}}
 							variant="outlined"
-							color="secondary"
+							color={isAutomatingAccess ? "primary" : "secondary"}
 							disabled={selectedCategory === undefined || selectedCategory === "" || selectedCategory === "default"}
 							onClick={() => {
 								setShowSettingsMenu(true)
 							}}
 						>
-							<SettingsIcon style={{color: theme.palette.secondary.main, }} />
+							<SettingsIcon style={{}} />
 						</Button>
 					</Tooltip> 
 				</ButtonGroup>
 
-				{showAutomationMenu || showSettingsMenu ? 
+				{showSettingsMenu ?
 					<Dialog
-						open={showAutomationMenu || showSettingsMenu}
+						open={showSettingsMenu}
 						onClose={() => {
-							setShowAutomationMenu(false)
 							setShowSettingsMenu(false)
 						}}
 						PaperProps={{
@@ -2605,12 +2065,11 @@ const CacheView = memo((props) => {
 						<DialogTitle>
 						</DialogTitle>
 						<DialogContent style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: theme.palette.DialogStyle.backgroundColor, }}>
-							{showSettingsMenu === true ? 
-								<div>
-									<Typography variant="h6" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
-										<SettingsIcon style={{ verticalAlign: "middle", marginRight: 10 }} />
-										Settings for category '{selectedCategory}'
-									</Typography>
+							<div>
+								<Typography variant="h6" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
+									<SettingsIcon style={{ verticalAlign: "middle", marginRight: 10 }} />
+									Settings for category '{selectedCategory}'
+								</Typography>
 
 									<div style={{display: "flex", marginTop: 50,  }}>
 										<div style={{flex: 2, }}>
@@ -2697,39 +2156,24 @@ const CacheView = memo((props) => {
 										</div>
 									</div>
 								</div>
-								:
-								<div>
-									<Typography variant="h6" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
-										<RocketIcon style={{ verticalAlign: "middle", marginRight: 10 }} />
-										Automation for category '{selectedCategory}'
-									</Typography>
-
-									<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginBottom: 20, marginTop: 20, }}>
-										When
-									</Typography>
-									<Typography variant="body1" style={{ color: theme.palette.text.primary, marginBottom: 20 }}>
-										A key is edited 
-									</Typography>
-
-									<Typography variant="body2" style={{ color: theme.palette.text.secondary, marginTop: 100, marginBottom: 20 }}>
-										Do
-									</Typography>
-									{categoryAutomations.map((automation, index) => {
-
-										return (
-											<AutomationOptions 
-												key={index}
-												automation={automation} 
-												index={index} 
-											/>	
-										)
-									})}
-								</div>
-							}
-							
 						</DialogContent>
 					</Dialog>
 				: null}
+
+				<CategoryAutomationsDialog
+					open={showAutomationMenu}
+					onClose={() => setShowAutomationMenu(false)}
+					category={selectedCategory}
+					automations={categoryAutomations}
+					onAutomationsChange={() => {}}
+					initialSettings={categoryConfig?.settings}
+					onSaved={() => {
+						listOrgCache(orgId, selectedCategory, 0, pageSize, page)
+					}}
+					entityLabel={{ singular: "key", plural: "keys" }}
+					theme={themeMode}
+					orgId={orgId}
+				/>
 			</div>
 
             {isSelectedDataStore? null :<Divider
@@ -2740,7 +2184,7 @@ const CacheView = memo((props) => {
             />}
 
 		      <DataGrid
-				rows={listCache || []}
+				rows={listCache}
 				columns={columns}
 				checkboxSelection
 				disableRowSelectionOnClick
@@ -2757,7 +2201,7 @@ const CacheView = memo((props) => {
 				autoHeight={true}
 				sx={{
 					marginTop: 1, 
-					height: (listCache?.length || 0)*52+500,
+					height: listCache?.length*52+500,
 					width: "100%",
 					'.MuiTablePagination-selectLabel, .MuiTablePagination-select, .MuiTablePagination-selectIcon': {
 					  display: 'none',
@@ -2789,10 +2233,19 @@ const CacheView = memo((props) => {
 				filterMode="client"
 				onFilterModelChange={(model) => {
 					// Specific search for the key itself to find it fast across the index
-					if (model?.items?.length === 1) {
-						if (model?.items[0]?.operatorValue === "equals" && model?.items[0]?.columnField === "key") {
-							// Run backend search for a specific key
-							listOrgCache(orgId, selectedCategory, 0, pageSize, page, model?.items[0]?.value)
+					if (model?.items?.length === 1 && model?.items[0]?.columnField === "key") {
+						const operator = model?.items[0]?.operatorValue
+						const filterValue = model?.items[0]?.value
+
+						if (operator === "equals" && filterValue !== undefined && filterValue !== "") {
+							// Exact key lookup
+							listOrgCache(orgId, selectedCategory, 0, pageSize, page, filterValue)
+						} else if (operator === "startsWith" && filterValue !== undefined && filterValue !== "") {
+							// Prefix search across the whole category (case-insensitive)
+							listOrgCache(orgId, selectedCategory, 0, pageSize, 0, undefined, filterValue)
+						} else if ((filterValue === undefined || filterValue === "") && (operator === "equals" || operator === "startsWith")) {
+							// Cleared the filter -> reload the full category
+							listOrgCache(orgId, selectedCategory, 0, pageSize, 0)
 						}
 					}
 				}}
@@ -2879,26 +2332,12 @@ const CacheView = memo((props) => {
 					  }}
 					/>
 
-					{selectedRows.length > 0 ?
+					{selectedRows?.length > 0 ?
 						<Button
 							style={{ marginLeft: 50, }}
 							onClick={() => {
-								setCachedLoaded(false)
-								// selectedRows holds DataGrid row ids (getRowId = key_category),
-								// not the raw key. Resolve each back to its item before deleting.
-								for (var key in selectedRows) {
-									const item = listCache?.find(it => encodeURIComponent(`${it.key}_${it.category || ""}`) === selectedRows[key])
-									if (!item) continue
-									deleteEntry(orgId, item.key, item.category, false)
-								}
-
-								setSelectedRows([])
-								setTimeout(() => {
-									// Refresh the list
-									listOrgCache(orgId, selectedCategory, 0, pageSize, page)
-									toast.success("Deleted " + selectedRows.length + " keys from datastore")
-								}, 2500)
-
+								setDeleteConfirmTarget({ bulk: true });
+								setDeleteConfirmOpen(true);
 							}}
 							variant={"outlined"}
 							color="secondary"
@@ -2909,7 +2348,7 @@ const CacheView = memo((props) => {
 									marginRight: 10, 
 								}}
 							/>
-							Delete {selectedRows.length} Key{ selectedRows.length > 1 ? "s" : "" }
+							Delete {selectedRows?.length} Key{ selectedRows?.length > 1 ? "s" : "" }
 						</Button>
 					: null}
 				</div>

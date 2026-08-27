@@ -580,7 +580,7 @@ console.log("defatult in handleEditOrg", defaults)
 				<Grid item xs={12} style={{ marginTop: 50, }}>
 					<Typography variant="h4" style={{ textAlign: "left", }}>Workflow Backup Repository</Typography>
 					<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
-						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the root folder in the format 'status_workflowid.json'
+						Decide where workflows and apps are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the root folder in the format 'status_workflowid.json'
 					</Typography>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
@@ -750,7 +750,7 @@ console.log("defatult in handleEditOrg", defaults)
               onChange={toggleBetweenRequiredOrOptional}
               name="onOffSwitch"
               color="primary"
-              title="Make SAML SSO or OpenID Authentication Required or Optional for Your Organization"
+              title="Make SAML SSO or OpenID Authentication Required or Optional for your Tenant"
             />
             {SSORequired ? "Required" : "Optional"}
           </div>
