@@ -5,6 +5,7 @@ import (
 
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -270,8 +271,6 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	// FIXME: Add authentication?
-	// Cloud has auth.
 	id := request.Header.Get("Org-Id")
 	if len(id) == 0 {
 		log.Printf("[ERROR] No Org-Id header set - confirm")
@@ -280,8 +279,48 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	//setWorkflowqueuetest(id)
 	ctx := context.Background()
+	orgId := request.Header.Get("Org")
+	envs, err := shuffle.GetEnvironments(ctx, orgId)
+	if err != nil || len(envs) == 0 {
+		//log.Printf("[WARNING] No env found for orgId %s during queue confirm", orgId)
+	}
+
+	var env *shuffle.Environment
+	found := false
+	parsedEnvName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(id, " ", "-"), "_", "-"))
+	for i := range envs {
+		parsedInnerName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(envs[i].Name, " ", "-"), "_", "-"))
+		if parsedInnerName == parsedEnvName {
+			env = &envs[i]
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		env, err = shuffle.GetEnvironment(ctx, id, "")
+		if err != nil {
+			log.Printf("[WARNING] Failed to find the environment(%s) in org(%s) during queue confirm", id, orgId)
+		}
+	}
+
+	auth := request.Header.Get("Authorization")
+	parsedAuth := auth
+	if strings.HasPrefix(auth, "Bearer ") {
+		authCheck := strings.Split(auth, " ")
+		if len(authCheck) == 2 {
+			parsedAuth = authCheck[1]
+		}
+	}
+
+	if env == nil || len(env.Auth) == 0 || len(parsedAuth) == 0 || subtle.ConstantTimeCompare([]byte(parsedAuth), []byte(env.Auth)) != 1 {
+		log.Printf("[AUDIT] Invalid authorization header for workflow queue confirm. Env: %s, org: %s", id, orgId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid authorization"}`))
+		return
+	}
+
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 100)
 	if err != nil {
 		log.Printf("[WARNING] (1) Failed reading body for workflowqueue: %s", err)
@@ -392,17 +431,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		*/
 	}
 
-	// This section is cloud custom for now
-	auth := request.Header.Get("Authorization")
-	if len(auth) == 0 {
-		//log.Printf("[AUDIT] No Authorization header set. Env: %s, org: %s", orgId, environment)
-		/*
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the auth header (only applicable for cloud for now)."}`)))
-			return
-		*/
-	}
-
 	ctx := shuffle.GetContext(request)
 	envs, err := shuffle.GetEnvironments(ctx, orgId)
 	if err != nil || len(envs) == 0 {
@@ -436,6 +464,22 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			log.Printf("[WARNING] Failed to find the environment(%s) in org(%s). Could cause with Failover test", environment, orgId)
 		}
+	}
+
+	auth := request.Header.Get("Authorization")
+	parsedAuth := auth
+	if strings.HasPrefix(auth, "Bearer ") {
+		authCheck := strings.Split(auth, " ")
+		if len(authCheck) == 2 {
+			parsedAuth = authCheck[1]
+		}
+	}
+
+	if env == nil || len(env.Auth) == 0 || len(parsedAuth) == 0 || subtle.ConstantTimeCompare([]byte(parsedAuth), []byte(env.Auth)) != 1 {
+		log.Printf("[AUDIT] Invalid authorization header for workflow queue. Env: %s, org: %s", environment, orgId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid authorization"}`))
+		return
 	}
 
 	// Handles failover control between Orborus'
@@ -3397,7 +3441,17 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	fs := memfs.New()
 	ctx := context.Background()
-	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
+	tmpUrl, err := url.Parse(tmpBody.URL)
+	if err != nil {
+		log.Printf("[WARNING] Failed to parse url for remote app download: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid git URL"}`))
+		return
+	}
+
+	host := strings.ToLower(tmpUrl.Hostname())
+
+	if tmpUrl.Scheme == "https" && (host == "github.com" || host == "gitlab.com" || host == "bitbucket.org" || host == "dev.azure.com") {
 		cloneOptions := &git.CloneOptions{
 			URL: tmpBody.URL,
 		}
