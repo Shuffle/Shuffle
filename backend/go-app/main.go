@@ -80,6 +80,11 @@ type retStruct struct {
 	Licensed         bool                          `json:"licensed"`
 	CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
 	AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
+
+	WorkflowBackup        bool  `json:"workflow_backup"`
+	AppBackup             bool  `json:"app_backup"`
+	WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
+	AppBackupUpdated      int64 `json:"app_backup_updated"`
 }
 
 type Contact struct {
@@ -3863,7 +3868,12 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		Licensed         bool                          `json:"licensed"`
 		CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
 		AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
-		CloudStats    *shuffle.ExecutionInfo        `json:"cloud_stats,omitempty"`
+		CloudStats       *shuffle.ExecutionInfo        `json:"cloud_stats,omitempty"`
+
+		WorkflowBackup        bool  `json:"workflow_backup"`
+		AppBackup             bool  `json:"app_backup"`
+		WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
+		AppBackupUpdated      int64 `json:"app_backup_updated"`
 	}
 
 	responseData := retStruct{}
@@ -3985,6 +3995,19 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		}
 	}
 
+	freshOrg, err := shuffle.GetOrg(ctx, org.Id)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting org %s to sync backup settings: %s", org.Id, err)
+		return nil
+	}
+
+	if freshOrg.SyncConfig.MergeSyncConfigBackup(responseData.WorkflowBackup, responseData.AppBackup, responseData.WorkflowBackupUpdated, responseData.AppBackupUpdated) {
+		err = shuffle.SetOrg(ctx, *freshOrg, freshOrg.Id)
+		if err != nil {
+			log.Printf("[WARNING] Failed persisting merged backup settings for org %s: %s", org.Id, err)
+		}
+	}
+
 	return nil
 }
 
@@ -3996,6 +4019,17 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	// Check if workflow backup is active
 	// Check if app backup is active
 	ctx := context.Background()
+
+	if freshOrg, err := shuffle.GetOrg(ctx, org.Id); err == nil {
+		org = *freshOrg
+	} else {
+		log.Printf("[WARNING] Failed refreshing org %s before sync, using possibly stale copy: %s", org.Id, err)
+	}
+
+	if len(org.Users) == 0 {
+		log.Printf("[ERROR] Org %s has no users, can't run backup job", org.Id)
+		return errors.New("Org has no users")
+	}
 
 	foundUser := org.Users[0]
 	for _, user := range org.Users {
@@ -4075,6 +4109,11 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 			backupJob.Stats = *info
 		}
 	}
+
+	backupJob.WorkflowBackup = org.SyncConfig.WorkflowBackup
+	backupJob.AppBackup = org.SyncConfig.AppBackup
+	backupJob.WorkflowBackupUpdated = org.SyncConfig.WorkflowBackupUpdated
+	backupJob.AppBackupUpdated = org.SyncConfig.AppBackupUpdated
 
 	backupJobData, err := json.Marshal(backupJob)
 	if err != nil {
@@ -5936,6 +5975,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		Apikey       string      `datastore:"apikey"`
 		Organization shuffle.Org `datastore:"organization"`
 		Disable      bool        `datastore:"disable"`
+
+		WorkflowBackup bool `json:"workflow_backup" datastore:"workflow_backup"`
+		AppBackup      bool `json:"app_backup" datastore:"app_backup"`
 	}
 
 	var tmpData ReturnData
@@ -6050,6 +6092,30 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// Everything below here is to SET UP CLOUD SYNC.
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
+		if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup || org.SyncConfig.AppBackup != tmpData.AppBackup {
+			now := time.Now().Unix()
+			if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup {
+				org.SyncConfig.WorkflowBackup = tmpData.WorkflowBackup
+				org.SyncConfig.WorkflowBackupUpdated = now
+			}
+			if org.SyncConfig.AppBackup != tmpData.AppBackup {
+				org.SyncConfig.AppBackup = tmpData.AppBackup
+				org.SyncConfig.AppBackupUpdated = now
+			}
+
+			err = shuffle.SetOrg(ctx, *org, org.Id)
+			if err != nil {
+				log.Printf("[ERROR] Failed updating sync settings for org %s: %s", org.Id, err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Failed saving sync settings"}`))
+				return
+			}
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(`{"success": true, "reason": "Successfully updated sync settings"}`))
+			return
+		}
+
 		log.Printf("[WARNING] Org %s is already syncing. Skip", org.Id)
 		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Your org is already syncing. Nothing to set up."}`)))
@@ -6060,10 +6126,20 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	type requestStruct struct {
 		ApiKey string `json:"api_key"`
+
+		WorkflowBackup        bool  `json:"workflow_backup"`
+		AppBackup             bool  `json:"app_backup"`
+		WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
+		AppBackupUpdated      int64 `json:"app_backup_updated"`
 	}
 
+	backupSettingsSetAt := time.Now().Unix()
 	requestData := requestStruct{
-		ApiKey: tmpData.Apikey,
+		ApiKey:                tmpData.Apikey,
+		WorkflowBackup:        tmpData.WorkflowBackup,
+		AppBackup:             tmpData.AppBackup,
+		WorkflowBackupUpdated: backupSettingsSetAt,
+		AppBackupUpdated:      backupSettingsSetAt,
 	}
 
 	b, err := json.Marshal(requestData)
@@ -6164,8 +6240,10 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
 
-		WorkflowBackup: true,
-		AppBackup:      true,
+		WorkflowBackup:        responseData.WorkflowBackup,
+		AppBackup:             responseData.AppBackup,
+		WorkflowBackupUpdated: responseData.WorkflowBackupUpdated,
+		AppBackupUpdated:      responseData.AppBackupUpdated,
 	}
 
 	if strings.Contains("https://", responseData.CloudSyncUrl) && strings.Contains("shuffler.io", responseData.CloudSyncUrl) {
