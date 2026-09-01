@@ -140,7 +140,7 @@ const svgSize = 24;
 const imagesize = 23;
 
 // Session-based modal visibility helper
-const AI_ANNOUNCEMENT_SESSION_KEY = "ai_announcement_session";
+const AI_ANNOUNCEMENT_SESSION_KEY = "release_banner_announcement";
 
 const getCookie = (name) => {
   if (typeof document === "undefined") return "";
@@ -1277,9 +1277,9 @@ const Workflows2 = (props) => {
     }
 
     React.useEffect(() => {
-        if (!isLoggedIn) return;
+        if (!isLoggedIn || !isCloud) return;
       
-        const bannerID = "banner_ai_announcement";
+        const bannerID = "release_banner_announcement";
         const cookieSession = getCookie("__session") || "";
         sessionRef.current = cookieSession;
       
@@ -1322,9 +1322,8 @@ const Workflows2 = (props) => {
         setAiAnnouncementModalOpen(false);
       }, []);
       
-
     const dismissAiAnnouncement = () => {
-        const bannerID = "banner_ai_announcement";
+        const bannerID = "release_banner_announcement";
 
         if (isCloud) {
             ReactGA.event({
@@ -1335,7 +1334,7 @@ const Workflows2 = (props) => {
         }
 
         handleCloseAiAnnouncement();
-
+        return //do not want this for release banner
         // Open Create Workflow modal (EditWorkflow) and temporarily highlight inputs/buttons
         try {
             setModalOpen(true)
@@ -1720,12 +1719,12 @@ const Workflows2 = (props) => {
         TransitionProps={{ timeout: 300 }}
         PaperProps={{
           style: {
-            background: theme.palette.DialogStyle.backgroundColor,
+            background: "#1a1a1a",
             minWidth: isMobile ? "90vw" : 780,
-            maxWidth: isMobile ? "90vw" : 860,
-            borderRadius: 8,
+            maxWidth: isMobile ? "95vw" : 900,
+            borderRadius: 12,
             overflow: "hidden",
-            transformOrigin: "center",
+            padding: 0,
           },
         }}
       >
@@ -1733,14 +1732,17 @@ const Workflows2 = (props) => {
           <IconButton
             style={{
               position: "absolute",
-              top: 10,
-              right: 10,
+              top: 8,
+              right: 8,
+              zIndex: 10,
+              color: "#fff",
+              backgroundColor: "rgba(0,0,0,0.4)",
             }}
             onClick={
                 () => {
                     if (isCloud) {
                         ReactGA.event({
-                            category: "AIGeneratedNewWorkflow",
+                            category: "ReleaseAnnouncement",
                             action: "close_announcement",
                             label: userdata?.active_org?.id || userdata?.id || "",
                         });
@@ -1753,153 +1755,35 @@ const Workflows2 = (props) => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent
-          sx={{
-            height: "380px",
-            overflow: "hidden",
-          }}
-        >
-          {/* Main two-column layout */}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              gap: { xs: 3, sm: 4 },
-              alignItems: "stretch",
-              p: { xs: 2.5, sm: 3 },
-              mt: 1,
-            }}
-          >
-            {/* Left: steps image (38%) */}
+        <DialogContent sx={{ padding: "0px !important", overflow: "hidden" }}>
+          <Box sx={{ position: "relative", lineHeight: 0 }}>
             <Box
+              component="img"
+              src="/icons/workflow-page/release_banner.png"
+              alt="Shuffle release announcement"
               sx={{
-                flex: { xs: "0 0 auto", sm: "0 0 38%" },
-                maxWidth: { xs: "100%", sm: "38%" },
+                width: "100%",
+                height: "auto",
+                display: "block",
               }}
-            >
-              <Box
-                component="img"
-                src="/aiGenerateWorkflowSteps.svg"
-                alt="AI workflow generation steps"
-                sx={{
-                  width: "100%",
-                  height: {xs: "auto", md: "80%"},
-                  marginLeft: -2,
-                  objectFit: "contain",
-                  borderRadius: "6px",
-                }}
-              />
-            </Box>
-
-            {/* Right: content (62%) */}
+            />
+            {/* Invisible clickable overlay on the "See what's releasing" button area */}
             <Box
+              component="a"
+              href="https://shuffler.io/articles"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={dismissAiAnnouncement}
               sx={{
-                flex: { xs: "1 1 auto", sm: "0 0 62%" },
-                maxWidth: { xs: "100%", sm: "62%" },
-                display: "flex",
-                flexDirection: "column",
-                gap: { xs: 1.5, sm: 2 },
-                py: 1.2,
+                position: "absolute",
+                bottom: "12%",
+                left: "5%",
+                width: "35%",
+                height: "16%",
+                cursor: "pointer",
+                zIndex: 5,
               }}
-            >
-              {/* NEW badge */}
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 1,
-                  py: 0.5,
-                  px: 1.25,
-                  border: "1px solid #2bc07e",
-                  color: "#f85a3e",
-                  background: "transparent",
-                  borderRadius: 999,
-                  width: "fit-content",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  mb: { xs: 0.5, sm: 1 },
-                }}
-              >
-                <AutoAwesomeIcon sx={{ fontSize: 16, color: "#2bc07e" }} />
-                <Box
-                  component="span"
-                  sx={{
-                    color: "#2bc07e",
-                  }}
-                >
-                  NEW
-                </Box>
-              </Box>
-
-              {/* Title */}
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  lineHeight: 1.25,
-                  fontFamily: theme.typography.fontFamily,
-                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
-                }}
-              >
-                Introducing AI Workflow Generation
-              </Typography>
-
-              {/* Body text */}
-              <Typography
-                variant="body2"
-                sx={{
-                  lineHeight: 1.7,
-                  fontFamily: theme.typography.fontFamily,
-                }}
-              >
-                Simply describe what you want your workflow to do, and our AI
-                will automatically generate the workflow for you.
-              </Typography>
-
-              <Typography
-                variant="body2"
-                sx={{ fontFamily: theme.typography.fontFamily }}
-              >
-                <strong>Quick start:</strong> Create Workflow → Describe → AI
-                Generate → Done.
-              </Typography>
-
-              <Typography
-                variant="body2"
-                sx={{ fontFamily: theme.typography.fontFamily }}
-              >
-                For self-hosted setups, see the{" "}
-                <Box
-                  component="a"
-                  href="/docs/AI#self-hosting-models"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: "#ff8544", textDecoration: "underline" }}
-                >
-                  setup docs
-                </Box>
-              </Typography>
-
-              {/* CTA button */}
-              <Box sx={{ display: "flex", mt: { xs: 2, sm: 2.5 } }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={dismissAiAnnouncement}
-                  disableElevation
-                  sx={{
-                    py: 1.1,
-                    px: 2.7,
-                    textTransform: "none",
-                    mt: 3,
-                    borderRadius: "8px",
-                    fontSize: 14,
-                    width: { xs: "100%", sm: "auto" },
-                  }}
-                >
-                  Let's try it out
-                </Button>
-              </Box>
-            </Box>
+            />
           </Box>
         </DialogContent>
       </Dialog>

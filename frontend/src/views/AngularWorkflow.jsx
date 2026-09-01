@@ -23,6 +23,7 @@ import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
 import useDebouncedCallback from "../utils/useDebouncedCallback.jsx";
+import { createStreamSender, startStream } from "../views/workflowStream.jsx";
 import {
   Zoom,
   Fade,
@@ -717,6 +718,15 @@ const AngularWorkflow = (defaultprops) => {
   streamStatusRef.current = streamStatus
 
   const canStream = () => isCloud && multiplayerEnabledRef.current && streamStatusRef.current !== "denied"
+
+  // Single stream sender for the component. canStream is checked inside sendOp
+  // on every call, so it auto-no-ops when multiplayer is off or denied.
+  const stream = createStreamSender(
+    streamUrl, props.match.params.key, workflow.org_id, userdata.id,
+    () => setSavingState(0),
+    () => setStreamStatus("denied"),
+    canStream,
+  )
 
   const configSnapshotRef = React.useRef(null)
 
@@ -3037,61 +3047,6 @@ const AngularWorkflow = (defaultprops) => {
     })
   };
 
-  const sendStreamRequest = (body) => {
-    if (!canStream()) {
-      return
-    }
-
-
-    // Session may be important here huh 
-    body.user_id = userdata.id
-
-    const url = `${streamUrl}/api/v1/workflows/${props.match.params.key}/stream`
-
-    var parsedbody = body
-    try {
-      parsedbody = JSON.stringify(body)
-    } catch (e) {
-      console.log("Error parsing body for stream: ", e)
-    }
-
-	var headers = {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    }
- 
-    if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
-      headers["Org-Id"] = workflow.org_id
-    }
-
-    fetch(url, {
-      method: "POST",
-      headers: headers,
-      body: parsedbody,
-      credentials: "include",
-    })
-      .then((response) => {
-        setSavingState(0);
-        if (response.status === 401 || response.status === 403) {
-          setStreamStatus("denied")
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        //console.log("Stream resp: ", responseJson)
-      })
-      .catch((error) => {
-        console.log("Stream send error: ", error.toString())
-      })
-  }
-
-  const sendConfigureOp = (action) => {
-    if (!action || !action.id) return
-    const { large_image, small_image, ...dataToSend } = action
-    const item = action.source && action.target ? "edge" : "node"
-    sendStreamRequest({ "item": item, "type": "configure", "id": action.id, "data": dataToSend })
-  }
 
   const saveWorkflow = (curworkflow, executionArgument, startNode, duplicationOrg, skip_popup) => {
     var success = false;
@@ -3482,11 +3437,7 @@ const AngularWorkflow = (defaultprops) => {
           setSavingState(1);
 
           // Notify other users that this workflow was saved so they can update their UI save state
-          sendStreamRequest({
-            "item": "workflow",
-            "type": "save",
-            "id": workflow.id,
-          })
+          stream.sendWorkflowSave(workflow.id)
 
           if (
             responseJson.new_id !== undefined &&
@@ -4401,19 +4352,63 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
-  const onChunkedResponseComplete = (result) => {
-    // Dont return until in 5 seconds without setTimeout
-  }
+  // Stream op dispatch
+  // Switch on "item:type" — same strings the backend sends over the wire.
+  const onStreamOpReceived = (op) => {
+    if (!op.item) return
 
-  const onChunkedResponseError = (err) => {
-    if (streamStatusRef.current === "denied") {
+    // Track user presence on node/edge ops
+    if ((op.item === "node" || op.item === "edge") && op.user_id) {
+      setConnectedUsers(prev => {
+        const found = prev.find(u => u.user_id === op.user_id)
+        if (found?.color) op.color = found.color
+        return prev.map(u => u.user_id === op.user_id ? { ...u, last_seen: Date.now() } : u)
+      })
+    }
+
+    // Presence ops have no "type" field — handle before the type-based switch.
+    if (op.item === "presence" && op.users) {
+      setConnectedUsers(op.users.map(u => ({
+        user_id: u.user_id,
+        user: u.username || "User",
+        last_seen: u.last_seen,
+        color: u.color || "#888888",
+      })))
       return
+    }
+
+    if (!op.type) return
+
+    switch (op.item + ":" + op.type) {
+
+      case "system:init_complete":
+        break
+
+      case "workflow:save":
+        setLastSaved(true)
+        setSavingState(1)
+        toast(`${op.username || "Someone"} saved the workflow`)
+        break
+
+      case "node:move":      moveNode(op);              break
+      case "node:select":    selectNode(op);            break
+      case "node:unselect":  unselectNode(op);          break
+      case "node:add":       addNode(op);               break
+      case "node:remove":    removeNodeStream(op);      break
+      case "node:configure": configureNodeStream(op);   break
+
+      case "edge:add":       addEdgeStream(op);         break
+      case "edge:remove":    removeEdgeStream(op);      break
+      case "edge:configure": configureEdgeStream(op);   break
+
+      default:
+        break
     }
   }
 
 
   const getUserColor = (chunkJson) => {
-    // color is attached to chunkJson in processChunkedResponse from the fresh connectedUsers state
+    // color is attached to the op in onStreamOpReceived from the fresh connectedUsers state
     if (chunkJson?.color) return chunkJson.color
     const found = connectedUsers.find(u => u.user_id === chunkJson?.user_id)
     return found?.color || "#888888"
@@ -4828,226 +4823,101 @@ const AngularWorkflow = (defaultprops) => {
     }, 300)
   }
 
-  const processChunkedResponse = async (response) => {
+  const configureNodeStream = (op) => {
+    if (!op.data) return;
+    const node = cy.getElementById(op.id);
+    if (node.length === 0) return;
 
-    var text = '';
-    var lineBuffer = '';
-    var reader = response.body.getReader()
-    var decoder = new TextDecoder();
-
-    const appendChunks = (result) => {
-      var chunk = decoder.decode(result.value || new Uint8Array, { stream: !result.done });
-
-      if (chunk === undefined || chunk === null) {
-        console.log("Chunk is undefined or null")
-      }
-
-      // Handle newline-delimited JSON (multiple ops in one chunk). A single op's line can
-      // arrive split across two separate reads - buffer across calls and only parse complete
-      // lines, holding back any trailing partial line for the next chunk. At stream end
-      // (result.done), flush the buffer too since there's no more data to complete it with.
-      lineBuffer += chunk
-      const parts = lineBuffer.split("\n")
-      lineBuffer = result.done ? '' : parts.pop()
-      const lines = parts.filter(l => l.trim().length > 0)
-      for (const line of lines) {
-      try {
-        var chunkJson = JSON.parse(line)
-
-        if (chunkJson.success === false) {
-          console.log("Chunk failed: ", chunkJson)
-          continue
-        }
-
-        if (chunkJson.sequence && chunkJson.sequence > streamSeqRef.current) {
-          streamSeqRef.current = chunkJson.sequence
-        }
-
-        if (chunkJson.item !== undefined && chunkJson.item !== null && chunkJson.item !== "") {
-          if (chunkJson.item === "system" && chunkJson.type === "init_complete") {
-          } else if (chunkJson.item === "presence" && chunkJson.users) {
-            setConnectedUsers(chunkJson.users.map(u => ({
-              user_id: u.user_id,
-              user: u.username || "User",
-              last_seen: u.last_seen,
-              color: u.color || "#888888",
-            })))
-          } else if (chunkJson.item === "workflow" && chunkJson.type === "save") {
-            setLastSaved(true)
-            setSavingState(1)
-            toast(`${chunkJson.username || "Someone"} saved the workflow`)
-          } else if (chunkJson.item === "node") {
-            if (chunkJson.user_id) {
-              setConnectedUsers(prev => {
-                const found = prev.find(u => u.user_id === chunkJson.user_id)
-                if (found?.color) chunkJson.color = found.color
-                return prev.map(u => u.user_id === chunkJson.user_id ? { ...u, last_seen: Date.now() } : u)
-              })
-            }
-            if (chunkJson.type === "move") {
-              moveNode(chunkJson)
-            } else if (chunkJson.type === "select") {
-              selectNode(chunkJson)
-            } else if (chunkJson.type === "unselect") {
-              unselectNode(chunkJson)
-            } else if (chunkJson.type === "add") {
-              addNode(chunkJson)
-            } else if (chunkJson.type === "remove") {
-              removeNodeStream(chunkJson)
-            } else if (chunkJson.type === "configure" && chunkJson.data) {
-              const node = cy.getElementById(chunkJson.id)
-              if (node.length > 0) {
-                const configData = typeof chunkJson.data === "string" ? JSON.parse(chunkJson.data) : chunkJson.data
-                if (configData.isStartNode === true && workflow.start !== chunkJson.id) {
-                  cy.nodes("[?isStartNode]").forEach((n) => n.data("isStartNode", false))
-                  workflow.start = chunkJson.id
-                  for (const action of workflow.actions) {
-                    action.isStartNode = action.id === chunkJson.id
-                  }
-                }
-                node.data(configData)
-                if (node.data("type") === "COMMENT" && configData.width && configData.height) {
-                  node.style({ width: configData.width, height: configData.height })
-                  const pos = node.position()
-                  repositionCommentHandles(chunkJson.id, pos.x, pos.y, configData.width, configData.height)
-                }
-                const idx = workflow.actions.findIndex(a => a.id === chunkJson.id)
-                if (idx !== -1) workflow.actions[idx] = { ...workflow.actions[idx], ...configData }
-                const cidx = workflow.comments ? workflow.comments.findIndex(c => c.id === chunkJson.id) : -1
-                if (cidx !== -1) workflow.comments[cidx] = { ...workflow.comments[cidx], ...configData }
-              }
-            }
-          } else if (chunkJson.item === "edge") {
-            if (chunkJson.user_id) {
-              setConnectedUsers(prev => prev.map(u => u.user_id === chunkJson.user_id ? { ...u, last_seen: Date.now() } : u))
-            }
-            if (chunkJson.type === "add" && chunkJson.data) {
-              try {
-                const edgeData = typeof chunkJson.data === "string" ? JSON.parse(chunkJson.data) : chunkJson.data
-                if (cy && edgeData.source && edgeData.target && cy?.getElementById(chunkJson.id).length === 0) {
-                  cy.add({ group: "edges", data: edgeData })
-                }
-              } catch (e) {
-                console.log("Failed to add edge from stream:", e)
-              }
-            } else if (chunkJson.type === "remove") {
-              if (cy) {
-                const edge = cy.getElementById(chunkJson.id)
-                if (edge.length > 0) edge.remove()
-              }
-            } else if (chunkJson.type === "configure" && chunkJson.data) {
-              const configData = typeof chunkJson.data === "string" ? JSON.parse(chunkJson.data) : chunkJson.data
-              const edge = cy.getElementById(chunkJson.id)
-              if (edge.length > 0) edge.data(configData)
-              const bidx = workflow.branches.findIndex(b => b.id === chunkJson.id)
-              if (bidx !== -1) workflow.branches[bidx] = { ...workflow.branches[bidx], ...configData }
-            }
-          }
-        }
-      } catch (e) {
-        continue
-      }
-      } // end for loop over lines
-
-
-      //data.push(chunk)
-      //setData(data)
-
-      //setUpdate(Math.random());
-
-      //console.log('got chunk of', chunk.length, 'bytes. Value: ', chunk)
-      text += chunk;
-      //console.log('text so far is', text.length, 'bytes
-      if (result.done) {
-        return text;
-      } else {
-        return readChunk()
+    const configData =
+      typeof op.data === "string" ? JSON.parse(op.data) : op.data;
+    if (configData.isStartNode === true && workflow.start !== op.id) {
+      cy.nodes("[?isStartNode]").forEach((n) => n.data("isStartNode", false));
+      workflow.start = op.id;
+      for (const action of workflow.actions) {
+        action.isStartNode = action.id === op.id;
       }
     }
-
-    const readChunk = () => {
-      return reader.read().then(appendChunks);
+    node.data(configData);
+    if (
+      node.data("type") === "COMMENT" &&
+      configData.width &&
+      configData.height
+    ) {
+      node.style({ width: configData.width, height: configData.height });
+      const pos = node.position();
+      repositionCommentHandles(
+        op.id,
+        pos.x,
+        pos.y,
+        configData.width,
+        configData.height,
+      );
     }
+    const idx = workflow.actions.findIndex((a) => a.id === op.id);
+    if (idx !== -1)
+      workflow.actions[idx] = { ...workflow.actions[idx], ...configData };
+    const cidx = workflow.comments
+      ? workflow.comments.findIndex((c) => c.id === op.id)
+      : -1;
+    if (cidx !== -1)
+      workflow.comments[cidx] = { ...workflow.comments[cidx], ...configData };
+  };
 
-    return readChunk();
-  }
-
-  async function fetchWithTimeout(resource, options = {}) {
-    const { timeout = 8000 } = options;
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-
-    const response = await fetch(resource, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-
-    return response;
-  }
-
-  const startWorkflowStream = async (workflowId) => {
-
-    if (!canStream()) {
-      return
+  const addEdgeStream = (op) => {
+    if (!op.data) return;
+    try {
+      const edgeData =
+        typeof op.data === "string" ? JSON.parse(op.data) : op.data;
+      if (
+        cy &&
+        edgeData.source &&
+        edgeData.target &&
+        cy.getElementById(op.id).length === 0
+      ) {
+        cy.add({ group: "edges", data: edgeData });
+      }
+    } catch (e) {
+      console.log("Failed to add edge from stream:", e);
     }
+  };
 
-    streamStartedRef.current = true
-    setStreamStatus("active")
-    const timeout = 60000
-    const baseUrl = `${streamUrl}/api/v1/workflows/${workflowId}/stream`
-    let consecutiveFailures = 0
-    while (true) {
-      if (streamStatusRef.current === "denied") {
-        console.log("Stream denied, breaking")
-        break
-      }
+  const removeEdgeStream = (op) => {
+    if (!cy) return;
+    const edge = cy.getElementById(op.id);
+    if (edge.length > 0) edge.remove();
+  };
 
-      if (consecutiveFailures >= 20) {
-        setStreamStatus("disconnected")
-        break
-      }
-
-      const url = `${baseUrl}?since=${streamSeqRef.current}`
-      const getHeaders = {
-        "Content-Type": "application/json",
-        Accept: "text/event-stream",
-      }
-      if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
-        getHeaders["Org-Id"] = workflow.org_id
-      }
-      await fetchWithTimeout(url, {
-        method: "GET",
-        headers: getHeaders,
-        credentials: "include",
-        timeout: timeout,
-      })
-        .then((response) => {
-          if (response.status === 401 || response.status === 403) {
-            setStreamStatus("denied")
-          }
-
-          if (!response.ok) throw new Error(`stream ${response.status}`)
-          return processChunkedResponse(response)
-        })
-        .then((result) => {
-          consecutiveFailures = 0
-          return onChunkedResponseComplete(result)
-        })
-        .catch(async (error) => {
-          consecutiveFailures++
-          await new Promise(r => setTimeout(r, 3000))
-          return onChunkedResponseError(error)
-        })
-    }
-  }
+  const configureEdgeStream = (op) => {
+    // This handles the condition changes too
+    if (!op.data) return;
+    const configData =
+      typeof op.data === "string" ? JSON.parse(op.data) : op.data;
+    const edge = cy.getElementById(op.id);
+    if (edge.length > 0) edge.data(configData);
+    const bidx = workflow.branches.findIndex((b) => b.id === op.id);
+    if (bidx !== -1)
+      workflow.branches[bidx] = { ...workflow.branches[bidx], ...configData };
+  };
 
   React.useEffect(() => {
     if (multiplayerEnabled && cy && !streamStartedRef.current) {
-      startWorkflowStream(props.match.params.key)
+      if (!canStream()) return;
+      streamStartedRef.current = true;
+
+      startStream(streamUrl, props.match.params.key, workflow.org_id, {
+        onOp: onStreamOpReceived,
+        onSeqUpdate: (seq) => {
+          streamSeqRef.current = seq;
+        },
+        onStatusChange: (status) => {
+          setStreamStatus(status);
+        },
+        onError: (err) => {
+          console.log("Stream error: ", err);
+        },
+      });
     }
-  }, [multiplayerEnabled, cy])
+  }, [multiplayerEnabled, cy]);
 
   const [usedSubflowApps, setUsedSubflowApps] = React.useState([]);
 
@@ -5789,7 +5659,11 @@ const AngularWorkflow = (defaultprops) => {
 
     //setSubworkflow({})
     if (nodedata?.id && JSON.stringify(nodedata) !== configSnapshotRef.current) {
-      sendConfigureOp(nodedata)
+      if (nodedata.source && nodedata.target) {
+        stream.sendEdgeConfigure(nodedata.id, nodedata)
+      } else {
+        stream.sendNodeConfigure(nodedata.id, nodedata)
+      }
     }
     configSnapshotRef.current = null
     ReactDOM.unstable_batchedUpdates(() => {
@@ -5814,11 +5688,7 @@ const AngularWorkflow = (defaultprops) => {
       });
     })
 
-    sendStreamRequest({
-      "item": "node",
-      "type": "unselect",
-      "id": workflow.id,
-    })
+    stream.sendNodeUnselect(workflow.id)
     //}, 150)
   };
 
@@ -5924,15 +5794,7 @@ const AngularWorkflow = (defaultprops) => {
     const nodedata = event.target.data()
 
     if ((!nodedata.decorator || nodedata.type === "COMMENT") && !nodedata.isDescriptor && nodedata.type !== "RESIZE-HANDLE") {
-      sendStreamRequest({
-        "item": "node",
-        "type": "move",
-        "id": nodedata.id,
-        "location": {
-          "x": event.target.position("x"),
-          "y": event.target.position("y"),
-        }
-      })
+      stream.sendNodeMove(nodedata.id, event.target.position("x"), event.target.position("y"))
     }
 
     if (nodedata.id === selectedAction.id) {
@@ -7017,12 +6879,7 @@ const AngularWorkflow = (defaultprops) => {
             setLastSaved(false);
             parentNode.data("isStartNode", true);
 
-            sendStreamRequest({
-              "item": "node",
-              "type": "configure",
-              "id": parentNode.data("id"),
-              "data": { "isStartNode": true },
-            })
+            stream.sendSetStartNode(parentNode.data("id"))
           }
 
           //event.target.unselect();
@@ -7092,13 +6949,7 @@ const AngularWorkflow = (defaultprops) => {
 
             {
               const { large_image, small_image, ...streamNodeData } = newNodeData
-              sendStreamRequest({
-                "item": "node",
-                "type": "add",
-                "id": newNodeData.id,
-                "data": streamNodeData,
-                "location": { "x": newNodeData.position.x, "y": newNodeData.position.y },
-              })
+              stream.sendNodeAdd(newNodeData.id, streamNodeData, { "x": newNodeData.position.x, "y": newNodeData.position.y })
             }
 
             const sourcebranches = workflow.branches.filter((foundbranch) => foundbranch.source_id === parentNode.data("id"))
@@ -7120,12 +6971,7 @@ const AngularWorkflow = (defaultprops) => {
                 group: "edges",
                 data: newbranch,
               })
-              sendStreamRequest({
-                "item": "edge",
-                "type": "add",
-                "id": newbranch.id,
-                "data": { source: newbranch.source, target: newbranch.target, id: newbranch.id },
-              })
+              stream.sendEdgeAdd(newbranch.id, newbranch.source, newbranch.target)
             }
 
             for (var destinationBranchesKey in destinationbranches) {
@@ -7151,12 +6997,7 @@ const AngularWorkflow = (defaultprops) => {
                 group: "edges",
                 data: newbranch,
               })
-              sendStreamRequest({
-                "item": "edge",
-                "type": "add",
-                "id": newbranch.id,
-                "data": { source: newbranch.source, target: newbranch.target, id: newbranch.id },
-              })
+              stream.sendEdgeAdd(newbranch.id, newbranch.source, newbranch.target)
             }
 
             //event.target.unselect();
@@ -7843,15 +7684,7 @@ const AngularWorkflow = (defaultprops) => {
         "attachedTo": "",
       });
 
-      sendStreamRequest({
-        "item": "node",
-        "type": "select",
-        "id": data.id,
-        "location": {
-          "x": event.target.position("x"),
-          "y": event.target.position("y"),
-        }
-      })
+      stream.sendNodeSelect(data.id, event.target.position("x"), event.target.position("y"))
 
     })
   }
@@ -8540,12 +8373,7 @@ const AngularWorkflow = (defaultprops) => {
       workflow.branches.push(newbranch);
       setWorkflow(workflow);
 
-      sendStreamRequest({
-        "item": "edge",
-        "type": "add",
-        "id": edge.id,
-        "data": { source: edge.source, target: edge.target, id: edge.id },
-      })
+      stream.sendEdgeAdd(edge.id, edge.source, edge.target)
     }
 
     history.push({
@@ -8608,16 +8436,10 @@ const AngularWorkflow = (defaultprops) => {
       const zoom = cy.zoom()
       const pan = cy.pan()
       const pos = node.position()
-      sendStreamRequest({
-        "item": "node",
-        "type": "add",
-        "id": nodeId,
-        "data": newdata,
-        "location": {
+      stream.sendNodeAdd(nodeId, newdata, {
           "x": nodedata.type === "COMMENT" ? pos.x : (nodedata.position.x - pan.x) / zoom,
           "y": nodedata.type === "COMMENT" ? pos.y : (nodedata.position.y - pan.y) / zoom,
-        },
-      })
+        })
     }
 
     if (nodedata.type === "ACTION") {
@@ -8758,11 +8580,7 @@ const AngularWorkflow = (defaultprops) => {
 
     if (!edge.data("streamRemoveSent") && !edge.data("readded")) {
       edge.data("streamRemoveSent", true)
-      sendStreamRequest({
-        "item": "edge",
-        "type": "remove",
-        "id": edge.data("id"),
-      })
+      stream.sendEdgeRemove(edge.data("id"))
     }
 
     // Check if the source is trigger and can start
@@ -8842,11 +8660,7 @@ const AngularWorkflow = (defaultprops) => {
 
     if ((data.decorator !== true || data.type === "COMMENT") && data.attachedTo === undefined && data.type !== "RESIZE-HANDLE" && !data.streamRemoveSent && (data.app_name !== undefined || data.type === "COMMENT")) {
       node.data("streamRemoveSent", true)
-      sendStreamRequest({
-        "item": "node",
-        "type": "remove",
-        "id": data.id,
-      })
+      stream.sendNodeRemove(data.id)
     }
 
     workflow.actions = workflow.actions.filter((a) => a.id !== data.id);
@@ -21600,7 +21414,13 @@ const AngularWorkflow = (defaultprops) => {
 
     const reconnect = () => {
       setStreamStatus("active")
-      startWorkflowStream(workflow.id)
+      streamStartedRef.current = true
+      startStream(streamUrl, workflow.id, workflow.org_id, {
+        onOp: onStreamOpReceived,
+        onSeqUpdate: (seq) => { streamSeqRef.current = seq },
+        onStatusChange: (status) => { setStreamStatus(status) },
+        onError: (err) => { console.log("Stream error: ", err) },
+      })
     }
 
     const tightHeaderWidth = (bodyWidth - leftBarSize) < 1200
@@ -22713,12 +22533,7 @@ const AngularWorkflow = (defaultprops) => {
           width: newWidth,
           height: newHeight,
         }));
-        sendStreamRequest({
-          "item": "node",
-          "type": "configure",
-          "id": data.attachedTo,
-          "data": { ...parentNode.data(), width: newWidth, height: newHeight },
-        })
+        stream.sendNodeConfigure(data.attachedTo, { ...parentNode.data(), width: newWidth, height: newHeight })
       }
     });
 
