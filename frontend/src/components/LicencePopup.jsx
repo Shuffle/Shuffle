@@ -33,6 +33,8 @@ import {
   Draw as DrawIcon,
   Close as CloseIcon,
   Done as DoneIcon,
+  Delete as DeleteIcon,
+  InfoOutlined as InfoOutlinedIcon,
 } from "@mui/icons-material";
 
 // This is the main component which shows the cards on Billing & Stats tab
@@ -51,11 +53,15 @@ const LicencePopup = (props) => {
     monthlyAllSuborgExecutions,
     selectedOrganization,
     setSelectedOrganization,
-    isCloud,
     features,
     handleGetOrg,
     licensePopup = false,
   } = props;
+
+  	const isCloud =
+		window.location.host === "localhost:3002" ||
+		window.location.host === "shuffler.io" || 
+		window.location.host === "sandbox.shuffler.io";
   //const alert = useAlert();
   let navigate = useNavigate();
   const [shuffleVariant, setShuffleVariant] = useState(isCloud ? 0 : 1);
@@ -154,6 +160,9 @@ const LicencePopup = (props) => {
   };
 
   const userInScalePlan = userdata?.app_execution_limit > 2000;
+  const hasOnpremSub = (selectedOrganization?.subscriptions || []).some(
+    (s) => s.name?.toLowerCase().includes("onprem") && s.active
+  );
 
   // These functions are being used for the dynamic features from the orgSyncFeatures
   // Add this function to format the limit value
@@ -303,7 +312,15 @@ const LicencePopup = (props) => {
           : `${formattedLimit} Branding${
               parseInt(formattedLimit) > 1 ? "s" : ""
             }`;
-      }
+      },
+      agent_tokens: (limit) => {
+        const formattedLimit = formatLimit(limit);
+        return formattedLimit === "Unlimited"
+          ? "Unlimited Agent Tokens"
+          : `${formattedLimit} Agent Token${
+              parseInt(formattedLimit) > 1 ? "s" : ""
+            }`;
+      },
     };
 
     try {
@@ -330,7 +347,7 @@ const LicencePopup = (props) => {
       body: JSON.stringify({
         org_id: selectedOrganization.id,
         editing: "subscription_update",
-        subscription_index: 0,
+        subscription_index: subscription.id,
         subscription: subscription,
       }),
       mode: "cors",
@@ -554,7 +571,7 @@ const LicencePopup = (props) => {
         const payload = {
           org_id: selectedOrganization.id,
           editing: "subscription_update",
-          subscription_index: 0,
+          subscription_index: subscription.id,
           subscription: {
             ...form,
             // Ensure backend gets array of features
@@ -664,22 +681,26 @@ const LicencePopup = (props) => {
               label="Active"
             />
 
-            <TextField
-              label="Support level"
-              value={form.support_level}
-              onChange={(e) =>
-                setForm({ ...form, support_level: e.target.value })
-              }
-              fullWidth
-            />
-            <TextField
-              label="Recurrence (string)"
-              value={form.recurrence}
-              onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
-              fullWidth
-              error={!!errors.recurrence}
-              helperText={errors.recurrence}
-            />
+            {false && (
+              <TextField
+                label="Support level"
+                value={form.support_level}
+                onChange={(e) =>
+                  setForm({ ...form, support_level: e.target.value })
+                }
+                fullWidth
+              />
+            )}
+            {false && (
+              <TextField
+                label="Recurrence (string)"
+                value={form.recurrence}
+                onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
+                fullWidth
+                error={!!errors.recurrence}
+                helperText={errors.recurrence}
+              />
+            )}
 
             <TextField
               label="Amount"
@@ -694,6 +715,15 @@ const LicencePopup = (props) => {
               fullWidth
               error={!!errors.amount}
               helperText={errors.amount || "0 for Free"}
+            />
+
+            <TextField
+              label="Stripe Sub ID"
+              value={form.reference || ""}
+              onChange={(e) => setForm({ ...form, reference: e.target.value })}
+              fullWidth
+              placeholder="sub_1234567890abcdef"
+              helperText="Stripe subscription reference ID"
             />
 
             <TextField
@@ -734,85 +764,87 @@ const LicencePopup = (props) => {
               />
             )}
 
-            <div style={{ gridColumn: "1 / span 2" }}>
-              <Typography
-                variant="body2"
-                color="textSecondary"
-                style={{ marginBottom: 6 }}
-              >
-                Features
-              </Typography>
-              <TextField
-                value={featuresMarkdown}
-                onChange={(e) => setFeaturesMarkdown(e.target.value)}
-                placeholder={"- Feature\n  - Sub feature"}
-                multiline
-                minRows={8}
-                fullWidth
-                inputRef={featuresInputRef}
-                onKeyDown={handleFeaturesKeyDown}
-              />
-              <div style={{ marginTop: 10 }}>
+            {false && (
+              <div style={{ gridColumn: "1 / span 2" }}>
                 <Typography
                   variant="body2"
                   color="textSecondary"
-                  style={{ marginBottom: 4 }}
+                  style={{ marginBottom: 6 }}
                 >
-                  Preview
+                  Features
                 </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    border: "1px solid #3a3a3a",
-                    width: 350,
-                    padding: 12,
-                    borderRadius: 4,
-                  }}
-                >
-                  {markdownToFeatures(featuresMarkdown).map((feat, idx) => {
-                    const depth = (feat.match(/^(\s+)-\s+/) || [])[1]
-                      ? Math.min(
-                          3,
-                          Math.floor(
-                            (feat.match(/^(\s+)-\s+/) || [])[1].length / 2
+                <TextField
+                  value={featuresMarkdown}
+                  onChange={(e) => setFeaturesMarkdown(e.target.value)}
+                  placeholder={"- Feature\n  - Sub feature"}
+                  multiline
+                  minRows={8}
+                  fullWidth
+                  inputRef={featuresInputRef}
+                  onKeyDown={handleFeaturesKeyDown}
+                />
+                <div style={{ marginTop: 10 }}>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    style={{ marginBottom: 4 }}
+                  >
+                    Preview
+                  </Typography>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      border: "1px solid #3a3a3a",
+                      width: 350,
+                      padding: 12,
+                      borderRadius: 4,
+                    }}
+                  >
+                    {markdownToFeatures(featuresMarkdown).map((feat, idx) => {
+                      const depth = (feat.match(/^(\s+)-\s+/) || [])[1]
+                        ? Math.min(
+                            3,
+                            Math.floor(
+                              (feat.match(/^(\s+)-\s+/) || [])[1].length / 2
+                            )
                           )
-                        )
-                      : 0;
-                    const label = String(feat).replace(/^\s*-\s+/, "");
-                    return (
-                      <div
-                        key={`md_feat_${idx}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          marginLeft: depth * 16,
-                        }}
-                      >
-                        {depth === 0 ? (
-                          <DoneIcon
-                            style={{ color: "#9be39b", fontSize: 18 }}
-                          />
-                        ) : (
-                          <span
-                            style={{
-                              width: 6,
-                              height: 6,
-                              background: "#9be39b",
-                              borderRadius: 999,
-                              display: "inline-block",
-                            }}
-                          />
-                        )}
-                        <Typography variant="body2">{label}</Typography>
-                      </div>
-                    );
-                  })}
+                        : 0;
+                      const label = String(feat).replace(/^\s*-\s+/, "");
+                      return (
+                        <div
+                          key={`md_feat_${idx}`}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginLeft: depth * 16,
+                          }}
+                        >
+                          {depth === 0 ? (
+                            <DoneIcon
+                              style={{ color: "#9be39b", fontSize: 18 }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                background: "#9be39b",
+                                borderRadius: 999,
+                                display: "inline-block",
+                              }}
+                            />
+                          )}
+                          <Typography variant="body2">{label}</Typography>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
         <DialogActions
@@ -835,6 +867,38 @@ const LicencePopup = (props) => {
           <Button onClick={handleCancel} disabled={saving} color="primary">
             Cancel
           </Button>
+          <IconButton
+            disabled={saving}
+            style={{ marginLeft: "auto", color: "#ff5252" }}
+            onClick={() => {
+              if (!window.confirm("Delete this subscription?")) return;
+              setSaving(true);
+              fetch(`${globalUrl}/api/v1/orgs/${selectedOrganization.id}`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  org_id: selectedOrganization.id,
+                  editing: "subscription_delete",
+                  subscription_index: subscription.id,
+                }),
+              })
+                .then((r) => r.json())
+                .then((data) => {
+                  if (data?.success !== false) {
+                    toast.success("Subscription deleted");
+                    onClose?.();
+                    onSaved?.(null);
+                  } else {
+                    toast.error("Failed to delete subscription");
+                  }
+                })
+                .catch(() => toast.error("Failed to delete subscription"))
+                .finally(() => setSaving(false));
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
         </DialogActions>
       </Dialog>
     );
@@ -917,6 +981,11 @@ const LicencePopup = (props) => {
       subscription,
       isLoading = false,
     } = props;
+
+    const isCloud =
+		window.location.host === "localhost:3002" ||
+		window.location.host === "shuffler.io" || 
+		window.location.host === "sandbox.shuffler.io";
 
     const [signatureOpen, setSignatureOpen] = React.useState(false);
     const [tosChecked, setTosChecked] = React.useState(
@@ -1005,12 +1074,28 @@ const LicencePopup = (props) => {
 
     const finalFeatures = mergeUniqueFeatures(localSub.features, extraFeatures);
 
+    const orgAppLimit = selectedOrganization?.sync_features?.app_executions?.limit || 0;
+    const orgOnPremAppLimit = selectedOrganization?.sync_features?.onprem_app_executions?.limit || 0;
+
     const usedAppRuns = Number(monthlyAppRunsParent) + Number(monthlyAllSuborgExecutions);
-    const appRunsLimit = userdata?.app_execution_limit || selectedOrganization?.sync_features?.app_executions?.limit;
+    const annualGroupingActive = selectedOrganization?.sync_features?.annual_app_runs_grouping?.active === true;
+    const monthlyAppRunsLimit = userdata?.app_execution_limit || selectedOrganization?.sync_features?.app_executions?.limit;
+    // Annual plans pool 12 months of app runs into a single quota instead of resetting monthly
+    const appRunsLimit = annualGroupingActive ? monthlyAppRunsLimit * 12 : monthlyAppRunsLimit;
     const appRunsPct =
       appRunsLimit > 0
         ? Math.min(100, Math.round((usedAppRuns / appRunsLimit) * 100))
         : 0;
+    // Hard limit is 1000% (10x) of the soft/license limit
+    const appRunsHardLimit = appRunsLimit * 10;
+    const appRunsHardPct =
+      appRunsHardLimit > 0
+        ? Math.min(100, Math.round((usedAppRuns / appRunsHardLimit) * 100))
+        : 0;
+    const subName = (localSub?.name || "").toLowerCase();
+    const isNearingLimit =
+      appRunsPct >= 80 &&
+      (subName.includes("enterprise") || subName.includes("business"));
 
     const [showAllFeatures, setShowAllFeatures] = useState(false);
 
@@ -1042,6 +1127,17 @@ const LicencePopup = (props) => {
         : localSub?.currency + localSub?.amount
       : "Free";
 
+    const calculateAppRunsFromPrice = (amount) => {
+      const price = parseInt(amount) || 0;
+      if (price === 0) return 2000; // Free plan
+      
+      // Calculate Stripe quantity from price ($32 per unit)
+      const stripeQuantity = Math.max(1, Math.round(price / 32));
+      
+      // Backend logic: (quantity * 10000) + 2000
+      return (stripeQuantity * 10000) + 2000;
+    };
+
     if (typeof window === "undefined" || window.location === undefined) {
       return null;
     }
@@ -1060,11 +1156,11 @@ const LicencePopup = (props) => {
           globalUrl={globalUrl}
           selectedOrganization={selectedOrganization}
           onSaved={(updated) => {
-            // Update local card immediately for responsive UI
-            setLocalSub((prev) => ({ ...prev, ...updated }));
-            // Refresh organization data from server
             if (typeof handleGetOrg === "function") {
               handleGetOrg(selectedOrganization.id);
+            }
+            if (updated) {
+              setLocalSub((prev) => ({ ...prev, ...updated }));
             }
           }}
         />
@@ -1177,6 +1273,8 @@ const LicencePopup = (props) => {
           </DialogContent>
         </Dialog>
 
+        {/* Old card UI - kept for reference */}
+        {false && (
         <div
           style={{
             backgroundColor: theme.palette.cardBackgroundColor,
@@ -1252,7 +1350,7 @@ const LicencePopup = (props) => {
                     </IconButton>
                   </Tooltip>
                 )}
-                {isPaidPlan ? (
+                {(isPaidPlan || localSub?.amount === "0") ? (
                   <div
                     style={{
                       display: "flex",
@@ -1260,7 +1358,7 @@ const LicencePopup = (props) => {
                       gap: 8,
                       padding: "4px 10px",
                       borderRadius: 20,
-                      background: !isCancelled
+                      background: localSub?.active
                         ? "rgba(43, 192, 126, 0.1)"
                         : "rgba(255, 82, 82, 0.1)",
                     }}
@@ -1269,7 +1367,7 @@ const LicencePopup = (props) => {
                       style={{
                         width: 8,
                         height: 8,
-                        background: !isCancelled ? "#2BC07E" : "#FD4C62",
+                        background: localSub?.active ? "#2BC07E" : "#FD4C62",
                         borderRadius: 999,
                       }}
                     />
@@ -1277,10 +1375,10 @@ const LicencePopup = (props) => {
                       variant="caption"
                       style={{
                         opacity: 0.9,
-                        color: !isCancelled ? "#2BC07E" : "#FD4C62",
+                        color: localSub?.active ? "#2BC07E" : "#FD4C62",
                       }}
                     >
-                      {!isCancelled ? "Active" : "Inactive"}
+                      {localSub?.active ? "Active" : "Inactive"}
                     </Typography>
                   </div>
                 ) : null}
@@ -1336,21 +1434,37 @@ const LicencePopup = (props) => {
             ) : null}
 
             {localSub.cancellationdate !== 0 ? (
-              <Typography
-                variant="caption"
-                color="textSecondary"
-                style={{ marginTop: 2 }}
-              >
-                {`Cancelled on ${new Date(
-                  (localSub.cancellationdate || localSub.CancellationDate) *
-                    1000
-                ).toLocaleDateString(undefined, {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}`}
-              </Typography>
+                <Typography
+                  variant="caption"
+                  color="textSecondary"
+                  style={{ marginTop: 2 }}
+                >
+                  {`Cancelled on ${new Date(
+                    (localSub.cancellationdate || localSub.CancellationDate) *
+                      1000
+                  ).toLocaleDateString(undefined, {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}`}
+                </Typography>
             ) : null}
+
+            {localSub.amount !== "0" && (
+            <Typography
+                  variant="caption"
+                  color="textSecondary"
+                  style={{ marginTop: 2 }}
+                >
+                  {`Purchased on ${new Date(
+                    (localSub.startdate || localSub.Startdate) * 1000
+                  ).toLocaleDateString(undefined, {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}`}
+            </Typography>
+            )}
 
             <Divider
               style={{
@@ -1364,39 +1478,50 @@ const LicencePopup = (props) => {
                 (isCloud || (!isCloud && selectedOrganization.cloud_sync)) && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <Typography variant="body2" color="textSecondary" style={{}}>
-                  App Runs
+                  {localSub?.active ? "App Runs" : "App Runs included in plan"}
                 </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
+                {localSub?.active ? (
+                  // Active plan - show current usage and progress bar
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    <Typography
+                      variant="body1"
+                      style={{ minWidth: 140, fontWeight: 600 }}
+                    >
+                      {usedAppRuns?.toLocaleString?.() || usedAppRuns} of{" "}
+                      {appRunsLimit?.toLocaleString?.() || appRunsLimit}
+                    </Typography>
+                    <Box sx={{ width: "100%" }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={appRunsPct}
+                        sx={{
+                          height: 6,
+                          borderRadius: 6,
+                          backgroundColor: "#3a3a3a",
+                          "& .MuiLinearProgress-bar": {
+                            backgroundColor: "#ff8544",
+                            borderRadius: 6,
+                          },
+                        }}
+                      />
+                    </Box>
+                  </div>
+                ) : (
+                  // Inactive plan - show only the plan's app runs capacity
                   <Typography
                     variant="body1"
-                    style={{ minWidth: 140, fontWeight: 600 }}
+                    style={{ minWidth: 140, fontWeight: 600, fontSize: 18 }}
                   >
-                    {usedAppRuns?.toLocaleString?.() || usedAppRuns} of{" "}
-                    {appRunsLimit?.toLocaleString?.() || appRunsLimit}
+                    {calculateAppRunsFromPrice(localSub.amount)?.toLocaleString?.() || calculateAppRunsFromPrice(localSub.amount)}
                   </Typography>
-                  <Box sx={{ width: "100%" }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={appRunsPct}
-                      sx={{
-                        height: 6,
-                        borderRadius: 6,
-                        backgroundColor: "#3a3a3a",
-                        "& .MuiLinearProgress-bar": {
-                          backgroundColor: "#ff8544",
-                          borderRadius: 6,
-                        },
-                      }}
-                    />
-                  </Box>
-                </div>
+                )}
               </div>
               )
             }
@@ -1480,7 +1605,6 @@ const LicencePopup = (props) => {
               }}
             >
               {isCloud &&
-              localSub.name.toLowerCase().includes("scale") &&
               localSub?.reference &&
               localSub.reference.length > 0 ? (
                 <Button
@@ -1490,8 +1614,11 @@ const LicencePopup = (props) => {
                   onClick={() => {
                     const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}/manage_subscription`;
                     fetch(url, {
-                      method: "GET",
+                      method: "POST",
                       credentials: "include",
+                      body: JSON.stringify({
+                        subscription_id: localSub.reference
+                      }),
                       headers: { "Content-Type": "application/json" },
                     })
                       .then((r) => r.json())
@@ -1558,6 +1685,380 @@ const LicencePopup = (props) => {
             </div>
           </div>
         </div>
+        )} {/* end old card */}
+
+        {/* New card UI */}
+        <div
+          style={{
+            backgroundColor: theme.palette.cardBackgroundColor,
+            padding: "20px",
+            borderRadius: theme.palette?.borderRadius,
+            border: "1px solid #3a3a3a",
+            minWidth: 370,
+            // maxWidth: 370,
+            // width: 370,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Typography variant="caption" style={{ color: "#ff8544", fontWeight: 700, letterSpacing: 1 }}>
+              SHUFFLE
+            </Typography>
+            {/* Active / Inactive badge — only when multiple subs exist */}
+            {selectedOrganization?.subscriptions?.length > 1 && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "3px 10px",
+                borderRadius: 20,
+                background: localSub?.active ? "rgba(43, 192, 126, 0.1)" : "rgba(255, 82, 82, 0.1)",
+              }}>
+                <span style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: localSub?.active ? "#2BC07E" : "#FD4C62",
+                }} />
+                <Typography variant="caption" style={{ color: localSub?.active ? "#2BC07E" : "#FD4C62" }}>
+                  {localSub?.active ? "Active" : "Inactive"}
+                </Typography>
+              </div>
+            )}
+          </div>
+          <Typography variant="h6" style={{ fontWeight: 700, textTransform: "uppercase", lineHeight: 1.2, marginTop: 2, textWrap: "nowrap"}}>
+            {localSub?.name}
+          </Typography>
+          {localSub?.name?.toLowerCase().includes("scale") && localSub?.name?.toLowerCase().includes("trial") ? (
+            <Typography variant="caption" style={{ color: "#ff8544", fontWeight: 600, marginTop: 4, letterSpacing: 0.5 }}>
+              App runs reset on the 1st of every month
+            </Typography>
+          ) : (localSub.startdate || localSub.enddate) && (
+            <Typography variant="caption" style={{ color: "#ff8544", fontWeight: 600, marginTop: 4, letterSpacing: 0.5 }}>
+              PERIOD: {new Date((localSub.startdate || localSub.Startdate) * 1000).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }).toUpperCase()} – {new Date((localSub.enddate || localSub.Enddate) * 1000).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
+            </Typography>
+          )}
+          {isCancelled && (
+            <Typography variant="caption" style={{ color: "#FD4C62", marginTop: 2 }}>
+              {`Cancelled on ${new Date((localSub.cancellationdate || localSub.CancellationDate) * 1000).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}`}
+            </Typography>
+          )}
+
+          <Divider style={{ marginTop: 12, marginBottom: 12, borderColor: "#2f2f2f" }} />
+
+          {/* App Runs */}
+          {localSub?.name?.toLowerCase().includes("onprem") ? (
+            <div style={{ marginBottom: 14 }}>
+              <Typography variant="body2" style={{ fontWeight: 600, marginBottom: 4 }}>
+                ONPREM APP RUNS:{" "}
+                <span style={{ fontWeight: 400 }}>
+                  {((isCloud ? (annualGroupingActive ? (orgOnPremAppLimit * 12) : orgOnPremAppLimit) : (annualGroupingActive ? (orgAppLimit * 12) : orgAppLimit)) || 0).toLocaleString()}
+                </span>
+              </Typography>
+            </div>
+          ) : (isCloud || (!isCloud && selectedOrganization.cloud_sync)) && (
+            <div style={{ marginBottom: 14 }}>
+              {localSub?.active && isNearingLimit ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                    <Typography variant="body2" style={{ fontWeight: 600 }}>
+                      App Runs - Soft Limit:{" "}
+                      <span style={{ fontWeight: 400 }}>
+                        {(usedAppRuns || 0).toLocaleString()} / {(appRunsLimit || 0).toLocaleString()}
+                      </span>
+                    </Typography>
+                    <Tooltip
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            backgroundColor: "rgba(33, 33, 33, 1)",
+                            color: "rgba(241, 241, 241, 1)",
+                            fontSize: 14,
+                            padding: 2,
+                            border: "1px solid rgba(73, 73, 73, 1)",
+                            fontFamily: theme?.typography?.fontFamily,
+                          }
+                        },
+                      }}
+                      arrow
+                      title="Soft limit is based on your license, and what you paid for. Your automations will keep running even if you cross this soft limit."
+                      placement="top"
+                    >
+                      <InfoOutlinedIcon style={{ fontSize: 16, color: "#9a9a9a", cursor: "pointer" }} />
+                    </Tooltip>
+                  </div>
+                  <LinearProgress
+                    variant="determinate"
+                    value={appRunsPct}
+                    sx={{
+                      height: 6,
+                      borderRadius: 6,
+                      backgroundColor: "#3a3a3a",
+                      "& .MuiLinearProgress-bar": { backgroundColor: "#ff8544", borderRadius: 6 },
+                      marginBottom: "14px",
+                    }}
+                  />
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                    <Typography variant="body2" style={{ fontWeight: 600 }}>
+                      App Runs - Hard Limit:{" "}
+                      <span style={{ fontWeight: 400 }}>
+                        {(usedAppRuns || 0).toLocaleString()} / {(appRunsHardLimit || 0).toLocaleString()}
+                      </span>
+                    </Typography>
+                    <Tooltip
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            backgroundColor: "rgba(33, 33, 33, 1)",
+                            color: "rgba(241, 241, 241, 1)",
+                            fontSize: 14,
+                            padding: 2,
+                            border: "1px solid rgba(73, 73, 73, 1)",
+                            fontFamily: theme?.typography?.fontFamily,
+                          }
+                        },
+                      }}
+                      arrow
+                      title="Hard limit is 1000% of your license's app run limit. It is to ensure your automations run smoothly even when you go over your license limit. You will be billed at the same rate for overage app-runs for 30 days."
+                      placement="top"
+                    >
+                      <InfoOutlinedIcon style={{ fontSize: 16, color: "#9a9a9a", cursor: "pointer" }} />
+                    </Tooltip>
+                  </div>
+                  <LinearProgress
+                    variant="determinate"
+                    value={appRunsHardPct}
+                    sx={{
+                      height: 6,
+                      borderRadius: 6,
+                      backgroundColor: "#3a3a3a",
+                      "& .MuiLinearProgress-bar": { backgroundColor: "#ff8544", borderRadius: 6 },
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" style={{ fontWeight: 600, marginBottom: 4 }}>
+                    APP RUNS:{" "}
+                    <span style={{ fontWeight: 400 }}>
+                      {localSub?.active
+                        ? `${(usedAppRuns || 0).toLocaleString()} / ${(appRunsLimit || 0).toLocaleString()}`
+                        : (calculateAppRunsFromPrice(localSub.amount) || 0).toLocaleString()}
+                    </span>
+                  </Typography>
+                  {localSub?.active && (
+                    <LinearProgress
+                      variant="determinate"
+                      value={appRunsPct}
+                      sx={{
+                        height: 6,
+                        borderRadius: 6,
+                        backgroundColor: "#3a3a3a",
+                        "& .MuiLinearProgress-bar": { backgroundColor: "#ff8544", borderRadius: 6 },
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Features */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {/* Tenants */}
+            {features?.multi_tenant?.active && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Typography variant="body2" style={{ color: "#9be39b", fontWeight: 700, minWidth: 20, textAlign: "center" }}>
+                  {(features.multi_tenant.limit === 0 || (localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("enterprise"))) ? "∞" : features.multi_tenant.limit}
+                </Typography>
+                <Typography variant="body2">Tenants</Typography>
+              </div>
+            )}
+            {/* Locations / Environments */}
+            {features?.multi_env?.active && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Typography variant="body2" style={{ color: "#9be39b", fontWeight: 700, minWidth: 20, textAlign: "center" }}>
+                  {(features.multi_env.limit === 0 || (localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("enterprise"))) ? "∞" : features.multi_env.limit}
+                </Typography>
+                <Typography variant="body2">Locations</Typography>
+              </div>
+            )}
+            {/* All Features collapsible */}
+            {(finalFeatures || []).filter(f => f && !String(f).toLowerCase().includes("tenant") && !String(f).toLowerCase().includes("environment") && !String(f).toLowerCase().includes("location")).length > 0 && (
+              <>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                  onClick={() => {
+                  if (isCloud) {
+                      window.open(`${window.location.origin}/pricing`, "_blank")
+                  } else {
+                      window.open("https://shuffler.io/pricing", "_blank")
+                  }
+                }}
+                >
+                  <Typography variant="body2" style={{ color: "#9be39b", fontWeight: 700, minWidth: 20, textAlign: "center" }}>∞</Typography>
+                  <Typography variant="body2" style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>
+                    All Features
+                  </Typography>
+                </div>
+                {showAllFeatures && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 30 }}>
+                    {(finalFeatures || [])
+                      .filter(f => f && !String(f).toLowerCase().includes("tenant") && !String(f).toLowerCase().includes("environment") && !String(f).toLowerCase().includes("location"))
+                      .map((feat, idx) => (
+                        <div key={`nf_${idx}`} style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: getFeatureIndent(feat) * 16 }}>
+                          {getFeatureIndent(feat) === 0
+                            ? <DoneIcon style={{ color: "#9be39b", fontSize: 16 }} />
+                            : <span style={{ width: 5, height: 5, background: "#9be39b", borderRadius: 999, display: "inline-block" }} />}
+                          <Typography variant="body2">{stripPrefix(feat)}</Typography>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </>
+            )}
+            {/* Shuffle Support */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {localSub?.name?.toLowerCase().includes("enterprise") || localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("poc")
+                ? <DoneIcon style={{ color: "#9be39b", fontSize: 18 }} />
+                : <CloseIcon style={{ color: "#ff5252", fontSize: 18 }} />}
+              <Typography variant="body2">Shuffle Support</Typography>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          {(() => {
+            const subName = localSub?.name?.toLowerCase() || "";
+            const isScalePlan = subName.includes("scale license") && !subName.includes("trial");
+            const isTrialPlan = subName.includes("cloud trial");
+            const isPartner = subName.includes("partner");
+
+            if (isPartner) return null;
+
+            const contactUsBtn = (variant = "outlined") => (
+              <Button
+                fullWidth
+                variant={variant}
+                color="primary"
+                style={{ textTransform: "none" }}
+                onClick={() => {
+                  if (isCloud) navigate("/contact?category=contact&ref=cloud_billing");
+                  else window.open("https://shuffler.io/contact?category=contact&ref=onprem_billing", "_blank");
+                }}
+              >
+                Contact Us
+              </Button>
+            );
+
+            const getTrainingBtn = (variant = "outlined") => (
+              <Button
+                fullWidth
+                variant={variant}
+                color="primary"
+                style={{ textTransform: "none" }}
+                onClick={() => {
+                  if (isCloud) navigate("/training?ref=cloud_billing");
+                  else window.open("https://shuffler.io/training?ref=onprem_billing", "_blank");
+                }}
+              >
+                Get Training
+              </Button>
+            );
+
+            const editBillingBtn = userdata.support ? (
+              <Button
+                fullWidth
+                variant="outlined"
+                color="secondary"
+                style={{ textTransform: "none" }}
+                onClick={() => setEditOpen(true)}
+              >
+                Edit Billing
+              </Button>
+            ) : null;
+
+            const hasManageSub = localSub?.reference && localSub.reference.length > 0;
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {hasManageSub && (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    style={{ textTransform: "none" }}
+                    onClick={() => {
+                      if (!isCloud) {
+                        toast.info(
+                          "Manage your subscription from the cloud dashboard. Redirecting...",
+                        );
+                        setTimeout(() => {
+                          window.open(
+                            "https://shuffler.io/admin?admin_tab=billingstats",
+                            "_blank",
+                          );
+                        }, 2000);
+                        return;
+                      }
+                      const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}/manage_subscription`;
+                      fetch(url, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          subscription_id: localSub.reference,
+                        }),
+                      })
+                        .then((r) => r.json())
+                        .then((data) => {
+                          if (data?.success && data?.url)
+                            window.location.href = data.url;
+                          else toast("Failed to open subscription portal");
+                        })
+                        .catch(() =>
+                          toast("Failed to open subscription portal"),
+                        );
+                    }}
+                  >
+                    Manage Subscription
+                  </Button>
+                )}
+
+                {isTrialPlan && (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    style={{ textTransform: "none" }}
+                    onClick={() => {
+                      if (isCloud) navigate("/pricing?ref=cloud_billing");
+                      else window.open("https://shuffler.io/pricing?env=Self-Hosted&ref=onprem_billing", "_blank");
+                    }}
+                  >
+                    Upgrade License
+                  </Button>
+                )}
+
+                {!isScalePlan && !isTrialPlan && contactUsBtn("contained")}
+
+                {isScalePlan && !hasManageSub && contactUsBtn("contained")}
+
+                {(isScalePlan || isTrialPlan) && getTrainingBtn()}
+
+                {!isScalePlan && !isTrialPlan && getTrainingBtn()}
+
+                {(isScalePlan || isTrialPlan) && contactUsBtn()}
+
+                {editBillingBtn}
+              </div>
+            );
+          })()}
+        </div>
+
       </>
     );
   };
@@ -1575,8 +2076,8 @@ const LicencePopup = (props) => {
           display: "flex",
         }}
       >
-        <Grid item maxWidth={licensePopup ? 400 : 450}>
-          {isLoading ? (
+        <Grid item style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(370px, 1fr))", gap: 16}}>
+        {isLoading ? (
             <SubscriptionSkeleton />
           ) : (
             <>
@@ -1584,8 +2085,14 @@ const LicencePopup = (props) => {
               selectedOrganization.subscriptions !== null &&
               selectedOrganization.subscriptions.length > 0
                 ? (selectedOrganization.subscriptions || [])
-                    .slice()
-                    .map((sub, index) => {
+                      .slice()
+                      .sort((a, b) => {
+                        // Active subscriptions first, then inactive
+                        if (a.active && !b.active) return -1;
+                        if (!a.active && b.active) return 1;
+                        return 0;
+                      })
+                      .map((sub, index) => {
                       return (
                         <SubscriptionObject
                           key={sub.id || index}
@@ -1604,6 +2111,41 @@ const LicencePopup = (props) => {
                       );
                     })
                 : null}
+
+              {(!selectedOrganization.cloud_sync && hasOnpremSub) && (
+                  <div style={{
+                    width: "100%",
+                    gridColumn: "1 / -1",
+                    marginTop: 8,
+                    padding: "14px 16px",
+                    borderRadius: theme.palette?.borderRadius,
+                    border: "1px solid #ff8544",
+                    backgroundColor: theme.palette.cardBackgroundColor,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 16,
+                    flexWrap: "wrap",
+                  }}>
+                    <div>
+                      <Typography variant="body2" style={{ fontWeight: 600 }}>
+                        Activate License
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary" style={{ marginTop: 2, display: "block" }}>
+                        Turn on SLS (Shuffle Licensing System) to activate your license.
+                      </Typography>
+                    </div>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="primary"
+                      sx={{ textTransform: "none", whiteSpace: "nowrap"}}
+                      onClick={() => window.open("https://shuffler.io/docs/tenants#cloud-synchronization", "_blank")}
+                    >
+                      View docs to turn on SLS (Shuffle Licensing System)
+                    </Button>
+                  </div>
+                )}
             </>
           )}
         </Grid>

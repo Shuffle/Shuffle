@@ -18,6 +18,7 @@ import {
 
 import {
 	CircularProgress,
+	FormControlLabel,
 	Link,
 	Tooltip,
 	TextField,
@@ -34,7 +35,77 @@ import {
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
 import LineChartWrapper from '../components/LineChartWrapper.jsx';
 import { Context } from '../context/ContextApi.jsx';
+import { StackedBarChart, StackedBarSeries, GridlineSeries, Gridline, ChartTooltip, TooltipArea } from 'reaviz';
 
+
+export const StatsDateRangePicker = ({ startTime, endTime, onStartChange, onEndChange }) => {
+  const pickerSlotProps = {
+    textField: {
+      sx: {
+        "& .MuiOutlinedInput-root": {
+          "& fieldset": { borderColor: "#494949 !important", borderWidth: "1px !important" },
+          "&:hover fieldset": { borderColor: "#FFFFFF !important" },
+          "&.Mui-focused fieldset": { borderColor: "#FFFFFF !important" },
+          height: "35px", fontSize: 16, color: "#c8c8c8",
+        },
+      },
+    },
+  }
+  const pickerSx = {
+    "& .MuiInputBase-root": { height: "35px", minHeight: "35px" },
+    "& .MuiInputBase-input": { height: "35px", padding: "0 14px", boxSizing: "border-box", color: "#c8c8c8", fontSize: 16 },
+  }
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs} style={{ flex: 1 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", justifyContent: "center", alignItems: "flex-start", paddingTop: 10 }}>
+        <div style={{ display: "flex", flexDirection: "row", flex: 1, alignItems: "center" }}>
+          <Typography style={{ marginLeft: 10, marginRight: 10, fontSize: 16, whiteSpace: "nowrap" }} color="textSecondary">
+            Search from
+          </Typography>
+          <DateTimePicker slotProps={pickerSlotProps} sx={pickerSx} ampm={false} format="YYYY-MM-DD HH:mm:ss" value={startTime} onChange={onStartChange} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "row", flex: 1, alignItems: "center" }}>
+          <Typography style={{ marginLeft: 10, marginRight: 10, fontSize: 16, whiteSpace: "nowrap" }} color="textSecondary">
+            Search until
+          </Typography>
+          <DateTimePicker slotProps={pickerSlotProps} sx={{ marginTop: 1, ...pickerSx }} ampm={false} format="YYYY-MM-DD HH:mm:ss" value={endTime} onChange={onEndChange} />
+        </div>
+      </div>
+    </LocalizationProvider>
+  )
+}
+
+// Parses a date string into a Date object.
+// No val → defaults to today (start: 3 months back at 00:00, end: today at 23:59) // in New limitsBilling updates
+// Invalid val → falls back to today with the same hour rules
+export const parseDate = (val, isEnd) => {
+  const d = (val && !isNaN(new Date(val))) ? new Date(val) : new Date()
+  if (!val && !isEnd) d.setMonth(d.getMonth() - 3)
+  isEnd ? d.setHours(23, 59, 59, 999) : d.setHours(0, 0, 0, 0)
+  return d
+}
+
+// Formats a Date the same way as the graph axis labels, e.g. "29 Apr 2026"
+export const formatRangeDate = (d) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} ${d.getFullYear()}`
+
+// Merges cloud and onprem daily stats arrays into one list keyed by date.
+// Cloud entries are added first. If onprem has an entry for the same date,
+// numeric stat fields are summed together. Otherwise the onprem entry is added as-is.
+// Result is sorted oldest → newest.
+const mergeStatsByDate = (cloudList, onpremList) => {
+  const mergeFields = ["app_executions", "child_app_executions", "workflow_executions", "subflow_executions", "app_executions_failed", "workflow_executions_failed", "workflow_executions_finished", "org_sync_actions"]
+  const map = {}
+  for (const item of cloudList) {
+    map[new Date(item.date).toDateString()] = { ...item }
+  }
+  for (const item of onpremList) {
+    const key = new Date(item.date).toDateString()
+    if (map[key]) mergeFields.forEach(f => { map[key][f] = (map[key][f] || 0) + (item[f] || 0) })
+    else map[key] = { ...item }
+  }
+  return Object.values(map).sort((a, b) => new Date(a.date) - new Date(b.date))
+}
 
 const AppStats = (defaultprops) => {
   const { 
@@ -46,13 +117,11 @@ const AppStats = (defaultprops) => {
 	  clickedFromOrgTab,
 	  syncStats,
 	  statistics,
-	  monthlyAppRunsParent,
-	  setMonthlyAppRunsParent,
-	  monthlyAllSuborgExecutions,
-	  setMonthlyAllSuborgExecutions,
 	  currentTab
   } = defaultprops;
 
+  const [periodParentAppRuns, setPeriodParentAppRuns] = useState(0)
+  const [periodChildAppRuns, setPeriodChildAppRuns] = useState(0)
   const [keys, setKeys] = useState([])
   const [searches, setSearches] = useState([]);
   const [appRuns, setAppruns] = useState(undefined);
@@ -64,6 +133,8 @@ const AppStats = (defaultprops) => {
   const [endTime, setEndTime] = useState("")
   const [startTime, setStartTime] = useState("")
   const [filteredStatistics, setFilteredStatistics] = useState(undefined);
+  const [otherStatsStart, setOtherStatsStart] = useState(null)
+  const [otherStatsEnd, setOtherStatsEnd] = useState(null)
 
   const [apprunCost, setApprunCost] = useState(0)
   const [monthToDateCost, setMonthToDateCost] = useState(0)
@@ -74,6 +145,8 @@ const AppStats = (defaultprops) => {
   const [resultLoading, setResultLoading] = useState(true)
   const { themeMode, brandColor } = useContext(Context);
   const [onpremAppRuns, setOnpremAppRuns] = useState(0)
+  const [cloudChecked, setCloudChecked] = useState(isCloud)
+  const [onpremChecked, setOnpremChecked] = useState(!isCloud)
   const theme = getTheme(themeMode, brandColor)
   
   const includedExecutions = selectedOrganization?.sync_features?.app_executions !== undefined ? selectedOrganization?.sync_features?.app_executions?.limit : 0 
@@ -174,48 +247,7 @@ const AppStats = (defaultprops) => {
 			}
 		}
 
-		// Only add today's data if endTime is not set or if today falls within the selected date range
-		const today = new Date()
-		const todayStartOfDay = new Date(today)
-		todayStartOfDay.setHours(0, 0, 0, 0)
-		const shouldAddTodayData = endTime === "" || endTime === undefined || endTime === null || 
-			(new Date(endTime) >= todayStartOfDay)
 
-		if (!syncStats && shouldAddTodayData) {
-			// Adds data for today 
-			if (inputdata["daily_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
-				appRuns["data"].push({
-					key: new Date().toISOString(),
-					data: inputdata["daily_app_executions"]
-				})
-
-				appcostRuns["data"].push({
-					key: new Date().toISOString(),
-					data: (inputdata["daily_app_executions"] * invocationCost).toFixed(2)
-				})
-			}
-
-			if (inputdata["daily_child_app_executions"] !== undefined && inputdata["daily_app_executions"] !== null) {
-				childorgappRuns["data"].push({
-					key: new Date().toISOString(),
-					data: inputdata["daily_child_app_executions"]
-				})
-			}
-
-			if (inputdata["daily_workflow_executions"] !== undefined && inputdata["daily_workflow_executions"] !== null) {
-				workflowRuns["data"].push({
-					key: new Date().toISOString(),
-					data: inputdata["daily_workflow_executions"]
-				})
-			}
-
-			if (inputdata["daily_subflow_executions"] !== undefined && inputdata["daily_subflow_executions"] !== null) {
-				subflowRuns["data"].push({
-					key: new Date().toISOString(),
-					data: inputdata["daily_subflow_executions"]
-				})
-			}
-		}
 
 		// Only for parent orgs
 		if (childorgappRuns["data"].length > 0) {
@@ -379,7 +411,8 @@ const AppStats = (defaultprops) => {
 		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
 		if (!syncStats && (statistics[statKey] === undefined || statistics[statKey] === null)) {
 			setFilteredStatistics(statistics)
-			setMonthlyAppRunsParent(statistics["monthly_app_executions"] ?? 0)
+			setPeriodParentAppRuns(statistics["monthly_app_executions"] ?? 0)
+			setPeriodChildAppRuns(statistics["monthly_child_app_executions"] ?? 0)
 			return
 		}
 
@@ -437,55 +470,22 @@ const AppStats = (defaultprops) => {
 			}
 		}
 
-		// Make a date at the 1st of the current month - only when no start time is selected
-		var foundstarttime = (new Date())
-		if (startTime !== "" && startTime !== undefined && startTime !== null) {
-			foundstarttime = new Date(startTime)
-			// Set to start of day to include the entire start date
-			foundstarttime.setHours(0, 0, 0, 0)
-		} else {
-			// Default to 1st of current month when no start time is selected
-			foundstarttime.setDate(1)
-			foundstarttime.setHours(0, 0, 0, 0)
-		}
+		const foundstarttime = parseDate(startTime || null, false)
+		const foundendtime = parseDate(endTime || null, true)
 
-		// Set end time properly
-		var foundendtime = (new Date())
-		if (endTime !== "" && endTime !== undefined && endTime !== null) { 
-			foundendtime = new Date(endTime)
-			// Set to end of day to include the entire end date
-			foundendtime.setHours(23, 59, 59, 999)
-		} else {
-			// Default to current date when no end time is selected
-			foundendtime.setHours(23, 59, 59, 999)
-		}
+		const filterByRange = (arr) => (arr || []).filter(item => {
+			if (!item.date) return false
+			const d = new Date(item.date); d.setHours(0, 0, 0, 0)
+			return d >= foundstarttime && d <= foundendtime
+		})
 
-		// Check if start time is before the daily statistics["date"] string
 		var newlist = []
-		for (let key in statistics[statKey]) {
-			const item = statistics[statKey][key]
-			if (item["date"] === undefined) {
-				continue
-			}
-
-			const date = new Date(item["date"])
-			// Normalize the date to start of day for comparison
-			const normalizedDate = new Date(date)
-			normalizedDate.setHours(0, 0, 0, 0)
-			
-			// Normalize foundstarttime for comparison
-			const normalizedStartTime = new Date(foundstarttime)
-			normalizedStartTime.setHours(0, 0, 0, 0)
-			
-			// Normalize foundendtime for comparison  
-			const normalizedEndTime = new Date(foundendtime)
-			normalizedEndTime.setHours(0, 0, 0, 0)
-			
-			if (normalizedDate >= normalizedStartTime) {
-				if (normalizedDate <= normalizedEndTime) {
-					newlist.push(item)
-				}
-			}
+		if (currentTab === 0 && !syncStats) {
+			const cloudList = cloudChecked ? filterByRange(statistics[isCloud ? "daily_statistics" : "onprem_stats"]) : []
+			const onpremList = onpremChecked ? filterByRange(statistics[isCloud ? "onprem_stats" : "daily_statistics"]) : []
+			newlist = (cloudChecked && onpremChecked) ? mergeStatsByDate(cloudList, onpremList) : [...cloudList, ...onpremList]
+		} else {
+			newlist = filterByRange(statistics[statKey])
 		}
 
 		// If newlist is empty, set the timestamp to 1 year back and check if there are any statistics there
@@ -504,6 +504,8 @@ const AppStats = (defaultprops) => {
 
 		var workflowexecutions = 0
 		var appexecutions = 0
+		var parentAppRuns = 0
+		var childAppRuns = 0
 		var estimatedcost = 0
 		if (newlist.length > 0) {
 			tmpstats[statKey] = newlist
@@ -515,6 +517,8 @@ const AppStats = (defaultprops) => {
 				}
 
 				workflowexecutions += item["workflow_executions"]
+				parentAppRuns += (item["app_executions"] ?? 0)
+				childAppRuns += (item["child_app_executions"] ?? 0)
 				appexecutions += item["app_executions"]
 
 				if (currentTab === 0 || currentTab === 3) {
@@ -524,21 +528,7 @@ const AppStats = (defaultprops) => {
 				estimatedcost += (item["app_executions"] * invocationCost)
 			}
 
-			const today = new Date();
-			const isCurrentMonthSelected =
-				(startTime === "" && endTime === "") ||
-				(
-					new Date(foundstarttime).getMonth() === today.getMonth() &&
-					new Date(foundstarttime).getFullYear() === today.getFullYear() &&
-					new Date(foundendtime).getMonth() === today.getMonth() &&
-					new Date(foundendtime).getFullYear() === today.getFullYear()
-			 );
 
-			if (!syncStats && isCurrentMonthSelected) {
-				if (statistics["daily_app_executions"] !== undefined && statistics["daily_app_executions"] !== null) {
-					appexecutions += statistics["daily_app_executions"] + (statistics["daily_child_app_executions"] ?? 0)
-				}
-			}
 
 			tmpstats["monthly_workflow_executions"] = workflowexecutions
 			tmpstats["monthly_app_executions"] = appexecutions
@@ -546,21 +536,6 @@ const AppStats = (defaultprops) => {
 				setOnpremAppRuns(appexecutions)
 			}
 		} else {
-			const today = new Date();
-			const isCurrentMonthSelected =
-				(startTime === "" && endTime === "") ||
-				(
-					new Date(foundstarttime).getMonth() === today.getMonth() &&
-					new Date(foundstarttime).getFullYear() === today.getFullYear() &&
-					new Date(foundendtime).getMonth() === today.getMonth() &&
-					new Date(foundendtime).getFullYear() === today.getFullYear()
-			 );
-			 
-			if (!syncStats && isCurrentMonthSelected) {
-				if (statistics["daily_app_executions"] !== undefined && statistics["daily_app_executions"] !== null) {
-					appexecutions += statistics["daily_app_executions"] + (statistics["daily_child_app_executions"] ?? 0)
-				}
-			}
 
 			tmpstats["monthly_app_executions"] = appexecutions
 		}
@@ -577,14 +552,10 @@ const AppStats = (defaultprops) => {
 
 		setFilteredStatistics(tmpstats)
 		handleDataSetting(tmpstats, "day")
-		// if we have done monthly reset than only show monthly app runs as current month app run
-		const currentMonth = new Date().getMonth() + 1
-		if (!syncStats && !monthlyAppRunsParent && statistics["monthly_app_executions"] > 0 && currentMonth === statistics["last_monthly_reset_month"]) {
-			setMonthlyAppRunsParent(statistics["monthly_app_executions"])
-		}
 
-		if (!syncStats && !monthlyAllSuborgExecutions && statistics["monthly_child_app_executions"]> 0 && currentMonth === statistics["last_monthly_reset_month"]) {
-			setMonthlyAllSuborgExecutions(statistics["monthly_child_app_executions"])
+		if (!syncStats) {
+			setPeriodParentAppRuns(parentAppRuns)
+			setPeriodChildAppRuns(childAppRuns)
 		}
 
 
@@ -596,7 +567,7 @@ const AppStats = (defaultprops) => {
 			loadWorkflowStats(foundWorkflows, startTime, endTime)
 		}
 
-	}, [statistics, startTime, endTime, syncStats, currentTab, handleDataSetting])
+	}, [statistics, startTime, endTime, syncStats, currentTab, handleDataSetting, cloudChecked, onpremChecked])
 
 	const handleStartTimeChange = (date) => {
 		setStartTime(date)
@@ -724,24 +695,266 @@ const AppStats = (defaultprops) => {
 		},
 	]
 
+	const checkBoxes = [
+    { label: "Cloud", checked: cloudChecked, setChecked: setCloudChecked },
+    { label: "On-Prem", checked: onpremChecked, setChecked: setOnpremChecked },
+  ];
+	const formatCustomDate = (dateString) => {
+		if (!dateString || dateString === "0001-01-01T00:00:00Z") return '';
+		const date = new Date(dateString);
+		if (isNaN(date.getTime())) return '';
+		const day = date.getDate();
+		const month = date.toLocaleString('default', { month: 'long' });
+		const year = date.getFullYear();
+		return `${day} ${month} ${year}, ${date.toLocaleTimeString('en-US')}`;
+	};
+
   	const data = (
-    <div className="content" style={{width: "100%", margin: "auto", marginTop: 20}}>
+    <div className="content" style={{width: "100%", margin: "auto", marginTop: 20, boxSizing: 'border-box'}}>
+		{currentTab === 5 ?
+			<div style={{width: "100%", paddingBottom: 50}}>
+				{(() => {
+					const tenants = statistics?.tenants || [];
+					const locations = statistics?.locations || [];
+
+					const inRange = (dateStr) => {
+						if (!dateStr || dateStr === "0001-01-01T00:00:00Z") return false;
+						const d = new Date(dateStr);
+						if (isNaN(d.getTime())) return false;
+						const start = otherStatsStart ? new Date(otherStatsStart) : null;
+						const end = otherStatsEnd ? new Date(otherStatsEnd) : null;
+						if (start && d < start) return false;
+						if (end && d > end) return false;
+						return true;
+					};
+					const hasFilter = !!otherStatsStart || !!otherStatsEnd;
+
+					let activeTenants = 0;
+					let deletedTenants = 0;
+					let totalTenants = 0;
+
+					if (hasFilter) {
+						const createdInRange = tenants.filter(t => inRange(t.created_at));
+						const deletedInRange = tenants.filter(t => inRange(t.deleted_at));
+						activeTenants = createdInRange.length;
+						deletedTenants = deletedInRange.length;
+						totalTenants = new Set([...createdInRange, ...deletedInRange]).size;
+					} else {
+						totalTenants = tenants.length;
+						activeTenants = tenants.filter(t => t.status === 'active').length;
+						deletedTenants = tenants.filter(t => t.status !== 'active').length;
+					}
+					const filteredLocations = hasFilter ? locations.filter(l => inRange(l.created_at)) : locations;
+					const totalLocations = filteredLocations.length;
+					const activeLocations = filteredLocations.filter(l => l.status === 'active').length;
+					const disabledLocations = filteredLocations.filter(l => l.status !== 'active').length;
+
+					const tenantDayMap = {};
+					tenants.forEach(t => {
+						const useCreated = hasFilter ? (inRange(t.created_at) ? t.created_at : null) : (t.created_at && t.created_at !== "0001-01-01T00:00:00Z" ? t.created_at : null);
+						if (useCreated) {
+							const dk = new Date(useCreated).toDateString();
+							if (!tenantDayMap[dk]) tenantDayMap[dk] = { active: 0, deleted: 0, isoKey: useCreated };
+							tenantDayMap[dk].active += 1;
+						}
+						const useDeleted = hasFilter ? (inRange(t.deleted_at) ? t.deleted_at : null) : (t.deleted_at && t.deleted_at !== "0001-01-01T00:00:00Z" ? t.deleted_at : null);
+						if (useDeleted) {
+							const dk = new Date(useDeleted).toDateString();
+							if (!tenantDayMap[dk]) tenantDayMap[dk] = { active: 0, deleted: 0, isoKey: useDeleted };
+							tenantDayMap[dk].deleted += 1;
+						}
+					});
+					const tenantChartData = Object.entries(tenantDayMap)
+						.sort(([, a], [, b]) => new Date(a.isoKey) - new Date(b.isoKey))
+						.map(([, { active, deleted, isoKey }]) => ({ key: new Date(isoKey), data: [{ key: 'Active', data: active }, { key: 'Deleted', data: deleted }] }));
+
+					const locationDayMap = {};
+					locations.forEach(loc => {
+						const useDate = hasFilter ? (inRange(loc.created_at) ? loc.created_at : null) : (loc.created_at && loc.created_at !== "0001-01-01T00:00:00Z" ? loc.created_at : null);
+						if (useDate) {
+							const dk = new Date(useDate).toDateString();
+							if (!locationDayMap[dk]) locationDayMap[dk] = { active: 0, disabled: 0, isoKey: useDate };
+							if (loc.status === 'active') locationDayMap[dk].active += 1;
+							else locationDayMap[dk].disabled += 1;
+						}
+					});
+					const locationChartData = Object.entries(locationDayMap)
+						.sort(([, a], [, b]) => new Date(a.isoKey) - new Date(b.isoKey))
+						.map(([, { active, disabled, isoKey }]) => ({ key: new Date(isoKey), data: [{ key: 'Active', data: active }, { key: 'Disabled', data: disabled }] }));
+					
+				const tenantTooltip = (
+					<TooltipArea tooltip={<ChartTooltip placement="top" followCursor={true} content={(data) => {
+						const d = data?.x instanceof Date ? data.x : new Date(data?.x ?? 0);
+						const entry = tenantDayMap[d.toDateString()] || { active: 0, deleted: 0 };
+						return <div style={{ borderRadius: 4, backgroundColor: theme.palette.inputColor, border: theme.palette.defaultBorder, color: theme.palette.text.primary, padding: '8px 12px', minWidth: 170 }}>
+							<Typography variant="body2" style={{ fontWeight: 600, marginBottom: 4 }}>{!isNaN(d.getTime()) ? `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()}` : ''}</Typography>
+							<Typography variant="body2" style={{ color: theme.palette.green }}>Active: {entry.active}</Typography>
+							<Typography variant="body2" style={{ color: theme.palette.deleteColor }}>Deleted: {entry.deleted}</Typography>
+						</div>;
+					}} />} />
+				);
+
+				const locationTooltip = (
+					<TooltipArea tooltip={<ChartTooltip placement="top" followCursor={true} content={(data) => {
+						const d = data?.x instanceof Date ? data.x : new Date(data?.x ?? 0);
+						const entry = locationDayMap[d.toDateString()] || { active: 0, disabled: 0 };
+						return <div style={{ borderRadius: 4, backgroundColor: theme.palette.inputColor, border: theme.palette.defaultBorder, color: theme.palette.text.primary, padding: '8px 12px', minWidth: 170 }}>
+							<Typography variant="body2" style={{ fontWeight: 600, marginBottom: 4 }}>{!isNaN(d.getTime()) ? `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()}` : ''}</Typography>
+							<Typography variant="body2" style={{ color: theme.palette.green }}>Active: {entry.active}</Typography>
+							<Typography variant="body2" style={{ color: theme.palette.deleteColor }}>Disabled: {entry.disabled}</Typography>
+						</div>;
+					}} />} />
+				);
+
+				const statBoxStyle = {
+					display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+					margin: '5px',
+					backgroundColor: theme.palette.cardBackgroundColor,
+					border: theme.palette.defaultBorder,
+					borderRadius: 0,
+					width: 180, height: 180, flexShrink: 0,
+				};
+
+				return (<>
+						<Typography variant="h4" style={{ marginTop: 20, marginBottom: 16, fontWeight: 'bold' }}>Tenants</Typography>
+						<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 24, gap: 16 }}>
+							<div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+								<Box sx={statBoxStyle}><Typography variant="h4" style={{ fontWeight: 'bold' }}>{totalTenants}</Typography><Typography variant="body1" color="textSecondary" style={{ marginTop: 6 }}>All Tenants</Typography></Box>
+								<Box sx={statBoxStyle}><Typography variant="h4" style={{ fontWeight: 'bold', color: theme.palette.green }}>{activeTenants}</Typography><Typography variant="body1" color="textSecondary" style={{ marginTop: 6 }}>Active Tenants</Typography></Box>
+								<Box sx={statBoxStyle}><Typography variant="h4" style={{ fontWeight: 'bold', color: theme.palette.deleteColor }}>{deletedTenants}</Typography><Typography variant="body1" color="textSecondary" style={{ marginTop: 6 }}>Deleted Tenants</Typography></Box>
+							</div>
+
+							{/* Date Filter placed next to the boxes */}
+							<div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginLeft: 16 }}>
+								<StatsDateRangePicker
+									startTime={otherStatsStart}
+									endTime={otherStatsEnd}
+									onStartChange={(val) => setOtherStatsStart(val)}
+									onEndChange={(val) => setOtherStatsEnd(val)}
+								/>
+								{hasFilter && (
+									<Button size="small" variant="outlined" onClick={() => { setOtherStatsStart(null); setOtherStatsEnd(null); }}
+										style={{ textTransform: 'none', alignSelf: 'flex-start', marginLeft: 10, marginTop: 10, }}>
+										Clear Filter
+									</Button>
+								)}
+							</div>
+						</div>
+
+						{/* Tenants Chart */}
+						<div style={{ marginBottom: 40, overflow: 'hidden', minHeight: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', border: theme.palette.defaultBorder, borderRadius: 4, backgroundColor: theme.palette.cardBackgroundColor }}>
+							{tenantChartData.length > 0 ? (
+								<StackedBarChart width="100%" height={250} data={tenantChartData}
+									series={<StackedBarSeries colorScheme={[theme.palette.green, theme.palette.deleteColor]} tooltip={tenantTooltip} />}
+									gridlines={<GridlineSeries line={<Gridline direction="all" />} />}
+								/>
+							) : (
+								<Typography variant="body1" color="textSecondary">No data available</Typography>
+							)}
+						</div>
+
+						{/* Locations Summary Boxes */}
+						<Typography variant="h4" style={{ marginTop: 20, marginBottom: 16, fontWeight: 'bold' }}>Locations</Typography>
+						<div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24, gap: 8 }}>
+							<Box sx={statBoxStyle}><Typography variant="h4" style={{ fontWeight: 'bold' }}>{totalLocations}</Typography><Typography variant="body1" color="textSecondary" style={{ marginTop: 6 }}>Total Locations</Typography></Box>
+							<Box sx={statBoxStyle}><Typography variant="h4" style={{ fontWeight: 'bold', color: theme.palette.green }}>{activeLocations}</Typography><Typography variant="body1" color="textSecondary" style={{ marginTop: 6 }}>Active Locations</Typography></Box>
+							<Box sx={statBoxStyle}><Typography variant="h4" style={{ fontWeight: 'bold', color: theme.palette.deleteColor }}>{disabledLocations}</Typography><Typography variant="body1" color="textSecondary" style={{ marginTop: 6 }}>Disabled Locations</Typography></Box>
+						</div>
+
+						{/* Locations Chart */}
+						<div style={{ marginBottom: 40, overflow: 'hidden', minHeight: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', border: theme.palette.defaultBorder, borderRadius: 4, backgroundColor: theme.palette.cardBackgroundColor }}>
+							{locationChartData.length > 0 ? (
+								<StackedBarChart width="100%" height={250} data={locationChartData}
+									series={<StackedBarSeries colorScheme={[theme.palette.green, theme.palette.deleteColor]} tooltip={locationTooltip} />}
+									gridlines={<GridlineSeries line={<Gridline direction="all" />} />}
+								/>
+							) : (
+								<Typography variant="body1" color="textSecondary">No data available</Typography>
+							)}
+						</div>
+
+						{/* Tenants Table */}
+						<Typography variant="h4" style={{ marginTop: 30, marginBottom: 20, fontWeight: 'bold' }}>Tenants</Typography>
+						<div style={{ width: '100%', minHeight: 400, overflowX: 'auto' }}>
+							<DataGrid autoHeight rows={tenants}
+								columns={[
+									{ field: 'name', headerName: 'Name', flex: 1, minWidth: 200 },
+									{ field: 'created_at', headerName: 'Created At', flex: 1, minWidth: 200, renderCell: (params) => formatCustomDate(params.row.created_at) },
+									{ field: 'deleted_at', headerName: 'Deleted At', flex: 1, minWidth: 200, renderCell: (params) => formatCustomDate(params.row.deleted_at) },
+									{ field: 'status', headerName: 'Status', flex: 1, minWidth: 150, renderCell: (params) => <Typography style={{ color: params.row.status === 'active' ? theme.palette.green : theme.palette.deleteColor, fontSize: 14, marginTop: 15 }}>{params.row.status}</Typography> },
+								]}
+								initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+								pageSizeOptions={[10, 25, 50, 100]} disableSelectionOnClick hideFooterSelectedRowCount
+							/>
+						</div>
+
+						{/* Locations Table */}
+						<Typography variant="h4" style={{ marginTop: 50, marginBottom: 20, fontWeight: 'bold' }}>Locations</Typography>
+						<div style={{ width: '100%', minHeight: 400, overflowX: 'auto' }}>
+							<DataGrid autoHeight rows={locations}
+								columns={[
+									{ field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+									{ field: 'org_name', headerName: 'Org Name', flex: 1, minWidth: 150 },
+									{ field: 'created_at', headerName: 'Created At', flex: 1, minWidth: 220, renderCell: (params) => formatCustomDate(params.row.created_at) },
+									{ field: 'status', headerName: 'Status', flex: 1, minWidth: 120, renderCell: (params) => <Typography style={{ color: params.row.status === 'active' ? theme.palette.green : theme.palette.deleteColor, fontSize: 14, marginTop: 15 }}>{params.row.status}</Typography> },
+								]}
+								initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+								pageSizeOptions={[10, 25, 50, 100]} disableSelectionOnClick hideFooterSelectedRowCount
+							/>
+						</div>
+					</>);
+				})()}
+			</div>
+		:
+		<React.Fragment>
 		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
-			All shown statistics are gathered from <a 
+		All shown statistics are based on your<a 
 				href={`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/stats`} 
 				target="_blank"
 				style={{ textDecoration: "none", color: theme.palette.linkColor,}}
-			>Your Tenant Statistics.</a>
+			> tenant's stats API.</a> The metric accuracy may be delayed by 24 hours.
+		</Typography>
 
 			{currentTab === 0 ? 
-		<span>
-			All Organization app runs are calculated base on addition of parent org app runs + all child org app runs.
-		 </span>: <span>It exists to give you more insight into your workflows, and to
-        understand your utilization of the Shuffle platform.{" "}</span>}
-			<br style={{}}/>
-			{syncStats !== true ? null : 
-				"PS: You are currently looking at data from your onprem synced org"}
+		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
+			{isCloud ? "Cloud" : "OnPrem"} App Runs = Parent Tenant App runs + All Child Tenant App Runs + AI Tokens (converted) to App Runs <br /> <br />
+			App Runs Mapping for external services: <br />
+			<ul>
+				<li>1 SMS = 3 appruns</li>
+				<li>1 Email = 2 appruns</li>
+				<li>1 Million AI Input Tokens = 250 app runs</li>
+				<li>1 Million AI Output Tokens = 1500 app runs</li>
+			</ul>
 		</Typography>
+		: null}
+
+		{currentTab === 0 ?
+		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
+			Parent Tenant App Runs: {periodParentAppRuns ?? 0} <br />
+            Child Tenant App Runs: {periodChildAppRuns ?? 0}
+		</Typography>
+		: null}
+
+		{syncStats === true ?
+		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
+			{isCloud ? "On-Prem" : "Cloud"} App Runs = Parent Tenant App Runs + All Child Tenant App Runs + AI Tokens (converted) to App Runs
+		</Typography>
+		: null}
+
+		{currentTab === 0 && !syncStats ? (
+			<div style={{ display: "flex", gap: 4, alignItems: "center", marginLeft: 10, marginBottom: 16 }}>
+				{checkBoxes
+				.sort((a, b) => (a.label === (isCloud ? "Cloud" : "On-Prem") ? -1 : 1))
+				.map((item, index) => (
+					<FormControlLabel
+						key={item.label}
+						style={{ opacity: index === 0 ? 1 : 0.8 }}
+						control={<Checkbox checked={item.checked} onChange={e => item.setChecked(e.target.checked)} size="small" />}
+						label={<Typography variant="body2" color="textPrimary">{item.label}</Typography>}
+					/>
+				))}
+			</div>
+		) : null}
 
 		<div style={{display: "flex", flexDirection: "column", textAlign: "center",}}>
 			<div style={{flexDirection: "row", }}>
@@ -787,6 +1000,9 @@ const AppStats = (defaultprops) => {
 							<Typography variant="h6">
 								App Runs 
 							</Typography>
+							<Typography variant="body2" color="textSecondary" style={{marginTop: 8, whiteSpace: "nowrap", }}>
+								{formatRangeDate(parseDate(startTime || null, false))} - {formatRangeDate(parseDate(endTime || null, true))}
+							</Typography>
 						</Box>
 					</Tooltip> 
 					{/* } */}
@@ -824,131 +1040,12 @@ const AppStats = (defaultprops) => {
 							</Box>
 						</Tooltip>
 					} */}
-					<LocalizationProvider dateAdapter={AdapterDayjs} style={{ flex: 1 }}>
-				<div style={{ display: "flex", flexDirection: "column", gap: "10px", justifyContent: 'center', alignItems: 'flex-start', paddingTop: 10 }}>
-				  <div
-					style={{
-					  display: "flex",
-					  flexDirection: "row",
-					  flex: 1,
-					  alignItems: "center",
-					}}
-				  >
-					<Typography
-					  style={{
-						marginLeft: 10,
-						marginRight: 10,
-						fontSize: 16,
-						whiteSpace: "nowrap",
-					  }}
-					  color="textSecondary"
-					>
-					  Search from
-					</Typography>
-					<DateTimePicker
-					  slotProps={{
-						textField: {
-						  sx: {
-							"& .MuiOutlinedInput-root": {
-							  "& fieldset": {
-								borderColor: "#494949 !important",
-								borderWidth: "1px !important",
-							  },
-							  "&:hover fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  "&.Mui-focused fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  height: "35px",
-							  fontSize: 16,
-							  color: "#c8c8c8",
-							},
-						  },
-						},
-					  }}
-					  sx={{
-						"& .MuiInputBase-root": { 
-						  height: "35px",
-						  minHeight: "35px",
-						},
-						"& .MuiInputBase-input": {
-						  height: "35px",
-						  padding: "0 14px",
-						  boxSizing: "border-box",
-						  color: "#c8c8c8",
-						  fontSize: 16,
-						}
-					  }}
-					  ampm={false}
-					  format="YYYY-MM-DD HH:mm:ss"
-					  value={startTime}
-					  onChange={handleStartTimeChange}
+				<StatsDateRangePicker
+				  startTime={startTime}
+				  endTime={endTime}
+				  onStartChange={handleStartTimeChange}
+				  onEndChange={handleEndTimeChange}
 					/>
-				  </div>
-				  <div
-					style={{
-					  display: "flex",
-					  flexDirection: "row",
-					  flex: 1,
-					  alignItems: "center",
-					}}
-				  >
-					<Typography
-					  style={{
-						marginLeft: 10,
-						marginRight: 10,
-						fontSize: 16,
-						whiteSpace: "nowrap",
-					  }}
-					  color="textSecondary"
-					>
-					  Search until
-					</Typography>
-					<DateTimePicker
-					  slotProps={{
-						textField: {
-						  sx: {
-							"& .MuiOutlinedInput-root": {
-							  "& fieldset": {
-								borderColor: "#494949 !important",
-								borderWidth: "1px !important",
-							  },
-							  "&:hover fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  "&.Mui-focused fieldset": {
-								borderColor: "#FFFFFF !important",
-							  },
-							  height: "35px",
-							  fontSize: 16,
-							  color: "#c8c8c8",
-							},
-						  },
-						},
-					  }}
-					  sx={{
-						marginTop: 1,
-						"& .MuiInputBase-root": { 
-						  height: "35px",
-						  minHeight: "35px",
-						},
-						"& .MuiInputBase-input": {
-						  height: "35px",
-						  padding: "0 14px",
-						  boxSizing: "border-box",
-						  color: "#c8c8c8",
-						  fontSize: 16,
-						}
-					  }}
-					  ampm={false}
-					  format="YYYY-MM-DD HH:mm:ss"
-					  value={endTime}
-					  onChange={handleEndTimeChange}
-					/>
-				  </div>
-				</div>
-			  </LocalizationProvider>
 				</div>
 			: null}
 			</div>
@@ -1036,11 +1133,13 @@ const AppStats = (defaultprops) => {
 				}
 			  </div>
 		}
+		</React.Fragment>
+		}
     </div>
   )
 
   const dataWrapper = (
-    <div style={{ maxWidth: 1366, margin: "auto", }}>{data}</div>
+    <div style={{ width: "100%", maxWidth: 1366, margin: "auto", boxSizing: 'border-box', overflow: 'hidden' }}>{data}</div>
   );
 
   return dataWrapper;

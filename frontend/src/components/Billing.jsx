@@ -1,7 +1,9 @@
-import React, { useState, useEffect, memo, useMemo, useContext } from "react";
+import React, { useState, useEffect, memo, useMemo, useContext, useCallback } from "react";
 import ReactGA from 'react-ga4';
 import { getTheme } from "../theme.jsx";
 import countries from "../components/Countries.jsx";
+
+import {CloudSyncFeatures} from "./CloudSyncTab.jsx"
 
 import {
 	Box,
@@ -30,6 +32,12 @@ import {
 	Tabs,
 	Tab,
 	CircularProgress,
+	Switch,
+	FormControl,
+	Select,
+	MenuItem,
+	OutlinedInput,
+	ListSubheader,
 } from "@mui/material";
 
 import { useNavigate, Link, json } from "react-router-dom";
@@ -60,375 +68,276 @@ import {
 	Info as InfoIcon,
 	Email as MailIcon,
 	ArrowForward as ArrowRightIcon,
+	RemoveCircleOutline as RemoveCircleOutlineIcon,
+	ErrorOutline as ErrorOutlineIcon,
 } from "@mui/icons-material";
 
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
-import BillingStats from "../components/BillingStats.jsx";
+import BillingStats, { StatsDateRangePicker, parseDate as parseStatsDate } from "../components/BillingStats.jsx";
+import LineChartWrapper, { TokenBarChart } from '../components/LineChartWrapper.jsx';
 import LicencePopup from "../components/LicencePopup.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 
-import { Context } from "../context/ContextApi.jsx";
+import { Context, OrgStatusMapping, LegacyStatusList } from "../context/ContextApi.jsx";
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid } from "@mui/x-data-grid";
 
-const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) => {
-    var isProdStatusOn;
-    if (selectedOrganization !== undefined && selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions[0] !== undefined) {
-        isProdStatusOn = selectedOrganization?.subscriptions[0]?.name?.toLowerCase()?.includes("enterprise") && selectedOrganization?.subscriptions[0]?.active;
-    } else {
-        isProdStatusOn = false;
+const FeatureStatusIcon = ({ status }) => {
+    if (status === 'ok') {
+        return <CheckCircleIcon style={{ color: '#5cc879', fontSize: 20, flexShrink: 0, marginTop: 1 }} />;
     }
+    if (status === 'limited') {
+        return <ErrorOutlineIcon style={{ color: '#c08530', fontSize: 20, flexShrink: 0, marginTop: 1 }} />;
+    }
+    return <CancelIcon style={{ color: '#8a4f4f', fontSize: 20, flexShrink: 0, marginTop: 1 }} />;
+};
 
+const openSourceFeatures = [
+    { label: 'All Features', desc: 'Every feature enabled by default', status: 'ok' },
+    { label: '2500+ Apps', desc: 'All app integrations available', status: 'ok' },
+    { label: 'High Scale', desc: 'App runs capped at 25k/month', status: 'limited' },
+    { label: 'Tenants', desc: 'Multi-tenancy limited to 3 orgs', status: 'limited' },
+    { label: 'High Availability', desc: 'No HA or redundancy setup', status: 'limited' },
+    { label: 'Locations', desc: 'Limited to 1 additional location', status: 'limited' },
+    { label: 'Production Readiness', desc: 'No health checks or stable infra', status: 'no' },
+    { label: 'Custom Branding', desc: 'No branding or theme controls', status: 'no' },
+    { label: 'Shuffle Support', desc: 'No SLA support included', status: 'no' },
+    { label: 'Onboarding & Setup', desc: 'No official onboarding by Shuffle', status: 'no' },
+];
+
+const formatAppRunLimit = (limit) => {
+    if (!limit || limit <= 0) return 'Unlimited app runs';
+    if (limit >= 1000000) return `${limit / 1000000}M app runs per month`;
+    if (limit >= 1000) return `${limit / 1000}K app runs per month`;
+    return `${limit} app runs per month`;
+};
+
+const getLicensedFeatures = (org, isCloud) => [
+    { label: 'All Features', desc: 'Every feature enabled', status: 'ok' },
+    { label: '2500+ Apps', desc: 'All app integrations available', status: 'ok' },
+    {
+        label: 'High Scale',
+        desc: !isCloud && org?.sync_features?.app_executions?.limit
+            ? formatAppRunLimit(org.sync_features.app_executions.limit)
+            : 'Unlimited app runs',
+        status: 'ok',
+        },
+    { label: 'Tenants', desc: 'Unlimited multi-tenancy', status: 'ok' },
+    { label: 'High Availability', desc: 'HA and health monitoring included', status: 'ok' },
+    { label: 'Locations', desc: 'Multiple locations supported', status: 'ok' },
+    { label: 'Production Readiness', desc: 'Health checks and stable infra', status: 'ok' },
+    { label: 'Custom Branding', desc: 'Full branding and theme controls', status: 'ok' },
+    { label: 'Shuffle Support', desc: 'Official SLA support included', status: 'ok' },
+    { label: 'Onboarding & Setup', desc: 'Full onboarding by Shuffle team', status: 'ok' },
+];
+
+const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) => {
+    var isProdStatusOn = false;
+    if (selectedOrganization?.subscriptions && selectedOrganization.subscriptions.length > 0 && selectedOrganization.subscriptions[0]) {
+        const sub = selectedOrganization.subscriptions[0];
+        const name = sub?.name?.toLowerCase() || "";
+        isProdStatusOn = (name.includes("enterprise") || name.includes("business")) && sub.active;
+    }   
     const themeMode = theme.palette.mode;
-	const workflowActive = selectedOrganization?.sync_features?.app_executions?.active;
-	const multiTenantActive = selectedOrganization?.sync_features?.multi_tenant?.active;
-	const multiEnvActive = selectedOrganization?.sync_features?.multi_env?.active;
-	const brandingActive = selectedOrganization?.sync_features?.branding?.active;
-    const colors = {
-        textPrimary: theme.palette.text.primary,
-        textSecondary: theme.palette.text.secondary,
-        textMuted: themeMode === "dark" ? '#6e7681' : '#9ca3af',
-        border: themeMode === "dark" ? '#30363d' : '#e1e4e8',
-        divider: themeMode === "dark" ? '#21262d' : '#e5e7eb',
-        success: themeMode === "dark" ? '#10b981' : '#059669',
-        successBg: themeMode === "dark" ? 'rgba(16, 185, 129, 0.12)' : 'rgba(5, 150, 105, 0.08)',
-        warning: '#f59e0b',
-        warningBg: themeMode === "dark" ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.08)',
-        disabled: themeMode === "dark" ? '#6e7681' : '#d1d5db',
-        disabledBg: themeMode === "dark" ? 'rgba(110, 118, 129, 0.1)' : 'rgba(156, 163, 175, 0.08)',
-        accent: '#f85a3e',
-        cardBg: theme.palette.surfaceColor,
+    const accent = theme.palette.primary.main;
+    const cardBg = theme.palette.platformColor;
+    const borderColor = themeMode === 'dark' ? '#333333' : '#e0e0e0';
+    const dividerColor = themeMode === 'dark' ? '#2a2a2a' : '#ebebeb';
+    const textSecondary = theme.palette.text.secondary;
+    const textPrimary = theme.palette.text.primary;
+
+    const secondaryActionStyle = {
+        color: textSecondary,
+        fontWeight: 500,
+        fontSize: 13,
+        padding: '4px 12px',
+        borderRadius: 6,
+        textTransform: 'none',
+        minWidth: 0,
     };
 
-    const features = [
-        {
-            icon: ZapIcon,
-            label: 'App Runs',
-            licensed: `${selectedOrganization?.sync_features?.app_executions?.limit}/month limit`,
-            unlicensed: '25,000/month limit',
-            isActive: workflowActive,
-        },
-        {
-            icon: UsersIcon,
-            label: 'Multi-Tenant',
-            licensed: `${selectedOrganization?.sync_features?.multi_tenant?.limit} tenants`,
-            unlicensed: '3 tenants maximum',
-            isActive: multiTenantActive,
-        },
-        {
-            icon: FmdGoodOutlinedIcon,
-            label: 'Runtime Locations',
-            licensed: `${selectedOrganization?.sync_features?.multi_env?.limit} Runtime Locations`,
-            unlicensed: '1 Runtime Location only',
-            isActive: multiEnvActive,
-        },
-        {
-            icon: PaletteIcon,
-            label: 'Custom Branding',
-            licensed: `${brandingActive ? "Full branding control" : "Branding not available"}`,
-            unlicensed: 'Branding not available',
-            isActive: brandingActive,
-        },
-        {
-            icon: ShieldIcon,
-            label: 'High Availability',
-            licensed: 'Enterprise SLA guarantee',
-            unlicensed: 'Standard availability',
-            isActive: isProdStatusOn, // High availability is tied to license status
-        },
-    ];
-
-    return (
-        <div
-            style={{
-                width: '100%',
-                maxWidth: 800,
-				padding: "0px 24px 24px 0px",
-                display: 'flex',
-                flexDirection: 'column',
-                fontFamily: theme.typography.fontFamily,
-            }}
-        >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <Typography variant="h5" style={{ fontWeight: 600, margin: 0 }}>
-                    License Status
-                </Typography>
-
-                <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 16px',
-                borderRadius: 20,
-                background: isProdStatusOn ? colors.successBg : colors.warningBg,
-                border: `2px solid ${isProdStatusOn ? colors.success : colors.warning}`,
-                boxShadow: isProdStatusOn
-                  ? `0 2px 8px ${colors.success}30`
-                  : `0 2px 8px ${colors.warning}30`,
-				  height: 12,
-              }}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: isProdStatusOn ? colors.success : colors.warning,
-                  boxShadow: `0 0 10px ${isProdStatusOn ? colors.success : colors.warning}`,
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: isProdStatusOn ? colors.success : colors.warning,
-                  letterSpacing: '0.5px',	
-                }}
-              >
-                {isProdStatusOn ? 'Licensed' : 'Unlicensed'}
-              </span>
+    const FeatureRow = ({ feat }) => (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <FeatureStatusIcon status={feat.status} />
+            <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: textPrimary, lineHeight: 1.3 }}>
+                    {feat.label}
+            </div>
+                <div style={{ fontSize: 11.5, color: textSecondary, lineHeight: 1.4, marginTop: 1 }}>
+                    {feat.desc}
             </div>
             </div>
+        </div>
+    );
 
-            {/* Subtitle */}
-            <Typography
-                variant="body2"
-                color="textSecondary"
-                style={{
-                    margin: '0 0 24px 0',
-                    lineHeight: 1.5,
-                }}
+    const SecondaryActions = () => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Button
+                href="https://shuffler.io/training"
+                target="_blank"
+                rel="noreferrer"
+                variant="text"
+                style={secondaryActionStyle}
             >
-                {isProdStatusOn
-                    ? 'Your organization has full access to all enterprise features and capabilities.'
-                    : 'Your organization is running on the open-source plan. Upgrade to Enterprise to remove limits and unlock advanced capabilities.'}
-            </Typography>
-
-            {/* Features Grid */}
-            <div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 12,
-                    marginBottom: 32,
-                }}
+                Get Training
+            </Button>
+            <span style={{ color: borderColor, fontSize: 14, userSelect: 'none' }}>·</span>
+            <Button
+                href="https://shuffler.io/contact"
+                target="_blank"
+                rel="noreferrer"
+                variant="text"
+                style={secondaryActionStyle}
             >
-                {features
-                    .sort((a, b) => {
-                        const aActive = isProdStatusOn && a.isActive;
-                        const bActive = isProdStatusOn && b.isActive;
-                        return bActive - aActive;
-                    })
-                    .map((feature, index) => {
-                    const Icon = feature.icon;
-                    const isAvailable = isProdStatusOn;
-                    const statusColor = isAvailable ? colors.success : colors.warning;
-                    const bgColor = isAvailable ? themeMode === "dark" ? "#212121" : "#ffffff" : colors.disabledBg;
+                Contact Us
+            </Button>
+        </div>
+    );
 
+    if (isProdStatusOn) {
                     return (
-                        <div
-                            key={index}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 14,
-                                padding: '14px 16px',
-                                paddingLeft: !isAvailable ? 20 : 16,
-                                borderRadius: 10,
-                                background: bgColor,
-                                border: `1px solid ${isAvailable ? colors.success + '40' : colors.border}`,
-                                transition: 'all 0.2s',
-                                position: 'relative',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            {!isAvailable && (
-                                <div style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    bottom: 0,
-                                    width: 3,
-                                    background: colors.warning,
-                                    borderRadius: '10px 0 0 10px',
-                                }} />
-                            )}
-
-                            {/* Icon */}
-                            <div
-                                style={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: 8,
-                                    background: isAvailable ? colors.success + '20' : `${colors.warning}20`,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <Icon style={{ color: statusColor, fontSize: 20 }} />
-                            </div>
-
-                            {/* Content */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                    style={{
-                                        fontSize: 15,
-                                        fontWeight: 600,
-                                        color: colors.textPrimary,
-                                        marginBottom: 3,
-                                    }}
-                                >
-                                    {feature.label}
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: 13,
-                                        color: !isAvailable ? colors.warning : colors.textSecondary,
-                                        lineHeight: 1.4,
-                                    }}
-                                >
-                                    {isProdStatusOn ? feature.licensed : feature.unlicensed}
-                                </div>
-                            </div>
-
-                            {isAvailable ? (
-                                <CheckCircleIcon
-                                    style={{ color: colors.success, fontSize: 20, flexShrink: 0 }}
-                                />
-                            ) : (
-                                <LockIcon
-                                    style={{ color: colors.warning, fontSize: 20, flexShrink: 0 }}
-                                />
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
-            <div
-                style={{
-                    width: '100%',
-                    height: 1,
-                    background: colors.divider,
-                    margin: '8px 0 24px 0',
-                }}
-            />
-
-            {!isProdStatusOn && (
+            <div style={{ width: '100%', maxWidth: 520, fontFamily: theme.typography.fontFamily, marginTop: 30 }}>
                 <div style={{
                     borderRadius: 12,
+                    border: `1px solid ${borderColor}`,
+                    backgroundColor: cardBg,
+                                overflow: 'hidden',
+                }}>
+                    {/* Header */}
+                                <div style={{
+                        padding: '14px 20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                        gap: 12,
+                        borderBottom: `1px solid ${dividerColor}`,
+                    }}>
+                        <ShieldIcon style={{ color: accent, fontSize: 26, flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <Typography variant="h6" style={{ fontWeight: 700, fontSize: 16, margin: 0, letterSpacing: '0.01em' }}>
+                                    {selectedOrganization?.subscriptions?.[0]?.name?.toLowerCase()?.includes("enterprise") ? "Enterprise License" : "Business License"}
+                                </Typography>
+                                <span style={{
+                                    fontSize: 10, fontWeight: 600, color: accent,
+                                    background: `${accent}1a`,
+                                    border: `1px solid ${accent}4d`,
+                                    borderRadius: 20,
+                                    padding: '2px 8px',
+                                    letterSpacing: '0.06em',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    ACTIVE
+                                </span>
+                                </div>
+                            <Typography variant="body2" style={{ margin: '2px 0 0', fontSize: 12, color: textSecondary }}>
+                                Full access · All features included
+                            </Typography>
+                                </div>
+                            </div>
+
+                    {/* Features Grid */}
+                    <div style={{
+                        padding: '14px 20px',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '12px 20px',
+                    }}>
+                        {getLicensedFeatures(selectedOrganization, isCloud).map((feat, i) => (
+                            <FeatureRow key={i} feat={feat} />
+                        ))}
+                        </div>
+
+                    {/* Actions */}
+                    <div style={{
+                        padding: '10px 20px 14px',
+                        borderTop: `1px solid ${dividerColor}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                    }}>
+                        <SecondaryActions />
+            </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ width: '100%', maxWidth: 520, fontFamily: theme.typography.fontFamily,  marginTop: 30 }}>
+                <div style={{
+                    borderRadius: 12,
+                border: `1px solid ${borderColor}`,
+                backgroundColor: cardBg,
                     overflow: 'hidden',
-                    border: `1px solid ${colors.accent}40`,
-                    marginBottom: 24,
                 }}>
                     {/* Header */}
                     <div style={{
-                        background: `linear-gradient(135deg, ${colors.accent}14 0%, ${colors.accent}06 100%)`,
-                        padding: '16px 20px',
-                        borderBottom: `1px solid ${colors.accent}20`,
+                    padding: '14px 20px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
+                    borderBottom: `1px solid ${dividerColor}`,
                     }}>
-                        <div style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            background: `${colors.accent}20`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                        }}>
-                            <ShieldIcon style={{ color: colors.accent, fontSize: 20 }} />
-                        </div>
-                        <div>
-                            <Typography variant="h6" style={{ fontWeight: 700, margin: 0, fontSize: 16 }}>
-                                Unlock Shuffle Enterprise
+                    <ShieldIcon style={{ color: '#5a5a5a', fontSize: 26, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <Typography variant="h6" style={{ fontWeight: 700, fontSize: 16, margin: 0, letterSpacing: '0.01em' }}>
+                                Open Source License
                             </Typography>
-                            <Typography variant="body2" color="textSecondary" style={{ margin: 0, fontSize: 12, lineHeight: 1.4 }}>
-                                Scale your security operations without limits
+                        </div>
+                        <Typography variant="body2" style={{ margin: '2px 0 0', fontSize: 12, color: textSecondary }}>
+							Limited Scaling · All Features Included
                             </Typography>
                         </div>
                     </div>
 
-                    {/* Body */}
+                {/* Features Grid */}
                     <div style={{
-                        padding: '16px 20px 20px',
-                        background: themeMode === "dark" ? "#212121" : "#ffffff",
-                    }}>
-                        <div style={{
+                    padding: '14px 20px',
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
-                            gap: 8,
-                            marginBottom: 16,
+                    gap: '12px 20px',
                         }}>
-                            {[
-                                { icon: ZapIcon, text: 'Higher App Run Limits' },
-                                { icon: UsersIcon, text: 'Multi-Tenant Support' },
-                                { icon: ShieldIcon, text: 'Enterprise SLA' },
-                                { icon: FmdGoodOutlinedIcon, text: 'Multi-Location Deploy' },
-                            ].map((item, i) => {
-                                const ItemIcon = item.icon;
-                                return (
-                                    <div key={i} style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 8,
-                                        padding: '8px 12px',
-                                        borderRadius: 8,
-                                        background: themeMode === "dark" ? `${colors.accent}08` : `${colors.accent}06`,
-                                    }}>
-                                        <ItemIcon style={{ color: colors.accent, fontSize: 16 }} />
-                                        <span style={{ fontSize: 13, color: colors.textPrimary, fontWeight: 500 }}>
-                                            {item.text}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                    {openSourceFeatures.map((feat, i) => (
+                        <FeatureRow key={i} feat={feat} />
+                    ))}
                         </div>
 
-                        <Typography variant="body2" color="textSecondary" style={{
-                            marginBottom: 16,
-                            lineHeight: 1.6,
-                            fontSize: 13,
-                        }}>
-                            Purpose-built for security teams that need scalability, high availability, and dedicated
-                            expert support to run mission-critical workflows in production.{' '}
-                            <a href="https://shuffler.io/articles/Shuffle_Open_Source" target="_blank" rel="noreferrer" style={{ color: colors.accent }}>
-                                Learn more
-                            </a>
-                        </Typography>
-
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {/* Actions */}
+                <div style={{
+                    padding: '10px 20px 14px',
+                    borderTop: `1px solid ${dividerColor}`,
+                }}>
                         <Button
                                 href="https://shuffler.io/pricing?env=Self-Hosted"
                             target="_blank"
                             rel="noreferrer"
                             variant="contained"
-                            color="primary"
-                            endIcon={<ArrowRightIcon sx={{ fontSize: 16 }} />}
+                        fullWidth
+                        style={{
+                            backgroundColor: accent,
+                            color: '#fff',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            letterSpacing: '0.08em',
+                            borderRadius: 8,
+                            padding: '9px 0',
+                            boxShadow: `0 2px 10px ${accent}40`,
+                            textTransform: 'uppercase',
+                            marginBottom: 8,
+                        }}
                             >
-                                Upgrade Now
+                        Upgrade License
                             </Button>
-                            <Button
-                                href="https://shuffler.io/contact?category=talk_to_sales"
-                                target="_blank"
-                                rel="noreferrer"
-                                variant="outlined"
-                                startIcon={<MailIcon sx={{ fontSize: 16 }} />}
-                        >
-                            Talk to Sales
-                        </Button>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <SecondaryActions />
                         </div>
                     </div>
                 </div>
-            )}
         </div>
     );
 };
@@ -448,7 +357,7 @@ const AppRunsQueueCard = memo(({ environment, isAirGapped, isCloudSynching, tota
 
     let status, statusColor, statusBg;
     if (isThrottled) {
-        status = 'Throttled';
+        status = 'Scale Reached';
         statusColor = '#ef4444';
         statusBg = 'rgba(239, 68, 68, 0.12)';
     } else if (!isCloudSynching && usagePct >= 80) {
@@ -637,13 +546,446 @@ const AppRunsQueueCard = memo(({ environment, isAirGapped, isCloudSynching, tota
     );
 });
 
+const AnnualAppRunsGroupingToggle = ({ globalUrl, selectedOrganization, handleGetOrg, theme, userdata }) => {
+	const activeSub = selectedOrganization?.subscriptions?.[0];
+	const subName = activeSub?.name?.toLowerCase() || "";
+	const showGroupingToggle =
+		activeSub?.active === true &&
+		(subName.includes("business") || subName.includes("enterprise")) &&
+		(activeSub?.recurrence?.toLowerCase() === "annual" || activeSub?.recurrence?.toLowerCase() === "year");
+
+	const [groupingValue, setGroupingValue] = React.useState(
+		selectedOrganization?.sync_features?.annual_app_runs_grouping?.active === true
+	);
+	const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+	React.useEffect(() => {
+		setGroupingValue(selectedOrganization?.sync_features?.annual_app_runs_grouping?.active === true);
+	}, [selectedOrganization?.sync_features?.annual_app_runs_grouping?.active]);
+
+	if (!showGroupingToggle) return null;
+
+	const handleGroupingToggle = (newValue) => {
+		setGroupingValue(newValue);
+		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`;
+		fetch(url, {
+			mode: "cors",
+			method: "POST",
+			body: JSON.stringify({
+				org_id: selectedOrganization.id,
+				editing: "app_runs_grouping",
+				sync_features: {
+					annual_app_runs_grouping: {
+						active: newValue
+					}
+				}
+			}),
+			credentials: "include",
+			crossDomain: true,
+			withCredentials: true,
+			headers: { "Content-Type": "application/json; charset=utf-8" },
+		})
+			.then((response) => {
+				if (response.status === 200) {
+					toast("Annual App Runs Grouping " + (newValue ? "enabled" : "disabled") + "!");
+					if (handleGetOrg) {
+						handleGetOrg(selectedOrganization.id);
+					}
+				} else {
+					toast("Failed updating Annual App Runs Grouping.");
+					setGroupingValue(!newValue);
+				}
+			})
+			.catch((err) => {
+				toast("Error: " + err.toString());
+				setGroupingValue(!newValue);
+			});
+	};
+
+	return (
+		<div
+			key="annual-grouping-toggle"
+			style={{
+				display: "flex",
+				alignItems: "center",
+				marginLeft: 5,
+				marginTop: 30,
+				marginBottom: 0,
+			}}
+		>
+			<Typography variant="body2" color="textSecondary" style={{ fontSize: 16, maxWidth: 600 }}>
+				Pool your monthly app run limits into an annual quota. For example, a 300k monthly limit becomes 3.6M app runs available to use at any time until your current plan expires.
+			</Typography>
+			<div style={{ marginLeft: 15 }}>
+				<Tooltip title={groupingValue ? "Contact support@shuffler.io to disable the app runs grouping" : "Enable Annual App Runs Grouping"}>
+					<span>
+					<Switch
+						checked={groupingValue}
+							disabled={groupingValue}
+							onChange={(e) => {
+								if (e.target.checked && !userdata?.support) {
+									setConfirmOpen(true);
+								} else {
+									handleGroupingToggle(e.target.checked);
+								}
+							}}
+						color="primary"
+						inputProps={{ "aria-label": "annual app runs grouping toggle" }}
+						sx={{
+							"& .MuiSwitch-switchBase.Mui-checked": { color: "#FFFFFF" },
+								"& .MuiSwitch-switchBase.Mui-checked.Mui-disabled": { color: "#9e9e9e" },
+								"& .MuiSwitch-switchBase.Mui-disabled .MuiSwitch-thumb": { color: "#9e9e9e" },
+							"& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+								backgroundColor: groupingValue ? "#2BC07E" : "#9e9e9e",
+									opacity: 1,
+								},
+								"& .MuiSwitch-switchBase.Mui-checked.Mui-disabled + .MuiSwitch-track": {
+									backgroundColor: groupingValue ? "#2BC07E" : "#9e9e9e",
+									opacity: 0.3,
+								},
+								"& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track": {
+									backgroundColor: groupingValue ? "#2BC07E" : "#9e9e9e",
+									opacity: 0.3,
+							},
+							"& .MuiSwitch-track": {
+								backgroundColor: groupingValue ? "#2BC07E" : "#9e9e9e",
+							},
+						}}
+					/>
+					</span>
+				</Tooltip>
+			</div>
+			
+			<Dialog
+				open={confirmOpen}
+				onClose={() => setConfirmOpen(false)}
+				PaperProps={{
+					sx: {
+						borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+						border: theme?.palette?.DialogStyle?.border,
+						minWidth: '440px',
+						fontFamily: theme?.typography?.fontFamily,
+						backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						color: theme?.palette?.text?.primary,
+						zIndex: 1000,
+						'& .MuiDialogContent-root': {
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						},
+						'& .MuiDialogTitle-root': {
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						},
+						'& .MuiDialogActions-root': {
+							backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+						},
+					}
+				}}
+			>
+				<DialogTitle>Enable Annual App Runs Grouping?</DialogTitle>
+				<DialogContent>
+					<DialogContentText style={{ color: theme?.palette?.text?.secondary || "rgba(255, 255, 255, 0.7)" }}>
+						Are you sure you want to enable annual app runs grouping? It can be disabled only by contacting support.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setConfirmOpen(false)} style={{ color: theme?.palette?.text?.secondary || "rgba(255, 255, 255, 0.7)", textTransform: "none" }}>
+						Cancel
+					</Button>
+					<Button onClick={() => {
+						setConfirmOpen(false);
+						handleGroupingToggle(true);
+					}} color="primary" variant="contained" style={{ textTransform: "none" }}>
+						Enable
+					</Button>
+				</DialogActions>
+			</Dialog>
+		</div>
+	);
+};
+
+// Used for both cloud (fieldName="AlertThreshold") and onprem (fieldName="OnpremAlertThreshold")
+// alert thresholds - same UI and save/delete behavior, independent data per fieldName.
+const AlertThresholdSection = ({ theme, themeMode, selectedOrganization, globalUrl, BillingEmail, fieldName, limitValue }) => {
+	const getInitialThresholds = () => (
+		selectedOrganization.Billing !== undefined &&
+		selectedOrganization.Billing[fieldName] !== undefined &&
+		selectedOrganization.Billing[fieldName] !== null
+			? selectedOrganization.Billing[fieldName]
+			: [{ percentage: '', count: '', Email_send: false }]
+	);
+
+	const [thresholds, setThresholds] = useState(getInitialThresholds());
+	const [deleteIndex, setDeleteIndex] = useState(-1);
+	const [deleteVerification, setDeleteVerification] = useState(false);
+
+	useEffect(() => {
+		const sorted = getInitialThresholds().sort((a, b) => {
+			const countA = parseFloat(a.count);
+			const countB = parseFloat(b.count);
+			if (isNaN(countA)) return 1;
+			if (isNaN(countB)) return -1;
+
+			return countA - countB;
+		});
+
+		setThresholds(sorted);
+	}, [selectedOrganization]);
+
+	const addThreshold = () => {
+		setThresholds([...thresholds, { percentage: '', count: '', Email_send: false }]);
+	};
+
+	const updateThreshold = (index, field, value) => {
+		const newThresholds = thresholds.map((threshold, i) => {
+			if (i === index) {
+				const newValue = parseFloat(value);
+				if (field === 'percentage') {
+					const newCount = (newValue / 100) * limitValue;
+					return {
+						...threshold,
+						percentage: isNaN(newValue) ? '' : Math.round(newValue),
+						count: isNaN(newCount) ? '' : Math.round(newCount),
+						Email_send: false
+					};
+				} else if (field === 'count') {
+					const newPercentage = (newValue / limitValue) * 100;
+					return {
+						...threshold,
+						count: newValue,
+						percentage: isNaN(newPercentage) ? '' : Math.round(newPercentage),
+						Email_send: false
+					};
+				}
+			}
+			return threshold;
+		});
+		setThresholds(newThresholds);
+	};
+
+	const handleDeleteThreshold = (index) => {
+		const newThresholds = thresholds.filter((_, i) => i !== index);
+		setThresholds(newThresholds);
+		toast.info("Alert Threshold deleted successfully. Don't forget to save your changes.");
+	};
+
+	const handleSaveThresholds = () => {
+		const invalidCount = thresholds.some((threshold) => {
+			if (threshold.count === '') {
+				toast("Please enter a valid Count or Percentage value");
+				return true;
+			}
+			return false;
+		});
+
+		if (invalidCount) {
+			return;
+		}
+
+		toast("Updating Email Alert Threshold. Please wait...");
+
+		const data = {
+			org_id: selectedOrganization.id,
+			name: selectedOrganization?.name,
+			description: selectedOrganization?.description,
+			image: selectedOrganization?.image,
+			defaults: selectedOrganization?.defaults,
+			sso_config: selectedOrganization?.sso_config,
+			mfa_required: selectedOrganization?.mfa_required,
+			billing: {
+				email: BillingEmail,
+				[fieldName]: thresholds.map(threshold => ({
+					...threshold,
+					percentage: parseInt(threshold.percentage, 10),
+					count: parseInt(threshold.count, 10),
+				})),	
+				Consultation: selectedOrganization?.billing?.Consultation,
+			},
+		};
+
+		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`;
+		fetch(url, {
+			method: "POST",
+			body: JSON.stringify(data),
+			credentials: "include",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Bad status code in get org:", response.status);
+				}
+				return response.json();
+			}).then((responseJson) => {
+				console.log("Got org:", responseJson);
+				if (responseJson.success === true) {
+					toast.success("Successfully updated Email Alert Thresholds");
+				} else {
+					toast.error("Failed to update Email Alert Thresholds. Please try again.");
+				}
+			})
+			.catch((error) => {
+				console.log("Error getting org:", error);
+			});
+	};
+
+	return (
+		<div>
+			<div>
+				<div style={{ marginTop: 15 }}>
+					{thresholds.map((threshold, index) => (
+						<div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+						 <TextField
+							style={{
+							marginTop: 10,
+							backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+									color: theme.palette.textFieldStyle.color,
+							borderRadius: theme.palette.textFieldStyle.borderRadius,
+							width: 250,
+							height: 50,
+							}}
+							InputProps={{
+							style: {
+								height: 50,
+								color: theme.palette.textFieldStyle.color,
+							},
+							endAdornment: '%',
+							}}
+							InputLabelProps={{
+							shrink: undefined,
+							}}
+							color="primary"
+							fullWidth
+							label="Alert threshold (%)"
+							type="number"
+							value={threshold.percentage}
+							onChange={(e) => updateThreshold(index, 'percentage', e.target.value)}
+							margin="normal"
+							variant="outlined"
+							inputProps={{
+							max: 100,
+							}}
+						/>
+							<TextField
+								style={{
+								marginTop: 10,
+								height: 50,
+									backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+								color: theme.palette.textFieldStyle.color,
+								width: 250,
+									marginLeft: 15,
+								borderRadius: theme.palette.textFieldStyle.borderRadius,
+								}}
+								InputProps={{
+								style: {
+									height: 50,
+									color: theme.palette.textFieldStyle.color,
+								},
+								}}
+								InputLabelProps={{
+								shrink: undefined,
+								}}
+								color="primary"
+								fullWidth
+								label="Alert threshold (count)"
+								type="number"
+								value={threshold.count}
+								onChange={(e) => updateThreshold(index, 'count', e.target.value)}
+								margin="normal"
+								variant="outlined"
+							/>
+						<span
+						  style={{
+							marginLeft: 8,
+							color: 'green',
+						  }}
+						>
+						  {thresholds[index].Email_send === true && (
+							<Tooltip title="We have already sent alert for this threshold.">
+							  <CheckCircle />
+							</Tooltip>
+						  )}
+						</span>
+						{thresholds.length > 1 && (
+						  <Button
+							disableRipple
+							disableElevation
+							sx={{
+							  padding: 0,
+							  minWidth: 0,
+							  '&:hover': {
+								backgroundColor: 'transparent',
+							  },
+							}}
+							onClick={() => {
+							  setDeleteVerification(true);
+							  setDeleteIndex(index);
+							}}
+						  >
+							<DeleteIcon sx={{ color: themeMode === "dark" ? "rgba(255,255,255,0.7)" : "#666666" }} />
+						  </Button>
+						)}
+						<Dialog
+						  open={deleteVerification}
+						  onClose={() => setDeleteVerification(false)}
+						  sx={{
+							'& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
+						  }}
+						>
+						  <DialogTitle>Are you sure you want to delete this threshold?</DialogTitle>
+						  <DialogActions>
+							<Button
+							  style={{ textTransform: 'none', fontSize: 16 }}
+							  color="primary"
+							  onClick={() => setDeleteVerification(false)}
+							>
+							  Cancel
+							</Button>
+							<Button
+							style={{ textTransform: 'none', fontSize: 16 }}
+							variant="outlined"
+							  color="primary"
+							  onClick={() => {
+								handleDeleteThreshold(deleteIndex);
+								setDeleteVerification(false);
+							  }}
+							>
+							  Delete
+							</Button>
+						  </DialogActions>
+						</Dialog>
+					  </div>
+					))}
+				</div>
+			</div>
+			<Button
+				variant="outlined"
+				color="primary"
+				style={{ marginTop: 15, textTransform: 'none' }}
+				onClick={addThreshold}
+			>
+				Add Threshold
+			</Button>
+			<Button
+				variant="outlined"
+				color="primary"
+				style={{ marginTop: 15, textTransform: 'none', marginLeft: 20 }}
+				onClick={handleSaveThresholds}
+			>
+				Save
+			</Button>
+		</div>
+	);
+};
+
 const Billing = memo((props) => {
-	const { globalUrl, userdata, serverside, billingInfo, stripeKey,isLoaded, selectedOrganization, handleGetOrg, clickedFromOrgTab, removeCookie} = props;
+	const { globalUrl, userdata, serverside, billingInfo, stripeKey,isLoaded, selectedOrganization, handleGetOrg, clickedFromOrgTab, removeCookie, selectedStatus, setSelectedStatus, handleStatusChange} = props;
 	//const alert = useAlert();
 	let navigate = useNavigate();
 	const { themeMode, brandColor,supportEmail } = useContext(Context);
 	const theme = getTheme(themeMode, brandColor);
 	const [isLoggedIn, setIsLoggedIn] = useState(false)
+	const [orgStatus, setOrgStatus] = useState(selectedStatus || []);
+	const [orgRecurrence, setOrgRecurrence] = useState("Monthly");
 	const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
 	const [dealList, setDealList] = React.useState([]);
 	const [dealName, setDealName] = React.useState("");
@@ -659,11 +1001,7 @@ const Billing = memo((props) => {
 	const [isMouseOverOnChangeEmail, setIsMouseOverOnChangeEmail] = useState(false);
 	const [currentAppRunsInPercentage, setCurrentAppRunsInPercentage] = useState(0);
 	const [currentAppRunsInNumber, setCurrentAppRunsInNumber] = useState(0);
-	const [alertThresholds, setAlertThresholds] = useState(selectedOrganization.Billing !== undefined && selectedOrganization.Billing.AlertThreshold !== undefined && selectedOrganization.Billing.AlertThreshold !== null ? selectedOrganization.Billing.AlertThreshold : [{ percentage: '', count: '', Email_send: false }]);
-	const [currentIndex, setCurrentIndex] = useState(0);
-	const [deleteAlertIndex, setDeleteAlertIndex] = useState(-1);
-	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
-	const [supportAppRunLimit, setSupportAppRunLimit] = useState(selectedOrganization?.billing?.internal_app_runs_hard_limit || '');
+	const [supportAppRunLimit, setSupportAppRunLimit] = useState(selectedOrganization?.Billing?.internal_app_runs_hard_limit || '');
 	const [supportLimitDialogOpen, setSupportLimitDialogOpen] = useState(false);
 	const [isScale, setIsScale] = useState(false);
 	const [currentTab, setCurrentTab] = useState(0)
@@ -673,6 +1011,67 @@ const Billing = memo((props) => {
 	const [monthlyAppRunsParent, setMonthlyAppRunsParent] = useState(0)
 	const [monthlyAllSuborgExecutions, setMonthlyAllSuborgExecutions] = useState(0)
 	const [billingEnvironments, setBillingEnvironments] = useState([])
+
+
+	useEffect(() => {
+		setOrgStatus([...(selectedStatus || [])]);
+	}, [selectedStatus]);
+
+	useEffect(() => {
+		const activeSubRecurrence = selectedOrganization?.subscriptions?.[0]?.recurrence;
+		setOrgRecurrence((activeSubRecurrence?.toLowerCase() === "annual" || activeSubRecurrence?.toLowerCase() === "year") ? "Annual" : "Monthly");
+	}, [selectedOrganization?.subscriptions]);
+	
+
+	useEffect(() => {
+		if (!statistics || statistics?.success === false) {
+			return
+		}
+
+		if (selectedOrganization?.sync_features?.annual_app_runs_grouping?.active) {
+			setMonthlyAppRunsParent(statistics?.annual_app_executions ?? 0)
+			setMonthlyAllSuborgExecutions(statistics?.annual_child_app_executions ?? 0)
+			return
+		}
+
+		const dailyStats = statistics.daily_statistics
+		if (dailyStats === undefined || dailyStats === null) {
+			setMonthlyAppRunsParent(statistics["monthly_app_executions"] ?? 0)
+			setMonthlyAllSuborgExecutions(statistics["monthly_child_app_executions"] ?? 0)
+			return
+		}
+
+		const today = new Date()
+		const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+		monthStart.setHours(0, 0, 0, 0)
+		const monthEnd = new Date(today)
+		monthEnd.setHours(23, 59, 59, 999)
+
+		let parent = 0
+		let child = 0
+		for (const key in dailyStats) {
+			const item = dailyStats[key]
+			if (item?.date === undefined) {
+				continue
+			}
+
+			const date = new Date(item.date)
+			date.setHours(0, 0, 0, 0)
+			if (date >= monthStart && date <= monthEnd) {
+				parent += item.app_executions ?? 0
+				child += item.child_app_executions ?? 0
+			}
+		}
+
+		if (statistics["daily_app_executions"] !== undefined && statistics["daily_app_executions"] !== null) {
+			parent += statistics["daily_app_executions"]
+			child += statistics["daily_child_app_executions"] ?? 0
+		}
+
+		setMonthlyAppRunsParent(parent)
+		setMonthlyAllSuborgExecutions(child)
+	}, [statistics, selectedOrganization?.sync_features?.annual_app_runs_grouping?.active])
+
 	useEffect(() => {
 		if (monthlyAppRunsParent > 0 || monthlyAllSuborgExecutions > 0) {
 			const percentage = ((monthlyAppRunsParent + monthlyAllSuborgExecutions) / userdata.app_execution_limit) * 100;
@@ -703,26 +1102,6 @@ const Billing = memo((props) => {
 			setBillingEmail(selectedOrganization?.Billing?.Email);
 		}
 
-		// Set and sort the alert thresholds
-		const alertThresholds = selectedOrganization.Billing !== undefined &&
-			selectedOrganization.Billing.AlertThreshold !== undefined &&
-			selectedOrganization.Billing.AlertThreshold !== null
-			? selectedOrganization.Billing.AlertThreshold
-			: [{ percentage: '', count: '', Email_send: false }];
-
-		const sortedAlertThresholds = alertThresholds.sort((a, b) => {
-			const countA = parseFloat(a.count);
-			const countB = parseFloat(b.count);
-			if (isNaN(countA)) return 1;
-			if (isNaN(countB)) return -1;
-
-			return countA - countB;
-		});
-
-		setAlertThresholds(sortedAlertThresholds);
-
-		const findCurrentIndex = sortedAlertThresholds.some(threshold => threshold.Email_send === false);
-		setCurrentIndex(findCurrentIndex ? sortedAlertThresholds.findIndex(threshold => threshold.Email_send === false) : - 1);
 		if (selectedOrganization?.Billing?.internal_app_runs_hard_limit !== undefined && selectedOrganization?.Billing?.internal_app_runs_hard_limit !== null && selectedOrganization?.Billing?.internal_app_runs_hard_limit > 0) {
 			setSupportAppRunLimit(selectedOrganization?.Billing?.internal_app_runs_hard_limit)
 		}
@@ -2506,10 +2885,6 @@ const Billing = memo((props) => {
 				toast("Failed adding deal reg: ", error);
 			});
 	};
-	const addAlertThreshold = () => {
-		setAlertThresholds([...alertThresholds, { percentage: '', count: '', Email_send: false }]);
-	};
-
 
 	const handleUpdateSupportAppRunLimit = () => {
 		if (!supportAppRunLimit || isNaN(supportAppRunLimit) || supportAppRunLimit < 0) {
@@ -2517,7 +2892,39 @@ const Billing = memo((props) => {
 			return;
 		}
 
-		toast("Updating app run limit. Please wait...");
+		const appRunsHardLimit = parseInt(supportAppRunLimit) || 0;
+		const org = selectedOrganization;
+
+		if (org?.sync_features?.annual_app_runs_grouping?.active) {
+			const maxAllowed = (org?.sync_features?.app_executions?.limit || 0) * 12 * 2;
+			if (appRunsHardLimit > maxAllowed) {
+				toast.error("Hard limit cannot exceed 200% of the annual limit.");
+				return;
+			}
+		} else if (
+			org?.lead_info?.business_license_cloud ||
+			org?.lead_info?.business_license_onprem ||
+			org?.lead_info?.enterprise_license_cloud ||
+			org?.lead_info?.enterprise_license_onprem ||
+			org?.lead_info?.shuffle_enterprise_license_old_customer
+		) {
+			const maxAllowed = (org?.sync_features?.app_executions?.limit || 0) * 10;
+			if (appRunsHardLimit > maxAllowed) {
+				toast.error("Hard limit cannot exceed 1000% of the monthly limit.");
+				return;
+			}
+		} else {
+			const maxAllowed = org?.sync_features?.app_executions?.limit || 0;
+			if (appRunsHardLimit > maxAllowed) {
+				toast.error("Hard limit cannot exceed 100% of the monthly limit.");
+				return;
+			}
+		}
+
+		if (selectedOrganization?.Billing) {
+			selectedOrganization.Billing.internal_app_runs_hard_limit = appRunsHardLimit;
+		}
+		setSupportLimitDialogOpen(false);
 
 		const data = {
 			org_id: selectedOrganization.id,
@@ -2539,125 +2946,28 @@ const Billing = memo((props) => {
 				"Content-Type": "application/json; charset=utf-8",
 			},
 		})
-			.then((response) => {
+			.then(async (response) => {
 				if (response.status === 200) {
-					toast.success("Successfully updated app run limit");
 					setSupportLimitDialogOpen(false);
 					if (handleGetOrg !== undefined) {
 						handleGetOrg(selectedOrganization.id);
 					}
 				} else {
-					toast.error("Failed to update app run limit. Please try again.");
+					let errorMessage = "Failed to update app run limit. Please try again.";
+					try {
+						const responseData = await response.json();
+						if (responseData && responseData.reason) {
+							errorMessage = responseData.reason;
+						}
+					} catch (e) {
+						console.log("Error parsing response:", e);
+					}
+					toast.error(errorMessage);
 				}
 			})
 			.catch((error) => {
 				console.log("Error updating app run limit:", error);
 				toast.error("Failed to update app run limit. Please try again.");
-			});
-	};
-
-	const updateAlertThreshold = (index, field, value) => {
-
-		const totalValue = userdata.app_execution_limit;
-		const newAlertThresholds = alertThresholds.map((threshold, i) => {
-			if (i === index) {
-				const newValue = parseFloat(value);
-				if (field === 'percentage') {
-					const newCount = (newValue / 100) * totalValue;
-					return {
-						...threshold,
-						percentage: isNaN(newValue) ? '' : Math.round(newValue),
-						count: isNaN(newCount) ? '' : Math.round(newCount),
-						Email_send: false
-					};
-				} else if (field === 'count') {
-					const newPercentage = (newValue / totalValue) * 100;
-					return {
-						...threshold,
-						count: newValue,
-						percentage: isNaN(newPercentage) ? '' : Math.round(newPercentage),
-						Email_send: false
-					};
-				}
-			}
-			return threshold;
-		});
-		setAlertThresholds(newAlertThresholds);
-	};
-
-
-	const handleDeleteAlertThreshold = (index) => {
-		const newAlertThresholds = alertThresholds.filter((_, i) => i !== index);
-		setAlertThresholds(newAlertThresholds);
-
-		// Update currentIndex based on remaining elements
-		const findCurrentIndex = newAlertThresholds.some(threshold => threshold.Email_send === false);
-		setCurrentIndex(findCurrentIndex ? newAlertThresholds.findIndex(threshold => threshold.Email_send === false) : - 1);
-		toast.info("Alert Threshold deleted successfully. Don't forget to save your changes.");
-	};
-	const HandleEditOrgForAlertThreshold = (orgId) => {
-
-		// Use the `some` method to check for invalid counts
-		const invalidCount = alertThresholds.some((threshold) => {
-			if (threshold.count === '') {
-				toast("Please enter a valid Count or Percentage value");
-				return true; // Stop checking further and return true if invalid
-			}
-			return false;
-		});
-
-		// If any invalid count is found, return early
-		if (invalidCount) {
-			return;
-		}
-
-		toast("Updating Email Alert Threshold. Please wait...");
-
-		const data = {
-			org_id: orgId,
-			name: selectedOrganization?.name,
-			description: selectedOrganization?.description,
-			image: selectedOrganization?.image,
-			defaults: selectedOrganization?.defaults,
-			sso_config: selectedOrganization?.sso_config,
-			mfa_required: selectedOrganization?.mfa_required,
-			billing: {
-				email: BillingEmail,
-				AlertThreshold: alertThresholds.map(threshold => ({
-					...threshold,
-					percentage: parseInt(threshold.percentage, 10),
-					count: parseInt(threshold.count, 10),
-				})),
-				Consultation: selectedOrganization?.billing?.Consultation,
-			},
-		};
-
-		const url = `${globalUrl}/api/v1/orgs/${orgId}`;
-		fetch(url, {
-			method: "POST",
-			body: JSON.stringify(data),
-			credentials: "include",
-			headers: {
-				"Content-Type": "application/json",
-			},
-		})
-			.then((response) => {
-				if (response.status !== 200) {
-					console.log("Bad status code in get org:", response.status);
-				}
-				return response.json();
-			}).then((responseJson) => {
-				console.log("Got org:", responseJson);
-				if (responseJson.success === true) {
-					toast.success("Successfully updated Email Alert Thresholds");
-					const findCurrentIndex = alertThresholds.some(threshold => threshold.Email_send === false);
-					setCurrentIndex(findCurrentIndex ? alertThresholds.findIndex(threshold => threshold.Email_send === false) : - 1);
-				} else {
-					toast.error("Failed to update Email Alert Thresholds. Please try again.");
-				}
-			})
-			.catch((error) => {
-				console.log("Error getting org:", error);
 			});
 	};
 
@@ -2691,44 +3001,102 @@ const Billing = memo((props) => {
 
 	// Update supportAppRunLimit when selectedOrganization changes
 	useEffect(() => {
-		if (selectedOrganization?.billing?.internal_app_runs_hard_limit !== undefined) {
-			setSupportAppRunLimit(selectedOrganization.billing.internal_app_runs_hard_limit);
+		if (selectedOrganization?.Billing?.internal_app_runs_hard_limit !== undefined) {
+			setSupportAppRunLimit(selectedOrganization.Billing.internal_app_runs_hard_limit);
 		}
-	}, [selectedOrganization?.billing?.internal_app_runs_hard_limit]);
+	}, [selectedOrganization?.Billing?.internal_app_runs_hard_limit]);
+
+	const activeSubscription = selectedOrganization?.subscriptions?.[0];
+
+	const handleRecurrenceChange = (newRecurrence) => {
+		if (!activeSubscription) {
+			toast("No active subscription found to update.");
+			return;
+		}
+
+		const previousRecurrence = orgRecurrence;
+		setOrgRecurrence(newRecurrence);
+
+		const updatedSubscription = { ...activeSubscription, recurrence: newRecurrence };
+		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`;
+		fetch(url, {
+			mode: "cors",
+			method: "POST",
+			body: JSON.stringify({
+				org_id: selectedOrganization.id,
+				editing: "subscription_update",
+				subscription_index: activeSubscription.id,
+				subscription: updatedSubscription,
+			}),
+			credentials: "include",
+			crossDomain: true,
+			withCredentials: true,
+			headers: { "Content-Type": "application/json; charset=utf-8" },
+		})
+			.then((response) => response.json())
+			.then((responseJson) => {
+				if (responseJson["success"] === false) {
+					toast("Failed updating subscription recurrence.");
+					setOrgRecurrence(previousRecurrence);
+				} else {
+					toast("Subscription recurrence updated to " + newRecurrence + "!");
+					if (handleGetOrg) {
+						handleGetOrg(selectedOrganization.id);
+					}
+				}
+			})
+			.catch((error) => {
+				toast("Err: " + error.toString());
+				setOrgRecurrence(previousRecurrence);
+			});
+	};
+
+	const activeSubscriptionName = activeSubscription?.name?.toLowerCase() || "";
+	const hasActiveLicensedSubscription =
+		activeSubscription?.active &&
+		(activeSubscriptionName.includes("enterprise") ||
+			activeSubscriptionName.includes("business") ||
+			activeSubscriptionName.includes("scale") || 
+			activeSubscriptionName.includes("trial") || 
+			activeSubscriptionName.includes("poc"));
+
+	const isOnpremAlertEligible = selectedOrganization?.cloud_sync_active === true &&
+		(selectedOrganization?.lead_info?.enterprise_license_onprem === true ||
+			selectedOrganization?.lead_info?.business_license_onprem === true ||
+			selectedOrganization?.lead_info?.scale_license_onprem_customer === true);
 
 	return (
 		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
-			<div style={{  width: "100%", padding: 24, paddingTop: 0}}>
-				<div style={{ width: "100%", maxWidth: 800, }}>
-
-				{isCloud ? null : <ProductionStatus selectedOrganization={selectedOrganization} userdata={userdata} isCloud={isCloud} theme={theme} />}
+			<div style={{  width: "100%", padding: 24, paddingTop: 0, boxSizing: 'border-box'}}>
+				<div style={{ width: "100%", }}>
 
 				{addDealModal}
 				{clickedFromOrgTab ?
-					<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, }}>Billing & Licensing</Typography> 
-						:
-						<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
-						Billing	& Licensing
+				<Typography variant="h5" style={{fontSize: 24, fontWeight: 500, marginBottom: 8, }}>
+					 Billing & Licensing
 					</Typography>
+				: null
 				}
 			{userdata?.org_status?.includes("integration_partner") && userdata?.org_status?.includes("sub_org") ? null : 
 			<>
 				{clickedFromOrgTab ?
-				<Typography variant="body2" color="textSecondary" style={{ fontSize: 16 }}>{isCloud ?
+				<Typography variant="body2" color="textSecondary" style={{ fontSize: 16 }}>{isCloud  ?
 					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
-					!(selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions.length > 0 && selectedOrganization?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && selectedOrganization?.subscriptions[0]?.active) ? "Shuffle is an Enterprise automation platform, and a license is required at scale. We offer a license with HA guarantees, higher limits, along along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
+				"View and manage your Shuffle License below. For support, please contact platform@shuffle.io."
 				}</Typography> :
 				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10, fontSize: 16 }}>
 					{isCloud ?
 						"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 						:
-						!(selectedOrganization?.subscriptions !== undefined && selectedOrganization?.subscriptions.length > 0 && selectedOrganization?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && selectedOrganization?.subscriptions[0]?.active) ? "Shuffle is an Enterprise automation platform, and a license is required at scale. We offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
+					!hasActiveLicensedSubscription ? "Shuffle is an Enterprise automation platform, and a license is required at scale. We offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if SLS (Shuffle Licensing System) is enabled, the UI in your local instance will also update." : "Here you can check your license and billing information."
 					}
 				</Typography>}
 			</>  }
 
-			{userdata.support === true ?
+			{!isChildOrg && !isCloud && (!hasActiveLicensedSubscription || (selectedOrganization?.cloud_sync === true && appExecLimit <= 25000)) ? <ProductionStatus selectedOrganization={selectedOrganization} userdata={userdata} isCloud={isCloud} theme={theme} /> : null}
+
+			{userdata.support === true && isCloud ?
 				<Typography style={{ marginBottom: 10, marginTop: clickedFromOrgTab ? 16 : null, color: clickedFromOrgTab ? theme.palette.text.primary : null }}>
 					For sales: Create&nbsp;
 					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#FF8444" }}>
@@ -2758,7 +3126,8 @@ const Billing = memo((props) => {
 				</Typography>
 				: null}
 
-			<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: theme.palette.scrollbarColor, height: isChildOrg ? 0 : "100%", marginTop: 20}} >
+			{((isCloud || hasActiveLicensedSubscription) && !isChildOrg) ? (
+				<div style={{ display: "flex", width: clickedFromOrgTab ? "100%" : "auto", scrollbarWidth: 'thin', scrollbarColor: theme.palette.scrollbarColor, height: isChildOrg ? 0 : "100%", marginTop: hasActiveLicensedSubscription && !isCloud ? 30 : 20}} >
 				<div style={{ display: "flex", flexDirection: "column", width: "100%",  }}>
 				{/* {isCloud &&
 					selectedOrganization.subscriptions !== undefined &&
@@ -2785,7 +3154,7 @@ const Billing = memo((props) => {
 					: null} */}
 				
 				<div style={{ display: "flex", flexDirection: "row", width: "100%", marginTop: 20, marginBottom: 20, maxWidth: 860, }}>
-				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
+				{((isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null) || (!isCloud && hasActiveLicensedSubscription)) && !(!isCloud && selectedOrganization?.cloud_sync === true && appExecLimit <= 25000) ? isChildOrg ? null :
 					<LicencePopup
 					serverside={serverside}
 					removeCookie={removeCookie}
@@ -2801,67 +3170,9 @@ const Billing = memo((props) => {
 					stripeKey={stripeKey}
 					isScale={isScale}
 					features={selectedOrganization?.sync_features}
+					handleGetOrg={handleGetOrg}
 					{...props}
 					/>
-					: !isCloud ?
-						<span style={{ display: "flex", }}>
-							{/* <SubscriptionObject
-								index={0}
-								globalUrl={globalUrl}
-								userdata={userdata}
-								serverside={false}
-								billingInfo={undefined}
-								selectedOrganization={selectedOrganization}
-								subscription={{
-									name: "Open Source",
-									limit: 0,
-									features: [
-										"Unlimited app runs/month, but may be slow. Only limited by CPU.",
-										"Multi-Tenancy",
-										"Single-Sign-On",
-										"Cloud Sync",
-									],
-								}}
-								highlight={true}
-							/> */}
-							<LicencePopup
-								{...props}
-							  	serverside={serverside}
-								removeCookie={removeCookie}
-								isLoaded={isLoaded}
-								isLoggedIn={isLoggedIn}
-								globalUrl={globalUrl}
-								selectedOrganization={selectedOrganization}
-								monthlyAppRunsParent={monthlyAppRunsParent}
-								monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
-								billingInfo={billingInfo}
-								isCloud={isCloud}
-								userdata={userdata}
-								features={selectedOrganization?.sync_features}
-								stripeKey={stripeKey}
-								isScale={isScale}
-							/>	
-
-							{/* <SubscriptionObject
-								index={1}
-								globalUrl={globalUrl}
-								userdata={userdata}
-								serverside={false}
-								billingInfo={undefined}
-								selectedOrganization={selectedOrganization}
-								subscription={{
-									name: "Scale",
-									limit: 0,
-									features: [
-										"All Open Source features",
-										"Scale License. Runs faster, and across multiple servers.",
-										"Priority Support",
-										"Workflow & App development help",
-									],
-								}}
-								highlight={false}
-							/> */}
-						</span>
 						: null}
 						</div>
 				</div>
@@ -2910,6 +3221,7 @@ const Billing = memo((props) => {
 									</Grid>
 									*/}
 			</div>
+			): null}
 
 			{/*isCloud &&
 						selectedOrganization.partner_info !== undefined &&
@@ -3098,288 +3410,47 @@ const Billing = memo((props) => {
             ) : null*/}
 
 			{/* Queue Management */}
-			{!isCloud && activeQueueEnvs.length > 0 && !isChildOrg && (
-				<div style={{ maxWidth: 800, marginTop: 32, marginBottom: 8 }}>
-					<Typography variant="h6" style={{ marginBottom: 6, fontSize: 20, fontWeight: 600 }}>
-						Queue Management
-					</Typography>
-					<Typography variant="body2" color="textSecondary" style={{ marginBottom: 16, fontSize: 14 }}>
-						Real-time status of your app run usage and workflow queue across all runtime locations.
-					</Typography>
-					<AppRunsQueueCard
-						environment={aggregatedQueueEnv}
-						totalRuns={Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}
-						limit={selectedOrganization?.sync_features?.app_executions?.limit || 25000}
-						theme={theme}
-						navigate={navigate}
-						isAirGapped={isAirGapped}
-						isCloudSynching={isCloudSynching}
-					/>
-				</div>
-			)}
-
-			{!isChildOrg && false && isCloud && (
-				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }} id="professional-services">
-					<Typography variant="h6" style={{ marginBottom: 5, fontSize: 24, fontWeight: 500 }}>
-						Professional Services
-					</Typography>
-					<Typography variant="body2" color="textSecondary" style={{fontSize: 16,}}>
-						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at {supportEmail}.
-					</Typography>We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at
-					<div style={{ display: 'flex', width: '50%', flexDirection: 'row', marginTop: 5, }}>
-						{/* {billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
-							isChildOrg ? null : (
-								<ConsultationManagement
-									globalUrl={globalUrl}
-									userdata={userdata}
-									selectedOrganization={selectedOrganization}
-								/>
-							)
-						) : null} */}
-						<TrainingService />
-					</div>
-				</div>
-			)}
-			{isCloud ? (
-				<div style={{ marginTop: 40, marginLeft: 10 }}>
-				<Typography
-					style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
-				>
-					Manage Billing
-				</Typography>
-				<Typography color="textSecondary" style={{ marginTop: 10, marginBottom: 10, fontSize: 16, }}>
-					Manage your billing and licensing information below. When you reach the certain thresholds of your subscription limit, you will be notified by email.
-				</Typography>
-				<Typography style={{fontSize: 18, marginTop: 10}}>Current Usage:</Typography>
-				<LinearProgress
-					variant="determinate"
-					value={currentAppRunsInPercentage}
-					style={{
-						width: "50%",
-						height: 15,
-						borderRadius: 10,
-						margin: '10px 0',
-						marginBottom: 10,
-					}}
-				/>
-				<Typography style={{marginTop: 10, fontSize: 16,}} color="textSecondary">
-					You have used <strong>{currentAppRunsInPercentage}%</strong> of total app execution limit or <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs out of <strong>{userdata.app_execution_limit}</strong> app runs this month.
-				</Typography>
-				
-				{userdata?.active_org?.creator_org?.length > 0 ? null :
-					(
-					<>
-						<Typography color="textSecondary" style={{ marginTop: 20, fontSize: 16 }}>
-							Parent Tenant App Executions: <strong>{monthlyAppRunsParent}</strong>
-						</Typography>
-						<Typography color="textSecondary" style={{ fontSize: 16 }}>
-							Sub-Tenant App Executions: <strong>{monthlyAllSuborgExecutions || "N/A"}</strong>
-						</Typography>
-					</>
-				)}
-				
-				<div>
-					<Typography style={{ marginTop: 20, fontSize: 18 }}>
-						Set email alert thresholds for app runs
-					</Typography>
-					<Typography color="textSecondary" style={{ marginTop: 10, fontSize: 16 }}>
-						You will be notified by email when you reach the
-						{currentIndex !== -1
-							? " " + getSafeValue(alertThresholds[currentIndex].percentage) + '%' + " "
-							: " " + '0%' + " "
-						}
-						of your total app execution limit or
-						{currentIndex !== -1
-							? " " + getSafeValue(alertThresholds[currentIndex].count) + " "
-							: " " + 0 + " "}
-						app runs.
-					</Typography>
-					<Typography color="textSecondary" style={{ fontSize: 16, marginTop: 10 }}>
-						<span style={{fontWeight: 'bold'}}>Please note</span>: Once your app runs reach the set alert threshold, all admins in the tenant will receive an email notification. For Parent tenants, the alert will be sent base on the total app runs from both parent and sub-tenants. For Sub-tenants, the alert will be sent based on the app runs of the sub-tenants only.
-					</Typography>
-					<div style={{ marginTop: 15 }}>
-						{alertThresholds.map((threshold, index) => (
-							<div key={index} style={{ display: 'flex', alignItems: 'center' }}>
-							 <TextField
-								style={{
-								marginTop: 10,
-								backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-										color: theme.palette.textFieldStyle.color,
-								borderRadius: theme.palette.textFieldStyle.borderRadius,
-								width: 250,
-								height: 50,
-								}}
-								InputProps={{
-								style: {
-									height: 50,
-									color: theme.palette.textFieldStyle.color,
-								},
-								endAdornment: '%',
-								}}
-								InputLabelProps={{
-								shrink: undefined,
-								}}
-								color="primary"
-								fullWidth
-								label="Alert threshold (%)"
-								type="number"
-								value={threshold.percentage}
-								onChange={(e) => updateAlertThreshold(index, 'percentage', e.target.value)}
-								margin="normal"
-								variant="outlined"
-								inputProps={{
-								max: 100,
-								}}
-							/>
-								<TextField
-									style={{
-									marginTop: 10,
-									height: 50,
-										backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-									color: theme.palette.textFieldStyle.color,
-									width: 250,
-										marginLeft: 15,
-									borderRadius: theme.palette.textFieldStyle.borderRadius,
-									}}
-									InputProps={{
-									style: {
-										height: 50,
-										color: theme.palette.textFieldStyle.color,
-									},
-									}}
-									InputLabelProps={{
-									shrink: undefined,
-									}}
-									color="primary"
-									fullWidth
-									label="Alert threshold (count)"
-									type="number"
-									value={threshold.count}
-									onChange={(e) => updateAlertThreshold(index, 'count', e.target.value)}
-									margin="normal"
-									variant="outlined"
-								/>
-							<span
-							  style={{
-								marginLeft: alertThresholds[index].Email_send === true ? 10 : 35,
-								color: 'green',
-							  }}
-							>
-							  {alertThresholds[index].Email_send === true && (
-								<Tooltip title="We have already sent alert for this threshold.">
-								  <CheckCircle />
-								</Tooltip>
-							  )}
-							</span>
-							{alertThresholds.length > 1 && (
-							  <Button
-								disableRipple
-								disableElevation
-								sx={{
-								  padding: 0,
-								  '&:hover': {
-									backgroundColor: 'transparent',
-								  },
-								}}
-								onClick={() => {
-								  setDeleteAlertVerification(true);
-								  setDeleteAlertIndex(index);
-								}}
-							  >
-								<DeleteIcon sx={{ color: themeMode === "dark" ? "rgba(255,255,255,0.7)" : "#666666" }} />
-							  </Button>
-							)}
-							<Dialog
-							  open={deleteAlertVerification}
-							  onClose={() => setDeleteAlertVerification(false)}
-							  sx={{
-								'& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
-							  }}
-							>
-							  <DialogTitle>Are you sure you want to delete this threshold?</DialogTitle>
-							  <DialogActions>
-								<Button
-								  style={{ textTransform: 'none', fontSize: 16 }}
-								  color="primary"
-								  onClick={() => setDeleteAlertVerification(false)}
-								>
-								  Cancel
-								</Button>
-								<Button
-								style={{ textTransform: 'none', fontSize: 16 }}
-								variant="outlined"
-								  color="primary"
-								  onClick={() => {
-									handleDeleteAlertThreshold(deleteAlertIndex);
-									setDeleteAlertVerification(false);
-								  }}
-								>
-								  Delete
-								</Button>
-							  </DialogActions>
-							</Dialog>
-						  </div>
-						  
-						  
-						))}
-					</div>
-				</div>
-				<Button
-					variant="outlined"
-					color="primary"
-					style={{ marginTop: 15, textTransform: 'none' }}
-					onClick={addAlertThreshold}
-				>
-					Add Threshold
-				</Button>
-				<Button
-					variant="outlined"
-					color="primary"
-					style={{ marginTop: 15, textTransform: 'none', marginLeft: 20 }}
-					onClick={() => { HandleEditOrgForAlertThreshold(selectedOrganization.id) }}
-				>
-					Save
-				</Button>
-
-				{userdata.support === true && (
+			{isCloud && <AnnualAppRunsGroupingToggle 
+				globalUrl={globalUrl} 
+				selectedOrganization={selectedOrganization} 
+				handleGetOrg={handleGetOrg} 
+				theme={theme} 
+				userdata={userdata}
+			/> }
+				{!isChildOrg && isCloud && (
 					<div style={{ 
-						marginTop: 50, 
-						padding: 20, 
-						border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 193, 7, 0.4)'}`, 
-						borderRadius: 8, 
-						backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.02)' : 'rgba(255, 193, 7, 0.03)'
+						marginTop: 30,
+						marginLeft: 10,
+						borderRadius: 8,
+						display: "flex",
+						flexDirection: "column",
 					}}>
-						<Typography color="textPrimary" style={{ 
-							fontSize: 18, 
-							fontWeight: '600', 
-							marginBottom: 10
-						}}>
-							⚠️ Support Only - App Run Limit Control
+						<Typography variant="body2" color="textSecondary" style={{ fontSize: 16, marginBottom: 15, maxWidth: 800 }}>
+							A hard limit restricts the maximum number of app runs your organization can consume. Once reached, all workflow executions will be stopped until the limit is increased or the billing cycle resets.
 						</Typography>
-						<Typography color="textSecondary" style={{ fontSize: 16, marginBottom: 15 }}>
-							<strong>Note:</strong> Setting an app run hard limit below current usage will immediately stop all workflow executions for this tenant.
-						</Typography>
-						<Typography color="textSecondary" style={{ fontSize: 14, marginBottom: 20 }}>
-							Current app runs this month: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> / <strong>{userdata.app_execution_limit}</strong>
+
+						<Typography color="textSecondary" style={{ fontSize: 16, marginBottom: !isChildOrg ? 8 : 20 }}>
+							{selectedOrganization?.sync_features?.annual_app_runs_grouping?.active ? (
+								<>Current app runs this year: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> / <strong>{userdata.app_execution_limit * 12}</strong></>
+							) : (
+								<>Current app runs this month: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> / <strong>{userdata.app_execution_limit}</strong></>
+							)}
 						</Typography>
 						
-						<Button
-							variant="outlined"
-							color="primary"
-							sx={{
-								textTransform: 'none',
-								fontWeight: '500',
-								borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.5)' : 'rgba(255, 152, 0, 0.6)',
-								color: theme.palette.mode === 'dark' ? '#fff' : 'rgba(255, 152, 0, 0.9)',
-								'&:hover': {
-									color: theme.palette.mode === 'dark' ? '#fff' : 'rgba(255, 152, 0, 1)',
-									backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.08)' : 'rgba(255, 152, 0, 0.04)',
-								}
-							}}
-							onClick={() => setSupportLimitDialogOpen(true)}
-						>
-							Set App Run Limit
-						</Button>
+						{!isChildOrg && (
+							<div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
+								<Typography color="textSecondary" style={{ fontSize: 16 }}>
+									App runs hard limit: <strong>{selectedOrganization?.Billing?.internal_app_runs_hard_limit ? selectedOrganization.Billing.internal_app_runs_hard_limit : 'Not configured'}</strong>
+								</Typography>
+								<IconButton
+									size="small"
+									onClick={() => setSupportLimitDialogOpen(true)}
+									style={{ marginLeft: 8 }}
+								>
+									<Edit fontSize="small" />
+								</IconButton>
+							</div>
+						)}
 
 						{/* Support Limit Dialog */}
 						<Dialog
@@ -3408,17 +3479,21 @@ const Billing = memo((props) => {
 						}}
 						>
 							<DialogTitle color={theme.palette.text.primary}>
-								⚠️ Set App Run Limit
+								Set App Run Limit
 							</DialogTitle>
 							<DialogContent>
 								<DialogContentText style={{ marginBottom: 20 }}>
 									<strong>Note:</strong> This will set a hard limit on app executions. If the organization reaches this limit, all workflow executions will be stopped.
 								</DialogContentText>
 								<DialogContentText style={{ marginBottom: 20 }}>
-									Current usage: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs this month
+									{selectedOrganization?.sync_features?.annual_app_runs_grouping?.active ? (
+										<>Current usage: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs this year</>
+									) : (
+										<>Current usage: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> app runs this month</>
+									)}
 								</DialogContentText>
 								<DialogContentText style={{ marginBottom: 20 }}>
-									Current hard limit: <strong>{selectedOrganization?.billing?.internal_app_runs_hard_limit || 'Not set'}</strong>
+									Current hard limit: <strong>{selectedOrganization?.Billing?.internal_app_runs_hard_limit || 'Not set'}</strong>
 								</DialogContentText>
 								<TextField
 									autoFocus
@@ -3457,6 +3532,221 @@ const Billing = memo((props) => {
 					</div>
 				)}
 
+			{(userdata?.support && isCloud) ? (
+				<div style={{ display: 'flex', flexDirection: 'column' }}>
+				<Typography variant="h5" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
+					Org Config (Support User Only)
+				</Typography>
+				<Typography variant="body2" color="textSecondary" style={{ fontSize: 16, fontWeight: 400, marginLeft: 5, color: theme.palette.text.secondary }}>
+					Support-only settings for this organization's status and licensing.
+				</Typography>
+				<div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 20, marginLeft: 10, marginBottom: 20, gap: 20 }}>
+					<div style={{ display: 'flex', flexDirection: 'column' }}>
+					<div style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily, marginBottom: 5 }}>Status</div>
+					<FormControl style={{ width: 250, height: 35 }}>
+						<Select
+							style={{ minWidth: 250, marginTop: 5, maxWidth: 250, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
+							id="multiselect-status"
+							multiple
+							value={orgStatus}
+							onChange={(event) => {
+							let newStatus = [...event.target.value];
+							handleStatusChange(event);
+
+							const customerLicenses = [
+								"Enterprise License (Legacy)",
+								"Scale License Cloud",
+								"Scale License Onprem",
+								"Business License Cloud",
+								"Business License Onprem",
+								"Enterprise License Cloud",
+								"Enterprise License Onprem",
+							];
+							const openSourceLicenses = [
+								"Scale License Onprem",
+								"Business License Onprem",
+								"Enterprise License Onprem",
+							];
+
+							const hasCustomerLicense = newStatus.some(v => customerLicenses.includes(v));
+							const hasOpenSourceLicense = newStatus.some(v => openSourceLicenses.includes(v));
+
+							if (hasCustomerLicense) {
+								if (!newStatus.includes("Customer")) {
+									newStatus = [...newStatus, "Customer"];
+								}
+							} else {
+								newStatus = newStatus.filter(v => v !== "Customer");
+							}
+
+							if (hasOpenSourceLicense) {
+								if (!newStatus.includes("Open Source")) {
+									newStatus = [...newStatus, "Open Source"];
+								}
+							} else {
+								newStatus = newStatus.filter(v => v !== "Open Source");
+							}
+
+							setOrgStatus(newStatus);
+						}}
+							input={<OutlinedInput />}
+							renderValue={(selected) => selected.join(', ')}
+							MenuProps={{
+								PaperProps: {
+									style: {
+										maxHeight: 500,
+										width: 300,
+										borderRadius: 4,
+										overflowY: "scroll",
+									},
+								},
+							}}
+						>
+							<ListSubheader style={{ lineHeight: "28px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", pointerEvents: "none" }}>
+								License &amp; Partners
+							</ListSubheader>
+							{Object.values(OrgStatusMapping).map((name) => (
+								<MenuItem key={name} value={name}>
+									<Checkbox checked={orgStatus.indexOf(name) > -1} />
+									<ListItemText primary={name} />
+								</MenuItem>
+							))}
+							<Divider />
+							<ListSubheader style={{ lineHeight: "28px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", pointerEvents: "none" }}>
+								Legacy Status
+							</ListSubheader>
+							{LegacyStatusList.map((name) => (
+								<MenuItem key={name} value={name}>
+									<Checkbox checked={orgStatus.indexOf(name) > -1} />
+									<ListItemText primary={name} />
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+					</div>
+					{orgStatus.some((s) => {
+						const lower = s.toLowerCase();
+						if (lower.includes("scale") && lower.includes("trial")) {
+							return false;
+						}
+						return lower.includes("business") || lower.includes("enterprise") || lower.includes("scale");
+					}) ? (
+					<div style={{ display: 'flex', flexDirection: 'column' }}>
+					<div style={{ color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily, marginBottom: 5 }}>Recurrence</div>
+					<FormControl style={{ width: 150, height: 35 }}>
+						<Select
+							style={{ minWidth: 150, marginTop: 5, maxWidth: 150, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
+							id="select-recurrence"
+							value={orgRecurrence}
+							onChange={(event) => {
+								handleRecurrenceChange(event.target.value);
+							}}
+						>
+							<MenuItem value="Monthly">Monthly</MenuItem>
+							<MenuItem value="Annual">Annual</MenuItem>
+						</Select>
+					</FormControl>
+					</div>
+					) : null}
+				</div>
+				</div>
+			) : null}
+
+			{!isCloud &&  (
+				<div style={{ maxWidth: 800, marginTop: 32, marginBottom: 8 }}>
+					<Typography variant="h6" style={{ marginBottom: 6, fontSize: 20, fontWeight: 600 }}>
+						Queue Management
+					</Typography>
+					<Typography variant="body2" color="textSecondary" style={{ marginBottom: 16, fontSize: 14 }}>
+						Real-time status of your app run usage and workflow queue across all runtime locations.
+					</Typography>
+					<AppRunsQueueCard
+						environment={aggregatedQueueEnv}
+						totalRuns={Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}
+						limit={selectedOrganization?.sync_features?.app_executions?.limit || 25000}
+						theme={theme}
+						navigate={navigate}
+						isAirGapped={isAirGapped}
+						isCloudSynching={isCloudSynching}
+					/>
+				</div>
+			)}
+
+			{!isChildOrg && isCloud && false && (
+				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }} id="professional-services">
+					<Typography variant="h6" style={{ marginBottom: 5, fontSize: 24, fontWeight: 500 }}>
+						Professional Services
+					</Typography>
+					<Typography variant="body2" color="textSecondary" style={{fontSize: 16,}}>
+						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at {supportEmail}.
+					</Typography>We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at
+					<div style={{ display: 'flex', width: '50%', flexDirection: 'row', marginTop: 5, }}>
+						{/* {billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
+							isChildOrg ? null : (
+								<ConsultationManagement
+									globalUrl={globalUrl}
+									userdata={userdata}
+									selectedOrganization={selectedOrganization}
+								/>
+							)
+						) : null} */}
+						<TrainingService />
+					</div>
+				</div>
+			)}
+			{!isChildOrg && userdata.support && isCloud && (
+							<CloudSyncFeatures theme={theme} isCloud={isCloud} selectedOrganization={selectedOrganization} userdata={userdata} globalUrl={globalUrl} handleGetOrg={handleGetOrg}/>
+					)}
+			{isCloud ? (
+				<div style={{ marginTop: 40, marginLeft: 10 }}>
+				<Typography
+					style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
+				>
+					Manage Billing 
+				</Typography>
+				<Typography color="textSecondary" style={{ marginTop: 10, marginBottom: 10, fontSize: 16, }}>
+					Manage your billing alerts below. When you reach the set thresholds of your app runs limit, you will be notified by email.
+				</Typography>
+				<Typography color="textSecondary" style={{ fontSize: 16, marginTop: 10 }}>
+					<span style={{fontWeight: 'bold'}}>Please note:</span> Once your app runs reach the set alert threshold, all admins in the tenant will receive an email notification. For Parent tenants, the alert will be sent base on the total app runs from both parent and sub-tenants. For Sub-tenants, the alert will be sent based on the app runs of the sub-tenants only.
+				</Typography>
+
+				<div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 60 }}>
+					<div style={{ flex: 1, minWidth: 400 }}>
+						{isOnpremAlertEligible ? (
+							<Typography color="secondary" style={{ fontSize: 14, fontWeight: "bold", marginTop: 20, marginBottom: -10 }}>
+								Cloud
+							</Typography>
+						) : null}
+						<AlertThresholdSection
+							theme={theme}
+							themeMode={themeMode}
+							selectedOrganization={selectedOrganization}
+							globalUrl={globalUrl}
+							BillingEmail={BillingEmail}
+							fieldName="AlertThreshold"
+							limitValue={userdata.app_execution_limit}
+						/>
+					</div>
+
+					{isOnpremAlertEligible ? (
+						<div style={{ flex: 1, minWidth: 400 }}>
+							<Typography color="secondary" style={{ fontSize: 14, fontWeight: "bold", marginTop: 20 }}>
+								Onprem
+							</Typography>
+							<AlertThresholdSection
+								theme={theme}
+								themeMode={themeMode}
+								selectedOrganization={selectedOrganization}
+								globalUrl={globalUrl}
+								BillingEmail={BillingEmail}
+								fieldName="OnpremAlertThreshold"
+								limitValue={selectedOrganization?.sync_features?.onprem_app_executions?.limit}
+							/>
+						</div>
+					) : null}
+				</div>
+
 			</div>
 			): null}
 			</div>
@@ -3464,10 +3754,10 @@ const Billing = memo((props) => {
 				<Typography
 					style={{ marginTop: 10, marginLeft: 10, marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
 				>
-					Utilization & Stats
+					Usage and Statistics
 				</Typography>
 			</div>
-				<span>
+				<div style={{ overflow: 'hidden', width: '100%' }}>
 					<Tabs
 					value={currentTab}
 					onChange={(event, newValue) => {
@@ -3485,32 +3775,42 @@ const Billing = memo((props) => {
 					>
 						{isChildOrg ? null :
 						<Tab 
-							label="All Tenant Stats"
+							label="All Stats"
 							style={{ textTransform: 'none',}}
 							value={0}
 						/>}
 						<Tab
-							label={isChildOrg ? "Tenant Stats" : "Parent Tenant Stats"}
+							label={isChildOrg ? "Current Tenant" : "Parent Tenant"}
 							style={{ textTransform: 'none',}}
 							value={1}
 						/>
 						{isChildOrg ? null :
 						<Tab
-							label="Sub-Tenant Stats"
+							label="Child Tenant"
 							disabled={isChildOrg}
 							style={{ textTransform: 'none', }}
 							value={2}
 						/>}
-						{isCloud ? 
 							<Tab
-								label="Cloud-Synced Stats"
+							label="AI Tokens"
 								style={{ textTransform: 'none', }}
 								value={3}
+						/>
+						{isCloud || selectedOrganization?.cloud_sync ?
+							<Tab
+								label={isCloud ? "On-Prem — SLS (Shuffle Licensing System)" : "Cloud — SLS (Shuffle Licensing System)"}
+								style={{ textTransform: 'none', }}
+								value={4}
 							/>
 						: null}
+						<Tab
+							label="Other Stats"
+							style={{ textTransform: 'none', }}
+							value={5}
+						/>
 					</Tabs>
 
-					<div style={{paddingBottom: 200, minHeight: 750, }}>
+					<div style={{paddingBottom: 200, minHeight: 750, paddingRight: 60 }}>
 						{
 						currentTab === 0 ? 
 							<BillingStats
@@ -3520,10 +3820,6 @@ const Billing = memo((props) => {
 								selectedOrganization={selectedOrganization}
 								userdata={userdata}
 								statistics={statistics}
-								monthlyAppRunsParent={monthlyAppRunsParent}
-								monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
-								setMonthlyAllSuborgExecutions={setMonthlyAllSuborgExecutions}
-								setMonthlyAppRunsParent={setMonthlyAppRunsParent}
 								currentTab={currentTab}
 							/>
 						: currentTab === 1 ? 
@@ -3535,10 +3831,6 @@ const Billing = memo((props) => {
 									selectedOrganization={selectedOrganization}
 									userdata={userdata}
 									statistics={statistics}
-									monthlyAppRunsParent={monthlyAppRunsParent}
-									monthlyAllSuborgExecutions={monthlyAllSuborgExecutions}
-									setMonthlyAllSuborgExecutions={setMonthlyAllSuborgExecutions}
-									setMonthlyAppRunsParent={setMonthlyAppRunsParent}
 									currentTab={currentTab}
 								/>
 							</div>
@@ -3555,7 +3847,18 @@ const Billing = memo((props) => {
 								setAllChildOrgsStats={setAllChildOrgsStats}
 								currentTab={currentTab}
 							/>
-						: 
+						: currentTab === 3 ? 
+					<BillingStatsAI
+							userdata={userdata}
+							globalUrl={globalUrl}
+							selectedOrganization={selectedOrganization}
+							statistics={statistics}
+							allChildOrgs={allChildOrgs}
+							setAllChildOrgs={setAllChildOrgs}
+							allChildOrgsStats={allChildOrgsStats}
+							setAllChildOrgsStats={setAllChildOrgsStats}
+							/>
+						: currentTab === 4 ? 
 								<BillingStats
 									isCloud={isCloud}
 									clickedFromOrgTab={clickedFromOrgTab}
@@ -3566,9 +3869,19 @@ const Billing = memo((props) => {
 									syncStats={true}
 									statistics={statistics}
 								/>
+						: 
+								<BillingStats
+									isCloud={isCloud}
+									clickedFromOrgTab={clickedFromOrgTab}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									userdata={userdata}
+									currentTab={currentTab}
+									statistics={statistics}
+								/>
 						}
 					</div>
-				</span>
+				</div>
 			</div>
 		</Wrapper>
 	)
@@ -3576,6 +3889,336 @@ const Billing = memo((props) => {
 
 export default memo(Billing);
 
+
+const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statistics, allChildOrgs, setAllChildOrgs, allChildOrgsStats, setAllChildOrgsStats }) => {
+	const [startTime, setStartTime] = useState("")
+	const [endTime, setEndTime] = useState("")
+
+	const [parentInputTokens, setParentInputTokens] = useState(undefined)
+	const [parentOutputTokens, setParentOutputTokens] = useState(undefined)
+	const [parentConvertedRuns, setParentConvertedRuns] = useState(undefined)
+
+	const [childInputTokens, setChildInputTokens] = useState(undefined)
+	const [childOutputTokens, setChildOutputTokens] = useState(undefined)
+	const [childConvertedRuns, setChildConvertedRuns] = useState(undefined)
+
+	const [totalInputTokens, setTotalInputTokens] = useState(0)
+	const [totalOutputTokens, setTotalOutputTokens] = useState(0)
+	const [totalConvertedRuns, setTotalConvertedRuns] = useState(0)
+
+
+	const { themeMode, brandColor } = useContext(Context)
+	const theme = getTheme(themeMode, brandColor)
+
+	// 1M input tokens = 250 app runs; 1M output tokens = 1500 app runs
+	const INPUT_CONVERSION = 250 / 1_000_000
+	const OUTPUT_CONVERSION = 1500 / 1_000_000
+
+	const calcConvertedRuns = (inputT, outputT) =>
+		Math.round((inputT * INPUT_CONVERSION) + (outputT * OUTPUT_CONVERSION))
+
+	const formatTokens = (n) => {
+		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+		if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+		return String(n)
+	}
+
+	const parseDate = (val, isEnd) => {
+		if (!val) {
+			const d = new Date()
+			if (isEnd) {
+				d.setHours(23, 59, 59, 999)
+			} else {
+				d.setDate(1)
+				d.setHours(0, 0, 0, 0)
+			}
+			return d
+		}
+		const d = new Date(val)
+		if (isNaN(d.getTime())) {
+			if (typeof val.toDate === "function") {
+				return val.toDate()
+			}
+			const fallback = new Date()
+			if (isEnd) fallback.setHours(23, 59, 59, 999)
+			else {
+				fallback.setDate(1)
+				fallback.setHours(0, 0, 0, 0)
+			}
+			return fallback
+		}
+		return d
+	}
+
+	const paperStyle = {
+		textAlign: "center",
+		padding: "16px 24px",
+		margin: "4px",
+		backgroundColor: theme.palette.cardBackgroundColor,
+		border: theme.palette.defaultBorder,
+		minWidth: "140px",
+		maxWidth: "180px",
+		"&:hover": { backgroundColor: theme.palette.cardHoverColor },
+	}
+
+	const handleDataSetting = useCallback((inputdata) => {
+		if (!inputdata) return
+
+		const dailyStats = inputdata["daily_statistics"]
+
+		const filterStart = parseDate(startTime, false)
+		filterStart.setHours(0, 0, 0, 0)
+		const filterEnd = parseDate(endTime, true)
+		filterEnd.setHours(23, 59, 59, 999)
+
+		const inputData    = { key: "Input Tokens", data: [] }
+		const outputData   = { key: "Output Tokens", data: [] }
+		const convertedData = { key: "Converted App Runs", data: [] }
+
+		if (dailyStats) {
+			for (let key in dailyStats) {
+				const item = dailyStats[key]
+				if (!item["date"]) continue
+
+				const itemDate = new Date(item["date"])
+				const normalizedItemDate = new Date(itemDate)
+				normalizedItemDate.setHours(0, 0, 0, 0)
+
+				if (normalizedItemDate < filterStart || normalizedItemDate > filterEnd) continue
+
+			const dayInput  = Number(item["agent_input_tokens"]  ?? 0) + Number(item["child_org_agent_input_tokens"]  ?? 0)
+			const dayOutput = Number(item["agent_output_tokens"] ?? 0) + Number(item["child_org_agent_output_tokens"] ?? 0)
+
+			if (dayInput > 0 || dayOutput > 0) {
+					const isoDate = new Date(item["date"]).toISOString()
+					inputData.data.push({ key: isoDate, data: dayInput })
+					outputData.data.push({ key: isoDate, data: dayOutput })
+					convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dayInput, dayOutput) })
+				}
+			}
+		}
+
+		const today = new Date()
+		const todayStart = new Date(today)
+		todayStart.setHours(0, 0, 0, 0)
+		const shouldAddToday =
+			todayStart >= filterStart &&
+			(!endTime || new Date(endTime) >= todayStart)
+
+		if (shouldAddToday) {
+			const dailyInput  = Number(inputdata["daily_agent_input_tokens"]  ?? 0) + Number(inputdata["daily_child_org_agent_input_tokens"]  ?? 0)
+			const dailyOutput = Number(inputdata["daily_agent_output_tokens"] ?? 0) + Number(inputdata["daily_child_org_agent_output_tokens"] ?? 0)
+			if (dailyInput > 0 || dailyOutput > 0) {
+				const isoDate = today.toISOString()
+				inputData.data.push({ key: isoDate, data: dailyInput })
+				outputData.data.push({ key: isoDate, data: dailyOutput })
+				convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dailyInput, dailyOutput) })
+			}
+		}
+
+		setParentInputTokens(inputData.data.length > 0 ? inputData : undefined)
+		setParentOutputTokens(outputData.data.length > 0 ? outputData : undefined)
+		setParentConvertedRuns(convertedData.data.length > 0 ? convertedData : undefined)
+	}, [startTime, endTime])
+
+	// Build child org chart series from the parent's daily_statistics using child_org_agent_* fields.
+	const handleChildDataSetting = useCallback((inputdata) => {
+		if (!inputdata) return
+
+		const dailyStats = inputdata["daily_statistics"]
+
+		const filterStart = parseDate(startTime, false)
+		filterStart.setHours(0, 0, 0, 0)
+		const filterEnd = parseDate(endTime, true)
+		filterEnd.setHours(23, 59, 59, 999)
+
+		const inputData     = { key: "Input Tokens (Child Tenants)",        data: [] }
+		const outputData    = { key: "Output Tokens (Child Tenants)",       data: [] }
+		const convertedData = { key: "Converted App Runs (Child Tenants)",  data: [] }
+
+		if (dailyStats) {
+			for (let key in dailyStats) {
+				const item = dailyStats[key]
+				if (!item["date"]) continue
+
+				const normalizedItemDate = new Date(item["date"])
+				normalizedItemDate.setHours(0, 0, 0, 0)
+				if (normalizedItemDate < filterStart || normalizedItemDate > filterEnd) continue
+
+				const dayInput  = Number(item["child_org_agent_input_tokens"]  ?? 0)
+				const dayOutput = Number(item["child_org_agent_output_tokens"] ?? 0)
+				if (dayInput > 0 || dayOutput > 0) {
+					const isoDate = new Date(item["date"]).toISOString()
+					inputData.data.push({ key: isoDate, data: dayInput })
+					outputData.data.push({ key: isoDate, data: dayOutput })
+					convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dayInput, dayOutput) })
+				}
+			}
+		}
+
+		const today = new Date()
+		const todayStart = new Date(today)
+		todayStart.setHours(0, 0, 0, 0)
+		const shouldAddToday =
+			todayStart >= filterStart &&
+			(!endTime || new Date(endTime) >= todayStart)
+
+		if (shouldAddToday) {
+			const dailyInput  = Number(inputdata["daily_child_org_agent_input_tokens"]  ?? 0)
+			const dailyOutput = Number(inputdata["daily_child_org_agent_output_tokens"] ?? 0)
+			if (dailyInput > 0 || dailyOutput > 0) {
+				const isoDate = today.toISOString()
+				inputData.data.push({ key: isoDate, data: dailyInput })
+				outputData.data.push({ key: isoDate, data: dailyOutput })
+				convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dailyInput, dailyOutput) })
+			}
+		}
+
+		setChildInputTokens(inputData.data.length > 0 ? inputData : undefined)
+		setChildOutputTokens(outputData.data.length > 0 ? outputData : undefined)
+		setChildConvertedRuns(convertedData.data.length > 0 ? convertedData : undefined)
+	}, [startTime, endTime])
+
+	useEffect(() => {
+		if (statistics) {
+			handleDataSetting(statistics)
+			handleChildDataSetting(statistics)
+		}
+	}, [statistics, startTime, endTime])
+
+	useEffect(() => {
+		if (!statistics) return
+
+		const filterStart = parseDate(startTime, false)
+		filterStart.setHours(0, 0, 0, 0)
+
+		const filterEnd = parseDate(endTime, true)
+		filterEnd.setHours(23, 59, 59, 999)
+
+		let parentInput = 0
+		let parentOutput = 0
+		let childInput = 0
+		let childOutput = 0
+
+		// Calculate parent & child sum from daily stats
+		const parentDailyStats = statistics["daily_statistics"]
+		if (parentDailyStats) {
+			for (let key in parentDailyStats) {
+				const item = parentDailyStats[key]
+				if (!item["date"]) continue
+
+				const itemDate = new Date(item["date"])
+				itemDate.setHours(0, 0, 0, 0)
+				if (itemDate >= filterStart && itemDate <= filterEnd) {
+					parentInput += Number(item["agent_input_tokens"] ?? 0)
+					parentOutput += Number(item["agent_output_tokens"] ?? 0)
+					childInput += Number(item["child_org_agent_input_tokens"] ?? 0)
+					childOutput += Number(item["child_org_agent_output_tokens"] ?? 0)
+				}
+			}
+		}
+
+		// Add today's parent & child usage if within range
+		const today = new Date()
+		const todayStart = new Date(today)
+		todayStart.setHours(0, 0, 0, 0)
+		const shouldAddToday = todayStart >= filterStart && todayStart <= filterEnd
+		if (shouldAddToday) {
+			parentInput += Number(statistics["daily_agent_input_tokens"] ?? 0)
+			parentOutput += Number(statistics["daily_agent_output_tokens"] ?? 0)
+			childInput += Number(statistics["daily_child_org_agent_input_tokens"] ?? 0)
+			childOutput += Number(statistics["daily_child_org_agent_output_tokens"] ?? 0)
+		}
+
+		setTotalInputTokens(parentInput + childInput)
+		setTotalOutputTokens(parentOutput + childOutput)
+		setTotalConvertedRuns(calcConvertedRuns(parentInput + childInput, parentOutput + childOutput))
+	}, [statistics, startTime, endTime])
+
+	return (
+		<div style={{ width: "100%", margin: "auto", marginTop: 20 }}>
+	<Typography style={{ marginLeft: 5, marginBottom: 5, fontSize: 16 }} color="textSecondary">
+		All shown statistics are based on your tenant's{" "}
+		<a
+			href={`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/stats`}
+			target="_blank"
+			rel="noopener noreferrer"
+			style={{ textDecoration: "none", color: theme.palette.linkColor }}
+		>
+			stats API
+		</a>. The metric accuracy may be delayed by 24 hours.
+	</Typography>
+	<Typography style={{ marginLeft: 5, marginBottom: 16, fontSize: 16 }} color="textSecondary">
+		1 Million Input Tokens = 250 app runs &nbsp;|&nbsp; 1 Million Output Tokens = 1500 app runs
+	</Typography>
+
+		<div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginLeft: 5 }}>
+			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>Input tokens used this month (parent tenant)</Typography>}>
+				<Box sx={paperStyle}>
+					<Typography variant="h5">{formatTokens(totalInputTokens)}</Typography>
+					<Typography variant="body2">Input Tokens</Typography>
+				</Box>
+			</Tooltip>
+
+			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>Output tokens used this month (parent tenant)</Typography>}>
+				<Box sx={paperStyle}>
+					<Typography variant="h5">{formatTokens(totalOutputTokens)}</Typography>
+					<Typography variant="body2">Output Tokens</Typography>
+				</Box>
+			</Tooltip>
+
+			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>App run equivalent: (Input ÷ 1M × 250) + (Output ÷ 1M × 1500)</Typography>}>
+				<Box sx={paperStyle}>
+					<Typography variant="h5">{totalConvertedRuns.toLocaleString()}</Typography>
+					<Typography variant="body2">Converted App Runs</Typography>
+				</Box>
+			</Tooltip>
+
+				<StatsDateRangePicker
+					startTime={startTime}
+					endTime={endTime}
+					onStartChange={setStartTime}
+					onEndChange={setEndTime}
+				/>
+		</div>
+
+		{(parentInputTokens !== undefined || parentOutputTokens !== undefined) && (
+			<TokenBarChart
+				inputSeries={parentInputTokens}
+				outputSeries={parentOutputTokens}
+				title="AI Token Usage (Parent Tenant)"
+				height={300}
+				border={false}
+			/>
+		)}
+		{parentConvertedRuns !== undefined && (
+			<LineChartWrapper keys={parentConvertedRuns} height={300} width="100%" inputname="Converted App Runs (Parent Tenant)" border={false} />
+		)}
+
+		{selectedOrganization?.child_orgs?.length > 0 && (
+		<>
+			{childInputTokens === undefined && childOutputTokens === undefined && (
+				<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, marginLeft: 5 }}>
+					No AI token usage recorded for child tenants in the selected period.
+				</Typography>
+			)}
+			{(childInputTokens !== undefined || childOutputTokens !== undefined) && (
+				<TokenBarChart
+					inputSeries={childInputTokens}
+					outputSeries={childOutputTokens}
+					title="AI Token Usage (Child Tenants)"
+					height={300}
+					border={false}
+				/>
+			)}
+			{childConvertedRuns !== undefined && (
+				<LineChartWrapper keys={childConvertedRuns} height={300} width="100%" inputname="Converted App Runs (Child Tenants)" border={false} />
+			)}
+		</>
+	)}
+	</div>
+)
+})
 const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, allChildOrgs, setAllChildOrgs, allChildOrgsStats, setAllChildOrgsStats }) => {
 	const [subOrgStats, setSubOrgStats] = useState([]);
 	const [subOrgs, setSubOrgs] = useState([]);
@@ -3592,9 +4235,62 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 	const [tableCreated, setTableCreated] = useState(false)
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filteredRows, setFilteredRows] = useState([]);
+	const [selectedChildIndex, setSelectedChildIndex] = useState(0);
+	const [graphStartTime, setGraphStartTime] = useState("");
+	const [graphEndTime, setGraphEndTime] = useState("");
 	const { themeMode, brandColor, supportEmail } = useContext(Context);
 	const theme = getTheme(themeMode, brandColor);
 
+	const selectedChildName = subOrgs[selectedChildIndex]?.name || ""
+
+	// App Runs graph data for the child org selected in the table below,
+	// filtered by the picker range (default: past 3 months, same as parseDate)
+	const childGraphData = useMemo(() => {
+		const stat = subOrgStats[selectedChildIndex]
+		const daily = stat?.daily_statistics
+		if (daily === undefined || daily === null) {
+			return undefined
+		}
+
+		const filterStart = parseStatsDate(graphStartTime || null, false)
+		const filterEnd = parseStatsDate(graphEndTime || null, true)
+
+		const appRuns = {
+			"key": "App Runs",
+			"data": []
+		}
+
+		for (const item of daily) {
+			if (item["date"] === undefined) {
+				continue
+			}
+
+			const d = new Date(item["date"])
+			d.setHours(0, 0, 0, 0)
+			if (d < filterStart || d > filterEnd) {
+				continue
+			}
+
+			if (item["app_executions"] !== undefined && item["app_executions"] !== null) {
+				appRuns["data"].push({
+					key: new Date(item["date"]).toISOString(),
+					data: item["app_executions"]
+				})
+			}
+		}
+
+		// Adds data for today when it falls inside the selected range
+		const todayStart = new Date()
+		todayStart.setHours(0, 0, 0, 0)
+		if (todayStart >= filterStart && todayStart <= filterEnd && stat["daily_app_executions"] !== undefined && stat["daily_app_executions"] !== null) {
+			appRuns["data"].push({
+				key: new Date().toISOString(),
+				data: stat["daily_app_executions"]
+			})
+		}
+
+		return appRuns
+	}, [subOrgStats, subOrgs, selectedChildIndex, graphStartTime, graphEndTime])
 
 	// Handle page change
 	const handleChangePage = (event, newPage) => {
@@ -3926,21 +4622,47 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 	}
 
 	return (
-		<div style={{ display: "flex", flexDirection: "column", marginTop: 30, minHeight: 300, marginBottom: 200,  }}>
+		<div style={{ display: "flex", flexDirection: "column", marginTop: 20, minHeight: 300, marginBottom: 200,  }}>
 			{open && (
 				<IncreaseLimitPopUp open={open} onClose={HandleClosePopUP} limit={limit} HandleEditLimit={HandleEditLimit} setLimit={setLimit} editing={editing} setEditing={setEditing} editingOrgId={editingOrgId} setEditingOrgId={setEditingOrgId}/>
 			)}
-			<Typography style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}>
-				Child Tenants 
+			<div style={{display: 'flex', flexDirection: 'column'}}>
+			<Typography style={{ marginLeft: 10, marginBottom: 5, fontSize: 16 }} color="textSecondary">
+				All shown statistics are based on your tenant's{" "}
+				<a
+					href={`${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/stats`}
+					target="_blank"
+					rel="noopener noreferrer"
+					style={{ textDecoration: "none", color: theme.palette.linkColor }}
+				>
+					stats API
+				</a>. The metric accuracy may be delayed by 24 hours.
 			</Typography>
-			<div style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
-				<Typography color="textSecondary" style={{ marginTop: 10, fontSize: 16 }}>
+			<Typography color="textSecondary" style={{ marginLeft: 10, marginTop: 10, fontSize: 16 }}>
 					View and configure execution limits for child organizations. Click the edit icon to modify app and workflow execution limits.
 				</Typography>      
 			</div>
 			{tableCreated ? (
 				subOrgStatsRows.length > 0 && subOrgStatsColumns.length > 0 ? (
 					<>
+						<div style={{ marginTop: 20 }}>
+							<Typography style={{ marginLeft: 10, fontSize: 16 }} color="textSecondary">
+								Showing stats for <b>{selectedChildName}</b>. Click a row in the table below to switch tenant.
+							</Typography>
+							<StatsDateRangePicker
+								startTime={graphStartTime}
+								endTime={graphEndTime}
+								onStartChange={(date) => setGraphStartTime(date)}
+								onEndChange={(date) => setGraphEndTime(date)}
+							/>
+							{childGraphData === undefined || childGraphData.data.length === 0 ?
+								<Typography variant="body2" color="textSecondary" style={{ margin: 20, textAlign: "center" }}>
+									No app run stats found for this tenant in the selected period.
+								</Typography>
+								:
+								<LineChartWrapper keys={childGraphData} height={300} width={"100%"} inputname={`App Runs - ${selectedChildName}`} border={false} />
+							}
+						</div>
 						<TextField 
 							style={{ marginBottom: 10, width: 500, marginTop: 20 }} 
 							variant="outlined" 
@@ -3977,7 +4699,16 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 							onPageChange={handleChangePage}
 							onPageSizeChange={handleChangeRowsPerPage}
 							autoHeight
-							style={{ height: "300px", width: "100%", backgroundColor: theme.palette.platformColor, color: theme.palette.text.primary }}
+							onRowClick={(params) => setSelectedChildIndex(params.row.id)}
+							rowSelectionModel={[selectedChildIndex]}
+							hideFooterSelectedRowCount
+							sx={{
+								"& .MuiDataGrid-row.Mui-selected": {
+									backgroundColor: "#ff854433",
+									"&:hover": { backgroundColor: "#ff854455" },
+								},
+							}}
+							style={{ height: "300px", width: "100%", backgroundColor: theme.palette.platformColor, color: theme.palette.text.primary, cursor: "pointer" }}
 						/>
 					</>
 				) : (

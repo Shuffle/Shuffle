@@ -25,6 +25,7 @@ import {
     Close as CloseIcon,
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
+    Warning as WarningIcon,
 } from "@mui/icons-material";
 import { getTheme } from "../theme.jsx";
 import { styled } from '@mui/styles';
@@ -46,6 +47,8 @@ const CloudSyncTab = (props) => {
     const [selectedStatus, setSelectedStatus] = React.useState([]);
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [userSettings, setUserSettings] = React.useState({});
+    const [workflowBackup, setWorkflowBackup] = React.useState(false);
+    const [appBackup, setAppBackup] = React.useState(false);
     const [, forceUpdate] = React.useState();
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
@@ -55,6 +58,531 @@ const CloudSyncTab = (props) => {
 
     useEffect(() => { getSettings(); }, []);
 
+    useEffect(() => {
+        setWorkflowBackup(selectedOrganization?.sync_config?.workflow_backup === true);
+        setAppBackup(selectedOrganization?.sync_config?.app_backup === true);
+    }, [selectedOrganization?.sync_config?.workflow_backup, selectedOrganization?.sync_config?.app_backup]);
+
+    const handleGetOrg = (orgId) => {
+        if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+            const urlSearchParams = new URLSearchParams(window.location.search);
+            const params = Object.fromEntries(urlSearchParams.entries());
+            const foundorgid = params["org_id"];
+            if (foundorgid !== undefined && foundorgid !== null) {
+                orgId = foundorgid;
+            }
+        }
+
+        if (orgId === undefined || orgId === null || (orgId.length !== 36 && orgId.length !== 0)) {
+            return
+        }
+
+        if (orgId.length === 0) {
+            toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+            return;
+        }
+
+
+        // Just use this one?
+
+        fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+            .then((response) => {
+                if (response.status === 401) {
+                }
+
+                return response.json();
+            })
+            .then((responseJson) => {
+                if (responseJson["success"] === false) {
+                    toast.warn("Failed getting your org. If this persists, please contact support (SLS (Shuffle Licensing System))")
+                } else {
+                    if (
+                        responseJson.sync_features === undefined ||
+                        responseJson.sync_features === null
+                    ) {
+                        responseJson.sync_features = {};
+                    }
+
+                    setSelectedOrganization(responseJson)
+                    var lists = {
+                        active: {
+                            triggers: [],
+                            features: [],
+                            sync: [],
+                        },
+                        inactive: {
+                            triggers: [],
+                            features: [],
+                            sync: [],
+                        },
+                    };
+                    setOrganizationFeatures(lists);
+                }
+            })
+            .catch((error) => {
+                console.log("Error getting org: ", error);
+                toast("Error getting current organization");
+            });
+    };
+    const handleStopOrgSync = (org_id) => {
+        if (org_id === undefined || org_id === null) {
+            toast("Couldn't get org " + org_id);
+            return;
+        }
+
+        const data = {};
+
+        const url = globalUrl + "/api/v1/orgs/" + org_id + "/stop_sync";
+        fetch(url, {
+            mode: "cors",
+            method: "POST",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json; charset=utf-8",
+            },
+        })
+            .then((response) => {
+                if (response.status === 200) {
+                    console.log("Cloud sync success?");
+                    toast("Successfully stopped SLS (Shuffle Licensing System)");
+                } else {
+                    console.log("Cloud sync fail?");
+                    toast(
+                        "Failed stopping sync. Try again, and contact support if this persists."
+                    );
+                }
+
+                return response.json();
+            })
+            .then((responseJson) => {
+                setTimeout(() => {
+                    handleGetOrg(org_id);
+                }, 1000);
+            })
+            .catch((error) => {
+                toast("Err: " + error.toString());
+            });
+    };
+
+    const enableCloudSync = (apikey, organization, disableSync) => {
+        setOrgSyncResponse("");
+
+        const data = {
+            apikey: apikey,
+            organization: organization,
+            disable: disableSync,
+            workflow_backup: disableSync ? false : workflowBackup,
+            app_backup: disableSync ? false : appBackup,
+        };
+
+        const url = globalUrl + "/api/v1/cloud/setup";
+        fetch(url, {
+            mode: "cors",
+            method: "POST",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json; charset=utf-8",
+            },
+        })
+            .then((response) => {
+                setLoading(false);
+                if (response.status === 200) {
+                    console.log("Cloud sync success?");
+                    handleGetOrg(userdata.active_org.id);
+                    setUpdateOrg(true);
+                } else {
+                    console.log("Cloud sync fail?");
+                }
+
+                return response.json();
+                //setTimeout(() => {
+                //}, 1000)
+            })
+            .then((responseJson) => {
+                console.log("RESP: ", responseJson);
+                if (
+                    responseJson.success === false &&
+                    responseJson.reason !== undefined
+                ) {
+                    setOrgSyncResponse(responseJson.reason);
+                    toast("Failed to handle sync: " + responseJson.reason);
+                } else if (!responseJson.success) {
+                    toast("Failed to handle sync.");
+                } else {
+                    //getOrgs(); API no longer in use, as it's in handleInfo request
+                    if (disableSync) {
+                        toast("Successfully disabled sync!");
+                        setOrgSyncResponse("Successfully disabled syncronization");
+                    } else {
+                        toast("SLS (Shuffle Licensing System) successfully set up!");
+                        setOrgSyncResponse(
+                            "Successfully started syncronization. Cloud/Hybrid features are available below."
+                        );
+                    }
+
+                    selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync;
+                    setSelectedOrganization(selectedOrganization);
+                    setCloudSyncApikey("");
+
+                    handleGetOrg(userdata.active_org.id);
+                }
+            })
+            .catch((error) => {
+                setLoading(false);
+                toast("Err: " + error.toString());
+            });
+    };
+
+    const updateBackupSetting = (newWorkflowBackup, newAppBackup) => {
+        const url = isCloud
+            ? `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`
+            : `${globalUrl}/api/v1/cloud/setup`;
+
+        const data = isCloud
+            ? {
+                org_id: selectedOrganization.id,
+                editing: "sync_config",
+                sync_config: { workflow_backup: newWorkflowBackup, app_backup: newAppBackup },
+            }
+            : {
+                organization: selectedOrganization,
+                disable: false,
+                workflow_backup: newWorkflowBackup,
+                app_backup: newAppBackup,
+            };
+
+        fetch(url, {
+            mode: "cors",
+            method: "POST",
+            body: JSON.stringify(data),
+            credentials: "include",
+            crossDomain: true,
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json; charset=utf-8",
+            },
+        })
+            .then((response) => response.json())
+            .then((responseJson) => {
+                if (responseJson.success === false) {
+                    toast("Failed updating backup settings: " + responseJson.reason);
+                    setWorkflowBackup(selectedOrganization?.sync_config?.workflow_backup === true);
+                    setAppBackup(selectedOrganization?.sync_config?.app_backup === true);
+                    return;
+                }
+
+                toast("Successfully updated backup settings");
+                handleGetOrg(selectedOrganization.id);
+            })
+            .catch((error) => {
+                toast("Err: " + error.toString());
+                setWorkflowBackup(selectedOrganization?.sync_config?.workflow_backup === true);
+                setAppBackup(selectedOrganization?.sync_config?.app_backup === true);
+            });
+    };
+
+    const handleToggleWorkflowBackup = () => {
+        const newValue = !workflowBackup;
+        setWorkflowBackup(newValue);
+
+        const isActive = isCloud ? true : selectedOrganization.cloud_sync;
+        if (isActive) {
+            updateBackupSetting(newValue, appBackup);
+        }
+    };
+
+    const handleToggleAppBackup = () => {
+        const newValue = !appBackup;
+        setAppBackup(newValue);
+
+        const isActive = isCloud ? true : selectedOrganization.cloud_sync;
+        if (isActive) {
+            updateBackupSetting(workflowBackup, newValue);
+        }
+    };
+
+    const BackupToggles = () => (
+        <div style={{ marginTop: 20, marginBottom: 10, maxWidth: 500 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ marginRight: 10 }}>
+                    <Typography style={{ fontSize: 16, fontWeight: 400, color: theme.palette.text.primary }}>
+                        Backup workflows
+                    </Typography>
+                    <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 13 }}>
+                        Backup your workflows to the cloud. When enabled, your workflows are synced to the cloud.
+                    </Typography>
+                </div>
+                <Switch
+                    checked={workflowBackup}
+                    onChange={handleToggleWorkflowBackup}
+                    color="primary"
+                />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
+                <div style={{ marginRight: 10 }}>
+                    <Typography style={{ fontSize: 16, fontWeight: 400, color: theme.palette.text.primary }}>
+                        Backup apps
+                    </Typography>
+                    <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 13 }}>
+                        Backup your apps to the cloud. When enabled, your apps are synced to the cloud.
+                    </Typography>
+                </div>
+                <Switch
+                    checked={appBackup}
+                    onChange={handleToggleAppBackup}
+                    color="primary"
+                />
+            </div>
+        </div>
+    );
+
+    const getSettings = () => {
+        fetch(globalUrl + "/api/v1/getsettings", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            credentials: "include",
+        })
+            .then((response) => {
+                if (response.status !== 200) {
+                    console.log("Status not 200 when getting settings :O!");
+                }
+
+                return response.json();
+            })
+            .then((responseJson) => {
+                setUserSettings(responseJson);
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    };
+    if (
+        selectedOrganization.id === undefined &&
+        userdata !== undefined &&
+        userdata.active_org !== undefined &&
+        orgRequest === true
+    ) {
+        setOrgRequest(false);
+        handleGetOrg(userdata.active_org.id);
+    }
+
+    return (
+        <div style={{ padding: "27px 10px 19px 27px", }}>
+            <div style={{ marginBottom: 20 }}>
+                <Typography variant="h5"
+                    style={{ marginBottom: 8, marginTop: 0, fontWeight: 500 }}
+                >
+                    SLS (Shuffle Licensing System) <span style={{ color: red, }}>{userdata?.support === true && selectedOrganization && selectedOrganization?.creator_org !== undefined && selectedOrganization?.creator_org !== null && selectedOrganization?.creator_org?.length > 0 && " - Support Only: Normal users cannot see the SLS (Shuffle Licensing System) & Cloud Features section in a suborg"}</span>
+
+                </Typography>
+                <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400, }}>
+                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>SLS (Shuffle Licensing System)</a> do? SLS (Shuffle Licensing System) is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach. This will by default back up apps and workflows.
+                </Typography>
+            </div>
+
+            {isCloud ? (
+                <div style={{ marginTop: 15, display: "flex" }}>
+                    <div style={{ flex: 1 }}>
+                        <Typography style={{ fontWeight: 400, fontSize: 16, color: theme.palette.text.secondary }}>
+                            Currently syncronizing:{" "}
+                            {selectedOrganization.cloud_sync_active === true
+                                ? <span style={{ color: "#4CFD72", fontSize: 16, marginLeft: 16 }}>True</span>
+                                : <span style={{ color: "#FD4C62", fontSize: 16, marginLeft: 16 }}>False</span>}
+                        </Typography>
+                        {selectedOrganization.cloud_sync_active ? (
+                            <Typography style={{}}>
+                                Syncronization interval:{" "}
+                                {selectedOrganization.sync_config.interval === 0
+                                    ? "60"
+                                    : selectedOrganization.sync_config.interval}
+                            </Typography>
+                        ) : null}
+                        <Typography
+                            style={{
+                                whiteSpace: "nowrap",
+                                marginTop: 25,
+                                marginRight: 10,
+                                fontSize: 16,
+                                fontWeight: 400,
+                                color: theme.palette.text.primary,
+                                fontFamily: theme.typography.fontFamily,
+                            }}
+                        >
+                            Your Api key
+                        </Typography>
+                        {userSettings?.apikey === undefined || userSettings?.apikey === null || userSettings?.apikey?.length <= 0 ? (
+                            <Skeleton variant="rectangular" animation="wave" sx={{ backgroundColor: theme.palette.loaderColor, border: '1px solid #646464', width: 500, height: 50, marginTop: 2 }} />
+                        ) :
+                            <div style={{ display: "flex" }}>
+                                <TextField
+                                    style={{
+                                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                        borderRadius: theme.palette.textFieldStyle.borderRadius,
+                                        color: theme.palette.textFieldStyle.color,
+                                        maxWidth: 500,
+                                        height: 35
+                                    }}
+                                    InputProps={{
+                                        sx: {
+                                            height: "35px",
+                                            color: theme.palette.textFieldStyle.color,
+                                            fontSize: "1em",
+                                            backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                            borderRadius: theme.palette.textFieldStyle.borderRadius,
+                                        },
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    aria-label="toggle password visibility"
+                                                    onClick={() => {
+                                                        setShowApiKey(!showApiKey)
+                                                    }}
+                                                >
+                                                    {showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                    required
+                                    fullWidth={true}
+                                    disabled={true}
+                                    autoComplete="cloud apikey"
+                                    id="apikey_field"
+                                    margin="normal"
+                                    placeholder="Cloud Apikey"
+                                    variant="outlined"
+                                    value={userSettings?.apikey}
+                                    defaultValue={userSettings?.apikey}
+                                    type={!isCloud || showApiKey ? "text" : "password"}
+                                />
+                                {selectedOrganization.cloud_sync_active ? (
+                                    <Button
+                                        style={{
+                                            width: 150,
+                                            height: 50,
+                                            marginLeft: 10,
+                                            marginTop: 17,
+                                        }}
+                                        variant={
+                                            selectedOrganization.cloud_sync_active === true
+                                                ? "outlined"
+                                                : "contained"
+                                        }
+                                        color="primary"
+                                        onClick={() => {
+                                            handleStopOrgSync(selectedOrganization.id);
+                                        }}
+                                    >
+                                        Stop Sync
+                                    </Button>
+                                ) : null}
+                            </div>}
+                        <BackupToggles />
+                    </div>
+                </div>
+            ) : (
+                <div>
+                    <div style={{ display: "flex", marginBottom: 20 }}>
+                        <TextField
+                            color="primary"
+                            style={{
+                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                marginRight: 10,
+                                height: 35,
+                            }}
+                            InputProps={{
+                                style: {
+                                    height: "35px",
+                                    color: theme.palette.textFieldStyle.color,
+                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+                                    fontSize: "1em",
+                                },
+                            }}
+                            required
+                            fullWidth={true}
+                            disabled={selectedOrganization.cloud_sync}
+                            autoComplete="cloud apikey"
+                            id="apikey_field"
+                            margin="normal"
+                            placeholder="Cloud Apikey"
+                            variant="outlined"
+                            onChange={(event) => {
+                                setCloudSyncApikey(event.target.value);
+                            }}
+                        />
+                        <Button
+                            disabled={
+                                (!selectedOrganization.cloud_sync &&
+                                    cloudSyncApikey.length === 0) ||
+                                loading
+                            }
+                            style={{
+                                marginTop: 15, height: 35, width: 150, textTransform: 'none', fontSize: 16, color: (!selectedOrganization.cloud_sync &&
+                                    cloudSyncApikey.length === 0) ||
+                                    loading ? null : "#1a1a1a", backgroundColor: (!selectedOrganization.cloud_sync &&
+                                        cloudSyncApikey.length === 0) ||
+                                        loading ? null : "#FF8544"
+                            }}
+                            onClick={() => {
+                                setLoading(true);
+                                enableCloudSync(
+                                    cloudSyncApikey,
+                                    selectedOrganization,
+                                    selectedOrganization.cloud_sync
+                                );
+                            }}
+                            color="primary"
+                            variant={
+                                selectedOrganization.cloud_sync === true
+                                    ? "outlined"
+                                    : "contained"
+                            }
+                        >
+                            {selectedOrganization.cloud_sync
+                                ? "Stop sync"
+                                : "Start sync"}
+                        </Button>
+                    </div>
+                    <BackupToggles />
+                    {orgSyncResponse.length > 0 ? (
+                        <Typography style={{ marginTop: 5, marginBottom: 10 }}>
+                            Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
+                        </Typography>
+                    ) : null}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default CloudSyncTab;
+
+
+export const CloudSyncFeatures = ({isCloud, theme, selectedOrganization: propsSelectedOrg, userdata, globalUrl, handleGetOrg}) => {
+
+    const [, forceUpdate] = React.useState();
+    const [selectedOrganization, setSelectedOrganization] = React.useState(propsSelectedOrg);
+
+    React.useEffect(() => {
+        setSelectedOrganization(propsSelectedOrg);
+    }, [propsSelectedOrg]);
+
+
     const GridItem = (props) => {
         const [expanded, setExpanded] = React.useState(false);
         const [showEdit, setShowEdit] = React.useState(false);
@@ -62,7 +590,7 @@ const CloudSyncTab = (props) => {
 
         var primary = props.data.primary
 
-		const shownName = props.data.newname !== undefined && props.data.newname !== null && props.data.newname !== primary ? props.data.newname : primary
+        const shownName = props.data.newname !== undefined && props.data.newname !== null && props.data.newname !== primary ? props.data.newname : primary
 
         const secondary = props.data.secondary;
         const primaryIcon = props.data.icon;
@@ -70,7 +598,7 @@ const CloudSyncTab = (props) => {
             <CheckCircleIcon style={{ color: "green" }} />
             :
             <CloseIcon style={{ color: "red" }} />
-           
+
         const submitFeatureEdit = (sync_features) => {
             if (!userdata.support) {
                 console.log("User does not have support access and can't edit features");
@@ -137,7 +665,7 @@ const CloudSyncTab = (props) => {
 
             // Check if primary is in sync_features
             var tmpprimary = primary.replaceAll(" ", "_")
-            if (!(tmpprimary in selectedOrganization.sync_features)) {
+            if (tmpprimary !== "internal_app_runs_hard_limit" && !(tmpprimary in selectedOrganization.sync_features)) {
                 console.log("Primary not in sync_features: " + tmpprimary)
                 return
             }
@@ -147,6 +675,50 @@ const CloudSyncTab = (props) => {
             if (isNaN(tmp)) {
                 console.log("Not a number: " + newValue)
                 return
+            }
+
+            if (tmpprimary === "internal_app_runs_hard_limit") {
+                const data = {
+                    org_id: selectedOrganization.id,
+                    editing: "internal_appruns_hard_limit",
+                    billing: {
+                        internal_app_runs_hard_limit: tmp || 0,
+                    }
+                };
+                const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+
+                setShowEdit(false);
+                if (selectedOrganization.Billing) {
+                    selectedOrganization.Billing.internal_app_runs_hard_limit = tmp;
+                }
+                if (selectedOrganization.billing) {
+                    selectedOrganization.billing.internal_app_runs_hard_limit = tmp;
+                }
+                setSelectedOrganization(selectedOrganization);
+                forceUpdate(Math.random());
+
+                fetch(url, {
+                    mode: "cors",
+                    method: "POST",
+                    body: JSON.stringify(data),
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json; charset=utf-8",
+                    },
+                })
+                .then((response) => response.json())
+                .then((responseJson) => {
+                    if (responseJson.success === false) {
+                        toast.error("Failed updating app run limit: " + responseJson.reason);
+                    } else {
+                        toast.success("Successfully updated app run limit!");
+                        handleGetOrg(selectedOrganization.id);
+                    }
+                })
+                .catch((error) => {
+                    toast.error("Err: " + error.toString());
+                });
+                return;
             }
 
             selectedOrganization.sync_features[tmpprimary].limit = tmp
@@ -188,7 +760,7 @@ const CloudSyncTab = (props) => {
                         style={{ cursor: "pointer", }}
                         onClick={() => {
                             setExpanded(prev => !prev);
-                            if(showEdit){
+                            if (showEdit) {
                                 setShowEdit(false)
                             }
                         }}
@@ -200,7 +772,7 @@ const CloudSyncTab = (props) => {
                             style={{ textTransform: "capitalize", color: theme.palette.text.primary, fontSize: 14, fontWeight: 400, }}
                             primary={shownName}
                         />
-                        {isCloud && userdata.support === true ?
+                        {(isCloud && userdata.support === true) || (primary === "internal_app_runs_hard_limit" && userdata.support === true) ?
                             <Tooltip title="Edit features (support users only)">
                                 <EditIcon
                                     color="textPrimary"
@@ -209,7 +781,7 @@ const CloudSyncTab = (props) => {
                                         e.preventDefault();
                                         e.stopPropagation();
                                         console.log('expanded', expanded)
-                                        if (expanded){
+                                        if (expanded) {
                                             setExpanded(false)
                                         }
                                         if (showEdit) {
@@ -224,57 +796,68 @@ const CloudSyncTab = (props) => {
                                 />
                             </Tooltip>
                             : null}
-                        {userdata.support === true ?(
-                            <Tooltip title={props.data.active ? 'Disable feature' : 'Enable feature'}>
-                            <Switch
-                                checked={props.data.active}
-                                onChange={handleToggleFeature}
-                                color="primary"
-                                inputProps={{ 'aria-label': 'feature toggle' }}
-                                sx={{
-                                    '& .MuiSwitch-switchBase.Mui-checked': {
-                                        color: '#FFFFFF',
-                                    },
-                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                        backgroundColor: props.data.active ? '#2BC07E' : "#9e9e9e",
-                                    },
-                                    "& .MuiSwitch-track": {
-                                        backgroundColor: props.data.active ? '#2BC07E' : "#9e9e9e"
-                                    }
-                                }}
-                            />
-                        </Tooltip>
-                        ):(
-                            <Tooltip title={props.data.active ? "Disable feature" : "Enable feature"}>
-                            <span
-                                style={{ cursor: "pointer", marginTop: 5, }}
-                                onClick={(e) => {
-                                    if (!isCloud || userdata.support !== true) {
-                                        return
-                                    }
+                        {primary === "internal_app_runs_hard_limit" ? null : (
+                            userdata.support === true ? (
+                                <Tooltip title={props.data.active ? 'Disable feature' : 'Enable feature'}>
+                                    <Switch
+                                        checked={props.data.active}
+                                        onChange={handleToggleFeature}
+                                        color="primary"
+                                        inputProps={{ 'aria-label': 'feature toggle' }}
+                                        sx={{
+                                            '& .MuiSwitch-switchBase.Mui-checked': {
+                                                color: '#FFFFFF',
+                                            },
+                                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                backgroundColor: props.data.active ? '#2BC07E' : "#9e9e9e",
+                                            },
+                                            "& .MuiSwitch-track": {
+                                                backgroundColor: props.data.active ? '#2BC07E' : "#9e9e9e"
+                                            }
+                                        }}
+                                    />
+                                </Tooltip>
+                            ) : (
+                                <Tooltip title={props.data.active ? "Disable feature" : "Enable feature"}>
+                                    <span
+                                        style={{ cursor: "pointer", marginTop: 5, }}
+                                        onClick={(e) => {
+                                            if (!isCloud || userdata.support !== true) {
+                                                return
+                                            }
 
-                                    e.preventDefault();
-                                    e.stopPropagation();
+                                            e.preventDefault();
+                                            e.stopPropagation();
 
-                                    enableFeature()
-                                }}
-                            >
-                                {secondaryIcon}
-                            </span>
-                        </Tooltip>
+                                            enableFeature()
+                                        }}
+                                    >
+                                        {secondaryIcon}
+                                    </span>
+                                </Tooltip>
+                            )
                         )}
-                        
+
                     </ListItem>
                     {expanded ?
                         <div style={{ padding: 15 }}>
                             <Typography>
-                                <b>Usage:&nbsp;</b>
-                                {props.data.limit === 0 ? (
-                                    "Unlimited"
+                                {primary === "internal_app_runs_hard_limit" ? (
+                                    <>
+                                        <b>Limit:&nbsp;</b>
+                                        {props.data.limit === 0 || props.data.limit === "" ? "Unlimited" : props.data.limit}
+                                    </>
                                 ) : (
-                                    <span>
-                                        {props.data.usage} / {props.data.limit === "" ? "Unlimited" : props.data.limit}
-                                    </span>
+                                    <>
+                                        <b>Usage:&nbsp;</b>
+                                        {props.data.limit === 0 ? (
+                                            "Unlimited"
+                                        ) : (
+                                            <span>
+                                                {props.data.usage} / {props.data.limit === "" ? "Unlimited" : props.data.limit}
+                                            </span>
+                                        )}
+                                    </>
                                 )}
                             </Typography>
                             {/*<Typography>
@@ -290,7 +873,7 @@ const CloudSyncTab = (props) => {
                             console.log("Submit")
                             submitEdit(e)
                         }}>
-                            <span style={{ display: "flex",}}>
+                            <span style={{ display: "flex", }}>
 
                                 <TextField
                                     style={{ flex: 3, }}
@@ -327,491 +910,131 @@ const CloudSyncTab = (props) => {
             </Grid>
         );
     };
-    const handleGetOrg = (orgId) => {
-        if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
-            const urlSearchParams = new URLSearchParams(window.location.search);
-            const params = Object.fromEntries(urlSearchParams.entries());
-            const foundorgid = params["org_id"];
-            if (foundorgid !== undefined && foundorgid !== null) {
-                orgId = foundorgid;
-            }
-        }
-
-		if (orgId === undefined || orgId === null || (orgId.length !== 36 && orgId.length !== 0)) {
-			return
-		}
-
-        if (orgId.length === 0) {
-            toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
-            return;
-        }
 
 
-        // Just use this one?
-
-        fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-            .then((response) => {
-                if (response.status === 401) {
-                }
-
-                return response.json();
-            })
-            .then((responseJson) => {
-                if (responseJson["success"] === false) {
-                    toast.warn("Failed getting your org. If this persists, please contact support (cloud sync)")
-                } else {
-                    if (
-                        responseJson.sync_features === undefined ||
-                        responseJson.sync_features === null
-                    ) {
-                        responseJson.sync_features = {};
-                    }
-
-                    setSelectedOrganization(responseJson)
-                    var lists = {
-                        active: {
-                            triggers: [],
-                            features: [],
-                            sync: [],
-                        },
-                        inactive: {
-                            triggers: [],
-                            features: [],
-                            sync: [],
-                        },
-                    };
-                    setOrganizationFeatures(lists);
-                }
-            })
-            .catch((error) => {
-                console.log("Error getting org: ", error);
-                toast("Error getting current organization");
-            });
-    };
-    const handleStopOrgSync = (org_id) => {
-        if (org_id === undefined || org_id === null) {
-            toast("Couldn't get org " + org_id);
-            return;
-        }
-
-        const data = {};
-
-        const url = globalUrl + "/api/v1/orgs/" + org_id + "/stop_sync";
-        fetch(url, {
-            mode: "cors",
-            method: "POST",
-            body: JSON.stringify(data),
-            credentials: "include",
-            crossDomain: true,
-            withCredentials: true,
-            headers: {
-                "Content-Type": "application/json; charset=utf-8",
-            },
-        })
-            .then((response) => {
-                if (response.status === 200) {
-                    console.log("Cloud sync success?");
-                    toast("Successfully stopped cloud sync");
-                } else {
-                    console.log("Cloud sync fail?");
-                    toast(
-                        "Failed stopping sync. Try again, and contact support if this persists."
-                    );
-                }
-
-                return response.json();
-            })
-            .then((responseJson) => {
-                setTimeout(() => {
-                    handleGetOrg(org_id);
-                }, 1000);
-            })
-            .catch((error) => {
-                toast("Err: " + error.toString());
-            });
-    };
-
-    const enableCloudSync = (apikey, organization, disableSync) => {
-        setOrgSyncResponse("");
-
-        const data = {
-            apikey: apikey,
-            organization: organization,
-            disable: disableSync,
-        };
-
-        const url = globalUrl + "/api/v1/cloud/setup";
-        fetch(url, {
-            mode: "cors",
-            method: "POST",
-            body: JSON.stringify(data),
-            credentials: "include",
-            crossDomain: true,
-            withCredentials: true,
-            headers: {
-                "Content-Type": "application/json; charset=utf-8",
-            },
-        })
-            .then((response) => {
-                setLoading(false);
-                if (response.status === 200) {
-                    console.log("Cloud sync success?");
-                    handleGetOrg(userdata.active_org.id);
-                    setUpdateOrg(true);
-                } else {
-                    console.log("Cloud sync fail?");
-                }
-
-                return response.json();
-                //setTimeout(() => {
-                //}, 1000)
-            })
-            .then((responseJson) => {
-                console.log("RESP: ", responseJson);
-                if (
-                    responseJson.success === false &&
-                    responseJson.reason !== undefined
-                ) {
-                    setOrgSyncResponse(responseJson.reason);
-                    toast("Failed to handle sync: " + responseJson.reason);
-                } else if (!responseJson.success) {
-                    toast("Failed to handle sync.");
-                } else {
-                    //getOrgs(); API no longer in use, as it's in handleInfo request
-                    if (disableSync) {
-                        toast("Successfully disabled sync!");
-                        setOrgSyncResponse("Successfully disabled syncronization");
-                    } else {
-                        toast("Cloud Syncronization successfully set up!");
-                        setOrgSyncResponse(
-                            "Successfully started syncronization. Cloud/Hybrid features are available below."
-                        );
-                    }
-
-                    selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync;
-                    setSelectedOrganization(selectedOrganization);
-                    setCloudSyncApikey("");
-
-                    handleGetOrg(userdata.active_org.id);
-                }
-            })
-            .catch((error) => {
-                setLoading(false);
-                toast("Err: " + error.toString());
-            });
-    };
-    const getSettings = () => {
-        fetch(globalUrl + "/api/v1/getsettings", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
-            credentials: "include",
-        })
-            .then((response) => {
-                if (response.status !== 200) {
-                    console.log("Status not 200 when getting settings :O!");
-                }
-
-                return response.json();
-            })
-            .then((responseJson) => {
-                setUserSettings(responseJson);
-            })
-            .catch((error) => {
-                console.log(error);
-            });
-    };
-    if (
-        selectedOrganization.id === undefined &&
-        userdata !== undefined &&
-        userdata.active_org !== undefined &&
-        orgRequest === true
-    ) {
-        setOrgRequest(false);
-        handleGetOrg(userdata.active_org.id);
-    }
-    
     return (
-            <div style={{padding: "27px 10px 19px 27px",}}>
-            <div style={{ marginBottom: 20 }}>
-                <Typography variant="h5"
-                    style={{ marginBottom: 8, marginTop: 0, fontWeight: 500}}
-                >
-                    Cloud syncronization <span style={{color: red, }}>{userdata?.support === true && selectedOrganization && selectedOrganization?.creator_org !== undefined && selectedOrganization?.creator_org !== null && selectedOrganization?.creator_org?.length > 0 && " - Support Only: Normal users cannot see the cloud sync & Cloud Features section in a suborg"}</span>
-
-                </Typography>
-                <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400, }}>
-                    What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach. This will by default back up apps and workflows.
-                </Typography>
-            </div>
-
-            {isCloud ? (
-                <div style={{ marginTop: 15, display: "flex" }}>
-                    <div style={{ flex: 1 }}>
-                        <Typography style={{fontWeight: 400, fontSize: 16, color: theme.palette.text.secondary}}>
-                            Currently syncronizing:{" "}
-                            {selectedOrganization.cloud_sync_active === true
-                                ? <span style={{ color: "#4CFD72", fontSize: 16, marginLeft: 16}}>True</span>
-                                : <span style={{ color: "#FD4C62", fontSize: 16, marginLeft: 16 }}>False</span>}
-                        </Typography>
-                        {selectedOrganization.cloud_sync_active ? (
-                            <Typography style={{}}>
-                                Syncronization interval:{" "}
-                                {selectedOrganization.sync_config.interval === 0
-                                    ? "60"
-                                    : selectedOrganization.sync_config.interval}
-                            </Typography>
-                        ) : null}
-                        <Typography
-                            style={{
-                                whiteSpace: "nowrap",
-                                marginTop: 25,
-                                marginRight: 10,
-                                fontSize: 16, 
-                                fontWeight: 400,
-                                color: theme.palette.text.primary,
-                                fontFamily: theme.typography.fontFamily,
-                            }}
-                        >
-                            Your Api key
-                        </Typography>
-                        {userSettings?.apikey === undefined || userSettings?.apikey === null || userSettings?.apikey?.length <=0 ? (
-                                <Skeleton variant="rectangular" animation="wave" sx={{backgroundColor: theme.palette.loaderColor, border: '1px solid #646464', width: 500, height: 50, marginTop: 2 }}/>
-                        ):
-                        <div style={{ display: "flex" }}>
-                            <TextField
-                                style={{
-                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                    borderRadius: theme.palette.textFieldStyle.borderRadius,
-                                    color: theme.palette.textFieldStyle.color,
-                                    maxWidth: 500,
-                                    height: 35
-                                }}
-                                InputProps={{
-                                    sx: {
-                                        height: "35px",
-                                        color: theme.palette.textFieldStyle.color,
-                                        fontSize: "1em",
-                                        backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                        borderRadius: theme.palette.textFieldStyle.borderRadius,
-                                    },
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                aria-label="toggle password visibility"
-                                                onClick={() => {
-                                                    setShowApiKey(!showApiKey)
-                                                }}
-                                            >
-                                                {showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    )
-                                }}
-                                required
-                                fullWidth={true}
-                                disabled={true}
-                                autoComplete="cloud apikey"
-                                id="apikey_field"
-                                margin="normal"
-                                placeholder="Cloud Apikey"
-                                variant="outlined"
-                                value={userSettings?.apikey}
-                                defaultValue={userSettings?.apikey}
-                                type={!isCloud || showApiKey ? "text" : "password"}
-                            />
-                            {selectedOrganization.cloud_sync_active ? (
-                                <Button
-                                    style={{
-                                        width: 150,
-                                        height: 50,
-                                        marginLeft: 10,
-                                        marginTop: 17,
-                                    }}
-                                    variant={
-                                        selectedOrganization.cloud_sync_active === true
-                                            ? "outlined"
-                                            : "contained"
-                                    }
-                                    color="primary"
-                                    onClick={() => {
-                                        handleStopOrgSync(selectedOrganization.id);
-                                    }}
-                                >
-                                    Stop Sync
-                                </Button>
-                            ) : null}
-                        </div>}
-                    </div>
-                </div>
-            ) : (
-                <div>
-                    <div style={{ display: "flex", marginBottom: 20 }}>
-                        <TextField
-                            color="primary"
-                            style={{
-                                backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                marginRight: 10,
-                                height: 35,
-                            }}
-                            InputProps={{
-                                style: {
-                                    height: "35px",
-                                    color: theme.palette.textFieldStyle.color,
-                                    backgroundColor: theme.palette.textFieldStyle.backgroundColor,
-                                    fontSize: "1em",
-                                },
-                            }}
-                            required
-                            fullWidth={true}
-                            disabled={selectedOrganization.cloud_sync}
-                            autoComplete="cloud apikey"
-                            id="apikey_field"
-                            margin="normal"
-                            placeholder="Cloud Apikey"
-                            variant="outlined"
-                            onChange={(event) => {
-                                setCloudSyncApikey(event.target.value);
-                            }}
-                        />
-                        <Button
-                            disabled={
-                                (!selectedOrganization.cloud_sync &&
-                                    cloudSyncApikey.length === 0) ||
-                                loading
-                            }
-                            style={{ marginTop: 15, height: 35, width: 150, textTransform: 'none', fontSize: 16, color:  (!selectedOrganization.cloud_sync &&
-                                cloudSyncApikey.length === 0) ||
-                            loading ? null : "#1a1a1a", backgroundColor:  (!selectedOrganization.cloud_sync &&
-                                cloudSyncApikey.length === 0) ||
-                            loading? null : "#FF8544" }}
-                            onClick={() => {
-                                setLoading(true);
-                                enableCloudSync(
-                                    cloudSyncApikey,
-                                    selectedOrganization,
-                                    selectedOrganization.cloud_sync
-                                );
-                            }}
-                            color="primary"
-                            variant={
-                                selectedOrganization.cloud_sync === true
-                                    ? "outlined"
-                                    : "contained"
-                            }
-                        >
-                            {selectedOrganization.cloud_sync
-                                ? "Stop sync"
-                                : "Start sync"}
-                        </Button>
-                    </div>
-                    {orgSyncResponse.length > 0 ? (
-                        <Typography style={{ marginTop: 5, marginBottom: 10 }}>
-                            Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
-                        </Typography>
-                    ) : null}
-                </div>
-            )}
-
+        <>
             <Typography variant="h5" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
-				{isCloud ? "Cloud" : "Hybrid"} Features
+                {isCloud ? "Cloud" : "Hybrid"} Features (Support Users Only)
             </Typography>
             <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24, fontSize: 16, fontWeight: 400, marginLeft: 5, color: theme.palette.text.secondary }}>
-              Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced.            </Typography>
-                <Grid container style={{ width: "100%", marginBottom: 15,  }}>
+                Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced.            </Typography>
+            <Grid container style={{ width: "100%", marginBottom: 15, }}>
 
                 {selectedOrganization.sync_features === undefined ||
                     selectedOrganization.sync_features === null
                     ? <Grid container spacing={2} justifyContent="center">
 
-                    {[...Array(18)].map((_, i) => (
+                        {[...Array(18)].map((_, i) => (
 
-                        <Grid item xs={12} sm={6} md={4} key={i}>
-                            <div
-                                style={{
-                                    margin: 4,
-                                    borderRadius: 8,
-                                    minHeight: "inherit",
-                                    maxHeight: "inherit",
-                                    boxShadow: "none",
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <Skeleton
-                                    variant="rectangular"
-                                    height={50}
-                                    width={343}
-                                    sx={{ backgroundColor: theme.palette.loaderColor, display: 'flex', borderRadius: 1 }}
-                                    animation="wave"
-                                />
-                            </div>
-                        </Grid>
-                    ))}
-                </Grid>                
-                    : Object.keys(selectedOrganization.sync_features).map(function (
-                        key,
-                        index
-                    ) {
-
-                        if (key === "schedule" || key === "apps" || key === "updates" || key === "editing") {
-                            return null;
-                        }
-
-                        const item = selectedOrganization.sync_features[key];
-                        if (item === null) {
-                            return null
-                        }
-
-                        const newkey = key.replaceAll("_", " ");
-
-						// Rewrites to frontend names
-						var newname = newkey
-						if (newkey === "app executions") {
-							newname = "app runs"
-						} else if (newkey === "multiplayer") {
-							newname = "Multiplayer Workflow"
-						}
-
-                        if (key === "onprem_app_executions" && userdata.support !== true) {
-                            return null
-                        }
-
-                        const griditem = {
-                            primary: newkey,
-                            secondary:
-                                item.description === undefined ||
-                                    item.description === null ||
-                                    item.description.length === 0
-                                    ? "Not defined yet"
-                                    : item.description,
-                            limit: item.limit,
-                            usage: item.usage === undefined ||
-                                item.usage === null ? 0 : item.usage,
-                            data_collection: "None",
-                            active: item.active,
-                            icon: <PolylineIcon style={{ color: "#1a1a1a" }} />,
-
-							newname: newname,
-                        };
-
-                        return (
-                            <Zoom key={index}>
-                                <GridItem data={griditem} />
-                            </Zoom>
+                            <Grid item xs={12} sm={6} md={4} key={i}>
+                                <div
+                                    style={{
+                                        margin: 4,
+                                        borderRadius: 8,
+                                        minHeight: "inherit",
+                                        maxHeight: "inherit",
+                                        boxShadow: "none",
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <Skeleton
+                                        variant="rectangular"
+                                        height={50}
+                                        width={343}
+                                        sx={{ backgroundColor: theme.palette.loaderColor, display: 'flex', borderRadius: 1 }}
+                                        animation="wave"
+                                    />
+                                </div>
+                            </Grid>
+                        ))}
+                    </Grid>
+                     : (() => {
+                        const featureKeys = Object.keys(selectedOrganization.sync_features).filter(
+                            (k) => k !== "schedule" && k !== "apps" && k !== "updates" && k !== "editing"
                         );
-                    })}
-            </Grid>
-            </div>
-    );
-};
+                        if (userdata?.support === true) {
+                            featureKeys.push("internal_app_runs_hard_limit");
+                        }
+                        return featureKeys.map(function (key, index) {
+                            if (key === "internal_app_runs_hard_limit") {
+                                const griditem = {
+                                    primary: "internal_app_runs_hard_limit",
+                                    secondary: "Set a hard limit on app executions. If the organization reaches this limit, all workflow executions will be stopped.",
+                                    limit: (selectedOrganization?.Billing?.internal_app_runs_hard_limit !== undefined 
+                                        ? selectedOrganization.Billing.internal_app_runs_hard_limit 
+                                        : (selectedOrganization?.billing?.internal_app_runs_hard_limit !== undefined 
+                                            ? selectedOrganization.billing.internal_app_runs_hard_limit 
+                                            : 0)),
+                                    usage: 0,
+                                    data_collection: "None",
+                                    active: ((selectedOrganization?.Billing?.internal_app_runs_hard_limit > 0) || (selectedOrganization?.billing?.internal_app_runs_hard_limit > 0)),
+                                    icon: <PolylineIcon style={{ color: "#1a1a1a" }} />,
+                                    newname: "App Runs Hard Limit",
+                                };
+                                return (
+                                    <Zoom key={index}>
+                                        <GridItem data={griditem} />
+                                    </Zoom>
+                                );
+                            }
 
-export default CloudSyncTab;
+                            const item = selectedOrganization.sync_features[key];
+                            if (item === null) {
+                                return null
+                            }
+
+                            const newkey = key.replaceAll("_", " ");
+
+                            // Rewrites to frontend names
+                            var newname = newkey
+                            if (newkey === "app executions") {
+                                newname = "cloud app runs"
+                            } else if (newkey === "multiplayer") {
+                                newname = "Multiplayer Workflow"
+                            } else if (newkey === "agent tokens") {
+                                newname = "AI tokens"
+                            } else if (newkey === "onprem app executions") {
+                                newname = "onprem app runs"
+                            } else if (newkey === "multi env") {
+                                newname = "locations"
+                            } else if (newkey === "multi tenant") {
+                                newname = "tenants"
+                            } else if (newkey === "agent executions") {
+                                newname = "agents runs"
+                            }
+
+                            if (key === "onprem_app_executions" && !isCloud) {
+                                return null
+                            }
+
+                            const griditem = {
+                                primary: newkey,
+                                secondary:
+                                    item.description === undefined ||
+                                        item.description === null ||
+                                        item.description.length === 0
+                                        ? "Not defined yet"
+                                        : item.description,
+                                limit: item.limit,
+                                usage: item.usage === undefined ||
+                                    item.usage === null ? 0 : item.usage,
+                                data_collection: "None",
+                                active: item.active,
+                                icon: <PolylineIcon style={{ color: "#1a1a1a" }} />,
+
+                                newname: newname,
+                            };
+
+                            return (
+                                <Zoom key={index}>
+                                    <GridItem data={griditem} />
+                                </Zoom>
+                            );
+                        });
+                    })()}
+            </Grid>
+        </>
+    )
+}

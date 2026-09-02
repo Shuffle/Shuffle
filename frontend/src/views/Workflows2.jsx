@@ -1169,9 +1169,9 @@ const Workflows2 = (props) => {
           if (!fetched && org) {
             if (!isCloud) {
                 setCurrentOrg(org);
-                if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                if (org?.cloud_sync  && (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
-                } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+                } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
                 } else {
                   setIsProdStatusOn(false);
@@ -5699,9 +5699,10 @@ const Workflows2 = (props) => {
 						{!isCloud && (currentOrg?.old_org || isProdStatusOn) ? (
 						  <div
 							style={{
-							  position: "absolute",
-							  top: 20,
-							  right: 20,
+						  position: "fixed",
+						  top: 16,
+						  right: 16,
+						  zIndex: 1300,
 							}}
 						  >
 							<Licensed

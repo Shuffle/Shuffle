@@ -4,13 +4,12 @@ import { makeStyles } from "@mui/styles";
 import { toast } from "react-toastify"
 import { getTheme } from '../theme.jsx';
 import { Context } from "../context/ContextApi.jsx";
-//import { useAlert 
+//import { useAlert
 
 import {
 	FormControl,
 	InputLabel,
 	Paper,
-	OutlinedInput,
 	Checkbox,
 	Card,
 	Tooltip,
@@ -21,7 +20,6 @@ import {
 	Switch,
 	Select,
 	MenuItem,
-	Divider,
 	ListItemText,
 	TextField,
 	Button,
@@ -53,27 +51,11 @@ const OrgHeaderexpandedNew = (props) => {
 		globalUrl,
 		isCloud,
 		adminTab,
-		selectedStatus,
-		setSelectedStatus,
 		isEditOrgTab,
-		handleStatusChange
 	} = props;
 
 	const classes = useStyles();
 	const defaultBranch = "main";
-	const ITEM_HEIGHT = 48;
-	const ITEM_PADDING_TOP = 8;
-	const MenuProps = {
-		PaperProps: {
-			style: {
-				maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-				width: 300,
-				borderRadius: 4,
-				overflowY: "scroll",
-			},
-		},
-		getContentAnchorEl: () => null,
-	};
 
 	const [orgName, setOrgName] = useState(selectedOrganization?.name);
 	const [orgDescription, setOrgDescription] = React.useState(
@@ -496,32 +478,6 @@ const OrgHeaderexpandedNew = (props) => {
 											}}
 										/>
 									</div>
-									{userdata?.support ? (
-										<div style={{ alignItems: 'center' }}>
-											<div style={{ marginRight: '12px', color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily, marginTop: 2.5 }}>Status</div>
-											<FormControl style={{ width: 220, height: 35 }}>
-												<Select
-													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
-													id="multiselect-status"
-													multiple
-													value={selectedStatus}
-													onChange={(event) => { handleStatusChange(event); setSelectedStatus(event.target.value) }}
-													input={<OutlinedInput />}
-													renderValue={(selected) => selected.join(', ')}
-													MenuProps={MenuProps}
-												>
-													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "integration partner", "distribution partner", "channel partner", "service partner", "old customer", "old lead"].map((name) => (
-														<MenuItem key={name} value={name}>
-															<Checkbox checked={selectedStatus.indexOf(name) > -1} />
-															<ListItemText primary={name} />
-														</MenuItem>
-													))}
-												</Select>
-											</FormControl>
-										</div>
-									) : null}
-
-
 									{isCloud ? (
 										<div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }} >
 											<Typography variant="text" style={{color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily}}>Change Region</Typography>
@@ -711,12 +667,13 @@ const OrgHeaderexpandedNew = (props) => {
 					</span>
 				</Grid>
 
-				{!userdata?.support === true && (!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org === null || selectedOrganization?.creator_org?.length > 0) ? null :
+				{ selectedOrganization && (!selectedOrganization?.creator_org || selectedOrganization?.creator_org?.length === 0) ? (
 				<CloudSyncTab
 					globalUrl={globalUrl}
 					userdata={userdata}
 					serverside={false}
-				/>}
+					/>
+				) : null}
 				<Grid item xs={12} style={{ marginTop: 20, }}>
 					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Backup Repository</Typography>
 					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400 }}>
