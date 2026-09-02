@@ -258,9 +258,9 @@ If you're interested, please let me know a time that works for you, or set up a 
             <div style={{ marginBottom: 20 }}>
                 <div style={{display:"flex"}}>
                     <div style={{width:'70%'}}>
-                <Typography variant='h3' sx={{ marginBottom: "15px", marginTop: 0, }}>Organization overview</Typography>
+                <Typography variant='h3' sx={{ marginBottom: "15px", marginTop: 0, }}>Tenant overview</Typography>
                 <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16 }}>
-                    On this page organization admins can configure organisations, and sub-orgs (MSSP).{" "}
+                    On this page tenant admins can configure tenants, and sub-tenants (MSSP).{" "}
                     <a
                         target="_blank"
                         rel="noopener noreferrer"

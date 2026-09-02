@@ -325,7 +325,7 @@ export default function defaultCytoscapeStyle(theme, apps) {
       },
     },
     {
-      selector: "node[?isStartNode]",
+      selector: 'node[type="ACTION"][?isStartNode]',
       css: {
         shape: function(element) {
         return "ellipse" 
