@@ -3534,6 +3534,11 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	if cors {
 		return
 	}
+	if strings.ToLower(os.Getenv("SHUFFLE_DISABLE_RERUN_AND_ABORT")) == "true" {
+		resp.WriteHeader(http.StatusConflict)
+		resp.Write([]byte(`{"success": false, "reason": "SHUFFLE_DISABLE_RERUN_AND_ABORT is active. Won't rerun executions."}`))
+		return
+	}
 
 	location := strings.Split(request.URL.String(), "/")
 	var fileId string
