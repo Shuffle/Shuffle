@@ -1278,6 +1278,8 @@ const Workflows2 = (props) => {
 
     React.useEffect(() => {
         if (!isLoggedIn || !isCloud) return;
+
+        return // we don't wanna show this
       
         const bannerID = "release_banner_announcement";
         const cookieSession = getCookie("__session") || "";
@@ -6514,7 +6516,7 @@ const Workflows2 = (props) => {
                 {deleteModal}
                 {exportVerifyModal}
                 {publishModal}
-                {aiAnnouncementModal}
+                {/* {aiAnnouncementModal} */}
                 {workflowDownloadModalOpen}
                 {syncListModal}
 

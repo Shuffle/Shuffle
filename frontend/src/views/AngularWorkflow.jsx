@@ -7274,7 +7274,7 @@ const AngularWorkflow = (defaultprops) => {
               }
 
               item.fields = newfields;
-              if (item.app.name.toLowerCase() === curappName) {
+              if (item.app.name.toLowerCase().replaceAll(" ", "_") === curappName) {
                 authenticationOptions.push(item);
                 if (item.id === findAuthId) {
                   curaction.selectedAuthentication = item;
