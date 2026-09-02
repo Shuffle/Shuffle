@@ -91,13 +91,19 @@ func initializeIntegrationBackends(t *testing.T) {
 
 			mc := gomemcache.New(address)
 			mc.Timeout = 2 * time.Second
-			if err := mc.Ping(); err != nil {
-				memcacheError = err
-				continue
-			}
+			for attempt := 0; attempt < 3; attempt++ {
+				if err := mc.Ping(); err != nil {
+					memcacheError = err
+					time.Sleep(time.Second)
+					continue
+				}
 
-			memcacheAvailable = true
-			break
+				memcacheAvailable = true
+				break
+			}
+			if memcacheAvailable {
+				break
+			}
 		}
 		if !memcacheAvailable {
 			if memcacheError == nil {
