@@ -27,7 +27,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/opensearch-go/v4 v4.0.0
 	github.com/shuffle/shuffle-shared v1.3.3
-	github.com/shuffle/singul v0.0.32
+	github.com/shuffle/singul v0.0.33
 	golang.org/x/crypto v0.52.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.34.2
@@ -101,7 +101,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.15 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
