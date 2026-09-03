@@ -168,16 +168,16 @@ func scheduleExecutionJob(schedule shuffle.ScheduleOld, fallbackOrgID string) fu
 				claimTTL = 2592000
 			}
 
-			claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
-			claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
-			if err != nil {
-				log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
-				return
-			}
-			if !claimed {
-				log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
-				return
-			}
+			//claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
+			//claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
+		//	if err != nil {
+		//		log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
+		//		return
+		//	}
+		//	if !claimed {
+		//		log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
+		//		return
+		//	}
 
 			storedSchedule, err := shuffle.GetSchedule(context.Background(), schedule.Id)
 			if err != nil || storedSchedule.WorkflowId != schedule.WorkflowId {
