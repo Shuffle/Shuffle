@@ -3449,16 +3449,18 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 					name = "frikky/shuffle"
 				}
 
-				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
-				appSdkImage := ""
-				if len(appSdk) == 0 {
-					appSdkImage = fmt.Sprintf("%s:app_sdk", name)
-				} else {
-					appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
-				}
+				appSdkImage := os.Getenv("SHUFFLE_APP_SDK_IMAGE")
+				if appSdkImage == "" {
+					appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
+					if len(appSdk) == 0 {
+						appSdkImage = fmt.Sprintf("%s:app_sdk", name)
+					} else {
+						appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
+					}
 
-				if registry != "" {
-					appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+					if registry != "" {
+						appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+					}
 				}
 
 				_, err = dockercli.ImagePull(ctx, appSdkImage, image.PullOptions{})

@@ -114,6 +114,8 @@ SHUFFLE_RERUN_SCHEDULE: "{{ .Values.backend.cleanupSchedule }}"
 TZ: "{{ .Values.shuffle.timezone }}"
 REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}" # Used by app builder
 SHUFFLE_BASE_IMAGE_NAME: "{{ .Values.shuffle.appBaseImageName }}" # Used by app builder
+SHUFFLE_APP_SDK_IMAGE: "{{ .Values.shuffle.appSdkImage }}" # Used by app builder
+SHUFFLE_APP_BUILD_AIRGAPPED: {{ .Values.shuffle.appBuildAirgapped | quote }} # Used by app builder
 {{- if .Values.backend.debug }}
 DEBUG: "true"
 {{- end }}

@@ -3369,16 +3369,21 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	dockerfileDestination := fmt.Sprintf("%s/Dockerfile", basePath)
 
 	// Read and copy the baseline Dockerfile
-	dockerfileContent, err := ioutil.ReadFile(dockerfileSource)
-	if err != nil {
-		foundDockerfile := shuffle.GetBaseDockerfile()
-		if len(foundDockerfile) > 0 {
-			dockerfileContent = foundDockerfile
-		} else {
-			log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
-			resp.WriteHeader(500)
-			resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
-			return
+	var dockerfileContent []byte
+	if os.Getenv("SHUFFLE_APP_BUILD_AIRGAPPED") == "true" {
+		dockerfileContent = shuffle.GetBaseDockerfile()
+	} else {
+		dockerfileContent, err = ioutil.ReadFile(dockerfileSource)
+		if err != nil {
+			foundDockerfile := shuffle.GetBaseDockerfile()
+			if len(foundDockerfile) > 0 {
+				dockerfileContent = foundDockerfile
+			} else {
+				log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
+				resp.WriteHeader(500)
+				resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
+				return
+			}
 		}
 	}
 
