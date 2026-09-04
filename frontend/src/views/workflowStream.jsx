@@ -242,10 +242,57 @@ export function startStream(baseUrl, workflowId, orgId, options) {
   const timeout = 60000;
   const maxFailures = 20;
   const retryDelay = 3000;
+  const presenceIntervalMs = 5000;
 
   const url = buildStreamUrl(baseUrl, workflowId);
 
-  const run = async () => {
+  // Solo mode: poll presence cheaply instead of holding a long-poll open. Resolves true
+  // when it's time to go live — someone else (or an agent) is now on the workflow.
+  const waitUntilLive = async () => {
+    while (!stopped) {
+      try {
+        const headers = { "Content-Type": "application/json", Accept: "application/json" };
+        if (orgId !== undefined && orgId !== null && orgId.length > 0) {
+          headers["Org-Id"] = orgId;
+        }
+
+        const response = await fetchWithTimeout(`${url}?presence_only=1`, {
+          method: "GET",
+          headers: headers,
+          credentials: "include",
+          timeout: 8000,
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          if (onStatusChange) {
+            onStatusChange("denied");
+          }
+          return false;
+        }
+
+        const data = await response.json();
+        if (data && data.seq > lastSeq) {
+          lastSeq = data.seq;
+        }
+        if (data && data.count > 1) {
+          return true;
+        }
+      } catch (error) {
+        if (onError) {
+          onError(error);
+        }
+      }
+      // Add jitter to prevent thundering herd when many users poll simultaneously
+      const jitter = Math.random() * 2000; // 0-2 seconds
+      await new Promise((r) => setTimeout(r, presenceIntervalMs + jitter));
+    }
+    return false;
+  };
+
+  // Live mode: the long-poll loop. Reconnects every ~55s while others are present.
+  // Returns true when a cycle ends with nobody else around, so the caller can fall back
+  // to cheap presence polling; returns false when the stream should stop for good.
+  const runLive = async () => {
     if (onStatusChange) {
       onStatusChange("active");
     }
@@ -257,7 +304,7 @@ export function startStream(baseUrl, workflowId, orgId, options) {
         if (onStatusChange) {
           onStatusChange("disconnected");
         }
-        break;
+        return false;
       }
 
       const getHeaders = {
@@ -267,6 +314,11 @@ export function startStream(baseUrl, workflowId, orgId, options) {
       if (orgId !== undefined && orgId !== null && orgId.length > 0) {
         getHeaders["Org-Id"] = orgId;
       }
+
+      // Track how many users are present. Start at 2 (assume we're not alone) so we don't
+      // immediately drop back to solo mode if presence update hasn't arrived yet. Gets updated
+      // when we receive a presence operation from the server.
+      let lastPresenceCount = 2;
 
       try {
         const response = await fetchWithTimeout(`${url}?since=${lastSeq}`, {
@@ -280,7 +332,7 @@ export function startStream(baseUrl, workflowId, orgId, options) {
           if (onStatusChange) {
             onStatusChange("denied");
           }
-          break;
+          return false;
         }
 
         if (!response.ok) {
@@ -296,6 +348,11 @@ export function startStream(baseUrl, workflowId, orgId, options) {
             }
           }
 
+          // Track how many are here so we know when to drop back to solo.
+          if (op.item === "presence") {
+            lastPresenceCount = Array.isArray(op.users) ? op.users.length : 0;
+          }
+
           // Forward to caller
           if (onOp) {
             onOp(op);
@@ -303,6 +360,12 @@ export function startStream(baseUrl, workflowId, orgId, options) {
         });
 
         consecutiveFailures = 0;
+
+        // Server self-closed after ~55s. If we're the only one here now, stop holding
+        // the connection open and drop back to polling.
+        if (lastPresenceCount <= 1) {
+          return true;
+        }
       } catch (error) {
         consecutiveFailures++;
         if (onError) {
@@ -313,9 +376,31 @@ export function startStream(baseUrl, workflowId, orgId, options) {
         }
       }
     }
+    return false;
   };
 
-  run();
+  // First connection is always live so the initial since=0 catch-up replays any unsaved
+  // ops (unchanged behavior). After that, alternate: poll cheaply when solo, hold the
+  // live loop open when others are present.
+  const loop = async () => {
+    let firstCycle = true;
+    while (!stopped) {
+      if (!firstCycle) {
+        const goLive = await waitUntilLive();
+        if (!goLive) {
+          return;
+        }
+      }
+      firstCycle = false;
+
+      const backToSolo = await runLive();
+      if (!backToSolo) {
+        return;
+      }
+    }
+  };
+
+  loop();
 
   return function stop() {
     stopped = true;

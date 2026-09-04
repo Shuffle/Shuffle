@@ -742,6 +742,10 @@ const AngularWorkflow = (defaultprops) => {
   const [userediting, setUserediting] = React.useState(false)
 
   const [lastSaved, setLastSaved] = React.useState(true);
+  const skipUnloadWarningRef = React.useRef(false);
+  
+  // Expose ref on window so WorkflowHistory can set it before reload
+  window.skipUnloadWarningRef = skipUnloadWarningRef
   const [selectionOpen, setSelectionOpen] = React.useState(false);
 
   // eslint-disable-next-line no-unused-vars
@@ -4357,6 +4361,22 @@ const AngularWorkflow = (defaultprops) => {
   const onStreamOpReceived = (op) => {
     if (!op.item) return
 
+    // Handle system ops
+    if (op.item === "system") {
+      if (op.type === "rewind") {
+        // Another user reverted the workflow — show toast and reload
+        skipUnloadWarningRef.current = true
+        
+        const username = op.username || op.user_id || "Someone"
+        toast(`${username} reverted the workflow to an earlier state. Reloading...`, { duration: 2000 })
+        
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      }
+      return
+    }
+
     // Track user presence on node/edge ops
     if ((op.item === "node" || op.item === "edge") && op.user_id) {
       setConnectedUsers(prev => {
@@ -4816,6 +4836,8 @@ const AngularWorkflow = (defaultprops) => {
 
     setTimeout(() => {
       node.data("streamRemoveSent", true)
+      // Mark connected edges so onEdgeRemoved doesn't re-send them when the node removal cascades
+      node.connectedEdges().forEach(e => e.data("streamRemoveSent", true))
       if (node.data("type") === "COMMENT") {
         cy.filter(`node[attachedTo = "${chunkJson.id}"]`).forEach(h => { h.data("streamRemoveSent", true); h.remove() })
       }
@@ -4874,6 +4896,8 @@ const AngularWorkflow = (defaultprops) => {
         edgeData.target &&
         cy.getElementById(op.id).length === 0
       ) {
+        // Set guard BEFORE cy.add so onEdgeAdded fires but skips re-sending
+        edgeData.streamAddSent = true;
         cy.add({ group: "edges", data: edgeData });
       }
     } catch (e) {
@@ -4884,7 +4908,10 @@ const AngularWorkflow = (defaultprops) => {
   const removeEdgeStream = (op) => {
     if (!cy) return;
     const edge = cy.getElementById(op.id);
-    if (edge.length > 0) edge.remove();
+    if (edge.length > 0) {
+      edge.data("streamRemoveSent", true)
+      edge.remove();
+    }
   };
 
   const configureEdgeStream = (op) => {
@@ -6263,6 +6290,9 @@ const AngularWorkflow = (defaultprops) => {
 
 
   useBeforeunload(() => {
+    if (skipUnloadWarningRef.current) {
+      return
+    }
     if (!lastSaved) {
       return unloadText;
     } else {
@@ -8225,6 +8255,7 @@ const AngularWorkflow = (defaultprops) => {
     const eventTarget = event.target.target()
     if (eventTarget.data("isButton") === true) {
       const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
+      event.target.data("streamRemoveSent", true)  // internal redirection, not a real user removal
       event.target.remove()
       console.log("Setting it to parentnode: ", parentNode.data())
       if (parentNode !== undefined && parentNode !== null) {
@@ -8246,6 +8277,7 @@ const AngularWorkflow = (defaultprops) => {
 
         cy.add(edgeToBeAdded);
       }
+      return  // stop here — the new edge fires onEdgeAdded again for the real connection
     }
 
     if (eventTarget.data("isDescriptor") === true || eventTarget.data("type") === "COMMENT") {
@@ -8358,6 +8390,12 @@ const AngularWorkflow = (defaultprops) => {
       //console.log("DST Autocompleter: ", dstdata);
     }
 
+    // Don't send or record if this edge targets a button/handle — it's an intermediate
+    // state that gets immediately removed and replaced with an edge to the real parent node.
+    if (eventTarget.data("isButton") === true) {
+      return
+    }
+
     var newbranch = {
       source_id: edge.source,
       destination_id: edge.target,
@@ -8373,7 +8411,9 @@ const AngularWorkflow = (defaultprops) => {
       workflow.branches.push(newbranch);
       setWorkflow(workflow);
 
-      stream.sendEdgeAdd(edge.id, edge.source, edge.target)
+      if (!edge.streamAddSent) {
+        stream.sendEdgeAdd(edge.id, edge.source, edge.target)
+      }
     }
 
     history.push({
@@ -20282,7 +20322,8 @@ const AngularWorkflow = (defaultprops) => {
     transition: "all 0.3s ease",
     paddingLeft : 30,
     zoom: isSafari ? undefined : 0.9,
-    overflow: "hidden",
+    overflow: "visible",
+    minHeight: "fit-content",
   } 
 
 
@@ -20400,7 +20441,6 @@ const AngularWorkflow = (defaultprops) => {
         padding: "10px 20px",
         position: "relative",
         boxSizing: "border-box",
-        overflow: "hidden",
       }}>
         {/* Top Row: Workflow Name | Build/Debug Toggle | Right Side Buttons */}
         <div style={{
@@ -20573,8 +20613,9 @@ const AngularWorkflow = (defaultprops) => {
                     </ToggleButton>
                   ))}
                 </ToggleButtonGroup>
+          </div>)}
 
-              {workflow?.background_processing === true ? (
+          {workflow?.background_processing === true ? (
                 <span
                   onClick={() => window.open(`https://security.shuffler.io/usecases?name=${workflow.name}`, "_blank")}
                   style={{
@@ -20595,7 +20636,10 @@ const AngularWorkflow = (defaultprops) => {
                     cursor: "pointer",
                     position: "relative",
                     zIndex: 100,
-
+                     position: "absolute",
+                    left: "47%",
+                    transform: "translateX(-50%)",
+                    top: 45,
                     marginTop: 5,
 					marginLeft: 50, 
 					minWidth: 170, 
@@ -20606,7 +20650,6 @@ const AngularWorkflow = (defaultprops) => {
                   <span>Shuffle Security Usecase</span>
                 </span>
               ) : null}
-          </div>)}
   
           {/* Right: Buttons Container */}
           <div style={{ 
@@ -21402,13 +21445,20 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const ConnectedUsersAvatars = () => {
-    const otherUsers = connectedUsers.filter(u => u.user_id !== userdata.id)
-    const allUsers = connectedUsers.map(u => ({
-      ...u,
-      user: u.user_id === userdata.id ? (userdata.username || "You") : u.user,
-    }))
+    // Who to show:
+    //  - solo (just you)            → nobody
+    //  - only the agent is with you → just the agent
+    //  - other real people present  → you + everyone (so you can see your own color)
+    const others = connectedUsers.filter(u => u.user_id !== userdata.id)
+    const otherHumans = others.filter(u => u.user_id !== "agent")
+    const hasAgent = others.some(u => u.user_id === "agent")
+    const me = connectedUsers.find(u => u.user_id === userdata.id)
 
-    if (otherUsers.length < 1 && !multiplayerEnabled) {
+    const visibleUsers = otherHumans.length > 0
+      ? (me ? [me, ...others] : others)
+      : others
+
+    if (visibleUsers.length < 1 && !multiplayerEnabled) {
       return null
     }
 
@@ -21442,21 +21492,30 @@ const AngularWorkflow = (defaultprops) => {
         right: avatarsRight,
         zIndex: 50,
       }}>
-        {allUsers.map((user) => {
+        {visibleUsers.map((user) => {
+          const isAgent = user.user_id === "agent"
+          const isMe = user.user_id === userdata.id
           const color = user.color || "#888888"
           const initial = (user.user || "U")[0].toUpperCase()
-          const isYou = user.user_id === userdata.id
           return (
-            <Tooltip key={user.user_id} title={isYou ? `${user.user} (you)` : user.user} placement="bottom">
-              <Avatar style={{
-                backgroundColor: color,
-                border: isYou ? "2px solid #fff" : "2px solid " + color,
-                width: 30,
-                height: 30,
-                fontSize: 13,
-              }}>
-                {initial}
-              </Avatar>
+            <Tooltip key={user.user_id} title={isMe ? `${user.user} (you)` : user.user} placement="bottom">
+              {isAgent ? (
+                <Avatar
+                  src={theme.palette.singulBlackWhite}
+                  alt="Agent"
+                  style={{ width: 30, height: 30, border: "2px solid #9c5af2" }}
+                />
+              ) : (
+                <Avatar style={{
+                  backgroundColor: color,
+                  border: isMe ? "2px solid #ffffff" : "2px solid " + color,
+                  width: 30,
+                  height: 30,
+                  fontSize: 13,
+                }}>
+                  {initial}
+                </Avatar>
+              )}
             </Tooltip>
           )
         })}
@@ -21471,7 +21530,7 @@ const AngularWorkflow = (defaultprops) => {
             </IconButton>
           </Tooltip>
         ) : null}
-        {multiplayerEnabled && workflow?.id ? (
+        {multiplayerEnabled && workflow?.id && (visibleUsers.length > 0 || hasAgent || workflowGenerationModalOpen) ? (
           <div style={{
             width: 37,
             height: 37,
@@ -21481,7 +21540,7 @@ const AngularWorkflow = (defaultprops) => {
             alignItems: "center",
             justifyContent: "center",
             marginTop: 1,
-            marginLeft: allUsers.length > 0 ? 1 : 0,
+            marginLeft: visibleUsers.length > 0 ? 1 : 0,
           }}>
             <WorkflowHistory workflowId={workflow.id} globalUrl={globalUrl} theme={theme} />
           </div>
@@ -22067,7 +22126,7 @@ const AngularWorkflow = (defaultprops) => {
                   if (queryID !== undefined && queryID !== null) {
                     aa('init', {
                       appId: "JNSS5CFDZZ",
-                      apiKey: "c8f882473ff42d41158430be09ec2b4e",
+                      apiKey: "33e4e3564f4f060e96e0531957bed552",
                     })
                     const timestamp = new Date().getTime();
                     aa('sendEvents', [
@@ -26045,7 +26104,7 @@ const AngularWorkflow = (defaultprops) => {
 
       {showWorkflowRevisions ? null :
         <span>
-          <ConnectedUsersAvatars />
+          {ConnectedUsersAvatars()}
           {shownErrors}
           {(workflowGenerationModalOpen && isCloud) && (
             <AgentChatWidget
