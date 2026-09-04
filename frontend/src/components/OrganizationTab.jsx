@@ -159,7 +159,7 @@ const OrganizationTab = (props) => {
             case 'billing' :
                 return (
                     <Billing
-                        isCloud={true}
+                        isCloud={isCloud}
                         userdata={userdata}
                         setSelectedOrganization={setSelectedOrganization}
                         globalUrl={globalUrl}
@@ -171,6 +171,9 @@ const OrganizationTab = (props) => {
                         handleEditOrg={handleEditOrg}
                         removeCookie={removeCookie}
                         isLoaded={isLoaded}
+                        selectedStatus={selectedStatus}
+                        setSelectedStatus={setSelectedStatus}
+                        handleStatusChange={handleStatusChange}
                     />
                 );
             // case 'branding':

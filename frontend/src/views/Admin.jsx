@@ -1213,7 +1213,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((response) => {
         if (response.status === 200) {
           console.log("Cloud sync success?");
-          toast("Successfully stopped cloud sync");
+          toast("Successfully stopped SLS (Shuffle Licensing System)");
         } else {
           console.log("Cloud sync fail?");
           toast(
@@ -1282,7 +1282,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             toast("Successfully disabled sync!");
             setOrgSyncResponse("Successfully disabled syncronization");
           } else {
-            toast("Cloud Syncronization successfully set up!");
+            toast("SLS (Shuffle Licensing System) successfully set up!");
             setOrgSyncResponse(
               "Successfully started syncronization. Cloud features you now have access to can be seen below.",
             );
@@ -1627,6 +1627,10 @@ If you're interested, please let me know a time that works for you, or set up a 
 
             if (responseJson.lead_info.opensource) {
               leads.push("open source");
+            }
+
+            if (responseJson.lead_info.opensource_license) {
+              leads.push("Open Source License");
             }
 
             if (responseJson.lead_info.demo_done) {
@@ -3435,7 +3439,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           rel="noopener noreferrer"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
-          cloud sync
+          SLS (Shuffle Licensing System)
         </a>{" "}
         do?
         <div style={{ display: "flex", marginBottom: 20 }}>
@@ -3787,7 +3791,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               aria-label="disabled tabs example"
             >
               <Tab label=<span>Edit Details</span> />
-              <Tab label=<span>Limits & Cloud Sync</span> />
+              <Tab label=<span>Limits & SLS (Shuffle Licensing System)</span> />
               <Tab label=<span>Notifications</span> />
               <Tab label=<span>Billing & Stats</span> />
               <Tab disabled={!isCloud} label=<span>Partner</span> />
@@ -3816,7 +3820,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   variant="h6"
                   style={{ marginBottom: "10px", color: "white" }}
                 >
-                  Cloud syncronization
+                  SLS (Shuffle Licensing System)
                 </Typography>
                 What does{" "}
                 <a
@@ -3825,9 +3829,9 @@ If you're interested, please let me know a time that works for you, or set up a 
                   rel="noopener noreferrer"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
-                  cloud sync
+                  SLS (Shuffle Licensing System)
                 </a>{" "}
-                do? Cloud syncronization is a way of getting more out of
+                do? SLS (Shuffle Licensing System) is a way of getting more out of
                 Shuffle. Shuffle will <b>ALWAYS</b> make every option open
                 source, but features relying on other users can't be done
                 without a collaborative approach.

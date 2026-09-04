@@ -204,7 +204,11 @@ const PartnerTab = (props) => {
                         <div key={tabName} style={{ pointerEvents: 'auto', width: '100%', position: 'relative'}}>
                             <Button
                                 onClick={() => {
-                                    setCurIndex(index); 
+                                    if (tabName === "AI Agents") {
+                                        navigate("/agents");
+                                        return;
+                                    }
+                                    setCurIndex(index);
                                     handleTabClick(index === 0 ? "partner_settings" : tabName.toLowerCase().replace(/[\s&]+/g, ''));
                                 }}
                                 disabled={isTabDisabled(tabName)}
