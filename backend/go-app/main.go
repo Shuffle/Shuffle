@@ -501,7 +501,13 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 
 	neworg, err := shuffle.GetOrg(ctx, org.Id)
 	if err == nil {
-		//neworg.Users = append(neworg.Users, *newUser)
+		orgUsers := make([]shuffle.User, 0, len(neworg.Users)+1)
+		for _, orgUser := range neworg.Users {
+			if orgUser.Id != "" && orgUser.Id != newUser.Id {
+				orgUsers = append(orgUsers, orgUser)
+			}
+		}
+		neworg.Users = append(orgUsers, *newUser)
 		for tutorialIndex, tutorial := range neworg.Tutorials {
 			if tutorial.Name == "Invite teammates" {
 				neworg.Tutorials[tutorialIndex].Description = fmt.Sprintf("%d users are in your org. Org name and Image change next.", len(neworg.Users))
