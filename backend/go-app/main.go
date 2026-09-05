@@ -4550,48 +4550,32 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	parentExec := shuffle.WorkflowExecution{}
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		// Look for org_id query as app may be private
-		// No validation is done here, as it's just running the app
-		// to find a user
-		orgId := request.URL.Query().Get("org_id")
-		if len(orgId) > 0 {
-			user.ActiveOrg.Id = orgId
-		} else {
-			executionId := request.URL.Query().Get("execution_id")
-			authorization := request.URL.Query().Get("authorization")
-			if len(executionId) == 0 || len(authorization) == 0 {
-				//log.Printf("[WARNING] Bad execution id/auth in agent action validate (1): %#v, %#v. Continuing with the 'public' org id", executionId, authorization)
-
-				user.ActiveOrg.Id = "public"
-				//resp.WriteHeader(401)
-				//resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (0)"}`))
-				//return
-
-			} else {
-				// Find the execution
-				exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
-				if err != nil {
-					log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
-					return
-				}
-
-				if exec.Authorization != authorization {
-					log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
-					resp.WriteHeader(403)
-					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
-					return
-				}
-
-				parentExec = *exec
-				user.ActiveOrg.Id = exec.OrgId
-				if len(user.ActiveOrg.Id) == 0 {
-					user.ActiveOrg.Id = exec.ExecutionOrg
-				}
-
-				user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
+		executionId := request.URL.Query().Get("execution_id")
+		authorization := request.URL.Query().Get("authorization")
+		if len(executionId) > 0 && len(authorization) > 0 {
+			// Find the execution
+			exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+			if err != nil {
+				log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
+				return
 			}
+
+			if exec.Authorization != authorization {
+				log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
+				resp.WriteHeader(403)
+				resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
+				return
+			}
+
+			parentExec = *exec
+			user.ActiveOrg.Id = exec.OrgId
+			if len(user.ActiveOrg.Id) == 0 {
+				user.ActiveOrg.Id = exec.ExecutionOrg
+			}
+
+			user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
 		}
 
 		if len(user.ActiveOrg.Id) == 0 {
@@ -4604,7 +4588,8 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	isSingleApp := false
 
 	location := strings.Split(request.URL.Path, "/")
-	var fileId string
+	var runType string
+	var agentSkill string
 	if location[1] == "api" {
 		if len(location) <= 3 {
 			resp.WriteHeader(400)
@@ -4613,9 +4598,10 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(location) == 4 {
-			fileId = location[3] // /api/v1/agent or /api/v1/mcp
+			runType = location[3] // /api/v1/agent or /api/v1/mcp
 		} else {
-			fileId = location[4] // /api/v1/apps/{appid}/mcp
+			runType = location[3] // /api/v1/apps/{appid}/mcp
+			agentSkill = location[4]
 	
 			if location[3] == "apps" {
 				isSingleApp = true
@@ -4623,8 +4609,8 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if fileId == "agents" {
-		fileId = "agent"
+	if runType == "agents" {
+		runType = "agent"
 	}
 
 	// Determine execution mode for specialized logging
@@ -4633,7 +4619,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		executionMode = "workflow"
 	}
 
-	log.Printf("[AUDIT] MCP handler called by user %s (%s) in org %s for app %s, method %s, mode %s", user.Username, user.Id, user.ActiveOrg.Id, fileId, request.Method, executionMode)
+	log.Printf("[AUDIT] MCP handler called by user %s (%s) in org %s for app %s, method %s, mode %s", user.Username, user.Id, user.ActiveOrg.Id, runType, request.Method, executionMode)
 
 	body := []byte{}
 	if request.Body != nil {
@@ -4664,22 +4650,11 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	// Forwarding for special types
-	templateName := fileId
+	// Forwarding for predefined agent-skill 
 	if len(foundRequest.Params.Template) > 0 {
-		templateName = foundRequest.Params.Template
-	}
-
-	if templateName != "agents" && templateName != "agent" && templateName != "mcp" && !isSingleApp { 
-
-		// Reset body cursor
-		request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-		if templateName == "workflow-edit" { 
-			//shuffle.AgentWorkflowEditor(resp, request) 
-			return
-		} else {
-			log.Printf("[INFO] No agent template with name '%s' found. Continuing with default MCP handler.", templateName)
-		}
+		agentSkill = foundRequest.Params.Template
+	} else if len(agentSkill) > 0 { 
+		foundRequest.Params.Template = agentSkill
 	}
 
 	if foundRequest.Jsonrpc == "" {
@@ -4688,8 +4663,8 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 
 	app := &shuffle.WorkflowApp{}
 	foundId := ""
-	if len(fileId) == 32 {
-		foundId = fileId
+	if len(runType) == 32 {
+		foundId = runType
 	} else if len(foundRequest.Params.ToolID) > 0 {
 		foundId = foundRequest.Params.ToolID
 	} else {
@@ -4767,12 +4742,6 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	// FIXME: Only for cloud
-	//if foundId == "" { //&& project.Environment == "cloud" {
-	//	log.Printf("[DEBUG] Fallback to 'shuffle' app for MCP request, since no valid tool_id or tool_name provided.", foundRequest.Params)
-	//	foundId = "fc92c1d806df0c96f0c152a7b43b2878"
-	//}
-
 	if len(foundId) == 32 && app.ID == "" && !strings.HasPrefix(foundId, "app:") {
 		app, err = shuffle.GetApp(ctx, foundId, shuffle.User{}, false)
 		if err != nil {
@@ -4783,6 +4752,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	/*
 	if !app.Public {
 		if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
 			log.Printf("[AUDIT] Support & Admin user %s (%s) got access to app %s (MCP)", user.Username, user.Id, app.ID)
@@ -4797,6 +4767,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	} else {
 		log.Printf("[AUDIT] User %s (%s) in org %s (%s) got access to public app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
 	}
+	*/
 
 	if foundRequest.Method == "initialize" || foundRequest.Method == "tools/list" {
 		mcpRespStruct, err := shuffle.HandleMCPMethodInitialize(foundRequest, user, *app)
@@ -4894,6 +4865,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		Environment:      foundEnvironment,
 		AuthenticationId: foundAuthId,
 		Parameters: []shuffle.WorkflowAppActionParameter{
+			// app_name does nothing anymore
 			{
 				Name:  "app_name",
 				Value: "openai",
@@ -4922,6 +4894,27 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if len(agentSkill) > 0 && agentSkill != "agents" && agentSkill != "agent" && agentSkill != "mcp" && !isSingleApp { 
+		log.Printf("[INFO] Adding agent skill %s to action parameters", agentSkill)
+
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name: "template",
+			Value: agentSkill,
+		})
+
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name: "execution_mode",
+			Value: "direct",
+		})
+
+		if len(foundRequest.Params.Input.WorkflowId) > 0 {
+			newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+				Name: "workflow_id",
+				Value: foundRequest.Params.Input.WorkflowId,
+			})
+		}
+	}
+
 	// MCP-oriented action(s)
 	if len(parsedApp) > 0 {
 		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
@@ -4936,7 +4929,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			Value: "true",
 		})
 	} else {
-		if fileId == "agent" {
+		if runType == "agent" {
 			newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
 				Name:  "enable_questions",
 				Value: "true",
@@ -4965,7 +4958,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Special handling for agent calls
-	if fileId == "agent" {
+	if runType == "agent" {
 		if len(parentExec.ExecutionId) > 0 {
 			targetActionId := request.URL.Query().Get("action_id")
 			agentNodeFound := false
@@ -5027,7 +5020,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 
 	// For non-agent calls (MCP or other apps): continue with existing flow
 	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent_starter", marshalledAction, false, "")
-	if fileId == "agent_starter" {
+	if runType == "agent_starter" {
 		log.Printf("[INFO][%s] Returning early for agent_starter single action execution (2)", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
@@ -5076,6 +5069,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
+
 	executionRequest := shuffle.ExecutionRequest{
 		ExecutionId:   workflowExecution.ExecutionId,
 		WorkflowId:    workflowExecution.Workflow.ID,

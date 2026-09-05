@@ -1325,7 +1325,36 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO] Inside execute workflow for ID %s", fileId)
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId, true)
-	if err != nil && workflow.ID == "" {
+
+	// Load from execution. This is a specific trick to apply user_input
+	// questions to agentic runs
+	agenticCheck, agenticOk := request.URL.Query()["agentic"]
+	if (workflow == nil || workflow.ID == "") && agenticOk && len(agenticCheck) > 0 && agenticCheck[0] == "true" {
+		// exec ID = workflow ID in MOST cases. Not all. Fallback only
+		executionId := fileId
+		if ref, ok := request.URL.Query()["reference_execution"]; ok && len(ref) > 0 {
+			executionId = ref[0]
+		}
+
+		exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+		if err != nil || exec.ExecutionId != executionId { 
+			log.Printf("[WARNING][%s] Failed getting the agentic execution (execute workflow - agentic): %s", executionId, err)
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "No workflow or execution found"}`))
+			return
+		}
+
+		authorization := request.URL.Query().Get("authorization")
+		if authorization != exec.Authorization { 
+			log.Printf("[WARNING][%s] Invalid authorization for agentic execution (execute workflow - agentic): %s", executionId, authorization)
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "reason": "Invalid authorization"}`))
+			return
+		}
+
+		workflow = &exec.Workflow
+
+	} else if err != nil && (workflow == nil || workflow.ID == "") {
 		log.Printf("[WARNING] Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflow with ID %s doesn't exist."}`, fileId)))
@@ -2744,31 +2773,31 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(user.ActiveOrg.Id) == 0 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "No org_id found to map back to"}`))
-			return
+			log.Printf("[WARNING] Bad execution org id in single action validate (4): %#v. Continuing with the 'internal' org id. Attempted org: '%s'", user.ActiveOrg.Id, orgId)
+			user.Username = fmt.Sprintf("org INTERNAL")
+			user.ActiveOrg.Id = "INTERNAL"
 		}
 	}
 
 	location := strings.Split(request.URL.String(), "/")
-	var appId string
+	var fileId string
 	if location[1] == "api" {
 		if len(location) <= 4 {
-			resp.WriteHeader(400)
+			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
-		appId = location[4]
+		fileId = location[4]
 	}
 
 	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
-	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, appId)
+	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, fileId)
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("[INFO] Failed single execution POST body read: %s", err)
-		resp.WriteHeader(400)
+		log.Printf("[ERROR] Failed single execution POST body read: %s", err)
+		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -2781,10 +2810,28 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		runValidationAction = true
 	}
 
+	delay := 0
+	delayStr, ok := query["delay"]
+	if ok && len(delayStr) > 0 {
+		delay, err = strconv.Atoi(delayStr[0])
+		if delay < 0 || delay > 2678400 {
+			delay = 0
+		}
+	}
+
 	shouldRerun := false
 	rerun, rerunOk := query["rerun"]
 	if rerunOk && len(rerun) > 0 && rerun[0] == "true" {
 		shouldRerun = true
+	}
+
+	// Just a mechanism to ensure we don't keep open sockets for no reason
+	// Primarily used for AI Agents. Same as 'rerun' - just better worded
+	if !shouldRerun {
+		skipResultWait, skipResultWaitOk := query["skip_result_wait"]
+		if skipResultWaitOk && len(skipResultWait) > 0 && skipResultWait[0] == "true" {
+			shouldRerun = true
+		}
 	}
 
 	decisionId := ""
@@ -2793,9 +2840,20 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		decisionId = decision[0]
 	}
 
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, appId, body, runValidationAction, decisionId)
-	if appId == "agent_starter" {
-		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
+	singleActionOrg, _ := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	isValid := shuffle.IsExecutionRecursion(ctx, request, body, singleActionOrg)
+	if isValid {
+		log.Printf("[ERROR] SHOULD block recursion for URL %s (single action). NOT actively blocking - continuing as per usual", request.URL.String())
+	}
+
+	caller := request.Header.Get("X-Internal-Caller")
+	if strings.TrimSpace(caller) == "" {
+		caller = "executeSingleAction"
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, fileId, body, runValidationAction, decisionId)
+	if fileId == "agent_starter" {
+		log.Printf("[INFO][%s] Returning early for agent_starter single action execution (1)", workflowExecution.ExecutionId)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 		return
@@ -2805,13 +2863,20 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	resp.Header().Add("X-Debug-Url", debugUrl)
 
 	if err != nil {
-		log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
 		returndata := shuffle.ResultChecker{
 			Success: false,
 			Reason:  fmt.Sprintf("%s", err),
 		}
 
-		resp.WriteHeader(400)
+		// Special handler for decision reruns~
+		if strings.Contains(err.Error(), "Successfully") {
+			returndata.Success = true
+			resp.WriteHeader(200)
+		} else {
+			log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
+			resp.WriteHeader(400)
+		}
+
 		respBytes, err := json.Marshal(returndata)
 		if err != nil {
 			resp.Write([]byte(`{"success": false}`))
@@ -2823,7 +2888,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	workflowExecution.ProjectId = ""
-	workflowExecution.Locations = []string{""}
+	workflowExecution.Locations = []string{"Shuffle"}
 
 	foundEnv := ""
 	params := []string{}
@@ -2838,25 +2903,35 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if strings.ToLower(foundEnv) == "cloud" || len(foundEnv) == 0 {
+		foundEnv = "Shuffle"
+	}
+
 	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
-	executionRequest := shuffle.ExecutionRequest{
-		Priority:      15,
-		ExecutionId:   workflowExecution.ExecutionId,
-		WorkflowId:    workflowExecution.Workflow.ID,
-		Authorization: workflowExecution.Authorization,
-		Environments:  []string{foundEnv},
+	if workflowExecution.Type == "SENSOR_ACTION" {
+		if len(workflowExecution.Workflow.Actions) == 0 || len(workflowExecution.ExecutionId) == 0 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "No actions or execution ID found in workflow execution"}`))
+			return
+		}
+	} else {
+		executionRequest := shuffle.ExecutionRequest{
+			ExecutionId:   workflowExecution.ExecutionId,
+			WorkflowId:    workflowExecution.Workflow.ID,
+			Authorization: workflowExecution.Authorization,
+			Environments:  []string{foundEnv},
+		}
+
+		parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-"))
+
+		log.Printf("[INFO][%s] Adding new single-action job to env queue (4): %s", workflowExecution.ExecutionId, parsedEnv)
+		err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
+		if err != nil {
+			log.Printf("[WARNING][%s] Failed adding %s to db (single action queue): %s", workflowExecution.ExecutionId, parsedEnv, err)
+		}
 	}
 
-	parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-"))
-
-	log.Printf("[INFO] Adding new single-action job to env queue (4): %s", parsedEnv)
-	err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
-	if err != nil {
-		log.Printf("[WARNING] Failed adding %s to db (single action queue): %s", parsedEnv, err)
-	}
-
-	if shouldRerun {
-		//log.Printf("[DEBUG] Returning single action execution ID for rerun: %s", workflowExecution.ExecutionId)
+	if shouldRerun || delay > 0 {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 		return
@@ -2867,7 +2942,16 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		actionId = workflowExecution.Workflow.Actions[0].ID
 	}
 
-	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, 15, actionId)
+	timeout := 15
+	foundtimeout, timeoutOk := query["timeout"]
+	if timeoutOk && len(foundtimeout) > 0 {
+		newTimeout, err := strconv.Atoi(foundtimeout[0])
+		if err == nil && newTimeout > 0 && newTimeout < 301 {
+			timeout = newTimeout
+		}
+	}
+
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, timeout, actionId)
 	returnBytes, err := json.Marshal(returnBody)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
