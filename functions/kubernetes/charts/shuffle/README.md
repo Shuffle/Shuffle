@@ -248,7 +248,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `shuffle.baseUrl`          | The external base URL under which Shuffle is reachable.                                                                    | `""`            |
 | `shuffle.org`              | Default shuffle organization                                                                                               | `Shuffle`       |
 | `shuffle.appRegistry`      | The registry from / to which shuffle apps are pulled / pushed                                                              | `docker.io`     |
-| `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion> | `frikky`        |
+| `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion> | `frikky/shuffle` |
 | `shuffle.timezone`         | The timezone used by Shuffle                                                                                               | `Europe/Berlin` |
 
 #### backend Parameters
@@ -698,7 +698,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
 | `app.image.registry`                                    | app image registry (defaults to shuffle.appRegistry)                                                                                                                                                                   | `""`             |
 | `app.image.repository`                                  | app image repository (defaults to shuffle.appBaseImageName)                                                                                                                                                            | `""`             |
-| `app.image.tag`                                         | app image tag (defaults to the apps version)                                                                                                                                                                           | `""`             |
+| `app.image.tag`                                         | app image tag (defaults to the app name and version)                                                                                                                                                                   | `""`             |
 | `app.image.pullPolicy`                                  | default image pull policy for app deployments. Only effective for helm-deployed apps (see apps.enabled).                                                                                                               | `IfNotPresent`   |
 | `app.image.pullSecrets`                                 | default image pull secrets for app deployments. Only effective for helm-deployed apps (see apps.enabled).                                                                                                              | `[]`             |
 | `app.replicaCount`                                      | Default number of replicas to deploy for each app. Only effective for helm-deployed apps (see apps.enabled).                                                                                                           | `1`              |
@@ -1019,4 +1019,3 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `vault.secrets` | A list of VaultSecrets to create                                           | `[]`  |
 
 ### Other Parameters
-

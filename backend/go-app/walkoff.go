@@ -19,6 +19,7 @@ import (
 
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"net/url"
@@ -52,78 +53,172 @@ var scheduledOrgs = map[string]*newscheduler.Job{}
 
 var CronScheduler = gocron.NewScheduler(time.UTC)
 
-// Frequency = cronjob OR minutes between execution
-func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
-	var err error
-	testSplit := strings.Split(frequency, "*")
-	cronJob := ""
-	isCron := false
-	newfrequency := 0
+// @yashsinghcodes: One global lock keeps schedule lifecycle changes atomic.
+// Use per-schedule locks if schedule API throughput becomes a bottleneck.
+var scheduleJobsMu sync.Mutex
 
-	if len(testSplit) > 5 {
-		cronJob = frequency
-		isCron = true
-	} else {
-		newfrequency, err = strconv.Atoi(frequency)
-		if err != nil {
-			log.Printf("Failed to parse time: %s", err)
-			return err
-		}
-
-		//if int(newfrequency) < 60 {
-		//	cronJob = fmt.Sprintf("*/%s * * * *")
-		//} else if int(newfrequency) <
+// Took inspiration from https://github.com/robfig/cron/blob/master/parser.go#L88
+func checkCronSyntax(cron string) bool {
+	if len(cron) == 0 {
+		return false
 	}
 
-	if newfrequency < 1 && !isCron {
-		return errors.New("Frequency has to be more than 0")
+	cron = strings.TrimSpace(cron)
+	fileds := strings.Fields(cron)
+
+	return len(fileds) == 5 || len(fileds) == 6
+}
+
+func parseScheduleFrequency(frequency string) (int, error) {
+	if checkCronSyntax(frequency) {
+		return 0, nil
+	}
+
+	seconds, err := strconv.Atoi(frequency)
+	if err != nil {
+		return 0, err
+	}
+
+	if seconds < 1 {
+		return 0, errors.New("frequency has to be more than 0")
+	}
+
+	return seconds, nil
+}
+
+func scheduleRuntimeExistsLocked(scheduleID string) bool {
+	_, intervalExists := scheduledJobs[scheduleID]
+	_, cronExists := cronJobs[scheduleID]
+	return intervalExists || cronExists
+}
+
+func registerScheduleRuntimeLocked(schedule shuffle.ScheduleOld, fallbackOrgID string) (bool, error) {
+	if scheduleRuntimeExistsLocked(schedule.Id) {
+		log.Printf("[INFO] Schedule %s is already registered. Skipping duplicate start", schedule.Id)
+		return false, nil
+	}
+
+	if checkCronSyntax(schedule.Frequency) {
+		cronJob, err := CronScheduler.Cron(schedule.Frequency).Do(scheduleExecutionJob(schedule, fallbackOrgID))
+		if err != nil {
+			return false, err
+		}
+
+		cronJobs[schedule.Id] = cronJob
+		return true, nil
+	}
+
+	seconds := schedule.Seconds
+	if seconds < 1 {
+		var err error
+		seconds, err = parseScheduleFrequency(schedule.Frequency)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	intervalJob, err := newscheduler.Every(seconds).Seconds().NotImmediately().Run(scheduleExecutionJob(schedule, fallbackOrgID))
+	if err != nil {
+		return false, err
+	}
+
+	scheduledJobs[schedule.Id] = intervalJob
+	return true, nil
+}
+
+func registerScheduleRuntime(schedule shuffle.ScheduleOld, fallbackOrgID string) (bool, error) {
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+	return registerScheduleRuntimeLocked(schedule, fallbackOrgID)
+}
+
+func stopScheduleRuntimeLocked(scheduleID string) (bool, error) {
+	found := false
+
+	if intervalJob, exists := scheduledJobs[scheduleID]; exists {
+		select {
+		case intervalJob.Quit <- true:
+		default:
+		}
+		delete(scheduledJobs, scheduleID)
+		found = true
+	}
+
+	if cronJob, exists := cronJobs[scheduleID]; exists {
+		if err := CronScheduler.RemoveByID(cronJob); err != nil && !errors.Is(err, gocron.ErrJobNotFound) {
+			return found, err
+		}
+		delete(cronJobs, scheduleID)
+		found = true
+	}
+	return found, nil
+}
+
+func scheduleExecutionJob(schedule shuffle.ScheduleOld, fallbackOrgID string) func() {
+	return func() {
+		if strings.TrimSpace(os.Getenv("SHUFFLE_MEMCACHED")) != "" {
+			windowSeconds := schedule.Seconds
+			if windowSeconds < 1 {
+				windowSeconds = 60
+			}
+			claimTTL := windowSeconds
+			if claimTTL < 60 {
+				claimTTL = 60
+			} else if claimTTL > 2592000 {
+				claimTTL = 2592000
+			}
+
+			//claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
+			//claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
+		//	if err != nil {
+		//		log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
+		//		return
+		//	}
+		//	if !claimed {
+		//		log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
+		//		return
+		//	}
+
+			storedSchedule, err := shuffle.GetSchedule(context.Background(), schedule.Id)
+			if err != nil || storedSchedule.WorkflowId != schedule.WorkflowId {
+				log.Printf("[INFO] Skipping removed schedule %s", schedule.Id)
+				return
+			}
+		}
+
+		orgID := schedule.Org
+		if len(orgID) != 36 {
+			orgID = fallbackOrgID
+		}
+		request := &http.Request{
+			URL:    &url.URL{},
+			Method: "POST",
+			Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
+		}
+
+		log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
+		_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgID}}, request, orgID)
+		if err != nil {
+			log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
+		}
+	}
+}
+
+// Frequency = cronjob OR minutes between execution
+func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
+	newfrequency, err := parseScheduleFrequency(frequency)
+	if err != nil {
+		log.Printf("Failed to parse time: %s", err)
+		return err
 	}
 
 	//log.Printf("CRON: %s, body: %s", cronJob, string(body))
 
-	// FIXME:
-	// This may run multiple places if multiple servers,
-	// but that's a future problem
 	//log.Printf("BODY: %s", string(body))
 	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
 	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "schedule", "execution_argument": "%s"}`, startNode, parsedArgument)
 	log.Printf("[INFO] Body for schedule %s in workflow %s: \n%s", scheduleId, workflowId, bodyWrapper)
-	job := func() {
-		request := &http.Request{
-			URL:    &url.URL{},
-			Method: "POST",
-			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
-		}
 
-		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request, orgId)
-		if err != nil {
-			log.Printf("Failed to execute %s: %s", workflowId, err)
-		}
-	}
-
-	log.Printf("[INFO] Starting frequency for execution: %s", frequency)
-
-	if isCron {
-		cronJob, err := CronScheduler.Cron(cronJob).Do(job)
-		if err != nil {
-			log.Printf("[ERROR] Failed to start schedule with cron(%s): %s", cronJob, err)
-		}
-
-		cronJobs[scheduleId] = cronJob
-	} else {
-		//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
-		jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
-		if err != nil {
-			log.Printf("Failed to schedule workflow: %s", err)
-			return err
-		}
-
-		scheduledJobs[scheduleId] = jobret
-	}
-
-	//scheduledJobs = append(scheduledJobs, jobret)
-
-	// Doesn't need running/not running. If stopped, we just delete it.
 	timeNow := int64(time.Now().Unix())
 	schedule := shuffle.ScheduleOld{
 		Id:                   scheduleId,
@@ -139,10 +234,26 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		Org:                  orgId,
 		Environment:          "onprem",
 	}
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+
+	if scheduleRuntimeExistsLocked(scheduleId) {
+		log.Printf("[INFO] Schedule %s is already registered. Skipping duplicate start", scheduleId)
+		return nil
+	}
 
 	err = shuffle.SetSchedule(ctx, schedule)
 	if err != nil {
 		log.Printf("Failed to set schedule: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Starting frequency for execution: %s", frequency)
+	_, err = registerScheduleRuntimeLocked(schedule, orgId)
+	if err != nil {
+		if deleteErr := shuffle.DeleteKey(ctx, "schedules", scheduleId); deleteErr != nil {
+			return fmt.Errorf("failed starting schedule: %w (rollback failed: %v)", err, deleteErr)
+		}
 		return err
 	}
 
@@ -273,23 +384,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	// Org => Org ID here
 	orgId := request.Header.Get("Org")
 	if len(orgId) == 0 {
-		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
-		/*
-			resp.WriteHeader(403)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org header. This can be done by setting the 'ORG' environment variable for Orborus to your Org ID in Shuffle"}`)))
-			return
-		*/
-	}
-
-	// This section is cloud custom for now
-	auth := request.Header.Get("Authorization")
-	if len(auth) == 0 {
-		//log.Printf("[AUDIT] No Authorization header set. Env: %s, org: %s", orgId, environment)
-		/*
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the auth header (only applicable for cloud for now)."}`)))
-			return
-		*/
+		log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 	}
 
 	ctx := shuffle.GetContext(request)
@@ -300,14 +395,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	var env *shuffle.Environment
 	found := false
-	//for i := range envs {
-	//	if envs[i].Name == environment {
-	//		env = &envs[i]
-	//		found = true
-	//		break
-	//	}
-	//}
-
 	parsedEnvName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-"))
 	for i := range envs {
 		parsedInnerName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(envs[i].Name, " ", "-"), "_", "-"))
@@ -318,12 +405,22 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	// Only works onprem - shared queues across tenants
+	// Only works onprem - shared queues across tenants without explicit sharing
 	// without tenancy
 	if !found {
 		env, err = shuffle.GetEnvironment(ctx, environment, "")
 		if err != nil {
 			log.Printf("[WARNING] Failed to find the environment(%s) in org(%s). Could cause with Failover test", environment, orgId)
+		}
+	}
+
+	// After 1788778295. 2.3.0 release date~
+	auth := request.Header.Get("Authorization")
+	if strings.ToLower(env.Name) == strings.ToLower(environment) && strings.ToLower(environment) != "shuffle" && env.Created > 1788778295 && len(env.Auth) > 0 {
+		if auth != env.Auth {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Header is required for NEW auths made after Shuffle 2.3.0 that is not default 'shuffle'"}`)))
+			return
 		}
 	}
 
@@ -1360,8 +1457,17 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+
 	schedule, err := shuffle.GetSchedule(ctx, scheduleId)
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "doesn't exist") || strings.Contains(strings.ToLower(err.Error()), "not_found") || strings.Contains(strings.ToLower(err.Error()), "not found") {
+			resp.WriteHeader(200)
+			resp.Write([]byte(`{"success": true}`))
+			return
+		}
+
 		log.Printf("[WARNING] Failed finding schedule %s", scheduleId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -1369,6 +1475,11 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Schedule: %#v", schedule)
+	if schedule.WorkflowId != "" && schedule.WorkflowId != fileId {
+		resp.WriteHeader(http.StatusNotFound)
+		resp.Write([]byte(`{"success": false, "reason": "Schedule does not belong to workflow"}`))
+		return
+	}
 
 	if schedule.Environment == "cloud" {
 		log.Printf("[INFO] Should STOP a cloud schedule for workflow %s with schedule ID %s", fileId, scheduleId)
@@ -1390,7 +1501,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
-		if err != nil {
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "not found") && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			log.Printf("[WARNING] Failed cloud action STOP schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -1411,7 +1522,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = deleteSchedule(ctx, scheduleId)
+	err = deleteScheduleLocked(ctx, scheduleId)
 	if err != nil {
 		log.Printf("[WARNING] Failed deleting schedule: %s", err)
 		if strings.Contains(err.Error(), "Job not found") {
@@ -1527,23 +1638,17 @@ func deleteKeySchedule(ctx context.Context, id string) error {
 }
 
 func deleteSchedule(ctx context.Context, id string) error {
+	scheduleJobsMu.Lock()
+	defer scheduleJobsMu.Unlock()
+	return deleteScheduleLocked(ctx, id)
+}
+
+func deleteScheduleLocked(ctx context.Context, id string) error {
 	log.Printf("[DEBUG] Should stop schedule %s!", id)
-	if value, exists := scheduledJobs[id]; exists {
-		// Stops the schedule properly
-		value.Lock()
-	} else {
-		// FIXME - allow it to kind of stop anyway?
-		if j, ok := cronJobs[id]; ok {
-			err := CronScheduler.RemoveByID(j)
-			if err != nil {
-				log.Printf("[ERROR] Failed to remove the scheduler %s", err)
-				return err
-			}
-		} else {
-			// Just stop and delete anyway if not in memory
-			deleteKeySchedule(ctx, id)
-			return errors.New("Can't find the schedule.")
-		}
+
+	if _, err := stopScheduleRuntimeLocked(id); err != nil {
+		log.Printf("[ERROR] Failed to stop scheduler %s: %s", id, err)
+		return err
 	}
 
 	err := deleteKeySchedule(ctx, id)
@@ -1702,6 +1807,15 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if schedule.Environment == "cloud" {
+		scheduleJobsMu.Lock()
+		defer scheduleJobsMu.Unlock()
+
+		if existingSchedule, existingErr := shuffle.GetSchedule(ctx, schedule.Id); existingErr == nil && existingSchedule.Id == schedule.Id {
+			resp.WriteHeader(200)
+			resp.Write([]byte(`{"success": true, "reason": "Already running"}`))
+			return
+		}
+
 		log.Printf("[INFO] Should START a cloud schedule for workflow %s with schedule ID %s", workflow.ID, schedule.Id)
 		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
@@ -1749,7 +1863,10 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		//log.Printf("Starting Cloud schedule Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
-		if err != nil {
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") && !strings.Contains(strings.ToLower(err.Error()), "alreadyexists") {
+			if deleteErr := shuffle.DeleteKey(ctx, "schedules", schedule.Id); deleteErr != nil {
+				log.Printf("[ERROR] Failed rolling back cloud schedule %s: %s", schedule.Id, deleteErr)
+			}
 			log.Printf("[WARNING] Failed cloud action START schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -2554,208 +2671,6 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 	return nil
 }
 
-func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	ctx := shuffle.GetContext(request)
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		// Look for org_id query as app may be private
-		// No validation is done here, as it's just running the app
-		// to find a user
-		orgId := request.URL.Query().Get("org_id")
-		if len(orgId) > 0 {
-			user.ActiveOrg.Id = orgId
-		} else {
-			executionId := request.URL.Query().Get("execution_id")
-			authorization := request.URL.Query().Get("authorization")
-			if len(executionId) == 0 || len(authorization) == 0 {
-				log.Printf("[WARNING] Bad execution id/auth in single action validate (1): %#v, %#v. Continuing with the 'public' org id", executionId, authorization)
-				err := shuffle.ValidateRequestOverload(resp, request)
-				if err != nil {
-					log.Printf("[INFO] Request overload for IP %s in single action execution", shuffle.GetRequestIp(request))
-					resp.WriteHeader(429)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Too many requests. Please try again in 30 seconds."}`)))
-					return
-				}
-
-				user.Username = shuffle.GetRequestIp(request)
-				user.ActiveOrg.Name = shuffle.GetRequestIp(request)
-				user.ActiveOrg.Id = "public"
-			} else {
-				// Find the execution
-				exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
-				if err != nil {
-					log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
-					return
-				}
-
-				if exec.Authorization != authorization {
-					log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
-					resp.WriteHeader(403)
-					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
-					return
-				}
-
-				//log.Printf("[INFO] Found org_id from execution: %#v. Executionorg: %#v", exec.OrgId, exec.ExecutionOrg)
-				user.ActiveOrg.Id = exec.OrgId
-				if len(user.ActiveOrg.Id) == 0 {
-					user.ActiveOrg.Id = exec.ExecutionOrg
-				}
-
-				user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
-			}
-		}
-
-		if len(user.ActiveOrg.Id) == 0 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "No org_id found to map back to"}`))
-			return
-		}
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-	var appId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		appId = location[4]
-	}
-
-	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
-	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, appId)
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("[INFO] Failed single execution POST body read: %s", err)
-		resp.WriteHeader(400)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Look for the query parameter "validation=true" to find the correct action for the app to test
-	runValidationAction := false
-	query := request.URL.Query()
-	validation, ok := query["validation"]
-	if ok && len(validation) > 0 && validation[0] == "true" {
-		runValidationAction = true
-	}
-
-	shouldRerun := false
-	rerun, rerunOk := query["rerun"]
-	if rerunOk && len(rerun) > 0 && rerun[0] == "true" {
-		shouldRerun = true
-	}
-
-	decisionId := ""
-	decision, decisionOk := query["decision_id"]
-	if decisionOk && len(decision) > 0 {
-		decisionId = decision[0]
-	}
-
-	log.Printf("\n\nACTION TO RUN: %s. Body: %s. Source URL: %s\n\n", appId, string(body), request.URL.String())
-
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, appId, body, runValidationAction, decisionId)
-	if appId == "agent_starter" {
-		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
-		return
-	}
-
-	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-	resp.Header().Add("X-Debug-Url", debugUrl)
-
-	if err != nil {
-		log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
-		returndata := shuffle.ResultChecker{
-			Success: false,
-			Reason:  fmt.Sprintf("%s", err),
-		}
-
-		resp.WriteHeader(400)
-		respBytes, err := json.Marshal(returndata)
-		if err != nil {
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		resp.Write(respBytes)
-		return
-	}
-
-	workflowExecution.ProjectId = ""
-	workflowExecution.Locations = []string{""}
-
-	foundEnv := ""
-	params := []string{}
-	for _, action := range workflowExecution.Workflow.Actions {
-		for _, param := range action.Parameters {
-			params = append(params, param.Name)
-		}
-
-		if len(action.Environment) > 0 {
-			foundEnv = action.Environment
-			break
-		}
-	}
-
-	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
-	executionRequest := shuffle.ExecutionRequest{
-		Priority:      15,
-		ExecutionId:   workflowExecution.ExecutionId,
-		WorkflowId:    workflowExecution.Workflow.ID,
-		Authorization: workflowExecution.Authorization,
-		Environments:  []string{foundEnv},
-	}
-
-	parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-"))
-
-	log.Printf("[INFO] Adding new single-action job to env queue (4): %s", parsedEnv)
-	err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
-	if err != nil {
-		log.Printf("[WARNING] Failed adding %s to db (single action queue): %s", parsedEnv, err)
-	}
-
-	if shouldRerun {
-		//log.Printf("[DEBUG] Returning single action execution ID for rerun: %s", workflowExecution.ExecutionId)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
-		return
-	}
-
-	actionId := ""
-	if len(workflowExecution.Workflow.Actions) == 1 {
-		actionId = workflowExecution.Workflow.Actions[0].ID
-	}
-
-	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, 15, actionId)
-	returnBytes, err := json.Marshal(returnBody)
-	if err != nil {
-		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
-	}
-
-	// Look for delete=true query, and if it exists, delete the execution
-	if request.URL.Query().Get("delete") == "true" {
-		err = shuffle.DeleteKey(ctx, "workflowexecution", workflowExecution.ExecutionId)
-		if err != nil {
-			log.Printf("[ERROR] Failed to delete execution: %s", err)
-		}
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(returnBytes))
-}
-
 // Onlyname is used to
 func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate, duringStartup bool) ([]shuffle.BuildLaterStruct, []shuffle.BuildLaterStruct, error) {
 	var err error
@@ -3314,18 +3229,29 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			dockercli, _, err := shuffle.GetDockerClient()
 			if err == nil {
 
-				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
-				if len(appSdk) == 0 {
-					_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", image.PullOptions{})
-					if err != nil {
-						log.Printf("[WARNING] Failed to download new App SDK: %s", err)
-					}
-				} else {
-					_, err := dockercli.ImagePull(ctx, fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", "ghcr.io", "frikky", appSdk), image.PullOptions{})
-					if err != nil {
-						log.Printf("[WARNING] Failed to download new App SDK %s: %s", err)
+				registry := os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
+				name := os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+				if name == "" {
+					name = "frikky/shuffle"
+				}
+
+				appSdkImage := os.Getenv("SHUFFLE_APP_SDK_IMAGE")
+				if appSdkImage == "" {
+					appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
+					if len(appSdk) == 0 {
+						appSdkImage = fmt.Sprintf("%s:app_sdk", name)
+					} else {
+						appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
 					}
 
+					if registry != "" {
+						appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+					}
+				}
+
+				_, err = dockercli.ImagePull(ctx, appSdkImage, image.PullOptions{})
+				if err != nil {
+					log.Printf("[WARNING] Failed to download new App SDK: %s", err)
 				}
 			} else {
 				log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
@@ -3394,6 +3320,11 @@ func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
+		return
+	}
+	if strings.ToLower(os.Getenv("SHUFFLE_DISABLE_RERUN_AND_ABORT")) == "true" {
+		resp.WriteHeader(http.StatusConflict)
+		resp.Write([]byte(`{"success": false, "reason": "SHUFFLE_DISABLE_RERUN_AND_ABORT is active. Won't rerun executions."}`))
 		return
 	}
 

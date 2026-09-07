@@ -71,14 +71,22 @@ var debug = false
 //var syncUrl = "http://localhost:5002"
 
 type retStruct struct {
-	Success         bool                          `json:"success"`
-	SyncFeatures    shuffle.SyncFeatures          `json:"sync_features"`
-	SessionKey      string                        `json:"session_key"`
-	IntervalSeconds int64                         `json:"interval_seconds"`
-	Reason          string                        `json:"reason"`
-	Subscriptions   []shuffle.PaymentSubscription `json:"subscriptions"`
-	Licensed        bool                          `json:"licensed"`
-	CloudSyncUrl    string                        `json:"cloud_sync_url,omitempty"`
+	Success          bool                          `json:"success"`
+	SyncFeatures     shuffle.SyncFeatures          `json:"sync_features"`
+	SessionKey       string                        `json:"session_key"`
+	IntervalSeconds  int64                         `json:"interval_seconds"`
+	Reason           string                        `json:"reason"`
+	Subscriptions    []shuffle.PaymentSubscription `json:"subscriptions"`
+	Licensed         bool                          `json:"licensed"`
+	CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
+	AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
+
+	WorkflowBackup        bool  `json:"workflow_backup"`
+	AppBackup             bool  `json:"app_backup"`
+	AiCloudSync           bool  `json:"ai_cloud_sync"`
+	WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
+	AppBackupUpdated      int64 `json:"app_backup_updated"`
+	AiCloudSyncUpdated    int64 `json:"ai_cloud_sync_updated"`
 }
 
 type Contact struct {
@@ -501,7 +509,13 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 
 	neworg, err := shuffle.GetOrg(ctx, org.Id)
 	if err == nil {
-		//neworg.Users = append(neworg.Users, *newUser)
+		orgUsers := make([]shuffle.User, 0, len(neworg.Users)+1)
+		for _, orgUser := range neworg.Users {
+			if orgUser.Id != "" && orgUser.Id != newUser.Id {
+				orgUsers = append(orgUsers, orgUser)
+			}
+		}
+		neworg.Users = append(orgUsers, *newUser)
 		for tutorialIndex, tutorial := range neworg.Tutorials {
 			if tutorial.Name == "Invite teammates" {
 				neworg.Tutorials[tutorialIndex].Description = fmt.Sprintf("%d users are in your org. Org name and Image change next.", len(neworg.Users))
@@ -1263,7 +1277,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
+			baseSSOUrl, err = shuffle.GetOpenIdUrl(request, *org, user, "")
 			if err != nil {
 				log.Printf("[ERROR] Failed getting OpenID URL for org %s: %s", org.Name, err)
 			}
@@ -2500,6 +2514,1035 @@ func loadYaml(fileLocation string) (ApiYaml, error) {
 	return apiYaml, nil
 }
 
+func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	ctx := shuffle.GetContext(request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		// Look for org_id query as app may be private
+		// No validation is done here, as it's just running the app
+		// to find a user
+		orgId := request.URL.Query().Get("org_id")
+		executionId := request.URL.Query().Get("execution_id")
+		authorization := request.URL.Query().Get("authorization")
+		if len(executionId) == 0 || len(authorization) == 0 {
+			log.Printf("[WARNING] Bad execution id/auth in single action validate (1): %#v, %#v. Continuing with the 'public' org id", executionId, authorization)
+			err := shuffle.ValidateRequestOverload(resp, request)
+			if err != nil {
+				log.Printf("[INFO] Request overload for IP %s in single action execution", shuffle.GetRequestIp(request))
+				resp.WriteHeader(429)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Too many requests. Please try again in 30 seconds."}`)))
+				return
+			}
+
+			user.Username = shuffle.GetRequestIp(request)
+			user.ActiveOrg.Name = shuffle.GetRequestIp(request)
+			user.ActiveOrg.Id = "public"
+
+		} else {
+			// Find the execution
+			exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+			if err != nil {
+				log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
+				return
+			}
+
+			if exec.Authorization != authorization {
+				log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
+				resp.WriteHeader(403)
+				resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
+				return
+			}
+
+			//log.Printf("[INFO] Found org_id from execution: %#v. Executionorg: %#v", exec.OrgId, exec.ExecutionOrg)
+			user.ActiveOrg.Id = exec.OrgId
+			if len(user.ActiveOrg.Id) == 0 {
+				user.ActiveOrg.Id = exec.ExecutionOrg
+			}
+
+			user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
+		}
+
+		if len(user.ActiveOrg.Id) == 0 {
+			log.Printf("[WARNING] Bad execution org id in single action validate (4): %#v. Continuing with the 'internal' org id. Attempted org: '%s'", user.ActiveOrg.Id, orgId)
+			user.Username = fmt.Sprintf("org INTERNAL")
+			user.ActiveOrg.Id = "INTERNAL"
+		}
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
+	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, fileId)
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed single execution POST body read: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Look for the query parameter "validation=true" to find the correct action for the app to test
+	runValidationAction := false
+	query := request.URL.Query()
+	validation, ok := query["validation"]
+	if ok && len(validation) > 0 && validation[0] == "true" {
+		runValidationAction = true
+	}
+
+
+	delay := 0
+	delayStr, ok := query["delay"]
+	if ok && len(delayStr) > 0 {
+		delay, err = strconv.Atoi(delayStr[0])
+		if delay < 0 || delay > 2678400 {
+			delay = 0
+		}
+	}
+
+	shouldRerun := false
+	rerun, rerunOk := query["rerun"]
+	if rerunOk && len(rerun) > 0 && rerun[0] == "true" {
+		shouldRerun = true
+	}
+
+	// Just a mechanism to ensure we don't keep open sockets for no reason
+	// Primarily used for AI Agents. Same as 'rerun' - just better worded
+	if !shouldRerun {
+		skipResultWait, skipResultWaitOk := query["skip_result_wait"]
+		if skipResultWaitOk && len(skipResultWait) > 0 && skipResultWait[0] == "true" {
+			shouldRerun = true
+		}
+	}
+
+	decisionId := ""
+	decision, decisionOk := query["decision_id"]
+	if decisionOk && len(decision) > 0 {
+		decisionId = decision[0]
+	}
+
+	singleActionOrg, _ := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	isValid := shuffle.IsExecutionRecursion(ctx, request, body, singleActionOrg)
+	if isValid {
+		log.Printf("[ERROR] SHOULD block recursion for URL %s (single action). NOT actively blocking - continuing as per usual", request.URL.String())
+		//resp.WriteHeader(429)
+		//resp.Write([]byte(`{"success": false, "reason": "Workflow run recursion detected. Reset in 1 minute.."}`))
+		//return
+	}
+
+	caller := request.Header.Get("X-Internal-Caller")
+	if strings.TrimSpace(caller) == "" {
+		caller = "executeSingleAction"
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, fileId, body, runValidationAction, decisionId)
+	if fileId == "agent_starter" {
+		log.Printf("[INFO][%s] Returning early for agent_starter single action execution (1)", workflowExecution.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
+
+
+
+	// So IF an AI Agent is ran after the first node (not startnode), then
+	// for some reason, the rerun here thinks it already has a result, which stops it.
+	// It is 1 action AND 1 result
+	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	resp.Header().Add("X-Debug-Url", debugUrl)
+
+	if err != nil {
+		returndata := shuffle.ResultChecker{
+			Success: false,
+			Reason:  fmt.Sprintf("%s", err),
+		}
+
+		// Special handler for decision reruns~
+		if strings.Contains(err.Error(), "Successfully") {
+			returndata.Success = true
+			resp.WriteHeader(200)
+		} else {
+			log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
+			resp.WriteHeader(400)
+		}
+
+		respBytes, err := json.Marshal(returndata)
+		if err != nil {
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		resp.Write(respBytes)
+		return
+	}
+
+	workflowExecution.ProjectId = gceProject
+	workflowExecution.Locations = []string{""}
+
+	foundEnv := ""
+	params := []string{}
+	for _, action := range workflowExecution.Workflow.Actions {
+		for _, param := range action.Parameters {
+			params = append(params, param.Name)
+		}
+
+		if len(action.Environment) > 0 {
+			foundEnv = action.Environment
+			break
+		}
+	}
+
+	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
+	if workflowExecution.Type == "SENSOR_ACTION" {
+		if len(workflowExecution.Workflow.Actions) == 0 || len(workflowExecution.ExecutionId) == 0 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "No actions or execution ID found in workflow execution"}`))
+			return
+		}
+
+		//resp.WriteHeader(200)
+		//resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		//return
+	} else {
+		executionRequest := shuffle.ExecutionRequest{
+			ExecutionId:   workflowExecution.ExecutionId,
+			WorkflowId:    workflowExecution.Workflow.ID,
+			Authorization: workflowExecution.Authorization,
+			Environments:  []string{foundEnv},
+		}
+
+		parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
+
+		// Check if environment is distributed from parent org
+		if len(workflowExecution.ExecutionOrg) > 0 {
+			environments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting environments for org %s in single action. May fail to verify env.: %s", workflowExecution.ExecutionOrg, err)
+			} else {
+				for _, env := range environments {
+					if env.Archived {
+						continue
+					}
+
+					if env.Name != foundEnv {
+						continue
+					}
+
+					if env.OrgId != workflowExecution.ExecutionOrg && len(env.OrgId) > 0 {
+						if debug {
+							log.Printf("[DEBUG][%s] Found suborg environment %s for org %s in single action. Re-mapping it to org-id %s", workflowExecution.ExecutionId, env.Name, env.OrgId, env.OrgId)
+						}
+
+						parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), env.OrgId)
+						break
+					}
+				}
+			}
+		}
+
+		log.Printf("[INFO][%s] Adding new single-action job to env queue (4): %s", workflowExecution.ExecutionId, parsedEnv)
+		err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
+		if err != nil {
+			log.Printf("[WARNING][%s] Failed adding %s to db (single action queue): %s", workflowExecution.ExecutionId, parsedEnv, err)
+		}
+	}
+
+	if shouldRerun || delay > 0 {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
+
+	actionId := ""
+	if len(workflowExecution.Workflow.Actions) == 1 {
+		actionId = workflowExecution.Workflow.Actions[0].ID
+	}
+
+	timeout := 15
+	foundtimeout, timeoutOk := query["timeout"]
+	if timeoutOk && len(foundtimeout) > 0 {
+		newTimeout, err := strconv.Atoi(foundtimeout[0])
+		if err == nil && newTimeout > 0 && newTimeout < 301 {
+			timeout = newTimeout
+		}
+	}
+
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1, timeout, actionId)
+	returnBytes, err := json.Marshal(returnBody)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
+	}
+
+	// Look for delete=true query, and if it exists, delete the execution
+	if request.URL.Query().Get("delete") == "true" {
+		err = shuffle.DeleteKey(ctx, "workflowexecution", workflowExecution.ExecutionId)
+		if err != nil {
+			log.Printf("[ERROR] Failed to delete execution: %s", err)
+		}
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(returnBytes))
+}
+
+// MCP APIs: Returns the expected response
+// /api/v1/mcp
+// /api/v1/apps/{appid}/mcp
+
+// Agent APIs: Requires polling of execution_id and auth
+// /api/v1/agent
+// /api/v1/agents
+
+// /api/v1/mcp/{id}
+// /api/v1/agent/{id}
+// /api/v1/agents/{id}
+
+// '{"method": "tools/call", "params": {"tool_name": "outlook", "input": {"text": "send me an email with the subject 'heloo'"}, "reasoning": "minimal"}}'
+func runMCPAction(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	ctx := shuffle.GetContext(request)
+	parentExec := shuffle.WorkflowExecution{}
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		executionId := request.URL.Query().Get("execution_id")
+		authorization := request.URL.Query().Get("authorization")
+
+		if len(executionId) > 0 && len(authorization) > 0 {
+			// Find the execution
+			exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+			if err != nil {
+				log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
+				return
+			}
+
+			if exec.Authorization != authorization {
+				log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
+				resp.WriteHeader(403)
+				resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
+				return
+			}
+
+			parentExec = *exec
+			user.ActiveOrg.Id = exec.OrgId
+			if len(user.ActiveOrg.Id) == 0 {
+				user.ActiveOrg.Id = exec.ExecutionOrg
+			}
+
+			if len(user.ActiveOrg.Id) == 0 {
+				user.ActiveOrg.Id = exec.Workflow.OrgId
+			}
+
+			user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
+		}
+
+		if len(user.ActiveOrg.Id) == 0 {
+
+			//baseDomain := "shuffler.io"
+			scheme := "https"
+			if proto := request.Header.Get("X-Forwarded-Proto"); proto != "" {
+				scheme = proto
+			}
+
+			baseURL := fmt.Sprintf("%s://%s", scheme, request.Host)
+			metadataURL := fmt.Sprintf("%s/.well-known/oauth-protected-resource%s", baseURL, request.URL.Path)
+
+			log.Printf("[WARNING] Bad execution auth in single action validate (4). Returning WWW-Authenticate header with resource_metadata: %s", metadataURL)
+
+			resp.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, metadataURL))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "User auth or Execution auth required"}`))
+			return
+		}
+	}
+
+	isSingleApp := false
+
+	location := strings.Split(request.URL.Path, "/")
+	var runType string
+	var agentSkill string
+	var toolIds string
+	if location[1] == "api" {
+		if len(location) <= 3 {
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		// /api/v1/apps/{appIds or toolIds}/mcp
+		if len(location) == 6 {
+			agentSkill = "" 
+			runType = location[4] 
+			toolIds = location[4] 
+
+		} else if len(location) == 4 {
+			runType = location[3] // /api/v1/agent or /api/v1/mcp
+		} else {
+			runType = location[3] // /api/v1/agent/{skill} or /api/v1/mcp/{skill}
+			agentSkill = location[4]
+	
+			if location[3] == "apps" {
+				isSingleApp = true
+			}
+		}
+	}
+
+	if runType == "agents" {
+		runType = "agent"
+	}
+
+	// Determine execution mode for specialized logging
+	executionMode := "standalone"
+	if len(parentExec.ExecutionId) > 0 {
+		executionMode = "workflow"
+	}
+
+	log.Printf("[AUDIT] MCP handler called by user %s (%s) in org %s for app %s, method %s, mode %s", user.Username, user.Id, user.ActiveOrg.Id, runType, request.Method, executionMode)
+
+	body := []byte{}
+	if request.Body != nil {
+		body, err = ioutil.ReadAll(request.Body)
+		if err != nil {
+			log.Printf("[INFO] Failed MCP agent execution POST body read: %s", err)
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+	} else {
+		log.Printf("[WARNING] No body found in MCP agent execution request")
+	}
+
+	if debug {
+		log.Printf("[DEBUG] MCP Body: %s", string(body))
+	}
+
+	// Unmarshal it
+	foundRequest := shuffle.MCPRequest{}
+	err = json.Unmarshal(body, &foundRequest)
+	if err != nil {
+		log.Printf("[WARNING] Failed MCP agent POST body unmarshal: %s. Continuing anyway.", err)
+		if strings.Contains(err.Error(), "invalid character") {
+			resp.WriteHeader(400)
+			//resp.Write([]byte(`{"success": false, "reason": "Required format: {\"jsonrpc\": \"2.0\", \"method\": \"<method>\", \"params\": {\"<param>\": \"<value>\"}}"}`))
+			resp.Write([]byte(`{"success": false, "reason": "Standard MCP format: {\"params\": {\"input\": {\"text\": \"what can you do?\"}}}"}`))
+			return
+		}
+	}
+
+	// Forwarding for predefined agent-skill 
+	if len(foundRequest.Params.Template) > 0 {
+		agentSkill = foundRequest.Params.Template
+	} else if len(agentSkill) > 0 { 
+		foundRequest.Params.Template = agentSkill
+	}
+
+	if foundRequest.Jsonrpc == "" {
+		foundRequest.Jsonrpc = "2.0"
+	}
+
+	app := &shuffle.WorkflowApp{}
+	foundId := ""
+
+	// Handles multiple inputs to map into Params.ToolID
+	// Point being to parse BOTH names and IDs properly
+	if len(toolIds) > 0 { 
+		parsedToolIds := ""
+		for _, toolId := range strings.Split(toolIds, ",") { 
+			trimmedToolId := strings.TrimSpace(toolId)
+			if len(trimmedToolId) == 32 { 
+				parsedToolIds += trimmedToolId + ","
+			} else {
+				foundRequest.Params.ToolName += "," + trimmedToolId
+			}
+		}
+
+		foundRequest.Params.ToolID += ","+parsedToolIds
+	}
+
+	if len(runType) == 32 {
+		foundId = runType
+	} else if len(foundRequest.Params.ToolID) > 0 {
+		foundId = foundRequest.Params.ToolID
+	} 
+
+	if strings.HasPrefix(foundRequest.Params.ToolName, "app:") && strings.Count(foundRequest.Params.ToolName, ":") >= 2 {
+		foundId += ","+foundRequest.Params.ToolName
+	} else if len(foundRequest.Params.ToolName) == 32 {
+		foundId = ","+foundRequest.Params.ToolName
+	} else {
+		splitNames := strings.Split(foundRequest.Params.ToolName, ",")
+
+		newName := []string{}
+		for _, name := range splitNames {
+			if len(name) <= 1 {
+				continue
+			}
+
+			if strings.HasPrefix(name, "app:") && strings.Count(name, ":") >= 2 {
+				newName = append(newName, name)
+				continue
+			}
+
+			if name == "API" {
+				continue
+			}
+
+			foundApp := &shuffle.WorkflowApp{}
+			if len(name) == 32 {
+				foundApp, err = shuffle.GetApp(ctx, name, shuffle.User{}, false)
+				if err == nil && foundApp.ID != "" && foundApp.Public {
+					app = foundApp
+					newName = append(newName, fmt.Sprintf("app:%s:%s", foundApp.ID, strings.ToLower(strings.ReplaceAll(foundApp.Name, " ", "_"))))
+				}
+
+			} 
+
+			if len(foundApp.ID) == 0 { 
+				foundApps, err := shuffle.FindWorkflowAppByName(ctx, name)
+				if err != nil || len(foundApps) == 0 {
+
+					algoliaApp, err := shuffle.HandleAlgoliaAppSearch(ctx, name)
+					if err != nil {
+						log.Printf("[INFO] Failed to find app by name '%s' in mcp agent run: %s", name, err)
+						resp.WriteHeader(400)
+						resp.Write([]byte(`{"success": false, "reason": "App by that name not found. Valid param.tool_id (app ID) is required"}`))
+						return
+					} else {
+						foundApp, err := shuffle.GetApp(ctx, algoliaApp.ObjectID, shuffle.User{}, false)
+						if err == nil && foundApp.ID != "" {
+							foundApps = append(foundApps, *foundApp)
+						}
+
+					}
+				}
+
+				found := false
+				for _, loopApp := range foundApps {
+					if len(loopApp.Actions) == 0 { 
+						continue
+					}
+
+					if loopApp.Name == name || loopApp.ID == name {
+						found = true
+						app = &loopApp
+
+						newName = append(newName, fmt.Sprintf("app:%s:%s", loopApp.ID, strings.ToLower(strings.ReplaceAll(loopApp.Name, " ", "_"))))
+
+						if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
+							break
+						} else if user.Role == "admin" && app.Owner == "" {
+							break
+						}
+					}
+				}
+
+				if !found {
+					nameAdded := false
+					algoliaApp, err := shuffle.HandleAlgoliaAppSearch(ctx, name)
+					if err != nil {
+						log.Printf("[INFO] Failed to find app by name '%s' in mcp agent run: %s", name, err)
+					} else {
+						foundApp, err := shuffle.GetApp(ctx, algoliaApp.ObjectID, shuffle.User{}, false)
+						if err == nil && foundApp.ID != "" {
+							newName = append(newName, fmt.Sprintf("app:%s:%s", foundApp.ID, strings.ToLower(strings.ReplaceAll(foundApp.Name, " ", "_"))))
+							nameAdded = true
+						}
+					}
+
+					if debug {
+						log.Printf("[DEBUG] No app found for name '%s' in mcp agent run. Adding anyway.", name)
+					}
+
+					if !nameAdded { 
+						innerName := strings.ToLower(strings.ReplaceAll(name, " ", "_"))
+						for _, loopApp := range foundApps {
+							parsedAppname := strings.ToLower(strings.ReplaceAll(loopApp.Name, " ", "_"))
+							if strings.Contains(parsedAppname, innerName) || strings.Contains(innerName, parsedAppname) {
+								app = &loopApp
+								newName = append(newName, fmt.Sprintf("app:%s:%s", app.ID, strings.ToLower(strings.ReplaceAll(app.Name, " ", "_"))))
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if len(newName) > 0 { 
+			foundId += ","+strings.Join(newName, ",")
+		}
+	}
+
+	if len(foundId) >= 32 {
+		newFoundId := []string{}
+		for _, tool := range strings.Split(foundId, ",") {
+			// Check if starting with app:...
+			toolId := tool
+			if strings.HasPrefix(tool, "app:") && strings.Count(tool, ":") >= 2 {
+				toolId = strings.Split(tool, ":")[1]
+			}
+
+			toolId = strings.TrimSpace(toolId)
+			if len(toolId) != 32 {
+				continue
+			}
+
+			if shuffle.ArrayContains(newFoundId, toolId) { 
+				continue
+			}
+
+			app, err = shuffle.GetApp(ctx, toolId, user, false)
+			if err != nil || len(app.ID) != 32 {
+				continue
+			}
+
+			if !app.Public {
+				if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
+					log.Printf("[AUDIT] Support & Admin user %s (%s) got access to app %s (MCP)", user.Username, user.Id, app.ID)
+				} else if user.Role == "admin" && app.Owner == "" {
+					log.Printf("[AUDIT] Any admin can GET %s (%s), since it doesn't have an owner (GET - MCP).", app.Name, app.ID)
+				} else {
+					log.Printf("[AUDIT] User %s (%s) in org %s (%s) was denied access to app %s (%s) (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.Name, app.ID)
+
+					resp.WriteHeader(403)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You do not have access to app %s"}`, app.ID)))
+					return
+				}
+			} else {
+				log.Printf("[AUDIT] User %s (%s) in org %s (%s) got access to public app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
+			}
+
+			newFoundId = append(newFoundId, fmt.Sprintf("app:%s:%s", strings.TrimSpace(toolId), strings.ToLower(strings.ReplaceAll(app.Name, " ", "_"))))
+		}
+
+		foundId = strings.Join(newFoundId, ",")
+	}
+
+	if foundRequest.Method == "initialize" || foundRequest.Method == "tools/list" {
+		mcpRespStruct, err := shuffle.HandleMCPMethodInitialize(foundRequest, user, *app)
+		if err != nil {
+			log.Printf("[ERROR] Failed handling MCP initialize method: %s", err)
+			resp.WriteHeader(400)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		marshalledResp, err := json.Marshal(mcpRespStruct)
+		if err != nil {
+			log.Printf("[ERROR] Failed to marshal MCP initialize response: %s", err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		//log.Printf("[INFO] MCP initialize request received. Returning %s", string(marshalledResp))
+		log.Printf("[INFO] MCP initialize request received with URL %s. Responding with %d tools", request.URL.String(), len(mcpRespStruct.Result.Tools))
+		resp.WriteHeader(200)
+		resp.Write(marshalledResp)
+		return
+
+	} else if foundRequest.Method == "notifications/initialized" {
+		log.Printf("[INFO] MCP notifications/initialized received. Body: %s", string(body))
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(`{"success": true}`))
+		return
+
+	} else if foundRequest.Method == "ping" {
+		// format for timestamp: 2025-02-12T14:23:45Z
+		timestamp := time.Now().UTC().Format(time.RFC3339)
+
+		mcpRespStruct := shuffle.MCPResponse{
+			Jsonrpc: foundRequest.Jsonrpc,
+			ID:      foundRequest.ID,
+			Result: map[string]interface{}{
+				"timestamp": timestamp,
+				"uptime":    3600,
+			},
+		}
+
+		marshalledResp, err := json.Marshal(mcpRespStruct)
+		if err != nil {
+			log.Printf("[ERROR] Failed to marshal MCP ping response: %s", err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		log.Printf("[INFO] MCP ping request received")
+		resp.WriteHeader(200)
+		resp.Write(marshalledResp)
+		return
+	} else {
+		log.Printf("[INFO] MCP run request received. METHOD: '%s'. Message length: %d", foundRequest.Method, len(foundRequest.Params.Input.Text))
+	}
+
+	foundEnvironment := "cloud"
+	foundAuthId := ""
+	if len(foundRequest.Params.Environment) > 0 {
+		foundEnvironment = foundRequest.Params.Environment
+	}
+
+	if len(foundRequest.Params.AuthenticationId) > 0 {
+		foundAuthId = foundRequest.Params.AuthenticationId
+	}
+
+	if len(foundRequest.Params.Input.Text) < 1 {
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "reason": "Input text is required and must be at least 1 character.", "format": {"params": {"tool_name": "slack", "input": {"text": "Send a message to my friend"}, "environment": "runtime location name (optional)", "enable_questions": false}}}`))
+		return
+	}
+
+	var newAction shuffle.Action
+	newAction = shuffle.Action{
+		Name:             "agent",
+		AppName:          "AI Agent",
+		AppID:            "shuffle_agent",
+		AppVersion:       "1.0.0",
+		Environment:      foundEnvironment,
+		AuthenticationId: foundAuthId,
+		Parameters: []shuffle.WorkflowAppActionParameter{
+			// app_name does nothing anymore
+			{
+				Name:  "app_name",
+				Value: "openai",
+			},
+			{
+				Name:  "input",
+				Value: foundRequest.Params.Input.Text,
+			},
+		},
+	}
+
+	// Look for Params.Image
+	if len(foundRequest.Params.Input.Images) > 0 {
+		for _, image := range foundRequest.Params.Input.Images {
+			newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+				Name:  "image",
+				Value: image.URL,
+			})
+
+			if len(image.Detail) > 0 {
+				newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+					Name:  "image_detail",
+					Value: image.Detail,
+				})
+			}
+		}
+	}
+
+	if len(agentSkill) > 0 && agentSkill != "agents" && agentSkill != "agent" && agentSkill != "mcp" && !isSingleApp { 
+		log.Printf("[INFO] Adding agent skill %s to action parameters", agentSkill)
+
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name: "template",
+			Value: agentSkill,
+		})
+
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name: "execution_mode",
+			Value: "direct",
+		})
+
+		if len(foundRequest.Params.Input.WorkflowId) > 0 {
+			newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+				Name: "workflow_id",
+				Value: foundRequest.Params.Input.WorkflowId,
+			})
+		}
+	}
+
+	// MCP-oriented action(s)
+	if len(foundId) > 0 {
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name:  "action",
+			Value: foundId,
+		})
+	}
+
+	if foundRequest.Params.EnableQuestions {
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name:  "enable_questions",
+			Value: "true",
+		})
+	} else {
+		if runType == "agent" {
+			newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+				Name:  "enable_questions",
+				Value: "true",
+			})
+		}
+	}
+
+	if foundRequest.Params.Reasoning == "minimal" || foundRequest.Params.Reasoning == "low" || foundRequest.Params.Reasoning == "medium" || foundRequest.Params.Reasoning == "high" {
+		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
+			Name:  "reasoning",
+			Value: foundRequest.Params.Reasoning,
+		})
+	}
+
+	marshalledAction, err := json.Marshal(newAction)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal single action body: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	caller := request.Header.Get("X-Internal-Caller")
+	if strings.TrimSpace(caller) == "" {
+		caller = "runMCPAction"
+	}
+
+	// Special handling for agent calls
+	if runType == "agent" {
+		if len(parentExec.ExecutionId) > 0 {
+			targetActionId := request.URL.Query().Get("action_id")
+			agentNodeFound := false
+			var agentNode shuffle.Action
+
+			for i, action := range parentExec.Workflow.Actions {
+				if len(targetActionId) > 0 && action.ID != targetActionId {
+					continue
+				}
+				if len(targetActionId) == 0 && action.AppName != "AI Agent" {
+					continue
+				}
+
+				if len(foundRequest.Params.Input.Text) > 0 {
+					for j, param := range parentExec.Workflow.Actions[i].Parameters {
+						if param.Name == "input" {
+							parentExec.Workflow.Actions[i].Parameters[j].Value = foundRequest.Params.Input.Text
+							break
+						}
+					}
+				}
+
+				agentNode = parentExec.Workflow.Actions[i]
+				agentNodeFound = true
+				log.Printf("[DEBUG][%s] AI Agent: Running AI Agent node '%s' (ID: %s)", parentExec.ExecutionId, agentNode.Label, agentNode.ID)
+				break
+			}
+
+			if !agentNodeFound {
+				log.Printf("[ERROR][%s] AI Agent: No agent node found in parent workflow %s (target action %s)", parentExec.ExecutionId, parentExec.Workflow.ID, targetActionId)
+				resp.WriteHeader(400)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No AI Agent node found in parent workflow matching request"}`)))
+				return
+			}
+
+			log.Printf("[INFO][%s] %s Starting agent for org %s in parent workflow %s, parent execution %s", parentExec.ExecutionId, caller, user.ActiveOrg.Id, parentExec.Workflow.ID, parentExec.ExecutionId)
+			go shuffle.HandleAiAgentExecutionStart(parentExec, agentNode, false, caller)
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s", "mode": "hybrid"}`, parentExec.ExecutionId, parentExec.Authorization)))
+			return
+
+		} else {
+			//standalone mode
+			workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent_starter", marshalledAction, false, "")
+			if err != nil {
+				log.Printf("[ERROR] Failed to prepare standalone agent execution: %s", err)
+				resp.WriteHeader(500)
+				resp.Write([]byte(`{"success": false, "reason": "Failed to create agent execution"}`))
+				return
+			}
+
+			// log.Printf("[INFO][%s] AI Agent: Started standalone for org %s, execution id %s, workflow %s", workflowExecution.ExecutionId, user.ActiveOrg.Id, workflowExecution.ExecutionId, workflowExecution.WorkflowId)
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s", "mode": "standalone"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+			return
+		}
+	}
+
+	// For non-agent calls (MCP or other apps): continue with existing flow
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent_starter", marshalledAction, false, "")
+	if runType == "agent_starter" {
+		log.Printf("[INFO][%s] Returning early for agent_starter single action execution (2)", workflowExecution.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
+
+	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	resp.Header().Add("X-Debug-Url", debugUrl)
+
+	if err != nil {
+		returndata := shuffle.ResultChecker{
+			Success: false,
+			Reason:  fmt.Sprintf("%s", err),
+		}
+
+		// Special handler for decision reruns~
+		if strings.Contains(err.Error(), "Successfully") {
+			returndata.Success = true
+			resp.WriteHeader(200)
+		} else {
+			log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
+			resp.WriteHeader(400)
+		}
+
+		respBytes, err := json.Marshal(returndata)
+		if err != nil {
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		resp.Write(respBytes)
+		return
+	}
+
+	foundEnv := ""
+	params := []string{}
+	for _, action := range workflowExecution.Workflow.Actions {
+		for _, param := range action.Parameters {
+			params = append(params, param.Name)
+		}
+
+		if len(action.Environment) > 0 {
+			foundEnv = action.Environment
+			break
+		}
+	}
+
+	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
+	if foundEnv == "" || strings.ToLower(foundEnv) == "default" || strings.ToLower(foundEnv) == "cloud" {
+		//go deployAppShuffleCloud(ctx, workflowExecution, workflowExecution.Start)
+	} else {
+		executionRequest := shuffle.ExecutionRequest{
+			ExecutionId:   workflowExecution.ExecutionId,
+			WorkflowId:    workflowExecution.Workflow.ID,
+			Authorization: workflowExecution.Authorization,
+			Environments:  []string{foundEnv},
+		}
+
+		parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
+
+		// Check if environment is distributed from parent org
+		if len(workflowExecution.ExecutionOrg) > 0 {
+			environments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting environments for org %s in single action. May fail to verify env.: %s", workflowExecution.ExecutionOrg, err)
+			} else {
+				for _, env := range environments {
+					if env.Archived {
+						continue
+					}
+
+					if env.Name != foundEnv {
+						continue
+					}
+
+					if env.OrgId != workflowExecution.ExecutionOrg && len(env.OrgId) > 0 {
+						if debug {
+							log.Printf("[DEBUG][%s] Found suborg environment %s for org %s in single action. Re-mapping it to org-id %s", workflowExecution.ExecutionId, env.Name, env.OrgId, env.OrgId)
+						}
+
+						parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), env.OrgId)
+						break
+					}
+				}
+			}
+		}
+
+		log.Printf("[INFO][%s] Adding new single-action job to env queue (4 - MCP): %s", workflowExecution.ExecutionId, parsedEnv)
+		err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
+		if err != nil {
+			log.Printf("[WARNING][%s] Failed adding %s to db (single action queue): %s", workflowExecution.ExecutionId, parsedEnv, err)
+		}
+	}
+
+	actionId := ""
+	if len(workflowExecution.Workflow.Actions) == 1 {
+		actionId = workflowExecution.Workflow.Actions[0].ID
+	}
+
+	mappedResponse := shuffle.MCPResponse{
+		Jsonrpc: foundRequest.Jsonrpc,
+		ID:      foundRequest.ID,
+	}
+
+	singleResult := shuffle.HandleRetValidation(ctx, workflowExecution, 1, 45, actionId)
+	agentOutput := shuffle.AgentOutput{}
+	err = json.Unmarshal([]byte(singleResult.Result), &agentOutput)
+	if err == nil && len(agentOutput.Output) > 0 {
+		if debug {
+			log.Printf("[DEBUG] Returning agent output in MCP response: %s", agentOutput.Output)
+		}
+
+		agentOutput.Decisions = nil
+		agentOutput.Memory = ""
+		agentOutput.NodeId = ""
+		//agentOutput.Input = foundRequest.Params.Input.Text // Handled with original_input
+
+		marshalledAgentOutput, err := json.Marshal(agentOutput)
+		if err != nil {
+			log.Printf("[ERROR] Failed to marshal agent output in MCP response: %s", err)
+		} else {
+			marshalledOutput := map[string]interface{}{}
+			err = json.Unmarshal(marshalledAgentOutput, &marshalledOutput)
+			if err != nil {
+				log.Printf("[ERROR] Failed to unmarshal agent output in MCP response: %s", err)
+			}
+
+			//agentOutput.Messages = nil
+			marshalledOutput["message"] = agentOutput.Output
+			marshalledOutput["authorization"] = workflowExecution.Authorization
+			marshalledOutput["notifications"] = workflowExecution.NotificationsCreated
+
+			// Check if output exists and remove it
+			if _, ok := marshalledOutput["output"]; ok {
+				delete(marshalledOutput, "output")
+			}
+			mappedResponse.Result = marshalledOutput
+		}
+	} else {
+		marshalledSingleResult, err := json.Marshal(singleResult)
+		if err != nil {
+			log.Printf("[ERROR] Failed to marshal single result in MCP response: %s", err)
+		}
+
+		marshalledResult := map[string]interface{}{}
+		err = json.Unmarshal(marshalledSingleResult, &marshalledResult)
+		if err != nil {
+			log.Printf("[ERROR] Failed to unmarshal single result in MCP response: %s", err)
+		}
+	}
+
+	marshalledMappedResponse, err := json.MarshalIndent(mappedResponse, "", "  ")
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal mapped response in MCP response: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(marshalledMappedResponse)
+}
+
 // This should ALWAYS come from an OUTPUT
 func executeSchedule(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
@@ -3354,7 +4397,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	//log.Println(stitched)
 
 	// 3. Zip and stream it directly in the directory
-	_, err = shuffle.StreamZipdata(ctx, identifier, stitched, shuffle.GetAppRequirements(), "")
+	_, err = shuffle.StreamZipdata(ctx, user.ActiveOrg.Id, identifier, stitched, shuffle.GetAppRequirements(), "")
 	if err != nil {
 		log.Printf("[ERROR] Zipfile error: %s", err)
 		resp.WriteHeader(500)
@@ -3369,16 +4412,21 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	dockerfileDestination := fmt.Sprintf("%s/Dockerfile", basePath)
 
 	// Read and copy the baseline Dockerfile
-	dockerfileContent, err := ioutil.ReadFile(dockerfileSource)
-	if err != nil {
-		foundDockerfile := shuffle.GetBaseDockerfile()
-		if len(foundDockerfile) > 0 {
-			dockerfileContent = foundDockerfile
-		} else {
-			log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
-			resp.WriteHeader(500)
-			resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
-			return
+	var dockerfileContent []byte
+	if os.Getenv("SHUFFLE_APP_BUILD_AIRGAPPED") == "true" {
+		dockerfileContent = shuffle.GetBaseDockerfile()
+	} else {
+		dockerfileContent, err = ioutil.ReadFile(dockerfileSource)
+		if err != nil {
+			foundDockerfile := shuffle.GetBaseDockerfile()
+			if len(foundDockerfile) > 0 {
+				dockerfileContent = foundDockerfile
+			} else {
+				log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
+				resp.WriteHeader(500)
+				resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
+				return
+			}
 		}
 	}
 
@@ -3854,13 +4902,22 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success       bool                          `json:"success"`
-		Reason        string                        `json:"reason"`
-		Jobs          []shuffle.CloudSyncJob        `json:"jobs"`
-		SyncFeatures  shuffle.SyncFeatures          `json:"sync_features"`
-		Subscriptions []shuffle.PaymentSubscription `json:"subscriptions"`
-		Licensed      bool                          `json:"licensed"`
-		CloudSyncUrl  string                        `json:"cloud_sync_url,omitempty"`
+		Success          bool                          `json:"success"`
+		Reason           string                        `json:"reason"`
+		Jobs             []shuffle.CloudSyncJob        `json:"jobs"`
+		SyncFeatures     shuffle.SyncFeatures          `json:"sync_features"`
+		Subscriptions    []shuffle.PaymentSubscription `json:"subscriptions"`
+		Licensed         bool                          `json:"licensed"`
+		CloudSyncUrl     string                        `json:"cloud_sync_url,omitempty"`
+		AppRunsHardLimit int64                         `json:"app_runs_hard_limit"`
+		CloudStats       *shuffle.ExecutionInfo        `json:"cloud_stats,omitempty"`
+
+		WorkflowBackup        bool  `json:"workflow_backup"`
+		AppBackup             bool  `json:"app_backup"`
+		AiCloudSync           bool  `json:"ai_cloud_sync"`
+		WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
+		AppBackupUpdated      int64 `json:"app_backup_updated"`
+		AiCloudSyncUpdated    int64 `json:"ai_cloud_sync_updated"`
 	}
 
 	responseData := retStruct{}
@@ -3952,10 +5009,46 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		shuffle.SetCache(ctx, licenseCacheKey, licensedBytes, 1800)
 	}
 
+	appRunsHardLimitCacheKey := fmt.Sprintf("org_app_runs_hard_limit_%s", org.Id)
+	appRunsHardLimitBytes, err := json.Marshal(responseData.AppRunsHardLimit)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal AppRunsHardLimit for cache: %s", err)
+	} else {
+		shuffle.SetCache(ctx, appRunsHardLimitCacheKey, appRunsHardLimitBytes, 1800)
+	}
+	
+	// Store cloud stats in OnpremStats so the Cloud (Cloud-Sync) stats tab can show them.
+	// Overwrite instead of merging - cloud is the source of truth for its own stats.
+	if responseData.CloudStats != nil && len(responseData.CloudStats.DailyStatistics) > 0 {
+		orgStats, err := shuffle.GetOrgStatistics(ctx, org.Id)
+		if err == nil {
+			orgStats.OnpremStats = responseData.CloudStats.DailyStatistics
+			err = shuffle.SetOrgStatistics(ctx, *orgStats, org.Id)
+			if err != nil {
+				// log.Printf("[WARNING] Failed saving cloud stats during sync for org %s: %s", org.Id, err)
+			}
+		} else {
+			// log.Printf("[WARNING] Failed getting org stats during cloud stats sync for org %s: %s", org.Id, err)
+		}
+	}
+
 	for _, job := range responseData.Jobs {
 		err = handleCloudJob(job)
 		if err != nil {
 			log.Printf("[ERROR] Failed job from cloud: %s", err)
+		}
+	}
+
+	freshOrg, err := shuffle.GetOrg(ctx, org.Id)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting org %s to sync backup settings: %s", org.Id, err)
+		return nil
+	}
+
+	if freshOrg.SyncConfig.MergeSyncConfigBackup(responseData.WorkflowBackup, responseData.AppBackup, responseData.AiCloudSync, responseData.WorkflowBackupUpdated, responseData.AppBackupUpdated, responseData.AiCloudSyncUpdated) {
+		err = shuffle.SetOrg(ctx, *freshOrg, freshOrg.Id)
+		if err != nil {
+			log.Printf("[WARNING] Failed persisting merged backup settings for org %s: %s", org.Id, err)
 		}
 	}
 
@@ -3970,6 +5063,17 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	// Check if workflow backup is active
 	// Check if app backup is active
 	ctx := context.Background()
+
+	if freshOrg, err := shuffle.GetOrg(ctx, org.Id); err == nil {
+		org = *freshOrg
+	} else {
+		log.Printf("[WARNING] Failed refreshing org %s before sync, using possibly stale copy: %s", org.Id, err)
+	}
+
+	if len(org.Users) == 0 {
+		log.Printf("[ERROR] Org %s has no users, can't run backup job", org.Id)
+		return errors.New("Org has no users")
+	}
 
 	foundUser := org.Users[0]
 	for _, user := range org.Users {
@@ -4028,9 +5132,34 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		if err != nil {
 			log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
 		} else {
+			info.OnpremStats = nil // holds cloud's stats locally - don't echo them back
+
+			// Append today's running counters so cloud sees current data.
+			// The cloud merge updates same-date entries on every sync, and the
+			// real daily entry replaces this after the day rolls over.
+			info.DailyStatistics = append(info.DailyStatistics, shuffle.DailyStatistics{
+				Date:                       time.Now(),
+				AppExecutions:              info.DailyAppExecutions,
+				ChildAppExecutions:         info.DailyChildAppExecutions,
+				WorkflowExecutions:         info.DailyWorkflowExecutions,
+				WorkflowExecutionsFinished: info.DailyWorkflowExecutionsFinished,
+				WorkflowExecutionsFailed:   info.DailyWorkflowExecutionsFailed,
+				AppExecutionsFailed:        info.DailyAppExecutionsFailed,
+				SubflowExecutions:          info.DailySubflowExecutions,
+				AgentInputTokens:           info.DailyAgentInputTokens,
+				AgentOutputTokens:          info.DailyAgentOutputTokens,
+			})
+
 			backupJob.Stats = *info
 		}
 	}
+
+	backupJob.WorkflowBackup = org.SyncConfig.WorkflowBackup
+	backupJob.AppBackup = org.SyncConfig.AppBackup
+	backupJob.AiCloudSync = org.SyncConfig.AiCloudSync
+	backupJob.WorkflowBackupUpdated = org.SyncConfig.WorkflowBackupUpdated
+	backupJob.AppBackupUpdated = org.SyncConfig.AppBackupUpdated
+	backupJob.AiCloudSyncUpdated = org.SyncConfig.AiCloudSyncUpdated
 
 	backupJobData, err := json.Marshal(backupJob)
 	if err != nil {
@@ -4081,438 +5210,6 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	}
 
 	return nil
-}
-
-// /api/v1/mcp
-// /api/v1/agent
-// /api/v1/apps/{appid}/mcp
-func runMCPAction(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	ctx := shuffle.GetContext(request)
-	parentExec := shuffle.WorkflowExecution{}
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		// Look for org_id query as app may be private
-		// No validation is done here, as it's just running the app
-		// to find a user
-		orgId := request.URL.Query().Get("org_id")
-		if len(orgId) > 0 {
-			user.ActiveOrg.Id = orgId
-		} else {
-			executionId := request.URL.Query().Get("execution_id")
-			authorization := request.URL.Query().Get("authorization")
-			if len(executionId) == 0 || len(authorization) == 0 {
-				log.Printf("[WARNING] Bad execution id/auth in single action validate (1): %#v, %#v. Continuing with the 'public' org id", executionId, authorization)
-				err := shuffle.ValidateRequestOverload(resp, request)
-				if err != nil {
-					log.Printf("[INFO] Request overload for IP %s in single action execution", shuffle.GetRequestIp(request))
-					resp.WriteHeader(429)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Too many requests. Please try again in 30 seconds."}`)))
-					return
-				}
-
-				user.Username = shuffle.GetRequestIp(request)
-				user.ActiveOrg.Name = shuffle.GetRequestIp(request)
-				user.ActiveOrg.Id = "public"
-
-			} else {
-				// Find the execution
-				exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
-				if err != nil {
-					log.Printf("[WARNING] Bad execution id in single action validate (2): %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (1)"}`))
-					return
-				}
-
-				if exec.Authorization != authorization {
-					log.Printf("[WARNING] Bad execution auth in single action validate (3): %#v, %#v", exec.Authorization, authorization)
-					resp.WriteHeader(403)
-					resp.Write([]byte(`{"success": false, "reason": "Bad execution mapping (2)"}`))
-					return
-				}
-
-				parentExec = *exec
-				user.ActiveOrg.Id = exec.OrgId
-				if len(user.ActiveOrg.Id) == 0 {
-					user.ActiveOrg.Id = exec.ExecutionOrg
-				}
-
-				user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
-			}
-		}
-
-		if len(user.ActiveOrg.Id) == 0 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "No org_id found to map back to"}`))
-			return
-		}
-	}
-
-	location := strings.Split(request.URL.Path, "/")
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 3 {
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		if len(location) == 4 {
-			fileId = location[3] // /api/v1/agent or /api/v1/mcp
-		} else {
-			fileId = location[4] // /api/v1/apps/{appid}/mcp
-		}
-	}
-
-	//log.Printf("[AUDIT] User Authentication failed in execute SINGLE action - CONTINUING ANYWAY: %s. Found OrgID: %#v", err, user.ActiveOrg.Id)
-	log.Printf("[AUDIT] User %s (%s) in org %s (%s) is running SINGLE App run for App ID '%s'", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, fileId)
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("[INFO] Failed single execution POST body read: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	foundRequest := shuffle.MCPRequest{}
-	//func HandleAiAgentExecutionStart(execution WorkflowExecution, startNode Action, createNextActions bool) (Action, error) {
-	// Unmarshal it
-	err = json.Unmarshal(body, &foundRequest)
-	if err != nil {
-		log.Printf("[INFO] Failed single execution POST body unmarshal: %s", err)
-		resp.WriteHeader(400)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	foundEnvironment := "Shuffle"
-	if len(foundRequest.Params.Environment) > 0 {
-		foundEnvironment = foundRequest.Params.Environment
-	}
-
-	if len(foundRequest.Params.Input.Text) < 5 {
-		resp.WriteHeader(400)
-		resp.Write([]byte(`{"success": false, "reason": "Input text is required and must be at least 5 characters"}`))
-		return
-	}
-
-	var newAction shuffle.Action
-
-	if fileId == "agent" {
-		newAction = shuffle.Action{
-			Name:        "agent",
-			AppName:     "AI Agent",
-			AppID:       "shuffle_agent",
-			AppVersion:  "1.0.0",
-			Environment: foundEnvironment,
-			Parameters: []shuffle.WorkflowAppActionParameter{
-				{
-					Name:  "app_name",
-					Value: "openai",
-				},
-				{
-					Name:  "input",
-					Value: foundRequest.Params.Input.Text,
-				},
-			},
-		}
-	} else {
-		foundId := ""
-		if len(foundRequest.Params.ToolID) > 0 {
-			foundId = foundRequest.Params.ToolID
-		} else {
-			if len(foundRequest.Params.ToolName) == 32 {
-				foundId = foundRequest.Params.ToolName
-			} else {
-				foundApps, err := shuffle.FindWorkflowAppByName(ctx, foundRequest.Params.ToolName)
-				if err != nil || len(foundApps) == 0 {
-					log.Printf("[INFO] Failed to find app by name '%s' in single execution: %s", foundRequest.Params.ToolName, err)
-					resp.WriteHeader(400)
-					resp.Write([]byte(`{"success": false, "reason": "Valid param.tool_id (app ID) is required"}`))
-					return
-				}
-
-				for _, app := range foundApps {
-					if app.Name == foundRequest.Params.ToolName {
-						foundId = app.ID
-						break
-					}
-				}
-			}
-		}
-
-		app, err := shuffle.GetApp(ctx, foundId, shuffle.User{}, false)
-		if err != nil {
-			log.Printf("[INFO] Failed to find app by id '%s' in single execution: %s", foundId, err)
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		if !app.Public {
-			if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
-				log.Printf("[AUDIT] Support & Admin user %s (%s) got access to app %s (MCP)", user.Username, user.Id, app.ID)
-			} else if user.Role == "admin" && app.Owner == "" {
-				log.Printf("[AUDIT] Any admin can GET %s (%s), since it doesn't have an owner (GET - MCP).", app.Name, app.ID)
-			} else {
-				log.Printf("[AUDIT] User %s (%s) in org %s (%s) was denied access to app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
-				resp.WriteHeader(403)
-				resp.Write([]byte(`{"success": false}`))
-				return
-			}
-		} else {
-			log.Printf("[AUDIT] User %s (%s) in org %s (%s) got access to public app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
-		}
-
-		// Check permissions
-		parsedName := strings.ToLower(strings.ReplaceAll(app.Name, " ", "_"))
-		parsedApp := fmt.Sprintf("app:%s:%s", app.ID, parsedName)
-
-		// Run the action
-		newAction = shuffle.Action{
-			Name:        "agent",
-			AppName:     "AI Agent",
-			AppID:       "shuffle_agent",
-			AppVersion:  "1.0.0",
-			Environment: foundEnvironment,
-			Parameters: []shuffle.WorkflowAppActionParameter{
-				{
-					Name:  "app_name",
-					Value: "openai",
-				},
-				{
-					Name:  "input",
-					Value: foundRequest.Params.Input.Text,
-				},
-				{
-					Name:  "app_name",
-					Value: parsedApp,
-				},
-			},
-		}
-	}
-
-	marshalledAction, err := json.Marshal(newAction)
-	if err != nil {
-		log.Printf("[ERROR] Failed to marshal single action body: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Special handling for agent calls
-	if fileId == "agent" {
-		if len(parentExec.ExecutionId) > 0 {
-			targetActionId := request.URL.Query().Get("action_id")
-			agentNodeFound := false
-			var agentNode shuffle.Action
-
-			for i, action := range parentExec.Workflow.Actions {
-				if len(targetActionId) > 0 && action.ID != targetActionId {
-					continue
-				}
-				if len(targetActionId) == 0 && action.AppName != "AI Agent" {
-					continue
-				}
-
-				if len(foundRequest.Params.Input.Text) > 0 {
-					for j, param := range parentExec.Workflow.Actions[i].Parameters {
-						if param.Name == "input" {
-							parentExec.Workflow.Actions[i].Parameters[j].Value = foundRequest.Params.Input.Text
-							break
-						}
-					}
-				}
-
-				agentNode = parentExec.Workflow.Actions[i]
-				agentNodeFound = true
-				log.Printf("[DEBUG][%s] AI Agent: Running AI Agent node '%s' (ID: %s)", parentExec.ExecutionId, agentNode.Label, agentNode.ID)
-				break
-			}
-
-			if !agentNodeFound {
-				log.Printf("[ERROR][%s] No AI Agent node found in parent workflow (Target ID: %s)", parentExec.ExecutionId, targetActionId)
-				resp.WriteHeader(400)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No AI Agent node found in parent workflow matching request"}`)))
-				return
-			}
-
-			callerName := "deployAppShuffleOnprem"
-			go shuffle.HandleAiAgentExecutionStart(parentExec, agentNode, false, callerName)
-
-			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s", "mode": "hybrid"}`, parentExec.ExecutionId, parentExec.Authorization)))
-			return
-
-		} else {
-			//standalone mode
-			workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent_starter", marshalledAction, false, "")
-			if err != nil {
-				log.Printf("[ERROR] Failed to prepare standalone agent execution: %s", err)
-				resp.WriteHeader(500)
-				resp.Write([]byte(`{"success": false, "reason": "Failed to create agent execution"}`))
-				return
-			}
-
-			log.Printf("[INFO] Standalone agent execution created: %s", workflowExecution.ExecutionId)
-			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s", "mode": "standalone"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
-			return
-		}
-	}
-
-	// For non-agent calls (MCP or other apps): continue with existing flow
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, request, user, "agent", marshalledAction, false, "")
-	if fileId == "agent_starter" {
-		log.Printf("[INFO] Returning early for agent_starter single action execution: %s", workflowExecution.ExecutionId)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
-		return
-	}
-
-	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-	resp.Header().Add("X-Debug-Url", debugUrl)
-
-	if err != nil {
-		returndata := shuffle.ResultChecker{
-			Success: false,
-			Reason:  fmt.Sprintf("%s", err),
-		}
-
-		// Special handler for decision reruns~
-		if strings.Contains(err.Error(), "Successfully") {
-			returndata.Success = true
-			resp.WriteHeader(200)
-		} else {
-			log.Printf("[INFO] Failed workflowrequest POST read in single action (4): %s", err)
-			resp.WriteHeader(400)
-		}
-
-		respBytes, err := json.Marshal(returndata)
-		if err != nil {
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		resp.Write(respBytes)
-		return
-	}
-
-	foundEnv := ""
-	params := []string{}
-	for _, action := range workflowExecution.Workflow.Actions {
-		for _, param := range action.Parameters {
-			params = append(params, param.Name)
-		}
-
-		if len(action.Environment) > 0 {
-			foundEnv = action.Environment
-			break
-		}
-	}
-
-	go shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
-
-	executionRequest := shuffle.ExecutionRequest{
-		ExecutionId:   workflowExecution.ExecutionId,
-		WorkflowId:    workflowExecution.Workflow.ID,
-		Authorization: workflowExecution.Authorization,
-		Environments:  []string{foundEnv},
-	}
-
-	parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
-
-	// Check if environment is distributed from parent org
-	if len(workflowExecution.ExecutionOrg) > 0 {
-		environments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting environments for org %s in single action. May fail to verify env.: %s", workflowExecution.ExecutionOrg, err)
-		} else {
-			for _, env := range environments {
-				if env.Archived {
-					continue
-				}
-
-				if env.Name != foundEnv {
-					continue
-				}
-
-				if env.OrgId != workflowExecution.ExecutionOrg && len(env.OrgId) > 0 {
-					if debug {
-						log.Printf("[DEBUG][%s] Found suborg environment %s for org %s in single action. Re-mapping it to org-id %s", workflowExecution.ExecutionId, env.Name, env.OrgId, env.OrgId)
-					}
-
-					parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), env.OrgId)
-					break
-				}
-			}
-		}
-	}
-
-	log.Printf("[INFO][%s] Adding new single-action job to env queue (4 - MCP): %s", workflowExecution.ExecutionId, parsedEnv)
-	err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
-	if err != nil {
-		log.Printf("[WARNING][%s] Failed adding %s to db (single action queue): %s", workflowExecution.ExecutionId, parsedEnv, err)
-	}
-
-	actionId := ""
-	if len(workflowExecution.Workflow.Actions) == 1 {
-		actionId = workflowExecution.Workflow.Actions[0].ID
-	}
-
-	mappedResponse := shuffle.MCPResponse{
-		Jsonrpc: foundRequest.Jsonrpc,
-		ID:      foundRequest.ID,
-	}
-
-	singleResult := shuffle.HandleRetValidation(ctx, workflowExecution, 1, 45, actionId)
-	agentOutput := shuffle.AgentOutput{}
-	err = json.Unmarshal([]byte(singleResult.Result), &agentOutput)
-	if err == nil && len(agentOutput.Output) > 0 {
-		log.Printf("[INFO] Returning agent output in MCP response: %s", agentOutput.Output)
-
-		marshalledAgentOutput, err := json.Marshal(agentOutput)
-		if err != nil {
-			log.Printf("[ERROR] Failed to marshal agent output in MCP response: %s", err)
-		} else {
-			marshalledOutput := map[string]interface{}{}
-			err = json.Unmarshal(marshalledAgentOutput, &marshalledOutput)
-			if err != nil {
-				log.Printf("[ERROR] Failed to unmarshal agent output in MCP response: %s", err)
-			}
-
-			marshalledOutput["message"] = agentOutput.Output
-			mappedResponse.Result = marshalledOutput
-		}
-	} else {
-		marshalledSingleResult, err := json.Marshal(singleResult)
-		if err != nil {
-			log.Printf("[ERROR] Failed to marshal single result in MCP response: %s", err)
-		}
-
-		marshalledResult := map[string]interface{}{}
-		err = json.Unmarshal(marshalledSingleResult, &marshalledResult)
-		if err != nil {
-			log.Printf("[ERROR] Failed to unmarshal single result in MCP response: %s", err)
-		}
-	}
-
-	marshalledMappedResponse, err := json.Marshal(mappedResponse)
-	if err != nil {
-		log.Printf("[ERROR] Failed to marshal mapped response in MCP response: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(marshalledMappedResponse)
 }
 
 func runInitCloudSetup() {
@@ -4655,62 +5352,21 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
 	} else {
 		log.Printf("[INFO] Setting up %d schedule(s)", len(schedules))
-
-		url := &url.URL{}
-		job := func(schedule shuffle.ScheduleOld) func() {
-			return func() {
-				log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
-
-				request := &http.Request{
-					URL:    url,
-					Method: "POST",
-					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
-				}
-
-				orgId := ""
-				if len(activeOrgs) > 0 {
-					orgId = activeOrgs[0].Id
-				}
-
-				if len(schedule.Org) == 36 {
-					orgId = schedule.Org
-				}
-
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
-				if err != nil {
-					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
-				}
-			}
+		fallbackOrgID := ""
+		if len(activeOrgs) > 0 {
+			fallbackOrgID = activeOrgs[0].Id
 		}
 
 		for _, schedule := range schedules {
-			if strings.ToLower(schedule.Environment) == "cloud" {
-				log.Printf("[DEBUG] Skipping cloud schedule")
+			if strings.EqualFold(schedule.Environment, "cloud") {
 				continue
 			}
 
-			// FIXME: Add a randomized timer to avoid all schedules running at the same time
-			// Many are at 5 minutes / 1 hour. The point is to spread these out
-			// a bit instead of all of them starting at the exact same time
-
-			//log.Printf("Schedule: %#v", schedule)
-			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
-			if schedule.Seconds == 0 && len(schedule.Frequency) > 0 {
-				cronJob, err := CronScheduler.Cron(schedule.Frequency).Do(job(schedule))
-				if err != nil {
-					log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
-				} else {
-					log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
-				}
-				cronJobs[schedule.Id] = cronJob
-			} else {
-				jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
-				if err != nil {
-					log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
-				} else {
-					log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
-				}
-				scheduledJobs[schedule.Id] = jobret
+			created, err := registerScheduleRuntime(schedule, fallbackOrgID)
+			if err != nil {
+				log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+			} else if created {
+				log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
 			}
 		}
 	}
@@ -5194,6 +5850,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 
 	ctx := context.Background()
 	org.CloudSync = false
+	org.CloudSyncActive = false
 	org.SyncFeatures = shuffle.SyncFeatures{}
 	org.SyncConfig = shuffle.SyncConfig{}
 	org.Subscriptions = []shuffle.PaymentSubscription{}
@@ -5272,6 +5929,10 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		Apikey       string      `datastore:"apikey"`
 		Organization shuffle.Org `datastore:"organization"`
 		Disable      bool        `datastore:"disable"`
+
+		WorkflowBackup bool `json:"workflow_backup" datastore:"workflow_backup"`
+		AppBackup      bool `json:"app_backup" datastore:"app_backup"`
+		AiCloudSync    bool `json:"ai_cloud_sync" datastore:"ai_cloud_sync"`
 	}
 
 	var tmpData ReturnData
@@ -5373,6 +6034,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 			licenseCacheKey := fmt.Sprintf("org_licensed_%s", org.Id)
 			shuffle.DeleteCache(ctx, licenseCacheKey)
 
+			appRunsHardLimitCacheKey := fmt.Sprintf("org_app_runs_hard_limit_%s", org.Id)
+			shuffle.DeleteCache(ctx, appRunsHardLimitCacheKey)
+
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
 		}
@@ -5383,6 +6047,34 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// Everything below here is to SET UP CLOUD SYNC.
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
+		if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup || org.SyncConfig.AppBackup != tmpData.AppBackup || org.SyncConfig.AiCloudSync != tmpData.AiCloudSync {
+			now := time.Now().Unix()
+			if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup {
+				org.SyncConfig.WorkflowBackup = tmpData.WorkflowBackup
+				org.SyncConfig.WorkflowBackupUpdated = now
+			}
+			if org.SyncConfig.AppBackup != tmpData.AppBackup {
+				org.SyncConfig.AppBackup = tmpData.AppBackup
+				org.SyncConfig.AppBackupUpdated = now
+			}
+			if org.SyncConfig.AiCloudSync != tmpData.AiCloudSync {
+				org.SyncConfig.AiCloudSync = tmpData.AiCloudSync
+				org.SyncConfig.AiCloudSyncUpdated = now
+			}
+
+			err = shuffle.SetOrg(ctx, *org, org.Id)
+			if err != nil {
+				log.Printf("[ERROR] Failed updating sync settings for org %s: %s", org.Id, err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Failed saving sync settings"}`))
+				return
+			}
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(`{"success": true, "reason": "Successfully updated sync settings"}`))
+			return
+		}
+
 		log.Printf("[WARNING] Org %s is already syncing. Skip", org.Id)
 		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Your org is already syncing. Nothing to set up."}`)))
@@ -5393,10 +6085,24 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	type requestStruct struct {
 		ApiKey string `json:"api_key"`
+
+		WorkflowBackup        bool  `json:"workflow_backup"`
+		AppBackup             bool  `json:"app_backup"`
+		AiCloudSync           bool  `json:"ai_cloud_sync"`
+		WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
+		AppBackupUpdated      int64 `json:"app_backup_updated"`
+		AiCloudSyncUpdated    int64 `json:"ai_cloud_sync_updated"`
 	}
 
+	backupSettingsSetAt := time.Now().Unix()
 	requestData := requestStruct{
-		ApiKey: tmpData.Apikey,
+		ApiKey:                tmpData.Apikey,
+		WorkflowBackup:        tmpData.WorkflowBackup,
+		AppBackup:             tmpData.AppBackup,
+		AiCloudSync:           tmpData.AiCloudSync,
+		WorkflowBackupUpdated: backupSettingsSetAt,
+		AppBackupUpdated:      backupSettingsSetAt,
+		AiCloudSyncUpdated:    backupSettingsSetAt,
 	}
 
 	b, err := json.Marshal(requestData)
@@ -5454,6 +6160,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// 2. Add iterative sync schedule for interval seconds
 	// 3. Add another environment for the org's users
 	org.CloudSync = true
+	org.CloudSyncActive = true
 
 	// set cache here for 30 min
 	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
@@ -5485,13 +6192,28 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		cloudSyncRegionUrlCacheKey := fmt.Sprintf("org_cloudsync_region_url_%s", org.Id)
 		shuffle.SetCache(ctx, cloudSyncRegionUrlCacheKey, []byte(responseData.CloudSyncUrl), 1800)
 	}
+	if responseData.AppRunsHardLimit > 0 {
+		appRunsHardLimitCacheKey := fmt.Sprintf("org_app_runs_hard_limit_%s", org.Id)
+		appRunsHardLimitBytes, err := json.Marshal(responseData.AppRunsHardLimit)
+		if err == nil {
+			shuffle.SetCache(ctx, appRunsHardLimitCacheKey, appRunsHardLimitBytes, 1800)
+		}
+	}
 
 	org.SyncConfig = shuffle.SyncConfig{
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
 
-		WorkflowBackup: true,
-		AppBackup:      true,
+		WorkflowBackup:        responseData.WorkflowBackup,
+		AppBackup:             responseData.AppBackup,
+		AiCloudSync:           responseData.AiCloudSync,
+		WorkflowBackupUpdated: responseData.WorkflowBackupUpdated,
+		AppBackupUpdated:      responseData.AppBackupUpdated,
+		AiCloudSyncUpdated:    responseData.AiCloudSyncUpdated,
+	}
+
+	if strings.Contains("https://", responseData.CloudSyncUrl) && strings.Contains("shuffler.io", responseData.CloudSyncUrl) {
+		org.SyncConfig.URL = responseData.CloudSyncUrl
 	}
 
 	interval := int(responseData.IntervalSeconds)
@@ -5796,9 +6518,7 @@ func initHandlers() {
 	CronScheduler.StartAsync()
 
 	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
-	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
 
-	//es := shuffle.GetEsConfig()
 	elasticConfig := "elasticsearch"
 	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
 		elasticConfig = ""
@@ -5830,6 +6550,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/health/executions/live", shuffle.GetLiveExecutionStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/opensearch-prefix", shuffle.HandleFixOpensearchPrefix).Methods("POST", "OPTIONS")
 
 	// Make user related locations
@@ -5838,6 +6559,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{userId}/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
@@ -5845,6 +6567,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/users/{userid}/remove", shuffle.HandleDeleteUsersAccountPermanent).Methods("DELETE", "OPTIONS")
 	// r.HandleFunc("/api/v1/users/{userID}/remove", shuffle.HandleDeleteUsersAccount).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", shuffle.DeleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
@@ -5854,6 +6577,7 @@ func initHandlers() {
 
 	// General - duplicates and old.
 	r.HandleFunc("/api/v1/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/download_docker_image", getDockerImage).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login", shuffle.HandleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
@@ -5864,6 +6588,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
 
+	r.HandleFunc("/api/v1/environments/{environment}", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getenvironments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", shuffle.HandleSetEnvironments).Methods("PUT", "OPTIONS")
 
@@ -5889,12 +6614,17 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 
 	// Agent / MCP actions
-	r.HandleFunc("/api/v1/apps/{key}/mcp", runMCPAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{key}/mcp", runMCPAction).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/api/v1/mcp", runMCPAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/agent", runMCPAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/agents", runMCPAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/mcp/{id}", runMCPAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/agent/{id}", runMCPAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/agents/{id}", runMCPAction).Methods("POST", "OPTIONS")
 
 
 	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/singul", singul.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/deactivate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
@@ -5916,7 +6646,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication", shuffle.GetAppAuthentication).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication", shuffle.AddAppAuthentication).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/config/batch", shuffle.SetAuthenticationConfigBatch).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/summary", shuffle.GetOrgAppsSummary).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/actions", shuffle.GetWorkflowAppActions).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/authentication/group", shuffle.AddAppAuthenticationGroup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/authentication/group", shuffle.GetAppAuthenticationGroup).Methods("GET", "OPTIONS")
@@ -5929,8 +6662,14 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.UpdateUsecases).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/partner_usecases/{key}", shuffle.HandleGetIndividualUsecase).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/partners/{id}", shuffle.HandleGetPartner).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/partners/{id}/usecases", shuffle.HandleGetPartnerUsecases).Methods("GET", "OPTIONS")
 
 	// Legacy app things
+	r.HandleFunc("/api/v1/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/usecases/{key}", shuffle.HandlePublishUsecase).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/usecases/{key}", shuffle.HandleDeleteUsecase).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
@@ -5940,19 +6679,24 @@ func initHandlers() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", shuffle.GetWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", shuffle.SetNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/operations", shuffle.HandleAgentWorkflowOperations).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/search", shuffle.HandleWorkflowRunSearch).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", shuffle.HandleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", shuffle.GetWorkflowExecutions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/count", shuffle.HandleGetWorkflowRunCount).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/rerun", checkUnfinishedExecution).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/executions/{executionId}/abort", shuffle.AbortExecution).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/unpublish", makeWorkflowPublic).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", shuffle.LoadSpecificWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/minimal", shuffle.GetWorkflowMinimal).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/run", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflowUpdate).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/stream/history", shuffle.HandleStreamWorkflowHistory).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/duplicate", shuffle.DuplicateWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
@@ -5963,7 +6707,12 @@ func initHandlers() {
 	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate/llm", shuffle.HandleWorkflowGenerationResponse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/edit/llm", shuffle.HandleEditWorkflowWithLLM).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/correlations", shuffle.GetCorrelations).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/correlations", shuffle.GetCorrelations).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}/{key}", shuffle.HandleGetCacheKey).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}/{key}/revisions", shuffle.GetDatastoreKeyRevisions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/datastore", shuffle.HandleSetDatastoreKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/datastore/category/{category_key}", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
@@ -5974,6 +6723,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/recommendations/modify", shuffle.HandleRecommendationAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/child_workflows", shuffle.GetChildWorkflows).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/validation", shuffle.GetWorkflowValidation).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/distribute/batch", shuffle.DistributeWorkflowsBatch).Methods("POST", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
@@ -6052,7 +6803,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleGetCacheKey).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/{category_key}/{key}", shuffle.HandleSetDatastoreKey).Methods("POST", "PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/delete_cache", shuffle.HandleDeleteCacheKeyPost).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
@@ -6074,6 +6828,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
+	r.HandleFunc("/api/v1/login/openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/disconnect_sso", shuffle.HandleDisconnectSSO).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/sso/link", shuffle.HandleGenerateProvisionUrl).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSAML).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
@@ -6116,6 +6873,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/conversation", shuffle.RunActionAI).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/conversation/history", shuffle.HandleGetConversationHistory).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/conversation/stream", shuffle.HandleStreamSupportLLM).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orborus", shuffle.GetOrborusDownloadCommand).Methods("GET")
+	r.HandleFunc("/api/v1/chat/completions", shuffle.RunAiQueryHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/vulnerabilities", shuffle.GetVulnerabilities).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/vulnerabilities/{id}", shuffle.GetVulnerability).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/vulnerabilities", shuffle.GetVulnerability).Methods("POST", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
@@ -6132,6 +6896,15 @@ func initHandlers() {
 	//	} else {
 	//		log.Printf("[DEBUG] Memory debugging is disabled. To enable, set SHUFFLE_DEBUG_MEMORY or DEBUG_MEMORY to true")
 	//	}
+
+	// A fallback to look up keys in the Datastore based on category
+	// 1. It checks {category} directly
+	// 2. It checks shuffle-security_{category}
+	// 3. Look into GET and POST /api/v2/{datastore_category}/{key} 
+	// 4. Separate function for POST responses
+	r.HandleFunc("/api/v2/{datastore_category}", shuffle.HandleDatastoreGetRedirect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/{datastore_category}/{datastore_key}", shuffle.HandleDatastoreGetRedirect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/{datastore_category}/{datastore_key}", shuffle.HandleDatastorePostRedirect).Methods("POST", "OPTIONS")
 
 	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)

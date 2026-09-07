@@ -4,13 +4,12 @@ import { makeStyles } from "@mui/styles";
 import { toast } from "react-toastify"
 import { getTheme } from '../theme.jsx';
 import { Context } from "../context/ContextApi.jsx";
-//import { useAlert 
+//import { useAlert
 
 import {
 	FormControl,
 	InputLabel,
 	Paper,
-	OutlinedInput,
 	Checkbox,
 	Card,
 	Tooltip,
@@ -21,7 +20,6 @@ import {
 	Switch,
 	Select,
 	MenuItem,
-	Divider,
 	ListItemText,
 	TextField,
 	Button,
@@ -53,27 +51,11 @@ const OrgHeaderexpandedNew = (props) => {
 		globalUrl,
 		isCloud,
 		adminTab,
-		selectedStatus,
-		setSelectedStatus,
 		isEditOrgTab,
-		handleStatusChange
 	} = props;
 
 	const classes = useStyles();
 	const defaultBranch = "main";
-	const ITEM_HEIGHT = 48;
-	const ITEM_PADDING_TOP = 8;
-	const MenuProps = {
-		PaperProps: {
-			style: {
-				maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-				width: 300,
-				borderRadius: 4,
-				overflowY: "scroll",
-			},
-		},
-		getContentAnchorEl: () => null,
-	};
 
 	const [orgName, setOrgName] = useState(selectedOrganization?.name);
 	const [orgDescription, setOrgDescription] = React.useState(
@@ -496,32 +478,6 @@ const OrgHeaderexpandedNew = (props) => {
 											}}
 										/>
 									</div>
-									{userdata?.support ? (
-										<div style={{ alignItems: 'center' }}>
-											<div style={{ marginRight: '12px', color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily, marginTop: 2.5 }}>Status</div>
-											<FormControl style={{ width: 220, height: 35 }}>
-												<Select
-													style={{ minWidth: 220, marginTop: 5, maxWidth: 220, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
-													id="multiselect-status"
-													multiple
-													value={selectedStatus}
-													onChange={(event) => { handleStatusChange(event); setSelectedStatus(event.target.value) }}
-													input={<OutlinedInput />}
-													renderValue={(selected) => selected.join(', ')}
-													MenuProps={MenuProps}
-												>
-													{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "integration partner", "distribution partner", "channel partner", "service partner", "old customer", "old lead"].map((name) => (
-														<MenuItem key={name} value={name}>
-															<Checkbox checked={selectedStatus.indexOf(name) > -1} />
-															<ListItemText primary={name} />
-														</MenuItem>
-													))}
-												</Select>
-											</FormControl>
-										</div>
-									) : null}
-
-
 									{isCloud ? (
 										<div style={{ marginLeft: 13, fontSize: 16, color: "#9E9E9E" }} >
 											<Typography variant="text" style={{color: theme.palette.text.primary, fontFamily: theme?.typography?.fontFamily}}>Change Region</Typography>
@@ -710,21 +666,26 @@ const OrgHeaderexpandedNew = (props) => {
 						/>
 					</span>
 				</Grid>
-				{!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org || null || selectedOrganization?.creator_org?.length > 0 ? null :
+
+				{ selectedOrganization && (!selectedOrganization?.creator_org || selectedOrganization?.creator_org?.length === 0) ? (
 				<CloudSyncTab
 					globalUrl={globalUrl}
 					userdata={userdata}
 					serverside={false}
-				/>}
+					/>
+				) : null}
 				<Grid item xs={12} style={{ marginTop: 20, }}>
-					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Workflow Backup Repository</Typography>
+					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Backup Repository</Typography>
 					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400 }}>
-						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflow-status/workflowId.json format. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: theme.palette.linkColor }} target="_blank">Credentials are encrypted.</a>
+						Decide where workflows and apps are backed up in a Git repository in realtime when they are saved. This creates logs and notifications if upload fails.  The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflowStatus/workflowId.json format and /orgId/apps/appId.json. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: theme.palette.linkColor }} target="_blank">Credentials are encrypted.</a>
+						<br />
+						<b>Repository & Token required</b>
+
 					</Typography>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Repository for workflow backup</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Repository for backups</Typography>
 								<TextField
 									required
 									style={{
@@ -781,7 +742,7 @@ const OrgHeaderexpandedNew = (props) => {
 									variant="outlined"
 									multiline={true}
 									rows={1}
-									placeholder="The branch to use for backup of workflows"
+									placeholder="The branch to use for backups"
 									value={uploadBranch}
 									onChange={(e) => {
 										setUploadBranch(e.target.value);
@@ -806,7 +767,7 @@ const OrgHeaderexpandedNew = (props) => {
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Username for backup of workflows</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Username for backups</Typography>
 								<TextField
 									required
 									style={{
@@ -861,7 +822,7 @@ const OrgHeaderexpandedNew = (props) => {
 									variant="outlined"
 									multiline={true}
 									rows={1}
-									placeholder="The token to use for backup of workflows."
+									placeholder="The token to use for backups."
 									value={uploadToken}
 									onChange={(e) => {
 										setUploadToken(e.target.value);
@@ -1100,6 +1061,9 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		} else if (regiontag === "au") {
 			regiontag = "AUS";
 			regionCode = "au"
+		} else if (regiontag === "uk") {
+			regiontag = "UK";
+			regionCode = "gb"
 		}
 	}
 

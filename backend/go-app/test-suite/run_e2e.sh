@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/.."
+
+TEST_TIMEOUT="${SHUFFLE_E2E_TEST_TIMEOUT:-15m}"
+
+export SHUFFLE_E2E_STRICT="${SHUFFLE_E2E_STRICT:-true}"
+export SHUFFLE_E2E_MANAGED_WORKFLOW="${SHUFFLE_E2E_MANAGED_WORKFLOW:-true}"
+export SHUFFLE_E2E_MUTATION_CASES="${SHUFFLE_E2E_MUTATION_CASES:-9}"
+export SHUFFLE_E2E_CONCURRENCY="${SHUFFLE_E2E_CONCURRENCY:-8}"
+export SHUFFLE_E2E_HEALTH_WORKFLOW="${SHUFFLE_E2E_HEALTH_WORKFLOW:-true}"
+
+exec go test -tags=e2e ./test-suite -count=1 -timeout "${TEST_TIMEOUT}" -v "$@"

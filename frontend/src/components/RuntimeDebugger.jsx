@@ -66,10 +66,11 @@ const RuntimeDebugger = (props) => {
 
   	const classes = useStyles();
 
-	const [workflowId, setWorkflowId] = useState("")
-	const [status, setStatus] = useState("")
-	const [endTime, setEndTime] = useState("")
-	const [startTime, setStartTime] = useState("")
+	const urlParams = new URLSearchParams(window.location.search)
+	const [workflowId, setWorkflowId] = useState(urlParams.get('workflow_id') || "")
+	const [status, setStatus] = useState(urlParams.get('status') || "")
+	const [startTime, setStartTime] = useState(urlParams.get('start_time') ? dayjs(urlParams.get('start_time')) : "")
+	const [endTime, setEndTime] = useState(urlParams.get('end_time') ? dayjs(urlParams.get('end_time')) : "")
 	const [totalCount, setTotalCount] = useState(0)
 	const {themeMode, supportEmail} = useContext(Context)
 	const theme = getTheme(themeMode)
@@ -79,10 +80,10 @@ const RuntimeDebugger = (props) => {
 	const [searchLoading, setSearchLoading] = useState(false)
 	const [rowCursor, setCursor] = useState("")
 	const [rowsPerPage, setRowsPerPage] = useState(20)
-	const [maxExecutionCount, setMaxExecutionCount] = useState(50)
+	const [maxExecutionCount, setMaxExecutionCount] = useState(urlParams.get('max_results') ? Number(urlParams.get('max_results')) : 50)
 	const [resultRows, setResultRows] = useState([])
 	const [selectedWorkflowExecutions, setSelectedWorkflowExecutions] = useState([])
-	const [suborgWorkflowRuns, setSuborgWorkflowRuns] = useState(false)
+	const [suborgWorkflowRuns, setSuborgWorkflowRuns] = useState(urlParams.get('suborg_runs') === 'true')
 	const [paginationModel, setPaginationModel] = useState({
 		page: 0,
 		pageSize: 10,
@@ -282,29 +283,22 @@ const RuntimeDebugger = (props) => {
 	  }
 
 	useEffect(() => {
-
-		// Find workflow_id in url query
-		const urlParams = new URLSearchParams(window.location.search);
-		const workflowId = urlParams.get('workflow_id');
-		if (workflowId !== undefined && workflowId !== null && workflowId !== "" && workflowId.length === 36) {
-			setWorkflowId(workflowId)
-
-			// find the workflow in workflows and select it
-			for (let key in workflows) {
-				if (workflows[key].id === workflowId) {
-					setWorkflow(workflows[key])
-					break
-				}
-			}
-		}
-
-	  	getAvailableWorkflows(workflowId)
-
-		const foundStatus = urlParams.get('status');
-		if (foundStatus !== undefined && foundStatus !== null && foundStatus !== "") {
-			setStatus(foundStatus)
-		}
+		// workflowId is pre-set from URL via useState — pass it so getAvailableWorkflows can resolve the workflow object
+		getAvailableWorkflows(workflowId)
 	}, [])
+
+	// Sync all filters back to the URL so the page is shareable
+	useEffect(() => {
+		const params = new URLSearchParams()
+		if (workflowId) params.set('workflow_id', workflowId)
+		if (status) params.set('status', status)
+		if (startTime) params.set('start_time', dayjs(startTime).toISOString())
+		if (endTime) params.set('end_time', dayjs(endTime).toISOString())
+		if (maxExecutionCount !== 50) params.set('max_results', maxExecutionCount)
+		if (suborgWorkflowRuns) params.set('suborg_runs', 'true')
+		const qs = params.toString()
+		window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+	}, [workflowId, status, startTime, endTime, maxExecutionCount, suborgWorkflowRuns])
 
 	const forceContinue = (execution) => {
 		console.log(`FORCE CONTINUE execution ${execution.execution_id} for workflow ${execution.workflow.id}`)
@@ -1007,16 +1001,11 @@ const RuntimeDebugger = (props) => {
 						<Switch 
 							checked={suborgWorkflowRuns}
 							onChange={() => {
-								setSuborgWorkflowRuns(!suborgWorkflowRuns);
-								//set selected workflow to all workflows when switching between suborg and all workflows
+								const newSuborgRuns = !suborgWorkflowRuns;
+								setSuborgWorkflowRuns(newSuborgRuns);
 								setWorkflowId("")
 								setWorkflow({"id": "", "name": "All Workflows"})
-								setStatus("")
-								setStartTime("")
-								setEndTime("")
-								setSearchQuery("")
-								setMaxExecutionCount(50)
-								submitSearch("", "", "", "", rowCursor, 50, !suborgWorkflowRuns)}
+								submitSearch("", status, startTime, endTime, rowCursor, maxExecutionCount, newSuborgRuns)}
 							}
 							color="secondary"
 						/>
@@ -1087,6 +1076,9 @@ const RuntimeDebugger = (props) => {
 				  options={[{
 					  "name": "Agent Runs",
 					  "id": "AGENT",
+				  },{
+					  "name": "Sensor Actions",
+					  "id": "SENSOR_ACTION",
 				  }].concat(workflows)}
 				  fullWidth
 				  style={{

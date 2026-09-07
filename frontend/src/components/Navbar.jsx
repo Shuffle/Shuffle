@@ -37,7 +37,7 @@ import AddIcon from '@mui/icons-material/Add';
 import Mousetrap from "mousetrap";
 import LicencePopup from "../components/LicencePopup.jsx";
 import { Context } from "../context/ContextApi.jsx";
-import { getTheme } from "../theme.jsx";
+import theme, { getTheme } from "../theme.jsx";
 
 const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
 ? window.location.pathname
@@ -47,9 +47,8 @@ const curpath = (typeof window !== "undefined" && window.location && typeof wind
 const menuData = {
   Products: [
     {
-      title: "Shuffle",
-      description:
-        "The most versatile automation engine. Focused on cybersecurity.",
+      title: "Shuffle Core",
+      description: "The most versatile no-code automation engine. Works onprem, hybrid and in the cloud.",
       icon: "/images/icons/shuffleLogo.svg",
       path: "/docs/about",
       gaData: {
@@ -59,15 +58,38 @@ const menuData = {
       }
     },
     {
+      title: "Shuffle Security",
+      description: "Security platform for Agent-powered incident mananagement, host monitoring and vulnerabilities.",
+      icon: theme.palette.singulBlackWhite,
+      path: "https://security.shuffler.io",
+      gaData: {
+        category: "navbar",
+        action: "products_click",
+        label: "security_click"
+      }
+    },
+	/*
+    {
       title: "Singul",
-      description:
-        "Connect to your favorite services with a singul line of code.",
+      description: "Connect to your favorite services with a singul line of code. Standardised outputs from 3000+ apps.",
       icon: "/images/logos/singul.svg",
       path: "https://singul.io",
       gaData: {
         category: "navbar",
         action: "products_click",
         label: "singul_click"
+      }
+    },
+	*/
+    {
+      title: "Shuffle-MCPs",
+      description: "Library to put all integrations natively in YOUR product.",
+      icon: "/images/logos/npm-logo.png",
+      path: "https://security.shuffler.io/shuffle-mcp-demo",
+      gaData: {
+        category: "navbar",
+        action: "products_click",
+        label: "library_click"
       }
     },
 	/*
@@ -163,6 +185,43 @@ const menuData = {
             }
           },
           { title: "FAQ", icon: "/images/icons/faq.svg", hoverIcon: "/images/icons/faq_hover.svg", link: "/faq", gaData: { category: "navbar", action: "resources_click", label: "faq" } },
+        ],
+      },
+      {
+        title: "Technology",
+        items: [
+          {
+            title: "Schemaless",
+            icon: "/images/logos/schemaless.png",
+            hoverIcon: "/images/logos/schemaless.png",
+            link: "https://schemaless.org",
+            gaData: {
+              category: "navbar",
+              action: "resources_click",
+              label: "schemaless_click"
+            }
+          },
+          {
+            title: "Singul",
+            icon: "/images/logos/singul.svg",
+            hoverIcon: "/images/logos/singul.svg",
+            link: "https://singul.io",
+            gaData: {
+              category: "navbar",
+              action: "resources_click",
+              label: "singul_click"
+            }
+          },
+          { title: "App Generator", 
+            icon: "/images/icons/settings.svg", 
+            hoverIcon: "/images/icons/settings_hover.svg", 
+            link: "/docs/AI#app_generation", 
+            gaData: { 
+              category: "navbar", 
+              action: "resources_click", 
+              label: "app_generator_click" 
+            } 
+          },
         ],
       },
       {
@@ -390,7 +449,7 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
 
             <Collapse in={openSection === section}>
               {section === 'Resources' ? (
-                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)', }}>
                   {menuData.Resources.columns.map((column, index) => (
                     <Box 
                       key={index} 
@@ -430,6 +489,7 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                                   if (isCloud) {
                                     ReactGA.event(platform.gaData);
                                   }
+
                                   window.open(platform.link, '_blank')
                                   return;
                                 }}
@@ -608,8 +668,10 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                           variant="body2" 
                           sx={{ 
                             color: 'white',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             fontFamily: theme.typography.fontFamily,
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
                           }}
                         >
                           {item.description}
@@ -749,6 +811,8 @@ const Navbar = (props) => {
     serverside,
     billingInfo,
     SHUFFLE_VERSION,
+    bannerOffset = 0,
+
     notifications,
   } = props;
 
@@ -953,7 +1017,7 @@ const Navbar = (props) => {
 
   const menuItemBox = {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     padding: 2,
     paddingTop: "20px",
     paddingBottom: "20px",
@@ -992,7 +1056,7 @@ const Navbar = (props) => {
   const renderMenuContent = (item, isCloud) => {
     if (item === "Resources") {
       return (
-        <Box sx={{ display: "flex", gap: 8, p: 1.5 }}>
+        <Box sx={{ display: "flex", gap: 5, p: 1.5 }}>
           {menuData.Resources.columns.map((column, index) => (
             <Box
               key={index}
@@ -1227,14 +1291,14 @@ const Navbar = (props) => {
             component="img"
             src={menuItem.icon}
             sx={{
-              width: isCloud ? 44 : 75,
-              height: isCloud ? 44 : 75,
-              padding: "20px",
+              width: isCloud ? (menuItem.title === "Shuffle Security" || menuItem.title === "Shuffle-MCPs" ? 58 : 44) : 75,
+              height: isCloud ? (menuItem.title === "Shuffle Security" || menuItem.title === "Shuffle-MCPs" ? 58 : 44) : 75,
+              padding: (menuItem.title === "Shuffle Security" || menuItem.title === "Shuffle-MCPs") ? "13px" : "20px",
               borderRadius: 1.5,
               backgroundColor: "#2F2F2F",
             }}
           />
-          <Box sx={{ paddingTop: "5px"}}>
+          <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography
                 sx={{
@@ -1330,7 +1394,7 @@ const Navbar = (props) => {
                   : item === "Services"
                   ? -50
                   : item === "Resources"
-                  ? isTabletOrMobile ? -330 : -250
+                  ? isTabletOrMobile ? -400 : -310
                   : 0,
               backgroundColor: "#212121",
               borderTopLeftRadius: 0,
@@ -1347,7 +1411,7 @@ const Navbar = (props) => {
               transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease", 
               pointerEvents: openMenu === item ? "auto" : "none",
               ...(item === "Resources" && {
-                width: "900px",
+                width: "1060px",
                 padding: 3,
               }),
             }}
@@ -1660,7 +1724,7 @@ const Navbar = (props) => {
   };
 
   const topbarHeight = showTopbar ? 40 : 0
-  const topbar = !isCloud || !showTopbar ? null :
+  const topbar = !isCloud || !showTopbar || bannerOffset > 0 ? null :
     curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/poc" || curpath === "/professional-services" ?
       <span style={{ zIndex: 50001, marginTop: -4}}>
         {/* uncommit this to show topbar for release */}
@@ -1883,6 +1947,7 @@ const Navbar = (props) => {
       position="fixed"
       sx={{
 		transition: serverside === true ? "none": undefined,
+        top: bannerOffset,
         backgroundColor: "transparent",
         boxShadow: "none",
         backgroundImage: "none",
@@ -2429,7 +2494,7 @@ const Navbar = (props) => {
                                 fontSize: '14px',
                                 fontFamily: theme.typography.fontFamily 
                               }}>
-                                Organization
+                                Tenant Admin 
                               </Typography>
                             </Box>
                           </MenuItem>
@@ -2779,5 +2844,183 @@ const Navbar = (props) => {
     </AppBar>
   );
 };
+
+const APPRUN_LIMIT_BANNER_KEY = "apprun_limit_banner_closed"
+
+export const fetchMonthlyAppRunUsage = (globalUrl, orgId, isAnnualGrouping = false) => {
+  return fetch(`${globalUrl}/api/v1/orgs/${orgId}/stats`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+  })
+    .then(res => res.json())
+    .then(stats => {
+      if (!stats || stats.success === false) return 0
+
+      if (isAnnualGrouping) {
+        return (stats.annual_app_executions ?? 0) + (stats.annual_child_app_executions ?? 0)
+      }
+
+      const dailyStats = stats.daily_statistics
+      if (dailyStats === undefined || dailyStats === null) {
+        return (stats.monthly_app_executions ?? 0) + (stats.monthly_child_app_executions ?? 0)
+      }
+
+      const today = new Date()
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+      monthStart.setHours(0, 0, 0, 0)
+      const monthEnd = new Date(today)
+      monthEnd.setHours(23, 59, 59, 999)
+
+      let parent = 0
+      let child = 0
+      for (const key in dailyStats) {
+        const item = dailyStats[key]
+        if (item?.date === undefined) continue
+        const date = new Date(item.date)
+        date.setHours(0, 0, 0, 0)
+        if (date >= monthStart && date <= monthEnd) {
+          parent += item.app_executions ?? 0
+          child += item.child_app_executions ?? 0
+        }
+      }
+
+      if (stats.daily_app_executions != null) {
+        parent += stats.daily_app_executions
+        child += stats.daily_child_app_executions ?? 0
+      }
+
+      return parent + child
+    })
+}
+
+export const AppRunsLimitBanner = ({ userdata, globalUrl, onDismiss, onVisibilityChange, showSpacer = true }) => {
+  const [showBanner, setShowBanner] = useState(
+    typeof window !== "undefined" && localStorage.getItem(APPRUN_LIMIT_BANNER_KEY) !== "true"
+  )
+  const [orgData, setOrgData] = useState(null)
+  const [usage, setUsage] = useState(0)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const orgId = userdata?.active_org?.id
+    if (!orgId || !globalUrl) return
+
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success !== false) setOrgData(data)
+      })
+      .catch(() => {
+        console.error("Failed to fetch org data for app runs limit banner")
+      })
+  }, [userdata?.active_org?.id, globalUrl])
+
+  useEffect(() => {
+    const orgId = userdata?.active_org?.id
+    if (!orgId || !globalUrl || orgData === null) return
+
+    const isAnnualGrouping = orgData?.sync_features?.annual_app_runs_grouping?.active === true
+    fetchMonthlyAppRunUsage(globalUrl, orgId, isAnnualGrouping)
+      .then(value => setUsage(value))
+      .catch(() => {
+        console.error("Failed to fetch stats for app runs limit banner")
+      })
+  }, [userdata?.active_org?.id, globalUrl, orgData])
+
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const limit = userdata?.app_execution_limit || 0
+
+  const sub = (orgData?.subscriptions || []).slice().reverse()[0]
+  const subName = sub?.name?.toLowerCase() || ""
+  const upgradeLicenses = ["scale license", "open source", "cloud trial"]
+  const isCancelled = sub?.cancellationdate > 0 && sub.cancellationdate * 1000 < Date.now()
+  const hasUpgradeLicense = subName.length === 0 || upgradeLicenses.some(l => subName.includes(l))
+
+  const limitExceeded = limit > 0 && usage >= limit
+  const isSubOrg = userdata?.active_org?.creator_org !== "" && userdata?.active_org?.creator_org !== undefined && userdata?.active_org?.creator_org !== null
+  const isPartner = userdata?.active_org?.is_partner || userdata?.org_status?.includes("integration_partner")
+  const isVisible = isCloud && showBanner && !isSubOrg && !isPartner && (limitExceeded || isCancelled)
+
+  useEffect(() => {
+    if (onVisibilityChange) onVisibilityChange(isVisible)
+  }, [isVisible])
+
+  if (!isVisible) return null
+
+  const linkStyle = {
+    cursor: "pointer",
+    fontWeight: 600,
+    color: "rgba(255,255,255,0.9)",
+    textDecoration: "underline"
+  }
+
+  const bannerContent = isCancelled ? (
+    hasUpgradeLicense ? (
+      <span>
+        Your license has expired. Please contact{" "}
+        <a href="mailto:support@shuffler.io" style={linkStyle}>support@shuffler.io</a>
+        {" "}immediately for uninterrupted platform usage.
+      </span>
+    ) : (
+      <span>
+        Your license has expired. Please contact{" "}
+        <a href="mailto:platform@shuffler.io" style={linkStyle}>platform@shuffler.io</a>
+        {" "}immediately for uninterrupted platform usage.
+      </span>
+    )
+  ) : hasUpgradeLicense ? (
+    <span>
+      You have exceeded your app runs limit, please upgrade on{" "}
+      <span style={linkStyle} onClick={() => navigate("/admin?admin_tab=billingstats")}>billing page</span>
+      {" "}to continue.
+    </span>
+  ) : (
+    <span>
+      You have exceeded your app runs limit, please contact{" "}
+      <a href="mailto:platform@shuffler.io" style={linkStyle}>platform@shuffler.io</a>
+      {" "}to continue.
+    </span>
+  )
+
+  return (
+    <>
+      {showSpacer && <div style={{ height: 50 }} />}
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 50,
+        zoom: 0.8,
+        zIndex: 99999,
+        backgroundColor: "#e41c38",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+      <Typography style={{ fontSize: 20, textAlign: "center", color: "white" }}>
+        {bannerContent}
+      </Typography>
+      <IconButton
+        color="secondary"
+        style={{ position: "absolute", top: 8, right: 20 }}
+        onClick={() => {
+          localStorage.setItem(APPRUN_LIMIT_BANNER_KEY, "true")
+          setShowBanner(false)
+          if (onDismiss) onDismiss()
+        }}
+      >
+        <CloseIcon sx={{fontSize: 26}} />
+      </IconButton>
+    </div>
+    </>
+  )
+}
 
 export default Navbar;

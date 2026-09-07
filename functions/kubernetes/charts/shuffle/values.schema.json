@@ -134,8 +134,8 @@
                 },
                 "appBaseImageName": {
                     "type": "string",
-                    "description": "The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion>",
-                    "default": "frikky"
+                    "description": "The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion>",
+                    "default": "frikky/shuffle"
                 },
                 "timezone": {
                     "type": "string",
@@ -2758,7 +2758,7 @@
                         },
                         "tag": {
                             "type": "string",
-                            "description": "app image tag (defaults to the apps version)",
+                            "description": "app image tag (defaults to the app name and version)",
                             "default": ""
                         },
                         "pullPolicy": {

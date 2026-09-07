@@ -9,9 +9,9 @@
 {{/* use shuffle.appRegistry as default image registry */}}
 {{- $_ := set $appValues.image "registry" ($appValues.image.registry | default $.Values.shuffle.appRegistry) -}}
 {{/* use shuffle.appBaseImageName as default image repository */}}
-{{- $_ := set $appValues.image "repository" ($appValues.image.repository | default (printf "%s/%s" $.Values.shuffle.appBaseImageName $appValues.name)) -}}
-{{/* use app version as default tag */}}
-{{- $_ := set $appValues.image "tag" ($appValues.image.tag | default $appValues.version) -}}
+{{- $_ := set $appValues.image "repository" ($appValues.image.repository | default $.Values.shuffle.appBaseImageName) -}}
+{{/* use app name and version as default tag */}}
+{{- $_ := set $appValues.image "tag" ($appValues.image.tag | default (printf "%s_%s" $appValues.name $appValues.version)) -}}
 
 {{/* Only create a service account if create is explicitly enabled on that specific app ($app not $appValues). Otherwise the shared shuffle-app service account is used. */}}
 {{- $shouldCreateDedicatedServiceAccount := and $app.serviceAccount.create $app.serviceAccount.name -}}

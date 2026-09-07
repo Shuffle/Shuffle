@@ -1213,7 +1213,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((response) => {
         if (response.status === 200) {
           console.log("Cloud sync success?");
-          toast("Successfully stopped cloud sync");
+          toast("Successfully stopped SLS (Shuffle Licensing System)");
         } else {
           console.log("Cloud sync fail?");
           toast(
@@ -1282,7 +1282,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             toast("Successfully disabled sync!");
             setOrgSyncResponse("Successfully disabled syncronization");
           } else {
-            toast("Cloud Syncronization successfully set up!");
+            toast("SLS (Shuffle Licensing System) successfully set up!");
             setOrgSyncResponse(
               "Successfully started syncronization. Cloud features you now have access to can be seen below.",
             );
@@ -1627,6 +1627,10 @@ If you're interested, please let me know a time that works for you, or set up a 
 
             if (responseJson.lead_info.opensource) {
               leads.push("open source");
+            }
+
+            if (responseJson.lead_info.opensource_license) {
+              leads.push("Open Source License");
             }
 
             if (responseJson.lead_info.demo_done) {
@@ -3363,6 +3367,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   color="primary"
                   label={"Edit value"}
                   defaultValue={props.data.limit}
+                  style={{}}
                   onChange={(event) => {
                     setNewValue(event.target.value);
                   }}
@@ -3434,7 +3439,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           rel="noopener noreferrer"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
-          cloud sync
+          SLS (Shuffle Licensing System)
         </a>{" "}
         do?
         <div style={{ display: "flex", marginBottom: 20 }}>
@@ -3531,14 +3536,14 @@ If you're interested, please let me know a time that works for you, or set up a 
     curTab === 0 && selectedOrganization.id !== undefined ? (
       <div style={{ position: "relative" }}>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>Organization overview</h2>
+          <h2 style={{ display: "inline" }}>Tenant overview</h2>
           <Typography
             variant="body1"
             color="textSecondary"
             style={{ marginLeft: 0 }}
           >
-            On this page organization admins can configure organizations, and
-            sub-orgs (MSSP).{" "}
+            On this page tenant admins can configure tenants, and
+            sub-tenants (MSSP).{" "}
             <a
               target="_blank"
               rel="noopener noreferrer"
@@ -3648,7 +3653,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             ) : null}
             {isCloud ? (
               <Tooltip
-                title={`Your organization is in ${regiontag}. Click to change!`}
+                title={`Your tenant is in ${regiontag}. Click to change!`}
                 style={{}}
               >
                 <Avatar
@@ -3786,7 +3791,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               aria-label="disabled tabs example"
             >
               <Tab label=<span>Edit Details</span> />
-              <Tab label=<span>Limits & Cloud Sync</span> />
+              <Tab label=<span>Limits & SLS (Shuffle Licensing System)</span> />
               <Tab label=<span>Notifications</span> />
               <Tab label=<span>Billing & Stats</span> />
               <Tab disabled={!isCloud} label=<span>Partner</span> />
@@ -3815,7 +3820,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   variant="h6"
                   style={{ marginBottom: "10px", color: "white" }}
                 >
-                  Cloud syncronization
+                  SLS (Shuffle Licensing System)
                 </Typography>
                 What does{" "}
                 <a
@@ -3824,9 +3829,9 @@ If you're interested, please let me know a time that works for you, or set up a 
                   rel="noopener noreferrer"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
-                  cloud sync
+                  SLS (Shuffle Licensing System)
                 </a>{" "}
-                do? Cloud syncronization is a way of getting more out of
+                do? SLS (Shuffle Licensing System) is a way of getting more out of
                 Shuffle. Shuffle will <b>ALWAYS</b> make every option open
                 source, but features relying on other users can't be done
                 without a collaborative approach.
@@ -3996,7 +4001,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 >
                   Features and Limitations that are currently available to you
                   in your Cloud or Hybrid Organization. App Executions (App
-                  Runs) reset monthly. If the organization is a customer or in a
+                  Runs) reset monthly. If the tenant is a customer or in a
                   trial, these features limitations are not always enforced.
                 </Typography>
                 <Grid
@@ -4083,6 +4088,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 selectedOrganization={selectedOrganization}
                 adminTab={adminTab}
                 billingInfo={billingInfo}
+                selectedOrganization={selectedOrganization}
                 stripeKey={props.stripeKey}
                 handleGetOrg={handleGetOrg}
               />
@@ -4136,12 +4142,12 @@ If you're interested, please let me know a time that works for you, or set up a 
       <DialogContent>
         {curTab === 1 && isCloud ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>
-            We will send an email to invite them to your organization.
+            We will send an email to invite them to your tenant.
           </Typography>
         ) : curTab === 7 ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>
-            The organization created will become a child of your current
-            organization, and be available to you.
+            The tenant created will become a child of your current
+            tenant, and be available to you.
           </Typography>
         ) : null}
         {curTab === 1 ? (
@@ -4284,9 +4290,9 @@ If you're interested, please let me know a time that works for you, or set up a 
 
   const UpdateMFAInUserOrg = (org_id) => {
     if (MFARequired === false) {
-      toast("Making MFA required for your organization. Please wait...");
+      toast("Making MFA required for your tenant. Please wait...");
     } else {
-      toast("Making MFA optional for your organization. Please wait...");
+      toast("Making MFA optional for your tenant. Please wait...");
     }
 
     const data = {
@@ -6238,7 +6244,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 	-e SHUFFLE_SWARM_CONFIG=run \\
 	-e SHUFFLE_LOGS_DISABLED=true \\
 	-e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
-	ghcr.io/shuffle/shuffle-orborus:latest
+	ghcr.io/shuffle/orborus:latest
 		`)
 	} else if (installationTab === 2) {
 		return `https://shuffler.io/docs/configuration#kubernetes`
@@ -6253,7 +6259,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 	-e ENVIRONMENT_NAME="${environment.Name}" \\
 	-e ORG="${props.userdata.active_org.id}" \\
 	-e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
-	ghcr.io/shuffle/shuffle-orborus:latest`
+	ghcr.io/shuffle/orborus:latest`
 
 	return commandData
 
@@ -6820,6 +6826,7 @@ curTab === 6 ? (
                             marginTop: 10,
                             marginBottom: 10,
                             padding: 15,
+                            textAlign: "center",
                             height: 70,
                             textAlign: "left",
                             backgroundColor: theme.palette.surfaceColor,
@@ -6963,7 +6970,7 @@ curTab === 6 ? (
                 }}
               >
                 {" "}
-                Your Parent Organization
+                Your Parent Tenant 
               </h3>
             </div>
             <Divider
@@ -7062,7 +7069,7 @@ curTab === 6 ? (
                   letterSpacing: "1px",
                 }}
               >
-                Sub Organizations of the Current Organization ({subOrgs.length})
+                Sub-Tenants of the Current tenant ({subOrgs.length})
               </h3>
             </div>
 
@@ -7168,7 +7175,7 @@ curTab === 6 ? (
               letterSpacing: "1px",
             }}
           >
-            All Your Organizations 
+            All Your Tenants
           </h3>
         </div>
 
@@ -7347,7 +7354,7 @@ curTab === 6 ? (
         >
           <Tab
             label=<span>
-              <BusinessIcon style={iconStyle} /> Organization
+              <BusinessIcon style={iconStyle} /> Tenant 
             </span>
           />
           <Tab

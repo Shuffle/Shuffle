@@ -115,6 +115,38 @@ var subflowPollBackoff sync.Map
 
 var window = shuffle.NewTimeWindow(10 * time.Second)
 
+func normalizeRegistryName(registry string) string {
+	return strings.TrimSuffix(strings.TrimSpace(registry), "/")
+}
+
+func imageHasRegistryPrefix(image string) bool {
+	firstPart := strings.SplitN(image, "/", 2)[0]
+
+	return strings.Contains(firstPart, ".") || strings.Contains(firstPart, ":") || firstPart == "localhost"
+}
+
+func imageHasLocalRegistryPrefix(image, localRegistry string) bool {
+	localRegistry = normalizeRegistryName(localRegistry)
+	if len(localRegistry) == 0 {
+		return false
+	}
+
+	return image == localRegistry || strings.HasPrefix(image, fmt.Sprintf("%s/", localRegistry))
+}
+
+func buildAppImageName(registry, baseImageName, appName, appVersion string) string {
+	imageName := fmt.Sprintf("%s:%s_%s", baseImageName, appName, appVersion)
+	if len(normalizeRegistryName(registry)) > 0 {
+		imageName = fmt.Sprintf("%s/%s", normalizeRegistryName(registry), imageName)
+	}
+
+	if strings.Contains(imageName, " ") {
+		imageName = strings.ReplaceAll(imageName, " ", "-")
+	}
+
+	return imageName
+}
+
 func restoreActionConfig(ctx context.Context, executionID string, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) {
 	if len(executionID) == 0 || action == nil {
 		return
@@ -396,6 +428,10 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 					timepassed := time.Since(timestart)
 					if timepassed.Seconds() > float64(timeComparison) {
 						log.Printf("[DEBUG][%s] Max poll time reached to look for updates. Stopping poll. This poll is here to send personal results back to itself to be handled, then to stop this thread.", workflowExecution.ExecutionId)
+
+						// Without this the backoff stays pinned at its max, so
+						// the next poll for this subflow starts at the cap.
+						resetSubflowPollDelay(fmt.Sprintf("%s:%s", workflowExecution.ExecutionId, subflowId))
 						break
 					}
 
@@ -586,7 +622,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	// Checking if app is generated or not
 	if !(baseDeployMode && autoDeployOverride) {
-		localRegistry = os.Getenv("REGISTRY_URL")
+		localRegistry = normalizeRegistryName(os.Getenv("REGISTRY_URL"))
 	} else {
 		log.Printf("[DEBUG] Detected baseDeploy image (%s) and ghcr override. Resorting to using ghcr instead of registry", image)
 	}
@@ -612,14 +648,14 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	*/
 
 	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !(baseDeployMode && autoDeployOverride) {
-		localRegistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
+		localRegistry = normalizeRegistryName(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY"))
 	}
 
-	if (len(localRegistry) > 0 && strings.Count(image, "/") <= 2) && !(baseDeployMode && autoDeployOverride) {
+	if (len(localRegistry) > 0 && !imageHasLocalRegistryPrefix(image, localRegistry) && !imageHasRegistryPrefix(image)) && !(baseDeployMode && autoDeployOverride) {
 		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
 		image = fmt.Sprintf("%s/%s", localRegistry, image)
 	} else {
-		if strings.Count(image, "/") <= 2 && !strings.HasPrefix(image, "frikky/shuffle:") {
+		if !imageHasLocalRegistryPrefix(image, localRegistry) && !imageHasRegistryPrefix(image) && strings.Count(image, "/") <= 2 && !strings.HasPrefix(image, "frikky/shuffle:") {
 			image = fmt.Sprintf("frikky/shuffle:%s", image)
 		}
 	}
@@ -1021,7 +1057,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		appName = strings.ToLower(appName)
 		//log.Printf("[INFO][%s] New appname: %s, image: %s", workflowExecution.ExecutionId, appName, image)
 
-		if !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
+		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" && !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
 			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
 			// FIXME: Not caring if it's ok or not. Just continuing
 			// This is working as intended, just designed to download an updated
@@ -1679,20 +1715,17 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		}
 
-		imageName := fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion)
-		if strings.Contains(imageName, " ") {
-			imageName = strings.ReplaceAll(imageName, " ", "-")
-		}
+		imageName := buildAppImageName("", baseimagename, parsedAppname, action.AppVersion)
 
 		// Kubernetes specific.
 		// Should it be though?
 		if isKubernetes == "true" {
 			// Map it to:
-			// <registry>/baseimagename/<appname>:<appversion>
-			localRegistry := os.Getenv("REGISTRY_URL")
+			// <registry>/<baseimagename>:<appname>_<appversion>
+			localRegistry := normalizeRegistryName(os.Getenv("REGISTRY_URL"))
 			if len(localRegistry) > 0 && len(baseimagename) > 0 {
 
-				newImageName := fmt.Sprintf("%s/%s/%s:%s", localRegistry, baseimagename, parsedAppname, action.AppVersion)
+				newImageName := buildAppImageName(localRegistry, baseimagename, parsedAppname, action.AppVersion)
 
 				log.Printf("[INFO] Remapping image name %s to %s due to registry+image name existing on k8s", imageName, newImageName)
 
@@ -1859,8 +1892,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// 3. Add remote repo location
 		images := []string{
 			imageName,
-			fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, parsedAppname, action.AppVersion),
-			fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion),
+			buildAppImageName(registryName, baseimagename, parsedAppname, action.AppVersion),
+			buildAppImageName("", baseimagename, parsedAppname, action.AppVersion),
 		}
 
 		// This is the weirdest shit ever looking back at
@@ -1876,21 +1909,23 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					return
 				}
 
-				err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
 				executed := false
-				if err == nil {
-					log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
-					downloadedImages = append(downloadedImages, imageName)
-					//err = deployApp(dockercli, image, identifier, env, workflow, action)
-					err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
-					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-						if strings.Contains(err.Error(), "exited prematurely") {
-							log.Printf("[DEBUG] Shutting down (41)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-							return
+				if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" {
+					err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
+					if err == nil {
+						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
+						downloadedImages = append(downloadedImages, imageName)
+						//err = deployApp(dockercli, image, identifier, env, workflow, action)
+						err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+							if strings.Contains(err.Error(), "exited prematurely") {
+								log.Printf("[DEBUG] Shutting down (41)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+								return
+							}
+						} else {
+							executed = true
 						}
-					} else {
-						executed = true
 					}
 				}
 
@@ -1907,6 +1942,12 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 						//log.Printf("[WARNING] Failed CLEANUP execution. Downloading image %s remotely.", image)
 
 						log.Printf("[WARNING] Failed to download image %s (CLEANUP): %s", imageName, err)
+						if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+							message := fmt.Sprintf("image %s is not available locally and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", imageName)
+							log.Printf("[ERROR] %s", message)
+							shutdown(workflowExecution, action.ID, message, true)
+							return
+						}
 
 						reader, err := dockercli.ImagePull(context.Background(), imageName, pullOptions)
 						if err != nil {
@@ -1990,23 +2031,24 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					}
 
 					log.Printf("[DEBUG][%s] Failed deploy. Downloading image %s: %s", workflowExecution.ExecutionId, imageName, err)
-					err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
-
 					executed := false
-					if err == nil {
-						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
-						downloadedImages = append(downloadedImages, imageName)
-						//err = deployApp(dockercli, image, identifier, env, workflow, action)
-						err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
-						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-							log.Printf("[ERROR] Err: %s", err)
-							if strings.Contains(err.Error(), "exited prematurely") {
-								log.Printf("[DEBUG] Shutting down (40)")
-								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-								return
+					if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" {
+						err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
+						if err == nil {
+							log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", imageName)
+							downloadedImages = append(downloadedImages, imageName)
+							//err = deployApp(dockercli, image, identifier, env, workflow, action)
+							err = deployApp(dockercli, imageName, identifier, env, workflowExecution, action)
+							if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+								log.Printf("[ERROR] Err: %s", err)
+								if strings.Contains(err.Error(), "exited prematurely") {
+									log.Printf("[DEBUG] Shutting down (40)")
+									shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+									return
+								}
+							} else {
+								executed = true
 							}
-						} else {
-							executed = true
 						}
 					}
 
@@ -2025,6 +2067,12 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 							if isKubernetes == "true" {
 								log.Printf("[ERROR] Image %s doesn't exist. Returning error for now")
+								return
+							}
+							if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+								message := fmt.Sprintf("image %s is not available locally and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", imageName)
+								log.Printf("[ERROR] %s", message)
+								shutdown(workflowExecution, action.ID, message, true)
 								return
 							}
 
@@ -2318,14 +2366,14 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 
 	key := fmt.Sprintf("%s:%s", workflowExecution.ExecutionId, subflowId)
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
-	usedCache := false
+	// Fast path only: the cache can tell us the subflow is already done, but it
+	// can be stale, so a miss must always fall through to the backend below.
 	if cacheData, err := shuffle.GetCache(ctx, cacheKey); err == nil {
 		cachedBytes, ok := cacheData.([]uint8)
 		if ok {
 			cacheWorkflow := shuffle.WorkflowExecution{}
 			if jsonErr := json.Unmarshal([]byte(cachedBytes), &cacheWorkflow); jsonErr == nil {
 				workflowExecution = cacheWorkflow
-				usedCache = true
 				log.Printf("[DEBUG][%s] Using cached workflow execution for subflow poll", workflowExecution.ExecutionId)
 
 				if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
@@ -2358,14 +2406,6 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 				}
 			}
 		}
-	}
-
-	if usedCache {
-		delay := nextSubflowPollDelay(key)
-		attempt := getSubflowPollAttempt(key)
-		log.Printf("[DEBUG][%s] Subflow poll backoff attempt %d for %s (cache hit), sleeping %s", workflowExecution.ExecutionId, attempt, subflowId, delay)
-		time.Sleep(delay)
-		return errors.New("Subflow status not found yet (cache)")
 	}
 
 	if len(data) == 0 {
@@ -4402,7 +4442,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 	callbackUrl := os.Getenv("SHUFFLE_WORKER_SERVER_URL")
 	if len(callbackUrl) > 0 {
 		parsedRequest.BaseUrl = callbackUrl
-		if parsedRequest.Action.AppName == "shuffle-subflow" || parsedRequest.Action.AppName == "shuffle-subflow-v2" || parsedRequest.Action.AppName == "User Input" {
+		if (parsedRequest.Action.AppName == "shuffle-subflow" || parsedRequest.Action.AppName == "shuffle-subflow-v2" || parsedRequest.Action.AppName == "User Input") && (len(getAppProxyValue("NO_PROXY", "SHUFFLE_APP_NO_PROXY")) == 0) {
 			parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 			//parsedRequest.Url = parsedRequest.BaseUrl
 		}
@@ -5138,18 +5178,6 @@ func processRunExecution(execRequest shuffle.OrborusExecutionRequest) {
 
 	ctx := context.Background()
 
-	if len(execRequest.HTTPProxy) > 0 {
-		log.Printf("[DEBUG] Sending proxy info to child process")
-		os.Setenv("SHUFFLE_PASS_APP_PROXY", execRequest.ShufflePassProxyToApp)
-	}
-	if len(execRequest.HTTPProxy) > 0 {
-		log.Printf("[DEBUG] Running with default HTTP proxy %s", execRequest.HTTPProxy)
-		os.Setenv("HTTP_PROXY", execRequest.HTTPProxy)
-	}
-	if len(execRequest.HTTPSProxy) > 0 {
-		log.Printf("[DEBUG] Running with default HTTPS proxy %s", execRequest.HTTPSProxy)
-		os.Setenv("HTTPS_PROXY", execRequest.HTTPSProxy)
-	}
 	if len(execRequest.EnvironmentName) > 0 {
 		os.Setenv("ENVIRONMENT_NAME", execRequest.EnvironmentName)
 		environment = execRequest.EnvironmentName

@@ -48,7 +48,7 @@ const OrganizationTab = (props) => {
     const [billingInfo, setBillingInfo] = useState({});
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [curIndex, setCurIndex] = React.useState(0);
-    const items = ['Org Configuration', "SSO", "Notifications", 'Billing & Stats'];
+    const items = ['Tenant Configuration', "SSO", "Notifications", 'Billing & Stats'];
     const [visibleTabs, setVisibleTabs] = useState(items);
     const [unreadNotifications, setUnreadNotifications] = React.useState(
         notifications?.filter((notification) => notification.read === false)?.length
@@ -77,7 +77,7 @@ const OrganizationTab = (props) => {
         if (tabName) {
             const decodedTabName = decodeURIComponent(tabName);
             setSelectedTab(decodedTabName);
-            if (decodedTabName === 'org_config') {
+            if (decodedTabName === 'tenant_config') {
                 setCurIndex(0);
             } else if (decodedTabName === 'prodstatus' || decodedTabName === 'productionstatus' && !isCloud) {
                 setCurIndex(1);
@@ -159,7 +159,7 @@ const OrganizationTab = (props) => {
             case 'billing' :
                 return (
                     <Billing
-                        isCloud={true}
+                        isCloud={isCloud}
                         userdata={userdata}
                         setSelectedOrganization={setSelectedOrganization}
                         globalUrl={globalUrl}
@@ -171,6 +171,9 @@ const OrganizationTab = (props) => {
                         handleEditOrg={handleEditOrg}
                         removeCookie={removeCookie}
                         isLoaded={isLoaded}
+                        selectedStatus={selectedStatus}
+                        setSelectedStatus={setSelectedStatus}
+                        handleStatusChange={handleStatusChange}
                     />
                 );
             // case 'branding':

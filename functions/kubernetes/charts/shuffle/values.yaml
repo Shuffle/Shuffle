@@ -86,9 +86,17 @@ shuffle:
   ##
   appRegistry: "docker.io"
 
-  ## @param shuffle.appBaseImageName The base image used for shuffle apps. The final image for an app is <appRegistr>/<appBaseImageName>/<appName>:<appVersion>
+  ## @param shuffle.appBaseImageName The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion>
   ##
-  appBaseImageName: "frikky"
+  appBaseImageName: "frikky/shuffle"
+
+  ## @param shuffle.appSdkImage Exact image used as the app SDK base. Leave empty to derive from appRegistry/appBaseImageName.
+  ##
+  appSdkImage: ""
+
+  ## @param shuffle.appBuildAirgapped When true, generate app Dockerfiles that only copy source into the SDK base image.
+  ##
+  appBuildAirgapped: false
 
   ## @param shuffle.timezone The timezone used by Shuffle
   ##
@@ -561,6 +569,72 @@ backend:
     ## @param backend.apps.forceUpdate Force an update of apps on startup.
     ##
     forceUpdate: false
+
+## @section security Parameters
+##
+security:
+  ## @param security.enabled Deploy the Shuffle Security frontend
+  ##
+  enabled: true
+  ## @param security.image.registry Shuffle Security image registry
+  ## @param security.image.repository Shuffle Security image repository
+  ## @param security.image.tag Shuffle Security image tag
+  ## @param security.image.digest Shuffle Security image digest (overrides the tag)
+  ## @param security.image.pullPolicy Shuffle Security image pull policy
+  ## @param security.image.pullSecrets Shuffle Security image pull secrets
+  ##
+  image:
+    registry: ghcr.io
+    repository: shuffle/shuffle-security
+    tag: latest
+    digest: ""
+    pullPolicy: Always
+    pullSecrets: []
+  ## @param security.replicaCount Number of Shuffle Security replicas
+  ##
+  replicaCount: 1
+  ## @param security.containerPorts.http Shuffle Security HTTP container port
+  ## @param security.containerPorts.https Shuffle Security HTTPS container port
+  ##
+  containerPorts:
+    http: 80
+    https: 443
+  ## @param security.backendHostname Backend hostname. Empty uses the chart backend Service.
+  ## @param security.shuffleCoreUrl Value for SHUFFLE_CORE_URL
+  ## @param security.shuffleSecurityUrl Value for SHUFFLE_SECURITY_URL
+  ## @param security.shuffleApiUrl Value for SHUFFLE_API_URL
+  ##
+  backendHostname: ""
+  shuffleCoreUrl: ""
+  shuffleSecurityUrl: ""
+  shuffleApiUrl: ""
+  ## @param security.resourcesPreset Container resource preset used when resources is empty
+  ## @param security.resources Container resource requests and limits
+  ##
+  resourcesPreset: nano
+  resources: {}
+  ## @param security.podLabels Extra labels for Shuffle Security pods
+  ## @param security.podAnnotations Annotations for Shuffle Security pods
+  ## @param security.nodeSelector Node labels for Shuffle Security pods
+  ## @param security.tolerations Tolerations for Shuffle Security pods
+  ## @param security.affinity Affinity for Shuffle Security pods
+  ##
+  podLabels: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  service:
+    ## @param security.service.type Shuffle Security Service type
+    ## @param security.service.annotations Annotations for the Shuffle Security Service
+    ## @param security.service.ports.http Shuffle Security Service HTTP port
+    ## @param security.service.ports.https Shuffle Security Service HTTPS port
+    ##
+    type: ClusterIP
+    annotations: {}
+    ports:
+      http: 80
+      https: 443
 
 ## @section frontend Parameters
 ##
@@ -1781,7 +1855,7 @@ worker:
 app:
   ## @param app.image.registry app image registry (defaults to shuffle.appRegistry)
   ## @param app.image.repository app image repository (defaults to shuffle.appBaseImageName)
-  ## @param app.image.tag app image tag (defaults to the apps version)
+  ## @param app.image.tag app image tag (defaults to the app name and version)
   ## @param app.image.pullPolicy default image pull policy for app deployments. Only effective for helm-deployed apps (see apps.enabled).
   ## @param app.image.pullSecrets default image pull secrets for app deployments. Only effective for helm-deployed apps (see apps.enabled).
   ##
