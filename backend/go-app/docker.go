@@ -427,6 +427,17 @@ func buildImage(tags []string, dockerfileLocation string) error {
 		if len(kanikoImage) == 0 {
 			kanikoImage = "gcr.io/kaniko-project/executor:latest"
 		}
+		kanikoArgs := []string{
+			"--verbosity=debug",
+			"--log-format=text",
+			"--dockerfile=Dockerfile",
+			"--context=dir://" + contextDir,
+			"--skip-tls-verify",
+			"--destination=" + destinationImage,
+		}
+		if os.Getenv("SHUFFLE_REGISTRY_INSECURE") == "true" {
+			kanikoArgs = append(kanikoArgs, "--insecure")
+		}
 
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -439,14 +450,7 @@ func buildImage(tags []string, dockerfileLocation string) error {
 							{
 								Name:  "kaniko",
 								Image: kanikoImage,
-								Args: []string{
-									"--verbosity=debug",
-									"--log-format=text",
-									"--dockerfile=Dockerfile",
-									"--context=dir://" + contextDir,
-									"--skip-tls-verify",
-									"--destination=" + destinationImage,
-								},
+								Args:  kanikoArgs,
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "kaniko-workspace",

@@ -161,6 +161,21 @@ const FreePlanCard = ({ classes }) => {
 const MarketplaceCard = ({ classes, isCloud }) => {
 	const marketplaceOptions = [
 		{
+			name: "Google Cloud Platform",
+			logo: "https://cdn.cdnlogo.com/logos/g/75/google-cloud.svg",
+			tooltipText: "Click to deploy on Google Cloud Platform!",
+			valid: true,
+			link: "https://console.cloud.google.com/marketplace/product/shuffle-public/shuffle"
+		},
+		{
+			name: "Amazon Web Services",
+			logo: isCloud ? "/icons/aws_logo.svg" : "/images/icons/aws_logo.svg",
+			logoStyle: { width: 48, height: 48, marginRight: 12 },
+			tooltipText: "Click to deploy on AWS Marketplace!",
+			valid: true,
+			link: "https://aws.amazon.com/marketplace/pp/prodview-typ7upg6kwntk"
+		},
+		{
 			name: "Open Source Install",
 			logo: "https://static.cdnlogo.com/logos/g/69/github-icon.svg",
 			tooltipText: "Click to install!",
@@ -169,21 +184,9 @@ const MarketplaceCard = ({ classes, isCloud }) => {
 			link: "https://github.com/shuffle/shuffle/blob/main/.github/install-guide.md"
 		},
 		{
-			name: "Amazon Web Services",
-			logo: "https://cdn.cdnlogo.com/logos/a/19/aws.svg",
-			tooltipText: "Coming soon to AWS Marketplace!",
-			valid: false,
-		},
-		{
 			name: "Microsoft Azure",
 			logo: "https://cdn.cdnlogo.com/logos/a/12/azure.svg",
 			tooltipText: "Coming soon to Azure Marketplace!",
-			valid: false,
-		},
-		{
-			name: "Google Cloud Platform",
-			logo: "https://cdn.cdnlogo.com/logos/g/75/google-cloud.svg",
-			tooltipText: "Coming soon to Google Cloud Marketplace!",
 			valid: false,
 		}
 	];
@@ -251,6 +254,7 @@ const MarketplaceCard = ({ classes, isCloud }) => {
 								className={classes.marketplaceIcon}
 								style={{
 									filter: option.valid === true ? null : "grayscale(1)",
+									...(option.logoStyle || {}),
 								}}
 							/>
 							<Typography className={classes.marketplaceText}>
@@ -476,7 +480,7 @@ const LoginPage = props => {
 				return;
 			}
 
-			window.location.pathname = "/new-dashboard"
+			window.location.pathname = "/dashboard"
 		}, 2000);
 	}
 
@@ -584,6 +588,7 @@ const LoginPage = props => {
 						});
 					}
 					setLoginInfo(responseJson["reason"])
+					setLoginLoading(false)
 				} else {
 					if (responseJson?.region_url !== undefined && responseJson?.region_url !== null && responseJson?.region_url !== "") {
 						toast.info("Set region to " + responseJson.region_url)
@@ -607,6 +612,7 @@ const LoginPage = props => {
 					}
 					else if (responseJson["reason"] !== undefined && responseJson["reason"] !== null && responseJson["reason"].includes("error")) {
 						setLoginInfo(responseJson["reason"])
+						setLoginLoading(false)
 						return
 					}
 
@@ -648,17 +654,16 @@ const LoginPage = props => {
 							const welcome = responseJson.tutorials.find(function (element) {
 								return element.name === "welcome";
 							})
-							console.log("Welcome: ", welcome)
+
 							if (welcome === undefined || welcome === null) {
 								  console.log("RUN login Welcome!!")
-									// window.location.pathname = "/welcome?tab=2"
-									// window.location = "/welcome?tab=2"
-									window.location.href = "/welcome?tab=2"
-									return
+								  window.location.href = "/onboarding"
+								  //window.location.href = "/welcome?tab=2"
+								  return
 							}
 						}
 
-						window.location.pathname = "/new-dashboard"
+						window.location.pathname = "/dashboard"
 					}, 2000);
 				}
 			})
@@ -687,6 +692,7 @@ const LoginPage = props => {
 								});
 							}
 							setLoginInfo(responseJson["reason"])
+							setLoginLoading(false)
 						} else {
 							if (responseJson["reason"] === "shuffle_account") {
 								window.location.href = "/login?message=Please+login+with+your+Shuffle+account"
@@ -737,9 +743,8 @@ const LoginPage = props => {
 								}
 
 								//if (responseJson.tutorials === undefined || responseJson.tutorials === null || !responseJson.tutorials.includes("welcome")) {
-								console.log("RUN Welcome!!")
-								//window.location.pathname = "/welcome?tab=2"
-								window.location.href = "/welcome"
+								window.location.href = "/onboarding"
+								//window.location.href = "/welcome?tab=2"
 							}, 2000);
 						}
 					}),
@@ -812,7 +817,7 @@ const LoginPage = props => {
 						width: "max-content",
 					}}
 				>
-					<form onSubmit={onSubmit} style={{ margin: 15, width: "max-content", overflow: "hidden", textAlign: "center", }}>
+					<form onSubmit={onSubmit} style={{ margin: 15, width: isMobile ? "100%" : "360px", width: "max-content", overflow: "hidden", textAlign: "center", }}>
 						<img
 							style={{
 								height: isMobile ? 44 : 60,
@@ -1047,7 +1052,7 @@ const LoginPage = props => {
 							</div>
 						</div>
 
-						<div style={{ marginTop: "10px", color: "white" }}>
+						<div style={{ marginTop: 30, color: "white" }}>
 							{loginInfo}
 						</div>
 

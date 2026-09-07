@@ -3260,7 +3260,7 @@ const ParsedAction = (props) => {
 						}}
 						getOptionLabel={(option) => {
 							if (option === undefined || option === null || option.name === undefined || option.name === null) {
-								return null;
+								return "";
 							}
 
 							const newname = (
@@ -3422,7 +3422,7 @@ const ParsedAction = (props) => {
 													{currentMethod}
 												</span>
 											) : params.InputProps?.startAdornment,
-											endAdornment: selectedApp?.actions?.length <= 1 ? (
+											endAdornment: (selectedApp?.actions?.length <= 1 && (selectedApp?.actions?.length !== 1 || selectedApp?.actions?.[0]?.name === "tmp")) ? (
 												<CircularProgress size={16} style={{ marginRight: 8 }} />
 											) : params.InputProps?.endAdornment,
 										}}

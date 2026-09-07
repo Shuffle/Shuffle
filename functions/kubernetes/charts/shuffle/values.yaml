@@ -90,6 +90,14 @@ shuffle:
   ##
   appBaseImageName: "frikky/shuffle"
 
+  ## @param shuffle.appSdkImage Exact image used as the app SDK base. Leave empty to derive from appRegistry/appBaseImageName.
+  ##
+  appSdkImage: ""
+
+  ## @param shuffle.appBuildAirgapped When true, generate app Dockerfiles that only copy source into the SDK base image.
+  ##
+  appBuildAirgapped: false
+
   ## @param shuffle.timezone The timezone used by Shuffle
   ##
   timezone: Europe/Berlin

@@ -20,7 +20,10 @@ import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 
 // LLM related tests
 import ChatBot from "./components/ChatBot.jsx";
-import AgentUI from "./views/AgentUI.jsx";
+// import AgentUI from "./views/AgentUI.jsx";
+import { AgentsView } from '@shuffleio/shuffle-mcps';
+import { CombinedDashboard, FormInput, Usecases as UsecasesSecurity } from '@shuffleio/shuffle-core';
+
 
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
@@ -35,7 +38,7 @@ import DashboardViews from "./views/DashboardViews.jsx";
 import SetAuthentication from "./views/SetAuthentication.jsx";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO.jsx";
 import Search from "./views/Search.jsx";
-import RunWorkflow from "./views/RunWorkflow.jsx";
+// import RunWorkflow from "./views/RunWorkflow.jsx";
 import Admin2 from "./views/Admin2.jsx";
 
 import LoginPage from "./views/LoginPage.jsx";
@@ -601,11 +604,12 @@ const App = (message, props) => {
         	  exact
         	  path="/usecases2"
         	  element={
-        	    <Dashboard
+        	    <UsecasesSecurity
 				  userdata={userdata}
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
+				  theme={themeMode}
         	      {...props}
         	    />
         	  }
@@ -614,15 +618,49 @@ const App = (message, props) => {
         	  exact
         	  path="/usecases"
         	  element={
-        	    <Usecases2
+        	    <UsecasesSecurity
 				  userdata={userdata}
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
+				  theme={themeMode}
         	      {...props}
         	    />
         	  }
         	/>
+			<Route
+					exact
+					path="/usecases/:key"
+					element={
+						<div style={{paddingTop: 15, minWidth: 1000, maxWidth: 1000, margin: "auto", }}>
+							<UsecasesSecurity
+								userdata={userdata}
+								isLoaded={isLoaded}
+								isLoggedIn={isLoggedIn}
+								globalUrl={globalUrl}
+								theme={themeMode}
+								{...props}
+							/>
+						</div>
+					}
+				/>
+
+				<Route
+					exact
+					path="/usecases/:key/details"
+					element={
+						<div style={{paddingTop: 15, minWidth: 1000, maxWidth: 1000, margin: "auto", }}>
+							<UsecasesSecurity
+								userdata={userdata}
+								isLoaded={isLoaded}
+								isLoggedIn={isLoggedIn}
+								globalUrl={globalUrl}
+								theme={themeMode}
+								{...props}
+							/>
+						</div>
+					}
+				/>
         	<Route
         	  exact
         	  path="/apps/new"
@@ -744,17 +782,18 @@ const App = (message, props) => {
         	      globalUrl={globalUrl}
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
+				  streamUrl={globalUrl}
         	      {...props}
         	    />
         	  }
         	/>
 			<Route exact path="/workflows/:key/code" element={<CodeWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
-			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
-			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
+			<Route exact path="/workflows/:key/run" element={<FormInput  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
+			<Route exact path="/workflows/:key/execute" element={<FormInput  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} /> } />
 
-			<Route exact path="/forms" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
-			<Route exact path="/forms/:key/run" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
-			<Route exact path="/forms/:key" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms" element={<FormInput serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key/run" element={<FormInput serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key" element={<FormInput serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={currentTheme.palette.surfaceColor} inputColor={currentTheme.palette.inputColor}{...props} />} />
 
         	<Route
         	  exact
@@ -891,12 +930,13 @@ const App = (message, props) => {
 				exact
 				path="/dashboard"
 				element={
-					<DashboardViews
+					<CombinedDashboard
 						serverside={false}
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						wut={userdata}
+						userdata={userdata}
+						theme={themeMode}
 					/>
 				}
 			/>
@@ -909,7 +949,8 @@ const App = (message, props) => {
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
-						wut={userdata}
+						userdata={userdata}
+						theme={themeMode}
 					/>
 				}
 			/>
@@ -992,12 +1033,13 @@ const App = (message, props) => {
 				exact
 				path="/agent"
 				element={
-					<AgentUI
+					<AgentsView
 						serverside={false}
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
 						userdata={userdata}
+						theme={themeMode}
 						{...props}
 					/>
 				}
@@ -1006,12 +1048,13 @@ const App = (message, props) => {
 				exact
 				path="/agents"
 				element={
-					<AgentUI
+					<AgentsView
 						serverside={false}
 						isLoaded={isLoaded}
 						isLoggedIn={isLoggedIn}
 						globalUrl={globalUrl}
 						userdata={userdata}
+						theme={themeMode}
 						{...props}
 					/>
 				}

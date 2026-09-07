@@ -29,6 +29,7 @@ import {
 import { getTheme } from "../theme.jsx";
 import { styled } from '@mui/styles';
 import { Context } from "../context/ContextApi.jsx";
+import { red } from "../views/AngularWorkflow.jsx";
 
 const CloudSyncTab = (props) => {
     const {
@@ -544,7 +545,8 @@ const CloudSyncTab = (props) => {
                 <Typography variant="h5"
                     style={{ marginBottom: 8, marginTop: 0, fontWeight: 500}}
                 >
-                    Cloud syncronization
+                    Cloud syncronization <span style={{color: red, }}>{userdata?.support === true && selectedOrganization && selectedOrganization?.creator_org !== undefined && selectedOrganization?.creator_org !== null && selectedOrganization?.creator_org?.length > 0 && " - Support Only: Normal users cannot see the cloud sync & Cloud Features section in a suborg"}</span>
+
                 </Typography>
                 <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400, }}>
                     What does <a href="/docs/organizations#cloud_sync" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor, fontSize: 16, textDecoration: 'none', }}>cloud sync</a> do? Cloud synchronization is a way of getting more out of Shuffle. Shuffle will ALWAYS make every option open source, but features relying on other users can't be done without a collaborative approach. This will by default back up apps and workflows.
@@ -775,6 +777,8 @@ const CloudSyncTab = (props) => {
 						var newname = newkey
 						if (newkey === "app executions") {
 							newname = "app runs"
+						} else if (newkey === "multiplayer") {
+							newname = "Multiplayer Workflow"
 						}
 
                         if (key === "onprem_app_executions" && userdata.support !== true) {

@@ -17,9 +17,17 @@ export const AppContext = (props) => {
     const [brandName, setBrandName] = useState(()=> localStorage.getItem("brandName") || "Shuffle");
     const [updateOrg, setUpdateOrg] = useState(false);
 
-    const [themeMode, setThemeMode] = useState(
-      () => localStorage.getItem("theme") || "dark"
-    );
+    const [themeMode, setThemeMode] = useState(() => {
+      const storedTheme = localStorage.getItem("theme");
+      if (!storedTheme || storedTheme === "null" || storedTheme === "undefined") {
+        return "dark";
+      }
+      // Resolve "system" to actual theme value since MUI only accepts "light" or "dark"
+      if (storedTheme === "system") {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      return storedTheme;
+    });
     const [supportEmail, setSupportEmail] = useState("support@shuffler.io");
     const [logoutUrl, setLogoutUrl] = useState("");
 

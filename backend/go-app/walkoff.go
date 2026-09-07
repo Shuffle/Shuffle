@@ -168,16 +168,16 @@ func scheduleExecutionJob(schedule shuffle.ScheduleOld, fallbackOrgID string) fu
 				claimTTL = 2592000
 			}
 
-			claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
-			claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
-			if err != nil {
-				log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
-				return
-			}
-			if !claimed {
-				log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
-				return
-			}
+			//claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
+			//claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
+		//	if err != nil {
+		//		log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
+		//		return
+		//	}
+		//	if !claimed {
+		//		log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
+		//		return
+		//	}
 
 			storedSchedule, err := shuffle.GetSchedule(context.Background(), schedule.Id)
 			if err != nil || storedSchedule.WorkflowId != schedule.WorkflowId {
@@ -3449,16 +3449,18 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 					name = "frikky/shuffle"
 				}
 
-				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
-				appSdkImage := ""
-				if len(appSdk) == 0 {
-					appSdkImage = fmt.Sprintf("%s:app_sdk", name)
-				} else {
-					appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
-				}
+				appSdkImage := os.Getenv("SHUFFLE_APP_SDK_IMAGE")
+				if appSdkImage == "" {
+					appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
+					if len(appSdk) == 0 {
+						appSdkImage = fmt.Sprintf("%s:app_sdk", name)
+					} else {
+						appSdkImage = fmt.Sprintf("%s:app_sdk_%s", name, appSdk)
+					}
 
-				if registry != "" {
-					appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+					if registry != "" {
+						appSdkImage = fmt.Sprintf("%s/%s", registry, appSdkImage)
+					}
 				}
 
 				_, err = dockercli.ImagePull(ctx, appSdkImage, image.PullOptions{})
@@ -3532,6 +3534,11 @@ func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
+		return
+	}
+	if strings.ToLower(os.Getenv("SHUFFLE_DISABLE_RERUN_AND_ABORT")) == "true" {
+		resp.WriteHeader(http.StatusConflict)
+		resp.Write([]byte(`{"success": false, "reason": "SHUFFLE_DISABLE_RERUN_AND_ABORT is active. Won't rerun executions."}`))
 		return
 	}
 

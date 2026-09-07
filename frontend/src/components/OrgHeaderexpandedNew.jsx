@@ -710,21 +710,25 @@ const OrgHeaderexpandedNew = (props) => {
 						/>
 					</span>
 				</Grid>
-				{!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org || null || selectedOrganization?.creator_org?.length > 0 ? null :
+
+				{!userdata?.support === true && (!selectedOrganization || selectedOrganization?.creator_org === undefined || selectedOrganization?.creator_org === null || selectedOrganization?.creator_org?.length > 0) ? null :
 				<CloudSyncTab
 					globalUrl={globalUrl}
 					userdata={userdata}
 					serverside={false}
 				/>}
 				<Grid item xs={12} style={{ marginTop: 20, }}>
-					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Workflow Backup Repository</Typography>
+					<Typography variant="h5" style={{ textAlign: "left", fontWeight: 500, }}>Backup Repository</Typography>
 					<Typography variant="body2" style={{ textAlign: "left", marginTop: 8, color: theme.palette.text.secondary, fontSize: 16, fontWeight: 400 }}>
-						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflow-status/workflowId.json format. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: theme.palette.linkColor }} target="_blank">Credentials are encrypted.</a>
+						Decide where workflows and apps are backed up in a Git repository in realtime when they are saved. This creates logs and notifications if upload fails.  The repository and branch must already have been initialized. Files will show up in the repo root in the /orgId/workflowStatus/workflowId.json format and /orgId/apps/appId.json. <b>MSSP:</b> If suborg exists, this will automatically be applied for them as well (not retroactive). <a href="/docs/configuration#environment-variables" style={{ textDecoration: "none", color: theme.palette.linkColor }} target="_blank">Credentials are encrypted.</a>
+						<br />
+						<b>Repository & Token required</b>
+
 					</Typography>
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Repository for workflow backup</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Repository for backups</Typography>
 								<TextField
 									required
 									style={{
@@ -781,7 +785,7 @@ const OrgHeaderexpandedNew = (props) => {
 									variant="outlined"
 									multiline={true}
 									rows={1}
-									placeholder="The branch to use for backup of workflows"
+									placeholder="The branch to use for backups"
 									value={uploadBranch}
 									onChange={(e) => {
 										setUploadBranch(e.target.value);
@@ -806,7 +810,7 @@ const OrgHeaderexpandedNew = (props) => {
 					<Grid container style={{ marginTop: 10, }} spacing={2}>
 						<Grid item xs={6} style={{}}>
 							<span>
-								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Username for backup of workflows</Typography>
+								<Typography style={{ fontWeight: 400, fontSize: 16 }}>Username for backups</Typography>
 								<TextField
 									required
 									style={{
@@ -861,7 +865,7 @@ const OrgHeaderexpandedNew = (props) => {
 									variant="outlined"
 									multiline={true}
 									rows={1}
-									placeholder="The token to use for backup of workflows."
+									placeholder="The token to use for backups."
 									value={uploadToken}
 									onChange={(e) => {
 										setUploadToken(e.target.value);
@@ -1100,6 +1104,9 @@ const RegionChangeModal = memo(({ selectedOrganization, setSelectedRegion, userd
 		} else if (regiontag === "au") {
 			regiontag = "AUS";
 			regionCode = "au"
+		} else if (regiontag === "uk") {
+			regiontag = "UK";
+			regionCode = "gb"
 		}
 	}
 

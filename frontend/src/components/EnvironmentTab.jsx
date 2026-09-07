@@ -36,6 +36,7 @@ import {
     ExpandLess as ExpandLessIcon,
     ExpandMore as ExpandMoreIcon,
 	Delete as DeleteIcon,
+	Computer as ComputerIcon, 
 } from "@mui/icons-material";
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
@@ -49,6 +50,7 @@ const EnvironmentTab = memo((props) => {
     const [modalUser, setModalUser] = React.useState({});
     const [loginInfo, setLoginInfo] = React.useState("");
     const [modalOpen, setModalOpen] = React.useState(false);
+    const [sensorGroup, setSensorGroup] = React.useState(false);
     const [showLoader, setShowLoader] = useState(true)
     const [commandController, setCommandController] = React.useState({
         pipelines: false,
@@ -434,7 +436,7 @@ const EnvironmentTab = memo((props) => {
         -e HTTPS_PROXY=IP:PORT \\` : ""}${skipPipeline ? `
         -e SHUFFLE_PIPELINE_URL=http://tenzir-node:5160 \\\n        -e SHUFFLE_PIPELINE_STANDALONE=true \\` : ""}${!showDetection ? `
         -v /tmp:/tmp \\` : ""}
-        ghcr.io/shuffle/shuffle-orborus:latest
+        ghcr.io/shuffle/orborus:latest
             `)
         } else if (installationTab === 2) {
              return `helm install shuffle-orborus oci://ghcr.io/shuffle/charts/shuffle \\
@@ -468,7 +470,7 @@ const EnvironmentTab = memo((props) => {
         -e ORG="${props.userdata.active_org.id}" \\
         -e BASE_URL="${newUrl}" \\${addProxy ? `
         -e HTTPS_PROXY=IP:PORT \\` : ""}
-        ghcr.io/shuffle/shuffle-orborus:latest`
+        ghcr.io/shuffle/orborus:latest`
 
         return commandData
     };
@@ -535,13 +537,36 @@ const EnvironmentTab = memo((props) => {
                   },
               },
           }}
+		  style={{
+		  }}
         >
-            <DialogTitle>
-                <Typography variant='h5' color="textPrimary" >Add Location</Typography>
+            <DialogTitle style={{display: "flex", }}>
+                <Typography variant='h5' color="textPrimary">Add Location</Typography>
+                <Button
+                    style={{ marginLeft: 485, }}
+					variant={sensorGroup ? "contained" : "outlined"}
+					color={sensorGroup ? "primary" : "secondary"}
+                    onClick={() => setSensorGroup(!sensorGroup)}
+                >
+					Monitoring Group
+                </Button>
             </DialogTitle>
             <DialogContent>
-                <div>
-                    <Typography variant='body2' color="textPrimary">Location Name</Typography>
+                <Typography variant='body1' color="textSecondary">
+					{sensorGroup ? 
+						'With "Monitoring Groups" enabled, Runtime Locations allows you to run a lightweight log-collector and response agent onprem.'
+						:
+						'Runtime Locations are a way to run automation in Shuffle. By default, it runs in Docker/Kubernetes and allows you to run AI Agents and Workflows in your designated datacenter.'
+					}
+				</Typography>
+                <div style={{marginTop: 15, }}>
+                    <Typography  color="textPrimary">
+						{sensorGroup ? 
+							"Monitor Group name"
+							:
+							"Location Name"
+						}
+					</Typography>
                     <TextField
                         color="primary"
                         style={{ backgroundColor: theme.palette.textFieldStyle.backgroundColor,}}
@@ -555,13 +580,14 @@ const EnvironmentTab = memo((props) => {
                         }}
                         required
                         fullWidth={true}
-                        placeholder="datacenter froglantern"
+                        placeholder="automation location 3"
                         id="environment_name"
                         margin="normal"
                         variant="outlined"
-                        onChange={(event) =>
+                        onChange={(event) => {
                             changeModalData("environment", event.target.value)
-                        }
+							setUpdate(Math.random())
+                        }}
                     />
                 </div>
                 {loginInfo}
@@ -576,12 +602,13 @@ const EnvironmentTab = memo((props) => {
                 <Button
                     variant="contained"
                     style={{ borderRadius: "2px", fontSize: 16, textTransform: "none", }}
+					disabled={modalUser.environment === undefined || modalUser.environment === ""}
                     onClick={() => {
                         submitEnvironment(modalUser); // Assuming modalUser is available
                     }}
                     color="primary"
                 >
-                    Submit
+					Create {sensorGroup ? "Monitor Group" : "Location"}
                 </Button>
             </DialogActions>
         </Dialog>
@@ -893,9 +920,9 @@ const EnvironmentTab = memo((props) => {
             <div style={{ height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin' }}>
               <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin'}}>
               <div style={{ marginBottom: 20 }}>
-                <Typography variant='h5' color="textPrimary" style={{ marginBottom: 8, marginTop: 0,}}>Runtime Locations</Typography>
+                <Typography variant='h5' color="textPrimary" style={{ marginBottom: 8, marginTop: 0,}}>Locations</Typography>
                 <Typography variant='body2' color="textSecondary">
-                    Decides which Orborus <b>runtime location</b> to run your workflows in. Previously called Environments. <br /> If you have scale problems, <a href="https://shuffler.io/docs/configuration#high-availability" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor }}>check the docs</a> or talk to our team: {supportEmail}.&nbsp;
+                    Decides which physical Orborus <b>location</b> to run jobs in for workflows and host monitors. Previously called Environments. <br /> Need help? <a href="https://shuffler.io/docs/configuration#high-availability" target="_blank" rel="noopener noreferrer" style={{ color: theme.palette.linkColor }}>Check the docs</a> or talk to our team: {supportEmail}.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
@@ -956,7 +983,7 @@ const EnvironmentTab = memo((props) => {
                 <ListItem 
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "80px 80px 80px 150px 100px 80px 400px 100px", 
+                    gridTemplateColumns: "80px 80px 70px 140px 100px 100px 400px 100px", 
                     width: "100%",
                     minWidth: showLoader ? 800 : 0,
                     paddingBottom: 0,
@@ -1102,6 +1129,11 @@ const EnvironmentTab = memo((props) => {
           >
             <ListItemText
             primary={
+              environment?.sensor_group === true ? 
+				<Tooltip title={`Monitoring group for Shuffle Security host monitors. Total: ${environment?.sensor_hosts?.length || 0}`}>
+					<ComputerIcon />
+				</Tooltip>
+			  :
               environment.run_type === "cloud" ||
               environment.name === "Cloud" ? (
               <Tooltip title="Cloud" placement="top">
@@ -1275,6 +1307,9 @@ const EnvironmentTab = memo((props) => {
                               <Tooltip title={`Make a new environment to set up a Datalake node. Please contact ${supportEmail} if this is something you want to see on Cloud directly.`} placement="top">
                                 <CancelIcon style={{ color: "rgba(255,255,255,0.3)" }} />
                               </Tooltip>
+						:
+                            environment?.sensor_group === true ?
+								"N/A"
                 		:
                             environment?.data_lake?.enabled && environment?.archived !== true ? (
                                 <a
@@ -1333,7 +1368,7 @@ const EnvironmentTab = memo((props) => {
                         />
 
                         <ListItemText
-                          primary={environment.Type}
+                          primary={environment?.sensor_group === true ? "Monitoring Group" : environment.Type}
                           primaryTypographyProps={{
                             style:{
                               minWidth:  50,
@@ -1520,6 +1555,16 @@ const EnvironmentTab = memo((props) => {
           	<Grid container justifyContent="center" style={{minWidth: 850, maxWidth: 850, }}>
     			<Grid item xs={12} sm={8} md={6}>
                     <div style={{minWidth: 750, maxWidth: 750, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
+						{environment?.sensor_group === true ?
+                        <div style={{ paddingTop: 50, paddingBottom: 100, }}>
+							<Typography variant="h6">
+								Monitoring Group - Host controls available in <a href="https://security.shuffler.io/monitors" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Shuffle Security</a>
+							</Typography> 
+							<Typography>
+								Total registered hosts: {environment?.sensor_hosts?.length || 0}.<br/>Host management and response actions is done in Shuffle Security. Click the link above to manage.
+							</Typography>
+						</div>
+							:
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
                             Self-Hosted Orborus instance
@@ -1703,6 +1748,7 @@ const EnvironmentTab = memo((props) => {
                             }
                           </Typography>
                         </div>
+					  }
                       </div>
 					  {currentEnvQueue.length === 0 ? null : 
 						  <List style={{ minWidth: 700, maxWidth: 700, maxHeight: 300, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin', }}>

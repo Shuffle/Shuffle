@@ -49,7 +49,7 @@ const PartnerIcon = ({ strokeColor, fillColor = 'transparent', width = 22, heigh
 const AdminNavBar = (props) => {
     const location = useLocation();
     const { globalUrl, userdata, isCloud,isOrgLoaded, isLoaded,removeCookie,  handleStatusChange, selectedStatus, setSelectedStatus, handleEditOrg, serverside, notifications, handleGetOrg, orgId, checkLogin, setNotifications, stripeKey, setSelectedOrganization, selectedOrganization } = props;
-    const [selectedItem, setSelectedItem] = useState("Organization");
+    const [selectedItem, setSelectedItem] = useState("Overview");
     const [isSelectedFiles, setIsSelectedFiles] = useState(true);
     const [isSelectedDataStore, setIsSelectedDataStore] = useState(true);
     const [isIntegrationPartner, setIsIntegrationPartner] = useState(false);
@@ -138,10 +138,14 @@ const AdminNavBar = (props) => {
 
         // if(!isCloud){
         //     if(tabName === "partner" || partnerTab !== null) {
-        //         setSelectedItem("Organization");
-        //         navigate(`?tab=organization`, { replace: true });
+        //         setSelectedItem("Overview");
+        //         navigate(`?tab=overview`, { replace: true });
         //     }
         // }
+        const adminTab = queryParams.get('admin_tab');
+        if (adminTab) {
+            setSelectedItem("Overview");
+        }
         if (partnerTab) {
             setSelectedItem("Partner");
         }
@@ -160,7 +164,7 @@ const AdminNavBar = (props) => {
     }, [location.search]);
 
     const items = [
-        { iconSrc: <BusinessIcon />, alt: "Organization Icon", text: "Organization", component: OrganizationTab, props: { isIntegrationPartner, isChildOrg, isGlobalUser,globalUrl,removeCookie,  selectedStatus, isLoaded, setSelectedStatus, handleStatusChange, handleEditOrg, handleGetOrg, userdata, isCloud, serverside, notifications, checkLogin, setNotifications, stripeKey, setSelectedOrganization, selectedOrganization } },
+        { iconSrc: <BusinessIcon />, alt: "Organization Icon", text: "Overview", component: OrganizationTab, props: { isIntegrationPartner, isChildOrg, isGlobalUser,globalUrl,removeCookie,  selectedStatus, isLoaded, setSelectedStatus, handleStatusChange, handleEditOrg, handleGetOrg, userdata, isCloud, serverside, notifications, checkLogin, setNotifications, stripeKey, setSelectedOrganization, selectedOrganization } },
         { iconSrc: undefined, alt: "Partner Icon", text: "Partner", component: PartnerTab, props: { globalUrl,removeCookie, isLoaded, handleGetOrg, userdata, isCloud, serverside, checkLogin, setSelectedOrganization, selectedOrganization } },
         { iconSrc: <PermIdentityIcon />, alt: "Users Icon", text: "Users", component: UserManagmentTab, props: { globalUrl, userdata, serverside, isCloud, selectedOrganization, setSelectedOrganization, handleEditOrg } },
         { iconSrc: <HttpsOutlinedIcon />, alt: "App Auth Icon", text: "App_auth", component: AppAuthTab, props: { globalUrl, userdata, isCloud, selectedOrganization } },
@@ -189,8 +193,8 @@ const AdminNavBar = (props) => {
             if (tabName === "sso" || tabName === "branding") {
                 toast.info("You are not allowed to access this tab. Please contact your admin for more information. Redirecting to Organization Configuration tab.");
                 setTimeout(() => {
-                    setSelectedItem("Organization");
-                    navigate(`?admin_tab=org_config`, { replace: true });
+                    setSelectedItem("Overview");
+                    navigate(`?admin_tab=tenant_config`, { replace: true });
                     window.location.reload();
                 }
                 , 3000);
@@ -201,7 +205,7 @@ const AdminNavBar = (props) => {
             if (tab === "users" || tab === "tenants" || tab === "partner") {
                 toast.info("You are not allowed to access this tab. Please contact your admin for more information. Redirecting to Organization Configuration tab.");
                 setTimeout(() => {
-                    setSelectedItem("Organization");
+                    setSelectedItem("Overview");
                     navigate(`?admin_tab=org_config`, { replace: true });
                     window.location.reload();
                 }
@@ -218,7 +222,7 @@ const AdminNavBar = (props) => {
             if (tab === "users" || tab === "locations" || tab === "environments" || tab === "files" || tab === "datastore" || tab === "triggers") {
                 toast.info("You are not allowed to access this tab. Please contact your admin for more information. Redirecting to Organization Configuration tab.");
                 setTimeout(() => {
-                    setSelectedItem("Organization");
+                    setSelectedItem("Overview");
                     navigate(`?admin_tab=org_config`, { replace: true });
                     window.location.reload();
                 }
@@ -231,8 +235,8 @@ const AdminNavBar = (props) => {
     const renderComponent = () => {
         const selectedItemData = visibleItems.find(item => item.text === selectedItem);
         if (!selectedItemData) {
-            setSelectedItem("Organization");
-            // If no tab is specified, default to "Organization" tab
+            setSelectedItem("Overview");
+            // If no tab is specified, default to "Overview" tab
             return <OrganizationTab isIntegrationPartner={isIntegrationPartner} isChildOrg={isChildOrg} isGlobalUser={isGlobalUser} globalUrl={globalUrl} removeCookie={removeCookie} selectedStatus={selectedStatus} isLoaded={isLoaded} setSelectedStatus={setSelectedStatus} handleStatusChange={handleStatusChange} handleEditOrg={handleEditOrg} handleGetOrg={handleGetOrg} userdata={userdata} isCloud={isCloud} serverside={serverside} notifications={notifications} checkLogin={checkLogin} setNotifications={setNotifications} stripeKey={stripeKey} setSelectedOrganization={setSelectedOrganization} selectedOrganization={selectedOrganization}/>;
         };
 
@@ -252,7 +256,7 @@ const AdminNavBar = (props) => {
 
     const defaultImage = "/images/logos/orange_logo.svg"
     const imageData =
-        selectedOrganization?.image === undefined || selectedOrganization?.image.length === 0
+        selectedOrganization?.image === undefined || selectedOrganization?.image?.length === 0
             ? defaultImage
             : selectedOrganization?.image;
 
@@ -351,7 +355,7 @@ export default AdminNavBar;
 
 const Loader = () => {
   const dummyNavItems = Array.from({ length: 6 });
-  const dummyTabItems = ['Org Configuration', 'SSO', 'Notifications', 'Billing & Stats', 'Branding'];
+  const dummyTabItems = ['Tenant Configuration', 'SSO', 'Notifications', 'Billing & Stats', 'Branding'];
   const { leftSideBarOpenByClick, windowWidth, themeMode } = useContext(Context);
   const theme = getTheme(themeMode);
   return (

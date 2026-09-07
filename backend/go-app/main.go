@@ -501,7 +501,13 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 
 	neworg, err := shuffle.GetOrg(ctx, org.Id)
 	if err == nil {
-		//neworg.Users = append(neworg.Users, *newUser)
+		orgUsers := make([]shuffle.User, 0, len(neworg.Users)+1)
+		for _, orgUser := range neworg.Users {
+			if orgUser.Id != "" && orgUser.Id != newUser.Id {
+				orgUsers = append(orgUsers, orgUser)
+			}
+		}
+		neworg.Users = append(orgUsers, *newUser)
 		for tutorialIndex, tutorial := range neworg.Tutorials {
 			if tutorial.Name == "Invite teammates" {
 				neworg.Tutorials[tutorialIndex].Description = fmt.Sprintf("%d users are in your org. Org name and Image change next.", len(neworg.Users))
@@ -3369,16 +3375,21 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 	dockerfileDestination := fmt.Sprintf("%s/Dockerfile", basePath)
 
 	// Read and copy the baseline Dockerfile
-	dockerfileContent, err := ioutil.ReadFile(dockerfileSource)
-	if err != nil {
-		foundDockerfile := shuffle.GetBaseDockerfile()
-		if len(foundDockerfile) > 0 {
-			dockerfileContent = foundDockerfile
-		} else {
-			log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
-			resp.WriteHeader(500)
-			resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
-			return
+	var dockerfileContent []byte
+	if os.Getenv("SHUFFLE_APP_BUILD_AIRGAPPED") == "true" {
+		dockerfileContent = shuffle.GetBaseDockerfile()
+	} else {
+		dockerfileContent, err = ioutil.ReadFile(dockerfileSource)
+		if err != nil {
+			foundDockerfile := shuffle.GetBaseDockerfile()
+			if len(foundDockerfile) > 0 {
+				dockerfileContent = foundDockerfile
+			} else {
+				log.Printf("[ERROR] Failed to read baseline Dockerfile: %s", err)
+				resp.WriteHeader(500)
+				resp.Write([]byte(`{"success": false, "reason": "Failed to read baseline Dockerfile"}`))
+				return
+			}
 		}
 	}
 
@@ -5359,6 +5370,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/health/executions/live", shuffle.GetLiveExecutionStats).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/health/opensearch-prefix", shuffle.HandleFixOpensearchPrefix).Methods("POST", "OPTIONS")
 
 	// Make user related locations
@@ -5367,6 +5379,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{userId}/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
@@ -5374,6 +5387,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/users/{userid}/remove", shuffle.HandleDeleteUsersAccountPermanent).Methods("DELETE", "OPTIONS")
 	// r.HandleFunc("/api/v1/users/{userID}/remove", shuffle.HandleDeleteUsersAccount).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", shuffle.DeleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
@@ -5383,6 +5397,7 @@ func initHandlers() {
 
 	// General - duplicates and old.
 	r.HandleFunc("/api/v1/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/download_docker_image", getDockerImage).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login", shuffle.HandleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
@@ -5393,6 +5408,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
 
+	r.HandleFunc("/api/v1/environments/{environment}", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getenvironments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", shuffle.HandleSetEnvironments).Methods("PUT", "OPTIONS")
 
@@ -5428,6 +5444,7 @@ func initHandlers() {
 
 
 	//r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/singul", singul.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/deactivate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
@@ -5449,7 +5466,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication", shuffle.GetAppAuthentication).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication", shuffle.AddAppAuthentication).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/config/batch", shuffle.SetAuthenticationConfigBatch).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/summary", shuffle.GetOrgAppsSummary).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/actions", shuffle.GetWorkflowAppActions).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/authentication/group", shuffle.AddAppAuthenticationGroup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/authentication/group", shuffle.GetAppAuthenticationGroup).Methods("GET", "OPTIONS")
@@ -5462,8 +5482,14 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.UpdateUsecases).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/partner_usecases/{key}", shuffle.HandleGetIndividualUsecase).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/partners/{id}", shuffle.HandleGetPartner).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/partners/{id}/usecases", shuffle.HandleGetPartnerUsecases).Methods("GET", "OPTIONS")
 
 	// Legacy app things
+	r.HandleFunc("/api/v1/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/usecases/{key}", shuffle.HandlePublishUsecase).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/usecases/{key}", shuffle.HandleDeleteUsecase).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
@@ -5473,19 +5499,24 @@ func initHandlers() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", shuffle.GetWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", shuffle.SetNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/operations", shuffle.HandleAgentWorkflowOperations).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/search", shuffle.HandleWorkflowRunSearch).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", shuffle.HandleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", shuffle.GetWorkflowExecutions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/count", shuffle.HandleGetWorkflowRunCount).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/rerun", checkUnfinishedExecution).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/executions/{executionId}/abort", shuffle.AbortExecution).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/unpublish", makeWorkflowPublic).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", shuffle.LoadSpecificWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/minimal", shuffle.GetWorkflowMinimal).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/run", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflowUpdate).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/stream/history", shuffle.HandleStreamWorkflowHistory).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/duplicate", shuffle.DuplicateWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
@@ -5496,7 +5527,12 @@ func initHandlers() {
 	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate/llm", shuffle.HandleWorkflowGenerationResponse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/edit/llm", shuffle.HandleEditWorkflowWithLLM).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/workflows/generate", shuffle.GenerateSingulWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/correlations", shuffle.GetCorrelations).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/correlations", shuffle.GetCorrelations).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}/{key}", shuffle.HandleGetCacheKey).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/category/{category_key}/{key}/revisions", shuffle.GetDatastoreKeyRevisions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v2/datastore", shuffle.HandleSetDatastoreKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v2/datastore/category/{category_key}", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
@@ -5507,6 +5543,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/recommendations/modify", shuffle.HandleRecommendationAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/child_workflows", shuffle.GetChildWorkflows).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/validation", shuffle.GetWorkflowValidation).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/distribute/batch", shuffle.DistributeWorkflowsBatch).Methods("POST", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
@@ -5585,7 +5623,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleGetCacheKey).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v2/datastore/{category_key}/{key}", shuffle.HandleSetDatastoreKey).Methods("POST", "PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/delete_cache", shuffle.HandleDeleteCacheKeyPost).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
@@ -5607,6 +5648,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
+	r.HandleFunc("/api/v1/login/openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/disconnect_sso", shuffle.HandleDisconnectSSO).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/sso/link", shuffle.HandleGenerateProvisionUrl).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSAML).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
@@ -5649,8 +5693,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/conversation", shuffle.RunActionAI).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/conversation/history", shuffle.HandleGetConversationHistory).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/conversation/stream", shuffle.HandleStreamSupportLLM).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orborus", shuffle.GetOrborusDownloadCommand).Methods("GET")
 	r.HandleFunc("/api/v1/chat/completions", shuffle.RunAiQueryHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/vulnerabilities", shuffle.GetVulnerabilities).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/vulnerabilities/{id}", shuffle.GetVulnerability).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/vulnerabilities", shuffle.GetVulnerability).Methods("POST", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")

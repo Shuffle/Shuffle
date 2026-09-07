@@ -451,7 +451,7 @@ const Header = (props) => {
               handleClose();
             }}
           >
-            <BusinessIcon style={{ marginRight: 5 }} /> Organization
+            <BusinessIcon style={{ marginRight: 5 }} /> Tenant Admin 
           </MenuItem>
         </Link>
         <Link to="/settings" style={hrefStyle}>
@@ -1450,6 +1450,7 @@ const Header = (props) => {
         color="transparent"
         elevation={0}
         style={{
+          backgroundColor: "transparent",
           boxShadow: "none",
           minHeight: 68,
           maxHeight: 68,

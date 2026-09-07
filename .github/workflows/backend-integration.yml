@@ -177,7 +177,12 @@ jobs:
           memcached_host="${SHUFFLE_MEMCACHED%:*}"
           memcached_port="${SHUFFLE_MEMCACHED##*:}"
           for attempt in $(seq 1 30); do
-            if timeout 1 bash -c "</dev/tcp/${memcached_host}/${memcached_port}" 2>/dev/null; then
+            if timeout 3 bash -c '
+              exec 3<>"/dev/tcp/$1/$2"
+              printf "version\r\n" >&3
+              IFS= read -r response <&3
+              [[ "$response" == VERSION\ * ]]
+            ' _ "$memcached_host" "$memcached_port" 2>/dev/null; then
               exit 0
             fi
             if [[ "$attempt" -eq 30 ]]; then

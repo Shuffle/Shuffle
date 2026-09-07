@@ -37,7 +37,7 @@ import AddIcon from '@mui/icons-material/Add';
 import Mousetrap from "mousetrap";
 import LicencePopup from "../components/LicencePopup.jsx";
 import { Context } from "../context/ContextApi.jsx";
-import { getTheme } from "../theme.jsx";
+import theme, { getTheme } from "../theme.jsx";
 
 const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
 ? window.location.pathname
@@ -47,9 +47,8 @@ const curpath = (typeof window !== "undefined" && window.location && typeof wind
 const menuData = {
   Products: [
     {
-      title: "Shuffle",
-      description:
-        "The most versatile automation engine. Focused on cybersecurity.",
+      title: "Shuffle Core",
+      description: "The most versatile no-code automation engine. Works onprem, hybrid and in the cloud.",
       icon: "/images/icons/shuffleLogo.svg",
       path: "/docs/about",
       gaData: {
@@ -59,15 +58,38 @@ const menuData = {
       }
     },
     {
+      title: "Shuffle Security",
+      description: "Security platform for Agent-powered incident mananagement, host monitoring and vulnerabilities.",
+      icon: theme.palette.singulBlackWhite,
+      path: "https://security.shuffler.io",
+      gaData: {
+        category: "navbar",
+        action: "products_click",
+        label: "security_click"
+      }
+    },
+	/*
+    {
       title: "Singul",
-      description:
-        "Connect to your favorite services with a singul line of code.",
+      description: "Connect to your favorite services with a singul line of code. Standardised outputs from 3000+ apps.",
       icon: "/images/logos/singul.svg",
       path: "https://singul.io",
       gaData: {
         category: "navbar",
         action: "products_click",
         label: "singul_click"
+      }
+    },
+	*/
+    {
+      title: "Shuffle-MCPs",
+      description: "Library to put all integrations natively in YOUR product.",
+      icon: "/images/logos/npm-logo.png",
+      path: "https://security.shuffler.io/shuffle-mcp-demo",
+      gaData: {
+        category: "navbar",
+        action: "products_click",
+        label: "library_click"
       }
     },
 	/*
@@ -163,6 +185,43 @@ const menuData = {
             }
           },
           { title: "FAQ", icon: "/images/icons/faq.svg", hoverIcon: "/images/icons/faq_hover.svg", link: "/faq", gaData: { category: "navbar", action: "resources_click", label: "faq" } },
+        ],
+      },
+      {
+        title: "Technology",
+        items: [
+          {
+            title: "Schemaless",
+            icon: "/images/logos/schemaless.png",
+            hoverIcon: "/images/logos/schemaless.png",
+            link: "https://schemaless.org",
+            gaData: {
+              category: "navbar",
+              action: "resources_click",
+              label: "schemaless_click"
+            }
+          },
+          {
+            title: "Singul",
+            icon: "/images/logos/singul.svg",
+            hoverIcon: "/images/logos/singul.svg",
+            link: "https://singul.io",
+            gaData: {
+              category: "navbar",
+              action: "resources_click",
+              label: "singul_click"
+            }
+          },
+          { title: "App Generator", 
+            icon: "/images/icons/settings.svg", 
+            hoverIcon: "/images/icons/settings_hover.svg", 
+            link: "/docs/AI#app_generation", 
+            gaData: { 
+              category: "navbar", 
+              action: "resources_click", 
+              label: "app_generator_click" 
+            } 
+          },
         ],
       },
       {
@@ -390,7 +449,7 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
 
             <Collapse in={openSection === section}>
               {section === 'Resources' ? (
-                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)', }}>
                   {menuData.Resources.columns.map((column, index) => (
                     <Box 
                       key={index} 
@@ -430,6 +489,7 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                                   if (isCloud) {
                                     ReactGA.event(platform.gaData);
                                   }
+
                                   window.open(platform.link, '_blank')
                                   return;
                                 }}
@@ -608,8 +668,10 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                           variant="body2" 
                           sx={{ 
                             color: 'white',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             fontFamily: theme.typography.fontFamily,
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
                           }}
                         >
                           {item.description}
@@ -749,6 +811,7 @@ const Navbar = (props) => {
     serverside,
     billingInfo,
     SHUFFLE_VERSION,
+
     notifications,
   } = props;
 
@@ -953,7 +1016,7 @@ const Navbar = (props) => {
 
   const menuItemBox = {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     padding: 2,
     paddingTop: "20px",
     paddingBottom: "20px",
@@ -992,7 +1055,7 @@ const Navbar = (props) => {
   const renderMenuContent = (item, isCloud) => {
     if (item === "Resources") {
       return (
-        <Box sx={{ display: "flex", gap: 8, p: 1.5 }}>
+        <Box sx={{ display: "flex", gap: 5, p: 1.5 }}>
           {menuData.Resources.columns.map((column, index) => (
             <Box
               key={index}
@@ -1227,14 +1290,14 @@ const Navbar = (props) => {
             component="img"
             src={menuItem.icon}
             sx={{
-              width: isCloud ? 44 : 75,
-              height: isCloud ? 44 : 75,
-              padding: "20px",
+              width: isCloud ? (menuItem.title === "Shuffle Security" || menuItem.title === "Shuffle-MCPs" ? 58 : 44) : 75,
+              height: isCloud ? (menuItem.title === "Shuffle Security" || menuItem.title === "Shuffle-MCPs" ? 58 : 44) : 75,
+              padding: (menuItem.title === "Shuffle Security" || menuItem.title === "Shuffle-MCPs") ? "13px" : "20px",
               borderRadius: 1.5,
               backgroundColor: "#2F2F2F",
             }}
           />
-          <Box sx={{ paddingTop: "5px"}}>
+          <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography
                 sx={{
@@ -1330,7 +1393,7 @@ const Navbar = (props) => {
                   : item === "Services"
                   ? -50
                   : item === "Resources"
-                  ? isTabletOrMobile ? -330 : -250
+                  ? isTabletOrMobile ? -400 : -310
                   : 0,
               backgroundColor: "#212121",
               borderTopLeftRadius: 0,
@@ -1347,7 +1410,7 @@ const Navbar = (props) => {
               transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease", 
               pointerEvents: openMenu === item ? "auto" : "none",
               ...(item === "Resources" && {
-                width: "900px",
+                width: "1060px",
                 padding: 3,
               }),
             }}
@@ -2429,7 +2492,7 @@ const Navbar = (props) => {
                                 fontSize: '14px',
                                 fontFamily: theme.typography.fontFamily 
                               }}>
-                                Organization
+                                Tenant Admin 
                               </Typography>
                             </Box>
                           </MenuItem>

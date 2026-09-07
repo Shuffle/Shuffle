@@ -3118,7 +3118,7 @@ const Billing = memo((props) => {
 				</div>
 			)}
 
-			{!isChildOrg && isCloud && (
+			{!isChildOrg && false && isCloud && (
 				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 50, maxWidth: 860 }} id="professional-services">
 					<Typography variant="h6" style={{ marginBottom: 5, fontSize: 24, fontWeight: 500 }}>
 						Professional Services
@@ -3170,10 +3170,10 @@ const Billing = memo((props) => {
 					(
 					<>
 						<Typography color="textSecondary" style={{ marginTop: 20, fontSize: 16 }}>
-							Parent Organization App Executions: <strong>{monthlyAppRunsParent}</strong>
+							Parent Tenant App Executions: <strong>{monthlyAppRunsParent}</strong>
 						</Typography>
 						<Typography color="textSecondary" style={{ fontSize: 16 }}>
-							Sub-Organization App Executions: <strong>{monthlyAllSuborgExecutions || "N/A"}</strong>
+							Sub-Tenant App Executions: <strong>{monthlyAllSuborgExecutions || "N/A"}</strong>
 						</Typography>
 					</>
 				)}
@@ -3195,7 +3195,7 @@ const Billing = memo((props) => {
 						app runs.
 					</Typography>
 					<Typography color="textSecondary" style={{ fontSize: 16, marginTop: 10 }}>
-						<span style={{fontWeight: 'bold'}}>Please note</span>: Once your app runs reach the set alert threshold, all admins in the organization will receive an email notification. For Parent organizations, the alert will be sent base on the total app runs from both parent and sub-organizations. For Sub-organizations, the alert will be sent based on the app runs of the sub-organization only.
+						<span style={{fontWeight: 'bold'}}>Please note</span>: Once your app runs reach the set alert threshold, all admins in the tenant will receive an email notification. For Parent tenants, the alert will be sent base on the total app runs from both parent and sub-tenants. For Sub-tenants, the alert will be sent based on the app runs of the sub-tenants only.
 					</Typography>
 					<div style={{ marginTop: 15 }}>
 						{alertThresholds.map((threshold, index) => (
@@ -3357,7 +3357,7 @@ const Billing = memo((props) => {
 							⚠️ Support Only - App Run Limit Control
 						</Typography>
 						<Typography color="textSecondary" style={{ fontSize: 16, marginBottom: 15 }}>
-							<strong>Note:</strong> Setting an app run hard limit below current usage will immediately stop all workflow executions for this organization.
+							<strong>Note:</strong> Setting an app run hard limit below current usage will immediately stop all workflow executions for this tenant.
 						</Typography>
 						<Typography color="textSecondary" style={{ fontSize: 14, marginBottom: 20 }}>
 							Current app runs this month: <strong>{Number(monthlyAppRunsParent ?? 0) + Number(monthlyAllSuborgExecutions ?? 0)}</strong> / <strong>{userdata.app_execution_limit}</strong>
@@ -3485,18 +3485,18 @@ const Billing = memo((props) => {
 					>
 						{isChildOrg ? null :
 						<Tab 
-							label="All Organization Stats"
+							label="All Tenant Stats"
 							style={{ textTransform: 'none',}}
 							value={0}
 						/>}
 						<Tab
-							label={isChildOrg ? "Organization Stats" : "Parent Organization Stats"}
+							label={isChildOrg ? "Tenant Stats" : "Parent Tenant Stats"}
 							style={{ textTransform: 'none',}}
 							value={1}
 						/>
 						{isChildOrg ? null :
 						<Tab
-							label="Child Organization Stats"
+							label="Sub-Tenant Stats"
 							disabled={isChildOrg}
 							style={{ textTransform: 'none', }}
 							value={2}
@@ -3931,7 +3931,7 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 				<IncreaseLimitPopUp open={open} onClose={HandleClosePopUP} limit={limit} HandleEditLimit={HandleEditLimit} setLimit={setLimit} editing={editing} setEditing={setEditing} editingOrgId={editingOrgId} setEditingOrgId={setEditingOrgId}/>
 			)}
 			<Typography style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}>
-				Child Organizations
+				Child Tenants 
 			</Typography>
 			<div style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
 				<Typography color="textSecondary" style={{ marginTop: 10, fontSize: 16 }}>
@@ -4094,7 +4094,6 @@ const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
 	  height: '100%',
 	  boxSizing: 'border-box',
 	  overflow: 'hidden',
-		maxHeight: 3000,
 		overflowY: "auto",
 		scrollbarColor: theme.palette.scrollbarColorTransparent,
 		scrollbarWidth: 'thin'
