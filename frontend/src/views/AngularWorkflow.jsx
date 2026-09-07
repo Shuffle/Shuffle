@@ -21542,7 +21542,7 @@ const AngularWorkflow = (defaultprops) => {
             marginTop: 1,
             marginLeft: visibleUsers.length > 0 ? 1 : 0,
           }}>
-            <WorkflowHistory workflowId={workflow.id} globalUrl={globalUrl} theme={theme} />
+            <WorkflowHistory workflowId={workflow.id} globalUrl={streamUrl} theme={theme} />
           </div>
         ) : null}
       </div>

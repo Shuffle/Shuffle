@@ -1075,7 +1075,7 @@ const LicencePopup = (props) => {
     const finalFeatures = mergeUniqueFeatures(localSub.features, extraFeatures);
 
     const orgAppLimit = selectedOrganization?.sync_features?.app_executions?.limit || 0;
-    const orgOnPremAppLimit = selectedOrganization?.sync_features?.onprem_app_executions?.limit || 0;
+    const orgOnPremAppLimit = localSub?.active ? selectedOrganization?.sync_features?.onprem_app_executions?.limit : localSub?.limit || 0;
 
     const usedAppRuns = Number(monthlyAppRunsParent) + Number(monthlyAllSuborgExecutions);
     const annualGroupingActive = selectedOrganization?.sync_features?.annual_app_runs_grouping?.active === true;
@@ -1117,6 +1117,20 @@ const LicencePopup = (props) => {
       return String(text)
         .replace(/^\s*-\s+/, "")
         .trim();
+    };
+
+    // Returns the display value for a plan feature limit.
+    // Business / Enterprise (or limit === 0) always get "∞".
+    // Scale (non-trial) gets the supplied `scaleDefault`.
+    const getPlanFeatureLimit = (featureLimit, scaleDefault) => {
+      const planName = localSub?.name?.toLowerCase() ?? "";
+      const isUnlimitedPlan =
+        planName.includes("business") ||
+        planName.includes("enterprise");
+      if (isUnlimitedPlan) return "∞";
+      const isScalePlan = planName.includes("scale") && !planName.includes("trial");
+      if (isScalePlan) return scaleDefault;
+      return featureLimit;
     };
 
     const isCancelled = localSub.cancellationdate !== 0;
@@ -1873,7 +1887,7 @@ const LicencePopup = (props) => {
             {features?.multi_tenant?.active && (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Typography variant="body2" style={{ color: "#9be39b", fontWeight: 700, minWidth: 20, textAlign: "center" }}>
-                  {(features.multi_tenant.limit === 0 || (localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("enterprise"))) ? "∞" : features.multi_tenant.limit}
+                  {getPlanFeatureLimit(features.multi_tenant.limit, "3")}
                 </Typography>
                 <Typography variant="body2">Tenants</Typography>
               </div>
@@ -1882,7 +1896,7 @@ const LicencePopup = (props) => {
             {features?.multi_env?.active && (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Typography variant="body2" style={{ color: "#9be39b", fontWeight: 700, minWidth: 20, textAlign: "center" }}>
-                  {(features.multi_env.limit === 0 || (localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("enterprise"))) ? "∞" : features.multi_env.limit}
+                  {getPlanFeatureLimit(features.multi_env.limit, "1")}
                 </Typography>
                 <Typography variant="body2">Locations</Typography>
               </div>
@@ -2051,7 +2065,7 @@ const LicencePopup = (props) => {
 
                 {!isScalePlan && !isTrialPlan && getTrainingBtn()}
 
-                {(isScalePlan || isTrialPlan) && contactUsBtn()}
+                {((isScalePlan && localSub?.reference?.length > 0) || isTrialPlan) && contactUsBtn()}
 
                 {editBillingBtn}
               </div>
