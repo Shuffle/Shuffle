@@ -22,7 +22,7 @@ import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 // import AgentUI from "./views/AgentUI.jsx";
 import { AgentsView } from '@shuffleio/shuffle-mcps';
-import { CombinedDashboard, FormInput, Usecases as UsecasesSecurity } from '@shuffleio/shuffle-core';
+import { CombinedDashboard, OnboardingFlow, FormInput, Usecases as UsecasesSecurity } from '@shuffleio/shuffle-core';
 
 
 import Welcome from "./views/Welcome.jsx";
@@ -770,6 +770,42 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+					exact
+					path="/onboarding"
+					element={
+						<OnboardingFlow
+							cookies={cookies}
+							removeCookie={removeCookie}
+							isLoaded={isLoaded}
+							isLoggedIn={isLoggedIn}
+							globalUrl={globalUrl}
+							cookies={cookies}
+							userdata={userdata}
+							checkLogin={checkLogin}
+							theme={themeMode}
+							{...props}
+						/>
+					}
+				/>
+				<Route
+					exact
+					path="/onboarding/:key"
+					element={
+						<OnboardingFlow
+							cookies={cookies}
+							removeCookie={removeCookie}
+							isLoaded={isLoaded}
+							isLoggedIn={isLoggedIn}
+							globalUrl={globalUrl}
+							cookies={cookies}
+							userdata={userdata}
+							checkLogin={checkLogin}
+							theme={themeMode}
+							{...props}
+						/>
+					}
+				/>
 			<Route exact path="/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
 			<Route exact path="/workflows/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
         	<Route
