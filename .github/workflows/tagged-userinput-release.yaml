@@ -1,0 +1,48 @@
+name: Tagged User Input Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to build
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - main
+      version:
+        description: Version to publish (for example, 2.3.0-rc1)
+        required: true
+        type: string
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Validate version
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Version must look like 2.3.0 or 2.3.0-rc1"
+            exit 1
+          fi
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: validate
+    uses: ./.github/workflows/dockerbuild-manual.yaml
+    secrets: inherit
+    with:
+      mode: build
+      ref: ${{ inputs.branch }}
+      image_tag: ${{ needs.validate.outputs.version }}
+      build_frontend: "true"
+      build_backend: "true"
+      build_worker: "true"
+      push_to_dockerhub: "true"
