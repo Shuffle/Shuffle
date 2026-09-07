@@ -83,8 +83,10 @@ type retStruct struct {
 
 	WorkflowBackup        bool  `json:"workflow_backup"`
 	AppBackup             bool  `json:"app_backup"`
+	AiCloudSync           bool  `json:"ai_cloud_sync"`
 	WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
 	AppBackupUpdated      int64 `json:"app_backup_updated"`
+	AiCloudSyncUpdated    int64 `json:"ai_cloud_sync_updated"`
 }
 
 type Contact struct {
@@ -3872,8 +3874,10 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 
 		WorkflowBackup        bool  `json:"workflow_backup"`
 		AppBackup             bool  `json:"app_backup"`
+		AiCloudSync           bool  `json:"ai_cloud_sync"`
 		WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
 		AppBackupUpdated      int64 `json:"app_backup_updated"`
+		AiCloudSyncUpdated    int64 `json:"ai_cloud_sync_updated"`
 	}
 
 	responseData := retStruct{}
@@ -4001,7 +4005,7 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 		return nil
 	}
 
-	if freshOrg.SyncConfig.MergeSyncConfigBackup(responseData.WorkflowBackup, responseData.AppBackup, responseData.WorkflowBackupUpdated, responseData.AppBackupUpdated) {
+	if freshOrg.SyncConfig.MergeSyncConfigBackup(responseData.WorkflowBackup, responseData.AppBackup, responseData.AiCloudSync, responseData.WorkflowBackupUpdated, responseData.AppBackupUpdated, responseData.AiCloudSyncUpdated) {
 		err = shuffle.SetOrg(ctx, *freshOrg, freshOrg.Id)
 		if err != nil {
 			log.Printf("[WARNING] Failed persisting merged backup settings for org %s: %s", org.Id, err)
@@ -4112,8 +4116,10 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 
 	backupJob.WorkflowBackup = org.SyncConfig.WorkflowBackup
 	backupJob.AppBackup = org.SyncConfig.AppBackup
+	backupJob.AiCloudSync = org.SyncConfig.AiCloudSync
 	backupJob.WorkflowBackupUpdated = org.SyncConfig.WorkflowBackupUpdated
 	backupJob.AppBackupUpdated = org.SyncConfig.AppBackupUpdated
+	backupJob.AiCloudSyncUpdated = org.SyncConfig.AiCloudSyncUpdated
 
 	backupJobData, err := json.Marshal(backupJob)
 	if err != nil {
@@ -5897,6 +5903,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 
 	ctx := context.Background()
 	org.CloudSync = false
+	org.CloudSyncActive = false
 	org.SyncFeatures = shuffle.SyncFeatures{}
 	org.SyncConfig = shuffle.SyncConfig{}
 	org.Subscriptions = []shuffle.PaymentSubscription{}
@@ -5978,6 +5985,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 		WorkflowBackup bool `json:"workflow_backup" datastore:"workflow_backup"`
 		AppBackup      bool `json:"app_backup" datastore:"app_backup"`
+		AiCloudSync    bool `json:"ai_cloud_sync" datastore:"ai_cloud_sync"`
 	}
 
 	var tmpData ReturnData
@@ -6092,7 +6100,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// Everything below here is to SET UP CLOUD SYNC.
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
-		if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup || org.SyncConfig.AppBackup != tmpData.AppBackup {
+		if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup || org.SyncConfig.AppBackup != tmpData.AppBackup || org.SyncConfig.AiCloudSync != tmpData.AiCloudSync {
 			now := time.Now().Unix()
 			if org.SyncConfig.WorkflowBackup != tmpData.WorkflowBackup {
 				org.SyncConfig.WorkflowBackup = tmpData.WorkflowBackup
@@ -6101,6 +6109,10 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 			if org.SyncConfig.AppBackup != tmpData.AppBackup {
 				org.SyncConfig.AppBackup = tmpData.AppBackup
 				org.SyncConfig.AppBackupUpdated = now
+			}
+			if org.SyncConfig.AiCloudSync != tmpData.AiCloudSync {
+				org.SyncConfig.AiCloudSync = tmpData.AiCloudSync
+				org.SyncConfig.AiCloudSyncUpdated = now
 			}
 
 			err = shuffle.SetOrg(ctx, *org, org.Id)
@@ -6129,8 +6141,10 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 		WorkflowBackup        bool  `json:"workflow_backup"`
 		AppBackup             bool  `json:"app_backup"`
+		AiCloudSync           bool  `json:"ai_cloud_sync"`
 		WorkflowBackupUpdated int64 `json:"workflow_backup_updated"`
 		AppBackupUpdated      int64 `json:"app_backup_updated"`
+		AiCloudSyncUpdated    int64 `json:"ai_cloud_sync_updated"`
 	}
 
 	backupSettingsSetAt := time.Now().Unix()
@@ -6138,8 +6152,10 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		ApiKey:                tmpData.Apikey,
 		WorkflowBackup:        tmpData.WorkflowBackup,
 		AppBackup:             tmpData.AppBackup,
+		AiCloudSync:           tmpData.AiCloudSync,
 		WorkflowBackupUpdated: backupSettingsSetAt,
 		AppBackupUpdated:      backupSettingsSetAt,
+		AiCloudSyncUpdated:    backupSettingsSetAt,
 	}
 
 	b, err := json.Marshal(requestData)
@@ -6197,6 +6213,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// 2. Add iterative sync schedule for interval seconds
 	// 3. Add another environment for the org's users
 	org.CloudSync = true
+	org.CloudSyncActive = true
 
 	// set cache here for 30 min
 	cacheKey := fmt.Sprintf("org_sync_features_%s", org.Id)
@@ -6242,8 +6259,10 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 		WorkflowBackup:        responseData.WorkflowBackup,
 		AppBackup:             responseData.AppBackup,
+		AiCloudSync:           responseData.AiCloudSync,
 		WorkflowBackupUpdated: responseData.WorkflowBackupUpdated,
 		AppBackupUpdated:      responseData.AppBackupUpdated,
+		AiCloudSyncUpdated:    responseData.AiCloudSyncUpdated,
 	}
 
 	if strings.Contains("https://", responseData.CloudSyncUrl) && strings.Contains("shuffler.io", responseData.CloudSyncUrl) {

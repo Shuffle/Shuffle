@@ -49,6 +49,7 @@ const CloudSyncTab = (props) => {
     const [userSettings, setUserSettings] = React.useState({});
     const [workflowBackup, setWorkflowBackup] = React.useState(false);
     const [appBackup, setAppBackup] = React.useState(false);
+    const [aiCloudSync, setAiCloudSync] = React.useState(false);
     const [, forceUpdate] = React.useState();
     const itemColor = "white";
     const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
@@ -61,7 +62,8 @@ const CloudSyncTab = (props) => {
     useEffect(() => {
         setWorkflowBackup(selectedOrganization?.sync_config?.workflow_backup === true);
         setAppBackup(selectedOrganization?.sync_config?.app_backup === true);
-    }, [selectedOrganization?.sync_config?.workflow_backup, selectedOrganization?.sync_config?.app_backup]);
+        setAiCloudSync(selectedOrganization?.sync_config?.ai_cloud_sync === true);
+    }, [selectedOrganization?.sync_config?.workflow_backup, selectedOrganization?.sync_config?.app_backup, selectedOrganization?.sync_config?.ai_cloud_sync]);
 
     const handleGetOrg = (orgId) => {
         if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
@@ -182,6 +184,7 @@ const CloudSyncTab = (props) => {
             disable: disableSync,
             workflow_backup: disableSync ? false : workflowBackup,
             app_backup: disableSync ? false : appBackup,
+            ai_cloud_sync: disableSync ? false : aiCloudSync,
         };
 
         const url = globalUrl + "/api/v1/cloud/setup";
@@ -245,7 +248,7 @@ const CloudSyncTab = (props) => {
             });
     };
 
-    const updateBackupSetting = (newWorkflowBackup, newAppBackup) => {
+    const updateBackupSetting = (newWorkflowBackup, newAppBackup, newAiCloudSync) => {
         const url = isCloud
             ? `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`
             : `${globalUrl}/api/v1/cloud/setup`;
@@ -254,13 +257,14 @@ const CloudSyncTab = (props) => {
             ? {
                 org_id: selectedOrganization.id,
                 editing: "sync_config",
-                sync_config: { workflow_backup: newWorkflowBackup, app_backup: newAppBackup },
+                sync_config: { workflow_backup: newWorkflowBackup, app_backup: newAppBackup, ai_cloud_sync: newAiCloudSync },
             }
             : {
                 organization: selectedOrganization,
                 disable: false,
                 workflow_backup: newWorkflowBackup,
                 app_backup: newAppBackup,
+                ai_cloud_sync: newAiCloudSync,
             };
 
         fetch(url, {
@@ -280,6 +284,7 @@ const CloudSyncTab = (props) => {
                     toast("Failed updating backup settings: " + responseJson.reason);
                     setWorkflowBackup(selectedOrganization?.sync_config?.workflow_backup === true);
                     setAppBackup(selectedOrganization?.sync_config?.app_backup === true);
+                    setAiCloudSync(selectedOrganization?.sync_config?.ai_cloud_sync === true);
                     return;
                 }
 
@@ -290,6 +295,7 @@ const CloudSyncTab = (props) => {
                 toast("Err: " + error.toString());
                 setWorkflowBackup(selectedOrganization?.sync_config?.workflow_backup === true);
                 setAppBackup(selectedOrganization?.sync_config?.app_backup === true);
+                setAiCloudSync(selectedOrganization?.sync_config?.ai_cloud_sync === true);
             });
     };
 
@@ -299,7 +305,7 @@ const CloudSyncTab = (props) => {
 
         const isActive = isCloud ? true : selectedOrganization.cloud_sync;
         if (isActive) {
-            updateBackupSetting(newValue, appBackup);
+            updateBackupSetting(newValue, appBackup, aiCloudSync);
         }
     };
 
@@ -309,13 +315,38 @@ const CloudSyncTab = (props) => {
 
         const isActive = isCloud ? true : selectedOrganization.cloud_sync;
         if (isActive) {
-            updateBackupSetting(workflowBackup, newValue);
+            updateBackupSetting(workflowBackup, newValue, aiCloudSync);
+        }
+    };
+
+    const handleToggleAiCloudSync = () => {
+        const newValue = !aiCloudSync;
+        setAiCloudSync(newValue);
+
+        const isActive = isCloud ? true : selectedOrganization.cloud_sync;
+        if (isActive) {
+            updateBackupSetting(workflowBackup, appBackup, newValue);
         }
     };
 
     const BackupToggles = () => (
         <div style={{ marginTop: 20, marginBottom: 10, maxWidth: 500 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ marginRight: 10 }}>
+                    <Typography style={{ fontSize: 16, fontWeight: 400, color: theme.palette.text.primary }}>
+                        Shuffle Cloud AI
+                    </Typography>
+                    <Typography variant="body2" style={{ color: theme.palette.text.secondary, fontSize: 13 }}>
+                        Run AI Agent requests on Shuffle Cloud instead of on-prem. When enabled, you don't need an AI API key or a locally hosted model - requests are sent through your existing SLS connection and run on Shuffle Cloud instead.
+                    </Typography>
+                </div>
+                <Switch
+                    checked={aiCloudSync}
+                    onChange={handleToggleAiCloudSync}
+                    color="primary"
+                />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
                 <div style={{ marginRight: 10 }}>
                     <Typography style={{ fontSize: 16, fontWeight: 400, color: theme.palette.text.primary }}>
                         Backup workflows
