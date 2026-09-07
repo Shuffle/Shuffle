@@ -15,7 +15,7 @@
     "@mui/styles": "^6.1.4",
     "@mui/x-data-grid": "^5.17.11",
     "@mui/x-date-pickers": "^6.11.1",
-    "@shuffleio/shuffle-core": "^0.0.45",
+    "@shuffleio/shuffle-core": "^0.0.44",
     "@shuffleio/shuffle-mcps": "^0.0.40",
     "@types/algoliasearch": "^3.34.11",
     "@uiw/codemirror-theme-basic": "^4.21.20",
