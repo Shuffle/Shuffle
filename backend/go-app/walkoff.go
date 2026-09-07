@@ -384,23 +384,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	// Org => Org ID here
 	orgId := request.Header.Get("Org")
 	if len(orgId) == 0 {
-		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
-		/*
-			resp.WriteHeader(403)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org header. This can be done by setting the 'ORG' environment variable for Orborus to your Org ID in Shuffle"}`)))
-			return
-		*/
-	}
-
-	// This section is cloud custom for now
-	auth := request.Header.Get("Authorization")
-	if len(auth) == 0 {
-		//log.Printf("[AUDIT] No Authorization header set. Env: %s, org: %s", orgId, environment)
-		/*
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the auth header (only applicable for cloud for now)."}`)))
-			return
-		*/
+		log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 	}
 
 	ctx := shuffle.GetContext(request)
@@ -411,14 +395,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	var env *shuffle.Environment
 	found := false
-	//for i := range envs {
-	//	if envs[i].Name == environment {
-	//		env = &envs[i]
-	//		found = true
-	//		break
-	//	}
-	//}
-
 	parsedEnvName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-"))
 	for i := range envs {
 		parsedInnerName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(envs[i].Name, " ", "-"), "_", "-"))
@@ -429,12 +405,22 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	// Only works onprem - shared queues across tenants
+	// Only works onprem - shared queues across tenants without explicit sharing
 	// without tenancy
 	if !found {
 		env, err = shuffle.GetEnvironment(ctx, environment, "")
 		if err != nil {
 			log.Printf("[WARNING] Failed to find the environment(%s) in org(%s). Could cause with Failover test", environment, orgId)
+		}
+	}
+
+	// After 1788778295. 2.3.0 release date~
+	auth := request.Header.Get("Authorization")
+	if strings.ToLower(env.Name) == strings.ToLower(environment) && strings.ToLower(environment) != "shuffle" && env.Created > 1788778295 && len(env.Auth) > 0 {
+		if auth != env.Auth {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Header is required for NEW auths made after Shuffle 2.3.0 that is not default 'shuffle'"}`)))
+			return
 		}
 	}
 
