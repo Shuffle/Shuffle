@@ -75,7 +75,7 @@ import {
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
 import BillingStats, { StatsDateRangePicker, parseDate as parseStatsDate } from "../components/BillingStats.jsx";
-import LineChartWrapper, { TokenBarChart } from '../components/LineChartWrapper.jsx';
+import LineChartWrapper from '../components/LineChartWrapper.jsx';
 import LicencePopup from "../components/LicencePopup.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 
@@ -3796,18 +3796,20 @@ const Billing = memo((props) => {
 								style={{ textTransform: 'none', }}
 								value={3}
 						/>
-						{isCloud || selectedOrganization?.cloud_sync ?
+						{(isCloud && !isChildOrg) || selectedOrganization?.cloud_sync ?
 							<Tab
 								label={isCloud ? "On-Prem — SLS (Shuffle Licensing System)" : "Cloud — SLS (Shuffle Licensing System)"}
 								style={{ textTransform: 'none', }}
 								value={4}
 							/>
 						: null}
-						<Tab
-							label="Other Stats"
-							style={{ textTransform: 'none', }}
-							value={5}
-						/>
+						{!isChildOrg && (
+							<Tab
+								label="Other Stats"
+								style={{ textTransform: 'none', }}
+								value={5}
+							/>
+						)}
 					</Tabs>
 
 					<div style={{paddingBottom: 200, minHeight: 750, paddingRight: 60 }}>
@@ -3894,28 +3896,25 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 	const [startTime, setStartTime] = useState("")
 	const [endTime, setEndTime] = useState("")
 
-	const [parentInputTokens, setParentInputTokens] = useState(undefined)
-	const [parentOutputTokens, setParentOutputTokens] = useState(undefined)
+	const [parentLLMTokens, setParentLLMTokens] = useState(undefined)
 	const [parentConvertedRuns, setParentConvertedRuns] = useState(undefined)
 
-	const [childInputTokens, setChildInputTokens] = useState(undefined)
-	const [childOutputTokens, setChildOutputTokens] = useState(undefined)
+	const [childLLMTokens, setChildLLMTokens] = useState(undefined)
 	const [childConvertedRuns, setChildConvertedRuns] = useState(undefined)
 
-	const [totalInputTokens, setTotalInputTokens] = useState(0)
-	const [totalOutputTokens, setTotalOutputTokens] = useState(0)
+	const [totalLLMTokens, setTotalLLMTokens] = useState(0)
 	const [totalConvertedRuns, setTotalConvertedRuns] = useState(0)
 
 
 	const { themeMode, brandColor } = useContext(Context)
 	const theme = getTheme(themeMode, brandColor)
 
-	// 1M input tokens = 250 app runs; 1M output tokens = 1500 app runs
-	const INPUT_CONVERSION = 250 / 1_000_000
-	const OUTPUT_CONVERSION = 1500 / 1_000_000
+	// 1M AI (LLM) tokens = 300 app runs
+	const AI_TOKEN_CONVERSION = 300 / 1_000_000
 
-	const calcConvertedRuns = (inputT, outputT) =>
-		Math.round((inputT * INPUT_CONVERSION) + (outputT * OUTPUT_CONVERSION))
+	// Backend (GetCorrectedStats) uses integer division (truncation), not rounding — match that here.
+	const calcConvertedRuns = (tokens) =>
+		Math.floor(tokens * AI_TOKEN_CONVERSION)
 
 	const formatTokens = (n) => {
 		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
@@ -3971,8 +3970,7 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		const filterEnd = parseDate(endTime, true)
 		filterEnd.setHours(23, 59, 59, 999)
 
-		const inputData    = { key: "Input Tokens", data: [] }
-		const outputData   = { key: "Output Tokens", data: [] }
+		const tokenData     = { key: "LLM Tokens", data: [] }
 		const convertedData = { key: "Converted App Runs", data: [] }
 
 		if (dailyStats) {
@@ -3986,38 +3984,17 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 
 				if (normalizedItemDate < filterStart || normalizedItemDate > filterEnd) continue
 
-			const dayInput  = Number(item["agent_input_tokens"]  ?? 0) + Number(item["child_org_agent_input_tokens"]  ?? 0)
-			const dayOutput = Number(item["agent_output_tokens"] ?? 0) + Number(item["child_org_agent_output_tokens"] ?? 0)
+			const dayTokens = Number(item["llm_tokens"] ?? 0)
 
-			if (dayInput > 0 || dayOutput > 0) {
+			if (dayTokens > 0) {
 					const isoDate = new Date(item["date"]).toISOString()
-					inputData.data.push({ key: isoDate, data: dayInput })
-					outputData.data.push({ key: isoDate, data: dayOutput })
-					convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dayInput, dayOutput) })
+					tokenData.data.push({ key: isoDate, data: dayTokens })
+					convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dayTokens) })
 				}
 			}
 		}
 
-		const today = new Date()
-		const todayStart = new Date(today)
-		todayStart.setHours(0, 0, 0, 0)
-		const shouldAddToday =
-			todayStart >= filterStart &&
-			(!endTime || new Date(endTime) >= todayStart)
-
-		if (shouldAddToday) {
-			const dailyInput  = Number(inputdata["daily_agent_input_tokens"]  ?? 0) + Number(inputdata["daily_child_org_agent_input_tokens"]  ?? 0)
-			const dailyOutput = Number(inputdata["daily_agent_output_tokens"] ?? 0) + Number(inputdata["daily_child_org_agent_output_tokens"] ?? 0)
-			if (dailyInput > 0 || dailyOutput > 0) {
-				const isoDate = today.toISOString()
-				inputData.data.push({ key: isoDate, data: dailyInput })
-				outputData.data.push({ key: isoDate, data: dailyOutput })
-				convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dailyInput, dailyOutput) })
-			}
-		}
-
-		setParentInputTokens(inputData.data.length > 0 ? inputData : undefined)
-		setParentOutputTokens(outputData.data.length > 0 ? outputData : undefined)
+		setParentLLMTokens(tokenData.data.length > 0 ? tokenData : undefined)
 		setParentConvertedRuns(convertedData.data.length > 0 ? convertedData : undefined)
 	}, [startTime, endTime])
 
@@ -4032,9 +4009,8 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		const filterEnd = parseDate(endTime, true)
 		filterEnd.setHours(23, 59, 59, 999)
 
-		const inputData     = { key: "Input Tokens (Child Tenants)",        data: [] }
-		const outputData    = { key: "Output Tokens (Child Tenants)",       data: [] }
-		const convertedData = { key: "Converted App Runs (Child Tenants)",  data: [] }
+		const tokenData     = { key: "LLM Tokens (Child Tenants)",         data: [] }
+		const convertedData = { key: "Converted App Runs (Child Tenants)", data: [] }
 
 		if (dailyStats) {
 			for (let key in dailyStats) {
@@ -4045,37 +4021,16 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 				normalizedItemDate.setHours(0, 0, 0, 0)
 				if (normalizedItemDate < filterStart || normalizedItemDate > filterEnd) continue
 
-				const dayInput  = Number(item["child_org_agent_input_tokens"]  ?? 0)
-				const dayOutput = Number(item["child_org_agent_output_tokens"] ?? 0)
-				if (dayInput > 0 || dayOutput > 0) {
+				const dayTokens = Number(item["child_org_llm_tokens"] ?? 0)
+				if (dayTokens > 0) {
 					const isoDate = new Date(item["date"]).toISOString()
-					inputData.data.push({ key: isoDate, data: dayInput })
-					outputData.data.push({ key: isoDate, data: dayOutput })
-					convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dayInput, dayOutput) })
+					tokenData.data.push({ key: isoDate, data: dayTokens })
+					convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dayTokens) })
 				}
 			}
 		}
 
-		const today = new Date()
-		const todayStart = new Date(today)
-		todayStart.setHours(0, 0, 0, 0)
-		const shouldAddToday =
-			todayStart >= filterStart &&
-			(!endTime || new Date(endTime) >= todayStart)
-
-		if (shouldAddToday) {
-			const dailyInput  = Number(inputdata["daily_child_org_agent_input_tokens"]  ?? 0)
-			const dailyOutput = Number(inputdata["daily_child_org_agent_output_tokens"] ?? 0)
-			if (dailyInput > 0 || dailyOutput > 0) {
-				const isoDate = today.toISOString()
-				inputData.data.push({ key: isoDate, data: dailyInput })
-				outputData.data.push({ key: isoDate, data: dailyOutput })
-				convertedData.data.push({ key: isoDate, data: calcConvertedRuns(dailyInput, dailyOutput) })
-			}
-		}
-
-		setChildInputTokens(inputData.data.length > 0 ? inputData : undefined)
-		setChildOutputTokens(outputData.data.length > 0 ? outputData : undefined)
+		setChildLLMTokens(tokenData.data.length > 0 ? tokenData : undefined)
 		setChildConvertedRuns(convertedData.data.length > 0 ? convertedData : undefined)
 	}, [startTime, endTime])
 
@@ -4095,10 +4050,8 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		const filterEnd = parseDate(endTime, true)
 		filterEnd.setHours(23, 59, 59, 999)
 
-		let parentInput = 0
-		let parentOutput = 0
-		let childInput = 0
-		let childOutput = 0
+		let parentTokens = 0
+		let childTokens = 0
 
 		// Calculate parent & child sum from daily stats
 		const parentDailyStats = statistics["daily_statistics"]
@@ -4110,29 +4063,14 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 				const itemDate = new Date(item["date"])
 				itemDate.setHours(0, 0, 0, 0)
 				if (itemDate >= filterStart && itemDate <= filterEnd) {
-					parentInput += Number(item["agent_input_tokens"] ?? 0)
-					parentOutput += Number(item["agent_output_tokens"] ?? 0)
-					childInput += Number(item["child_org_agent_input_tokens"] ?? 0)
-					childOutput += Number(item["child_org_agent_output_tokens"] ?? 0)
+					parentTokens += Number(item["llm_tokens"] ?? 0)
+					childTokens += Number(item["child_org_llm_tokens"] ?? 0)
 				}
 			}
 		}
 
-		// Add today's parent & child usage if within range
-		const today = new Date()
-		const todayStart = new Date(today)
-		todayStart.setHours(0, 0, 0, 0)
-		const shouldAddToday = todayStart >= filterStart && todayStart <= filterEnd
-		if (shouldAddToday) {
-			parentInput += Number(statistics["daily_agent_input_tokens"] ?? 0)
-			parentOutput += Number(statistics["daily_agent_output_tokens"] ?? 0)
-			childInput += Number(statistics["daily_child_org_agent_input_tokens"] ?? 0)
-			childOutput += Number(statistics["daily_child_org_agent_output_tokens"] ?? 0)
-		}
-
-		setTotalInputTokens(parentInput + childInput)
-		setTotalOutputTokens(parentOutput + childOutput)
-		setTotalConvertedRuns(calcConvertedRuns(parentInput + childInput, parentOutput + childOutput))
+		setTotalLLMTokens(parentTokens + childTokens)
+		setTotalConvertedRuns(calcConvertedRuns(parentTokens + childTokens))
 	}, [statistics, startTime, endTime])
 
 	return (
@@ -4149,25 +4087,18 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		</a>. The metric accuracy may be delayed by 24 hours.
 	</Typography>
 	<Typography style={{ marginLeft: 5, marginBottom: 16, fontSize: 16 }} color="textSecondary">
-		1 Million Input Tokens = 250 app runs &nbsp;|&nbsp; 1 Million Output Tokens = 1500 app runs
+		1 Million AI Tokens = 300 app runs
 	</Typography>
 
 		<div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginLeft: 5 }}>
-			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>Input tokens used this month (parent tenant)</Typography>}>
+			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>LLM tokens used this month (parent + child tenants)</Typography>}>
 				<Box sx={paperStyle}>
-					<Typography variant="h5">{formatTokens(totalInputTokens)}</Typography>
-					<Typography variant="body2">Input Tokens</Typography>
+					<Typography variant="h5">{formatTokens(totalLLMTokens)}</Typography>
+					<Typography variant="body2">LLM Tokens</Typography>
 				</Box>
 			</Tooltip>
 
-			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>Output tokens used this month (parent tenant)</Typography>}>
-				<Box sx={paperStyle}>
-					<Typography variant="h5">{formatTokens(totalOutputTokens)}</Typography>
-					<Typography variant="body2">Output Tokens</Typography>
-				</Box>
-			</Tooltip>
-
-			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>App run equivalent: (Input ÷ 1M × 250) + (Output ÷ 1M × 1500)</Typography>}>
+			<Tooltip title={<Typography variant="body1" style={{ padding: 10 }}>App run equivalent: (LLM Tokens ÷ 1M × 300)</Typography>}>
 				<Box sx={paperStyle}>
 					<Typography variant="h5">{totalConvertedRuns.toLocaleString()}</Typography>
 					<Typography variant="body2">Converted App Runs</Typography>
@@ -4182,14 +4113,8 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 				/>
 		</div>
 
-		{(parentInputTokens !== undefined || parentOutputTokens !== undefined) && (
-			<TokenBarChart
-				inputSeries={parentInputTokens}
-				outputSeries={parentOutputTokens}
-				title="AI Token Usage (Parent Tenant)"
-				height={300}
-				border={false}
-			/>
+		{parentLLMTokens !== undefined && (
+			<LineChartWrapper keys={parentLLMTokens} height={300} width="100%" inputname="LLM Token Usage (Parent Tenant)" border={false} />
 		)}
 		{parentConvertedRuns !== undefined && (
 			<LineChartWrapper keys={parentConvertedRuns} height={300} width="100%" inputname="Converted App Runs (Parent Tenant)" border={false} />
@@ -4197,19 +4122,13 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 
 		{selectedOrganization?.child_orgs?.length > 0 && (
 		<>
-			{childInputTokens === undefined && childOutputTokens === undefined && (
+			{childLLMTokens === undefined && (
 				<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, marginLeft: 5 }}>
 					No AI token usage recorded for child tenants in the selected period.
 				</Typography>
 			)}
-			{(childInputTokens !== undefined || childOutputTokens !== undefined) && (
-				<TokenBarChart
-					inputSeries={childInputTokens}
-					outputSeries={childOutputTokens}
-					title="AI Token Usage (Child Tenants)"
-					height={300}
-					border={false}
-				/>
+			{childLLMTokens !== undefined && (
+				<LineChartWrapper keys={childLLMTokens} height={300} width="100%" inputname="LLM Token Usage (Child Tenants)" border={false} />
 			)}
 			{childConvertedRuns !== undefined && (
 				<LineChartWrapper keys={childConvertedRuns} height={300} width="100%" inputname="Converted App Runs (Child Tenants)" border={false} />

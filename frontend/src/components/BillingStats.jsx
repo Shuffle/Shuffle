@@ -537,6 +537,7 @@ const AppStats = (defaultprops) => {
 			}
 		} else {
 
+
 			tmpstats["monthly_app_executions"] = appexecutions
 		}
 
@@ -699,6 +700,7 @@ const AppStats = (defaultprops) => {
     { label: "Cloud", checked: cloudChecked, setChecked: setCloudChecked },
     { label: "On-Prem", checked: onpremChecked, setChecked: setOnpremChecked },
   ];
+  
 	const formatCustomDate = (dateString) => {
 		if (!dateString || dateString === "0001-01-01T00:00:00Z") return '';
 		const date = new Date(dateString);
@@ -922,8 +924,7 @@ const AppStats = (defaultprops) => {
 			<ul>
 				<li>1 SMS = 3 appruns</li>
 				<li>1 Email = 2 appruns</li>
-				<li>1 Million AI Input Tokens = 250 app runs</li>
-				<li>1 Million AI Output Tokens = 1500 app runs</li>
+				<li>1 Million AI Tokens = 300 app runs</li>
 			</ul>
 		</Typography>
 		: null}
