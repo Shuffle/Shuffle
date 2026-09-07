@@ -368,8 +368,8 @@ github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
 github.com/shuffle/opensearch-go/v4 v4.0.0 h1:Mh85CD1MwOgXiFFYlzS1llnvdqL3CztRdR1ZT/SLIjU=
 github.com/shuffle/opensearch-go/v4 v4.0.0/go.mod h1:gVLZKQE5khQWMb68XBtgKrhu78oLGL2zHwAGnFMDwC0=
-github.com/shuffle/shuffle-shared v1.3.4 h1:/gmWmmdKW8ltHhrT98Y793shQc1+nxoMt3FS1SVoy6k=
-github.com/shuffle/shuffle-shared v1.3.4/go.mod h1:yANWqIkGTgRVCUHfp9HNiHOAxC/fCw18cplhzFb54zM=
+github.com/shuffle/shuffle-shared v1.3.10 h1:bCihB6kBu8uDoy6uY/dbPiCm90EhZl4BMvdU+8JOWek=
+github.com/shuffle/shuffle-shared v1.3.10/go.mod h1:yANWqIkGTgRVCUHfp9HNiHOAxC/fCw18cplhzFb54zM=
 github.com/shuffle/singul v0.0.33 h1:YNwfVKATPOaphODxltXtlqfM2RwIN+yNQ4Ml47Kn/x0=
 github.com/shuffle/singul v0.0.33/go.mod h1:TIbl1WqHr/NmTwUvwS7OuQMefF7Kvn4WF0aBwMcC8nQ=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
