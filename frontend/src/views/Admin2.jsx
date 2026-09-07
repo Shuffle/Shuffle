@@ -17,7 +17,7 @@ const Admin2 = (props) => {
     const {brandName, updateOrg, setUpdateOrg}  = useContext(Context)
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
-    let navigate = useNavigate();
+    let navigate = useNavigate();        
 
 	if (document !== undefined) {
         if (selectedOrganization?.name !== undefined) {
@@ -66,72 +66,117 @@ const Admin2 = (props) => {
                         responseJson.lead_info !== null
                     ) {
                         var leads = [];
-                        if (responseJson.lead_info.contacted) {
-                            leads.push("contacted");
+                        if (responseJson.lead_info.pov) {
+                            leads.push("POC License");
                         }
 
-                        if (responseJson.lead_info.customer) {
-                            leads.push("customer");
+                        if (responseJson.lead_info.shuffle_enterprise_license_old_customer) {
+                            leads.push("Enterprise License (Legacy)");
                         }
 
-                        if (responseJson.lead_info.old_customer) {
-                            leads.push("old customer");
+                        if (responseJson.lead_info.scale_license_cloud_trial) {
+                            leads.push("Scale License Cloud Trial");
                         }
 
-                        if (responseJson.lead_info.old_lead) {
-                            leads.push("old lead");
+                        if (responseJson.lead_info.scale_license_cloud_customer) {
+                            leads.push("Scale License Cloud");
                         }
 
-                        if (responseJson.lead_info.tech_partner) {
-                            leads.push("tech partner");
+                        if (responseJson.lead_info.scale_license_onprem_customer) {
+                            leads.push("Scale License Onprem");
+                        }
+
+                        if (responseJson.lead_info.opensource_license) {
+                            leads.push("Open Source License");
+                        }
+
+                        if (responseJson.lead_info.business_license_cloud) {
+                            leads.push("Business License Cloud");
+                        }
+
+                        if (responseJson.lead_info.business_license_onprem) {
+                            leads.push("Business License Onprem");
+                        }
+
+                        if (responseJson.lead_info.enterprise_license_cloud) {
+                            leads.push("Enterprise License Cloud");
+                        }
+
+                        if (responseJson.lead_info.enterprise_license_onprem) {
+                            leads.push("Enterprise License Onprem");
                         }
 
                         if (responseJson.lead_info.integration_partner) {
-                            leads.push("integration partner");
+                            leads.push("Integration Partner");
                         }
 
-						if (responseJson.lead_info.distribution_partner) {
-							leads.push("distribution partner");
-						}
+                        if (responseJson.lead_info.service_partner) {
+                            leads.push("Service Partner");
+                        }
 
                         if (responseJson.lead_info.channel_partner) {
-                            leads.push("channel partner");
+                            leads.push("Channel Partner");
                         }
 
-						if (responseJson.lead_info.service_partner) {
-							leads.push("service partner");
-						}
-
-                        if (responseJson.lead_info.creator) {
-                            leads.push("creator");
+                        if (responseJson.lead_info.tech_partner) {
+                            leads.push("Technology Partner");
                         }
 
-                        if (responseJson.lead_info.opensource) {
-                            leads.push("open source");
-                        }
-
-                        if (responseJson.lead_info.demo_done) {
-                            leads.push("demo done");
-                        }
-
-                        if (responseJson.lead_info.pov) {
-                            leads.push("pov");
+                        // Legacy statuses
+                        if (responseJson.lead_info.contacted) {
+                            leads.push("Contacted");
                         }
 
                         if (responseJson.lead_info.lead) {
-                            leads.push("lead");
+                            leads.push("Lead");
                         }
 
-                        if (responseJson.lead_info.student) {
-                            leads.push("student");
+                        if (responseJson.lead_info.demo_done) {
+                            leads.push("Demo Done");
+                        }
+
+                        if (responseJson.lead_info.customer) {
+                            leads.push("Customer");
+                        }
+
+                        if (responseJson.lead_info.old_customer) {
+                            leads.push("Old Customer");
+                        }
+
+                        if (responseJson.lead_info.old_lead) {
+                            leads.push("Old Lead");
+                        }
+
+                        if (responseJson.lead_info.opensource) {
+                            leads.push("Open Source");
+                        }
+
+                        if (responseJson.lead_info.opensource_license) {
+                            leads.push("Open Source License");
                         }
 
                         if (responseJson.lead_info.internal) {
-                            leads.push("internal");
+                            leads.push("Internal");
                         }
 
                         if (responseJson.lead_info.sub_org) {
-                            leads.push("sub_org");
+                            leads.push("Sub Org");
+                        }
+
+                        if (responseJson.lead_info.student) {
+                            leads.push("Student");
+                        }
+
+                        if (responseJson.lead_info.creator) {
+                            leads.push("Creator");
+                        }
+
+                        if (responseJson.lead_info.testing_shuffle) {
+                            leads.push("Testing Shuffle");
+                        }
+
+                        if (responseJson.lead_info.distribution_partner) {
+                            leads.push("Distribution Partner");
                         }
 
                         setSelectedStatus(leads);
@@ -315,7 +360,61 @@ const Admin2 = (props) => {
 
 
     const handleStatusChange = (event) => {
-        const { value } = event.target
+        let { value } = event.target
+        console.log("selcted status is: ", event.target.value)
+        const customerLicenses = [
+            "Enterprise License (Legacy)",
+            "Scale License Cloud",
+            "Scale License Onprem",
+            "Business License Cloud",
+            "Business License Onprem",
+            "Enterprise License Cloud",
+            "Enterprise License Onprem",
+        ]
+        const openSourceLicenses = [
+            "Scale License Onprem",
+            "Open Source License",
+            "Business License Onprem",
+            "Enterprise License Onprem",
+        ]
+
+        // License tiers are mutually exclusive - an org can only be on one at a time.
+        const tierLicenses = [
+            "POC License",
+            "Scale License Cloud Trial",
+            "Scale License Cloud",
+            "Scale License Onprem",
+            "Business License Cloud",
+            "Business License Onprem",
+            "Enterprise License Cloud",
+            "Enterprise License Onprem",
+        ]
+        const selectedTiers = value.filter(v => tierLicenses.includes(v))
+        if (selectedTiers.length > 1) {
+            const newlyAddedTier = selectedTiers.find(v => !selectedStatus.includes(v))
+            const tierToKeep = newlyAddedTier || selectedTiers[selectedTiers.length - 1]
+            value = value.filter(v => !tierLicenses.includes(v) || v === tierToKeep)
+        }
+
+        const hasCustomerLicense = value.some(v => customerLicenses.includes(v))
+        const hasOpenSourceLicense = value.some(v => openSourceLicenses.includes(v))
+
+        if (hasCustomerLicense) {
+            if (!value.includes("Customer")) {
+                value = [...value, "Customer"]
+            }
+        } else {
+            value = value.filter(v => v !== "Customer")
+        }
+
+        if (hasOpenSourceLicense) {
+            if (!value.includes("Open Source")) {
+                value = [...value, "Open Source"]
+            }
+        } else {
+            value = value.filter(v => v !== "Open Source")
+        }
+
         setSelectedStatus(value)
 
         handleEditOrg(

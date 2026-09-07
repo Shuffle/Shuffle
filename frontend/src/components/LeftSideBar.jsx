@@ -36,6 +36,8 @@ import {
   Tooltip,
   ToggleButtonGroup,
   ToggleButton,
+  LinearProgress,
+  CircularProgress,
 } from "@mui/material";
 import RecentWorkflow from "../components/RecentWorkflow.jsx";
 
@@ -47,6 +49,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Context } from "../context/ContextApi.jsx";
 import Licensed from "./Licensed.jsx";
+import { fetchMonthlyAppRunUsage } from "./Navbar.jsx";
 
 const ShuffleLogo = "/images/Shuffle_logo.png";
 const detectionIcon = "/icons/detection.svg";
@@ -64,6 +67,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
 
   const navigate = useNavigate();
   const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, updateOrg, setUpdateOrg, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
+  const [appRunUsage, setAppRunUsage] = useState(0);
   const [expandLeftNav, setExpandLeftNav] = useState(false);
   const [activeOrgName, setActiveOrgName] = useState(
     userdata?.active_org?.name || "Select Organziation"
@@ -1000,9 +1004,9 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           setActiveOrgData(org);
           setUpdateOrg(false);
           if (!isCloud) {
-              if (org?.cloud_sync  && org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+              if (org?.cloud_sync  && (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
-              } else if (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") && org?.subscriptions[0]?.active) {
+              } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
               } else {
                 setIsProdStatusOn(false);
@@ -1016,6 +1020,20 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
       fetched = true;
     };
   }, [userdata?.active_org?.id, globalUrl, updateOrg]);
+
+  useEffect(() => {
+    const orgId = userdata?.active_org?.id;
+    if (!orgId || !globalUrl || activeOrgData === null) return;
+
+    const isAnnualGrouping = activeOrgData?.sync_features?.annual_app_runs_grouping?.active === true;
+    fetchMonthlyAppRunUsage(globalUrl, orgId, isAnnualGrouping)
+      .then(value => setAppRunUsage(value))
+      .catch(() => {});
+  }, [userdata?.active_org?.id, globalUrl, activeOrgData]);
+
+  const appRunLimit = userdata?.app_execution_limit || 0;
+  const appRunPct = appRunLimit > 0 ? Math.min(100, Math.round((appRunUsage / appRunLimit) * 100)) : 0;
+  const appRunBarColor = appRunPct >= 100 ? theme?.palette?.error?.main : "#ff8544";
 
   return (
     <div
@@ -1274,11 +1292,28 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           </MenuItem>
         </Menu>
           {
-            !isCloud && expandLeftNav && (
-              <Typography variant="body2" style={{fontSize: 16, color: themeMode === "dark" ? lightText : darkText, transition: "opacity 0.3s ease", fontWeight: 600, marginTop: -5, marginLeft: 3}}>
-                 {isProdStatusOn ? "Enterprise" : "Open Source"}
+            expandLeftNav && (() => {
+              const orgStatus = userdata?.org_status;
+              const statusMap = [
+                { key: "pov", label: "POC" },
+                { key: "scale_license_cloud_trial", label: "Free Trial" },
+                { key: "scale_license_onprem_customer", label: "Scale (onPrem)" },
+                { key: "scale_license_cloud_customer", label: "Scale (Cloud)" },
+                { key: "business_license_cloud", label: "Business" },
+                { key: "business_license_onprem", label: "Business" },
+                { key: "enterprise_license_cloud", label: "Enterprise" },
+                { key: "enterprise_license_onprem", label: "Enterprise" },
+                { key: "shuffle_enterprise_license_old_customer", label: "Enterprise (Legacy)" },
+              ];
+              const match = orgStatus
+                ? statusMap.find(({ key }) => orgStatus.includes(key))
+                : null;
+              return match ? (
+                <Typography variant="body2" style={{fontSize: 14, color: themeMode === "dark" ? lightText : darkText, transition: "opacity 0.3s ease", fontWeight: 600, whiteSpace: "nowrap", marginLeft: 3}}>
+                  {match.label}
               </Typography>
-            )
+              ) : null;
+            })()
           }
           </Box>
         <Box
@@ -1910,9 +1945,75 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           <Licensed
             expanded={expandLeftNav}
             licensed={isProdStatusOn}
+            title={activeOrgData?.subscriptions[0]?.name?.toLowerCase()?.includes("business") ? "Business" : "Enterprise"}
           />
           )}
         </>
+
+        {appRunLimit > 0 && (
+          <Tooltip
+            title={`${appRunUsage.toLocaleString()} / ${appRunLimit.toLocaleString()} runs`}
+            placement="top"
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  backgroundColor: "rgba(33, 33, 33, 1)",
+                  color: "rgba(241, 241, 241, 1)",
+                  fontSize: 13,
+                  border: "1px solid rgba(73, 73, 73, 1)",
+                  fontFamily: theme?.typography?.fontFamily,
+                }
+              },
+              popper: {
+                sx: {
+                  zIndex: 1000019,
+                }
+              }
+            }}
+            arrow
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                padding: expandLeftNav ? "6px 12px" : "6px 0",
+                marginBottom: 1.5,
+                marginLeft: expandLeftNav ? -1 : -2,
+              }}
+            >
+              {expandLeftNav ? (
+                <LinearProgress
+                  variant="determinate"
+                  value={appRunPct}
+                  sx={{
+                    width: "100%",
+                    height: 8,
+                    borderRadius: 8,
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    "& .MuiLinearProgress-bar": { backgroundColor: appRunBarColor, borderRadius: 8 },
+                  }}
+                />
+              ) : (
+                <Box sx={{ position: "relative", display: "flex" }}>
+                  <CircularProgress
+                    variant="determinate"
+                    value={100}
+                    size={20}
+                    thickness={5}
+                    sx={{ color: "rgba(255,255,255,0.08)", position: "absolute" }}
+                  />
+                  <CircularProgress
+                    variant="determinate"
+                    value={appRunPct}
+                    size={20}
+                    thickness={5}
+                    sx={{ color: appRunBarColor }}
+                  />
+                </Box>
+              )}
+            </Box>
+          </Tooltip>
+        )}
 
         <Box ref={autocompleteRef}>
           <Autocomplete
