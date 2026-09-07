@@ -12,6 +12,8 @@ import {
 	BarSeries,
 	Bar,
 	BarLabel,
+	StackedBarChart,
+	StackedBarSeries,
 
 	GridlineSeries,
 	Gridline,
@@ -82,6 +84,14 @@ export const LoadStats = (globalUrl, cachekey) => {
 		toast("Failed to get stats")
 		return basedata
 	})
+}
+
+// Turns date-like keys (ISO strings, Date objects) into "22 Jul 2026". Non-dates pass through untouched.
+const formatDateLabel = (value) => {
+	if (value === undefined || value === null || value === "") return value
+	const parsed = value instanceof Date ? value : new Date(value)
+	if (isNaN(parsed.getTime())) return value
+	return `${parsed.getDate()} ${parsed.toLocaleString("en-US", { month: "short" })} ${parsed.getFullYear()}`
 }
 
 const LineChartWrapper = (props) => {
@@ -168,7 +178,10 @@ const LineChartWrapper = (props) => {
 		return null
 	}
 
-	//console.log("FORMAT: ", inputdata)
+	inputdata = inputdata.map((entry) => ({
+		...entry,
+		key: formatDateLabel(entry.key),
+	}))
 
 	const tooltip = <TooltipArea
 					tooltip={
@@ -184,7 +197,12 @@ const LineChartWrapper = (props) => {
 							padding: 6,
 							maxWidth: 240,
 						}}>
-							<Typography variant="body2" style={{fontWeight: 600}}>{data?.x ?? ''}</Typography>
+							<Typography variant="body2" style={{fontWeight: 600}}>
+								{data?.x && !isNaN(Date.parse(data.x)) ? 
+									`${new Date(data.x).getDate()} ${new Date(data.x).toLocaleString("en-US", { month: "long" })} ${new Date(data.x).getFullYear()}` 
+									: (data?.x ?? '')
+								}
+							</Typography>
 							<Typography variant="body2">{data?.y ?? ''}</Typography>
 						</div>
 						)}
@@ -192,16 +210,9 @@ const LineChartWrapper = (props) => {
 					}
 				/>;
 	
-	const selectedColor = color === undefined || color === null || color === "" ? "" : color
-	const barseries = color === undefined || color === null || color === "" ?
-		<BarSeries
-		  bar={
-			<Bar 
-			/>
-		  } 
-		  tooltip={tooltip}
-		/>
-		:
+	// Defaults to the Shuffle brand orange unless the caller picks its own color
+	const selectedColor = color === undefined || color === null || color === "" ? "#ff8544" : color
+	const barseries =
 		<BarSeries
 		  colorScheme={[selectedColor]}
 		  bar={
@@ -234,6 +245,122 @@ const LineChartWrapper = (props) => {
 				}
 			/>
 
+		</div>
+	)
+}
+
+const formatTokenCount = (n) => {
+	if (!n) return '0'
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+	return String(n)
+}
+
+export const TokenBarChart = ({ inputSeries, outputSeries, title, height = 300, border = false }) => {
+	const { themeMode } = useContext(Context)
+	const theme = getTheme(themeMode)
+
+	// Build a lookup map: dateString (toDateString) → {input, output}
+	const dataLookup = useMemo(() => {
+		const map = {}
+		for (const pt of (inputSeries?.data ?? [])) {
+			const dk = new Date(pt.key).toDateString()
+			if (!map[dk]) map[dk] = { input: 0, output: 0, isoKey: pt.key }
+			map[dk].input = pt.data ?? 0
+		}
+		for (const pt of (outputSeries?.data ?? [])) {
+			const dk = new Date(pt.key).toDateString()
+			if (!map[dk]) map[dk] = { input: 0, output: 0, isoKey: pt.key }
+			map[dk].output = pt.data ?? 0
+		}
+		return map
+	}, [inputSeries, outputSeries])
+
+	// Build StackedBarChart data: [{key: Date, data: [{key:'Input',data:N},{key:'Output',data:M}]}]
+	const combinedData = useMemo(() => {
+		return Object.entries(dataLookup)
+			.sort(([, a], [, b]) => new Date(a.isoKey) - new Date(b.isoKey))
+			.map(([, { input, output, isoKey }]) => ({
+				key: formatDateLabel(isoKey),
+				data: [
+					{ key: 'Input', data: input },
+					{ key: 'Output', data: output },
+				],
+			}))
+	}, [dataLookup])
+
+	const tooltip = (
+		<TooltipArea
+			tooltip={
+				<ChartTooltip
+					placement="top"
+					followCursor={true}
+					content={(data) => {
+						const hoveredDate = data?.x instanceof Date ? data.x : new Date(data?.x ?? 0)
+						const dk = hoveredDate.toDateString()
+						const entry = dataLookup[dk]
+						const inputVal = entry?.input ?? 0
+						const outputVal = entry?.output ?? 0
+						const total = inputVal + outputVal
+						return (
+							<div style={{
+								borderRadius: 4,
+								backgroundColor: theme.palette.inputColor,
+								border: theme.palette.defaultBorder,
+								color: theme.palette.text.primary,
+								padding: '8px 12px',
+								minWidth: 170,
+							}}>
+								<Typography variant="body2" style={{ fontWeight: 600, marginBottom: 4 }}>
+									{hoveredDate instanceof Date && !isNaN(hoveredDate.getTime()) ? 
+										`${hoveredDate.getDate()} ${hoveredDate.toLocaleString("en-US", { month: "long" })} ${hoveredDate.getFullYear()}` 
+										: ''
+									}
+								</Typography>
+								<Typography variant="body2">Total:&nbsp;&nbsp; {formatTokenCount(total)}</Typography>
+								<Typography variant="body2" style={{ color: '#60A5FA' }}>Input:&nbsp;&nbsp;&nbsp; {formatTokenCount(inputVal)}</Typography>
+								<Typography variant="body2" style={{ color: '#C084FC' }}>Output: {formatTokenCount(outputVal)}</Typography>
+							</div>
+						)
+					}}
+				/>
+			}
+		/>
+	)
+
+	const containerStyle = {
+		color: 'white',
+		padding: '5px 5px 10px 5px',
+		marginTop: 15,
+		overflow: 'hidden',
+		border: border ? '1px solid rgba(255,255,255,0.3)' : 'none',
+		borderRadius: border ? (theme.palette?.borderRadius ?? 4) : 0,
+		backgroundColor: 'transparent',
+	}
+
+	if (combinedData.length === 0) return null
+
+	return (
+		<div style={containerStyle}>
+			{title && (
+				<Typography variant="h6" style={{ paddingBottom: 25 }}>
+					{title}
+				</Typography>
+			)}
+			<StackedBarChart
+				width="100%"
+				height={height}
+				data={combinedData}
+				series={
+					<StackedBarSeries
+						colorScheme={['#5BE0E7', '#F88E4F']}
+						tooltip={tooltip}
+					/>
+				}
+				gridlines={
+					<GridlineSeries line={<Gridline direction="all" />} />
+				}
+			/>
 		</div>
 	)
 }

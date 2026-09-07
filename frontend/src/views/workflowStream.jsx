@@ -242,7 +242,7 @@ export function startStream(baseUrl, workflowId, orgId, options) {
   const timeout = 60000;
   const maxFailures = 20;
   const retryDelay = 3000;
-  const presenceIntervalMs = 5000;
+  const presenceIntervalMs = 15000; // This is the interval for the ping request
 
   const url = buildStreamUrl(baseUrl, workflowId);
 
