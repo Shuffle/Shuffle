@@ -700,6 +700,9 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
+	resultLength := len(workflowExecution.Results)
+	setExecution := true
+
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
@@ -714,10 +717,22 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-	_ = dbSave
-	setExecution := true
+
+	// For AI Agents, ParsedExecutionResult handles its own execution saving
+	if actionResult.Action.AppName == "AI Agent" || actionResult.Action.AppName == "Shuffle Agent" {
+		setExecution = false
+	}
+
+	// Validating that action results hasn't changed
+	newExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecution.ExecutionId)
+	if err == nil {
+		if len(newExecution.Results) > 0 && len(newExecution.Results) != resultLength {
+			setExecution = false
+		}
+	}
+
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
+		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
