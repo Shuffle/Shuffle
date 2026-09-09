@@ -4568,6 +4568,9 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			if len(user.ActiveOrg.Id) == 0 {
 				user.ActiveOrg.Id = exec.ExecutionOrg
 			}
+			if len(user.ActiveOrg.Id) == 0 {
+				user.ActiveOrg.Id = exec.Workflow.OrgId
+			}
 
 			user.Username = fmt.Sprintf("org %s", user.ActiveOrg.Id)
 		}
@@ -4584,6 +4587,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	location := strings.Split(request.URL.Path, "/")
 	var runType string
 	var agentSkill string
+	var toolIds string
 	if location[1] == "api" {
 		if len(location) <= 3 {
 			resp.WriteHeader(400)
@@ -4591,10 +4595,22 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if len(location) == 4 {
+		// /api/v1/apps/{appIds or toolIds}/mcp
+		if len(location) == 6 {
+			agentSkill = "" 
+			runType = location[4] 
+			if location[4] == "agent" || location[4] == "agents" {
+				runType = "agent"
+				toolIds = ""
+			} else {
+				toolIds = location[4]
+				isSingleApp = true
+			}
+
+		} else if len(location) == 4 {
 			runType = location[3] // /api/v1/agent or /api/v1/mcp
 		} else {
-			runType = location[3] // /api/v1/apps/{appid}/mcp
+			runType = location[3] // /api/v1/agent/{skill} or /api/v1/mcp/{skill}
 			agentSkill = location[4]
 	
 			if location[3] == "apps" {
@@ -4657,68 +4673,139 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 
 	app := &shuffle.WorkflowApp{}
 	foundId := ""
-	if len(runType) == 32 {
+
+	// Handles multiple inputs to map into Params.ToolID
+	// Point being to parse BOTH names and IDs properly
+	if len(toolIds) > 0 { 
+		parsedToolIds := ""
+		for _, toolId := range strings.Split(toolIds, ",") { 
+			trimmedToolId := strings.TrimSpace(toolId)
+			if trimmedToolId == "agent" || trimmedToolId == "agents" || trimmedToolId == "mcp" {
+				continue
+			}
+			if len(trimmedToolId) == 32 || len(trimmedToolId) == 36 { 
+				parsedToolIds += trimmedToolId + ","
+			} else {
+				foundRequest.Params.ToolName += "," + trimmedToolId
+			}
+		}
+
+		foundRequest.Params.ToolID += ","+parsedToolIds
+	}
+
+	if len(runType) == 32 || len(runType) == 36 {
 		foundId = runType
 	} else if len(foundRequest.Params.ToolID) > 0 {
 		foundId = foundRequest.Params.ToolID
+	} 
+
+	if foundId == "shuffle_agent" || foundId == "agent" || foundId == "agents" {
+		foundId = ""
+	}
+
+	if strings.HasPrefix(foundRequest.Params.ToolName, "app:") && strings.Count(foundRequest.Params.ToolName, ":") >= 2 {
+		foundId += ","+foundRequest.Params.ToolName
+	} else if len(foundRequest.Params.ToolName) == 32 || len(foundRequest.Params.ToolName) == 36 {
+		foundId = ","+foundRequest.Params.ToolName
 	} else {
-		if strings.HasPrefix(foundRequest.Params.ToolName, "app:") && strings.Count(foundRequest.Params.ToolName, ":") >= 2 {
-			foundId = foundRequest.Params.ToolName
-		} else if len(foundRequest.Params.ToolName) == 32 {
-			foundId = foundRequest.Params.ToolName
-		} else {
-			splitNames := strings.Split(foundRequest.Params.ToolName, ",")
+		splitNames := strings.Split(foundRequest.Params.ToolName, ",")
 
-			newName := []string{}
-			for _, name := range splitNames {
-				if strings.HasPrefix(name, "app:") && strings.Count(name, ":") >= 2 {
-					newName = append(newName, name)
-					continue
+		newName := []string{}
+		for _, name := range splitNames {
+			name = strings.TrimSpace(name)
+			if len(name) <= 1 {
+				continue
+			}
+
+			if strings.HasPrefix(name, "app:") && strings.Count(name, ":") >= 2 {
+				newName = append(newName, name)
+				continue
+			}
+
+			cleanName := strings.ToLower(name)
+			cleanNormalized := strings.ReplaceAll(strings.ReplaceAll(cleanName, "-", " "), "_", " ")
+			if cleanNormalized == "shuffle ai" || cleanNormalized == "agent" || cleanNormalized == "agents" || cleanNormalized == "shuffle agent" || cleanNormalized == "ai agent" || cleanNormalized == "openai" || cleanNormalized == "api" || cleanNormalized == "nothing" {
+				continue
+			}
+
+			foundApp := &shuffle.WorkflowApp{}
+			if len(name) == 32 || len(name) == 36 {
+				foundApp, err = shuffle.GetApp(ctx, name, shuffle.User{}, false)
+				if err == nil && foundApp.ID != "" && foundApp.Public {
+					app = foundApp
+					newName = append(newName, fmt.Sprintf("app:%s:%s", foundApp.ID, strings.ToLower(strings.ReplaceAll(foundApp.Name, " ", "_"))))
 				}
 
-				if name == "API" {
-					continue
-				}
+			} 
 
-				if len(name) == 32 {
-					foundApp, err := shuffle.GetApp(ctx, name, shuffle.User{}, false)
-					if err == nil && foundApp.ID != "" && foundApp.Public {
-						app = foundApp
-						newName = append(newName, fmt.Sprintf("app:%s:%s", foundApp.ID, strings.ToLower(strings.ReplaceAll(foundApp.Name, " ", "_"))))
+			if len(foundApp.ID) == 0 { 
+				foundApps, err := shuffle.FindWorkflowAppByName(ctx, name)
+				if (err != nil || len(foundApps) == 0) && (strings.Contains(name, "-") || strings.Contains(name, "_")) {
+					// Fallback to title case / spaces (e.g., "shuffle-tools" -> "Shuffle Tools")
+					altName := strings.Title(strings.ReplaceAll(strings.ReplaceAll(name, "-", " "), "_", " "))
+					if altApps, altErr := shuffle.FindWorkflowAppByName(ctx, altName); altErr == nil && len(altApps) > 0 {
+						foundApps = altApps
 					}
+				}
 
-				} else {
-					foundApps, err := shuffle.FindWorkflowAppByName(ctx, name)
-					if err != nil || len(foundApps) == 0 {
-
-						algoliaApp, err := shuffle.HandleAlgoliaAppSearch(ctx, name)
-						if err != nil {
-							log.Printf("[INFO] Failed to find app by name '%s' in mcp agent run: %s", name, err)
+				if err != nil || len(foundApps) == 0 {
+					algoliaApp, err := shuffle.HandleAlgoliaAppSearch(ctx, name)
+					if err != nil {
+						log.Printf("[INFO] Failed to find app by name '%s' in mcp agent run: %s", name, err)
+						if runType != "agent" && len(parentExec.ExecutionId) == 0 && foundRequest.Params.ToolID != "shuffle_agent" {
 							resp.WriteHeader(400)
 							resp.Write([]byte(`{"success": false, "reason": "App by that name not found. Valid param.tool_id (app ID) is required"}`))
 							return
-						} else {
-							foundApp, err := shuffle.GetApp(ctx, algoliaApp.ObjectID, shuffle.User{}, false)
-							if err == nil && foundApp.ID != "" {
-								foundApps = append(foundApps, *foundApp)
-							}
-
 						}
+						// For agent execution or workflow mode, skip this tool instead of aborting the request
+						continue
+					} else {
+						foundApp, err := shuffle.GetApp(ctx, algoliaApp.ObjectID, shuffle.User{}, false)
+						if err == nil && foundApp.ID != "" {
+							foundApps = append(foundApps, *foundApp)
+						}
+
+					}
+				}
+
+				found := false
+				for _, loopApp := range foundApps {
+					if len(loopApp.Actions) == 0 { 
+						continue
 					}
 
-					found := false
-					for _, loopApp := range foundApps {
-						if loopApp.Name == name || loopApp.ID == name {
-							found = true
-							app = &loopApp
-							//foundId = app.ID
-							newName = append(newName, fmt.Sprintf("app:%s:%s", loopApp.ID, strings.ToLower(strings.ReplaceAll(loopApp.Name, " ", "_"))))
+					if loopApp.Name == name || loopApp.ID == name || strings.EqualFold(loopApp.Name, name) || strings.EqualFold(loopApp.Name, strings.ReplaceAll(name, "-", " ")) {
+						found = true
+						app = &loopApp
 
+						newName = append(newName, fmt.Sprintf("app:%s:%s", loopApp.ID, strings.ToLower(strings.ReplaceAll(loopApp.Name, " ", "_"))))
+
+						if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
+							break
+						} else if user.Role == "admin" && app.Owner == "" {
 							break
 						}
 					}
+				}
 
-					if !found {
+				if !found {
+					nameAdded := false
+					algoliaApp, err := shuffle.HandleAlgoliaAppSearch(ctx, name)
+					if err != nil {
+						log.Printf("[INFO] Failed to find app by name '%s' in mcp agent run: %s", name, err)
+					} else {
+						foundApp, err := shuffle.GetApp(ctx, algoliaApp.ObjectID, shuffle.User{}, false)
+						if err == nil && foundApp.ID != "" {
+							newName = append(newName, fmt.Sprintf("app:%s:%s", foundApp.ID, strings.ToLower(strings.ReplaceAll(foundApp.Name, " ", "_"))))
+							nameAdded = true
+						}
+					}
+
+					if debug {
+						log.Printf("[DEBUG] No app found for name '%s' in mcp agent run. Adding anyway.", name)
+					}
+
+					if !nameAdded { 
 						innerName := strings.ToLower(strings.ReplaceAll(name, " ", "_"))
 						for _, loopApp := range foundApps {
 							parsedAppname := strings.ToLower(strings.ReplaceAll(loopApp.Name, " ", "_"))
@@ -4731,37 +4818,57 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 					}
 				}
 			}
+		}
 
-			foundId = strings.Join(newName, ",")
+		if len(newName) > 0 { 
+			foundId += ","+strings.Join(newName, ",")
 		}
 	}
 
-	if len(foundId) == 32 && app.ID == "" && !strings.HasPrefix(foundId, "app:") {
-		app, err = shuffle.GetApp(ctx, foundId, shuffle.User{}, false)
-		if err != nil {
-			log.Printf("[INFO] Failed to find app by id '%s' in single execution: %s", foundId, err)
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-	}
+	if len(foundId) >= 32 {
+		newFoundId := []string{}
+		for _, tool := range strings.Split(foundId, ",") {
+			// Check if starting with app:...
+			toolId := tool
+			if strings.HasPrefix(tool, "app:") && strings.Count(tool, ":") >= 2 {
+				toolId = strings.Split(tool, ":")[1]
+			}
 
-	/*
-	if !app.Public {
-		if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
-			log.Printf("[AUDIT] Support & Admin user %s (%s) got access to app %s (MCP)", user.Username, user.Id, app.ID)
-		} else if user.Role == "admin" && app.Owner == "" {
-			log.Printf("[AUDIT] Any admin can GET %s (%s), since it doesn't have an owner (GET - MCP).", app.Name, app.ID)
-		} else {
-			log.Printf("[AUDIT] User %s (%s) in org %s (%s) was denied access to app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
-			resp.WriteHeader(403)
-			resp.Write([]byte(`{"success": false}`))
-			return
+			toolId = strings.TrimSpace(toolId)
+			if len(toolId) != 32 && len(toolId) != 36 {
+				continue
+			}
+
+			if shuffle.ArrayContains(newFoundId, toolId) { 
+				continue
+			}
+
+			app, err = shuffle.GetApp(ctx, toolId, user, false)
+			if err != nil || (len(app.ID) != 32 && len(app.ID) != 36) {
+				continue
+			}
+
+			if !app.Public {
+				if user.Id == app.Owner || user.ActiveOrg.Id == app.ReferenceOrg || shuffle.ArrayContains(app.Contributors, user.Id) {
+					log.Printf("[AUDIT] Support & Admin user %s (%s) got access to app %s (MCP)", user.Username, user.Id, app.ID)
+				} else if user.Role == "admin" && app.Owner == "" {
+					log.Printf("[AUDIT] Any admin can GET %s (%s), since it doesn't have an owner (GET - MCP).", app.Name, app.ID)
+				} else {
+					log.Printf("[AUDIT] User %s (%s) in org %s (%s) was denied access to app %s (%s) (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.Name, app.ID)
+
+					resp.WriteHeader(403)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You do not have access to app %s"}`, app.ID)))
+					return
+				}
+			} else {
+				log.Printf("[AUDIT] User %s (%s) in org %s (%s) got access to public app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
+			}
+
+			newFoundId = append(newFoundId, fmt.Sprintf("app:%s:%s", strings.TrimSpace(toolId), strings.ToLower(strings.ReplaceAll(app.Name, " ", "_"))))
 		}
-	} else {
-		log.Printf("[AUDIT] User %s (%s) in org %s (%s) got access to public app %s (MCP)", user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id, app.ID)
+
+		foundId = strings.Join(newFoundId, ",")
 	}
-	*/
 
 	if foundRequest.Method == "initialize" || foundRequest.Method == "tools/list" {
 		mcpRespStruct, err := shuffle.HandleMCPMethodInitialize(foundRequest, user, *app)
@@ -4839,18 +4946,6 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	var newAction shuffle.Action
-
-	// Run the action
-	parsedName := strings.ToLower(strings.ReplaceAll(app.Name, " ", "_"))
-	parsedApp := fmt.Sprintf("app:%s:%s", app.ID, parsedName)
-	if strings.HasPrefix(foundId, "app:") {
-		parsedApp = foundId
-	}
-
-	if len(parsedApp) < 10 {
-		parsedApp = ""
-	}
-
 	newAction = shuffle.Action{
 		Name:             "agent",
 		AppName:          "AI Agent",
@@ -4910,10 +5005,10 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// MCP-oriented action(s)
-	if len(parsedApp) > 0 {
+	if len(foundId) > 0 {
 		newAction.Parameters = append(newAction.Parameters, shuffle.WorkflowAppActionParameter{
 			Name:  "action",
-			Value: parsedApp,
+			Value: foundId,
 		})
 	}
 
@@ -4962,7 +5057,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 				if len(targetActionId) > 0 && action.ID != targetActionId {
 					continue
 				}
-				if len(targetActionId) == 0 && action.AppName != "AI Agent" {
+				if len(targetActionId) == 0 && action.AppName != "AI Agent" && action.AppID != "shuffle_agent" && action.AppName != "shuffle-ai" && action.AppName != "Shuffle Agent" {
 					continue
 				}
 
