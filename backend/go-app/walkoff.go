@@ -700,6 +700,9 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
+	resultLength := len(workflowExecution.Results)
+	setExecution := true
+
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
@@ -714,10 +717,22 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-	_ = dbSave
-	setExecution := true
+
+	// For AI Agents, ParsedExecutionResult handles its own execution saving
+	if actionResult.Action.AppName == "AI Agent" || actionResult.Action.AppName == "Shuffle Agent" {
+		setExecution = false
+	}
+
+	// Validating that action results hasn't changed
+	newExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecution.ExecutionId)
+	if err == nil {
+		if len(newExecution.Results) > 0 && len(newExecution.Results) != resultLength {
+			setExecution = false
+		}
+	}
+
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
+		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
@@ -1311,7 +1326,36 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO] Inside execute workflow for ID %s", fileId)
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId, true)
-	if err != nil && workflow.ID == "" {
+
+	// Load from execution. This is a specific trick to apply user_input
+	// questions to agentic runs
+	agenticCheck, agenticOk := request.URL.Query()["agentic"]
+	if (workflow == nil || workflow.ID == "") && agenticOk && len(agenticCheck) > 0 && agenticCheck[0] == "true" {
+		// exec ID = workflow ID in MOST cases. Not all. Fallback only
+		executionId := fileId
+		if ref, ok := request.URL.Query()["reference_execution"]; ok && len(ref) > 0 {
+			executionId = ref[0]
+		}
+
+		exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+		if err != nil || exec.ExecutionId != executionId { 
+			log.Printf("[WARNING][%s] Failed getting the agentic execution (execute workflow - agentic): %s", executionId, err)
+			resp.WriteHeader(400)
+			resp.Write([]byte(`{"success": false, "reason": "No workflow or execution found"}`))
+			return
+		}
+
+		authorization := request.URL.Query().Get("authorization")
+		if authorization != exec.Authorization { 
+			log.Printf("[WARNING][%s] Invalid authorization for agentic execution (execute workflow - agentic): %s", executionId, authorization)
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "reason": "Invalid authorization"}`))
+			return
+		}
+
+		workflow = &exec.Workflow
+
+	} else if err != nil && (workflow == nil || workflow.ID == "") {
 		log.Printf("[WARNING] Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflow with ID %s doesn't exist."}`, fileId)))
