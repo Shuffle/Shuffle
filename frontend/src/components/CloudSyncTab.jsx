@@ -102,7 +102,7 @@ const CloudSyncTab = (props) => {
             })
             .then((responseJson) => {
                 if (responseJson["success"] === false) {
-                    toast.warn("Failed getting your org. If this persists, please contact support (SLS (Shuffle Licensing System))")
+                    toast.warn("Failed getting your org. If this persists, please contact support@shuffler.io for assistance.")
                 } else {
                     if (
                         responseJson.sync_features === undefined ||

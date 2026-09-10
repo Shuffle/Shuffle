@@ -197,6 +197,7 @@ export const getTheme = (themeMode, brandColor) => {
         usecaseDialogFieldColor: resolvedMode === "dark" ? "#2B2B2B" : "#F5F5F5",
         accentColor: resolvedMode === "dark" ? "#ff8544" : "#ff8544",
         green: resolvedMode === "dark" ? "#5cc879" : "#008000",
+        deleteColor: resolvedMode === "dark" ? "#FD4C62" : "#d32f2f",
         defaultBorder: resolvedMode === "dark" ? '1px solid #494949' : '1px solid #CCCCCC',
         linkColor: brandColor === "#ff8544" ? "#f86a3e" : brandColor,
         slateGrayColor: resolvedMode === "dark" ? "#494949" : "#CCCCCC",
