@@ -1789,7 +1789,7 @@ const Docs = (defaultprops) => {
                         </Tooltip>
                     )}
 					<div />
-					{isCloud && window.location.pathname !== "/docs" ? 
+					{/* {isCloud && window.location.pathname !== "/docs" ? 
 						 <Link to="/chat">
 							 <Button 
 								variant="outlined" 
@@ -1799,7 +1799,7 @@ const Docs = (defaultprops) => {
 								Support LLM
 							 </Button>
 						 </Link>
-					 : null}
+					 : null} */}
                     {tocLines.length > 0 ?
                         (
                             <h4 style={{ marginTop: 20, fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>

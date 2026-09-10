@@ -87,7 +87,11 @@ const WorkflowHistory = ({ workflowId, globalUrl, theme }) => {
       .then((json) => {
         if (json?.success && Array.isArray(json.operations)) {
           const meaningful = json.operations.filter(
-            (op) => op.type !== "select" && op.type !== "unselect" && op.type !== "hover"
+            (op) =>
+              op.type !== "select" &&
+              op.type !== "unselect" &&
+              op.type !== "hover" &&
+              op.item !== "presence"
           )
           setOps([...meaningful].reverse())
         }

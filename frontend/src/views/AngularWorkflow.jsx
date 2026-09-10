@@ -717,7 +717,7 @@ const AngularWorkflow = (defaultprops) => {
   const streamStatusRef = React.useRef(streamStatus)
   streamStatusRef.current = streamStatus
 
-  const canStream = () => isCloud && multiplayerEnabledRef.current && streamStatusRef.current !== "denied"
+  const canStream = () => multiplayerEnabledRef.current && streamStatusRef.current !== "denied"
 
   // Single stream sender for the component. canStream is checked inside sendOp
   // on every call, so it auto-no-ops when multiplayer is off or denied.
@@ -1745,6 +1745,19 @@ const AngularWorkflow = (defaultprops) => {
         category: "workflow_funnel",
         action,
         label: workflow?.id || "",
+        ...extra,
+      })
+    }
+  }
+
+  const trackAgentFunnel = (action, executionId = "", extra = {}) => {
+    if (isCloud && ReactGA !== undefined) {
+      ReactGA.event({
+        category: "editor_agent_funnel",
+        action,
+        label: [workflow?.id, executionId].filter(Boolean).join("|"),
+        workflow_id: workflow?.id || "",
+        execution_id: executionId || "",
         ...extra,
       })
     }
@@ -4945,6 +4958,26 @@ const AngularWorkflow = (defaultprops) => {
       });
     }
   }, [multiplayerEnabled, cy]);
+
+  const handleAgentPresenceRefresh = () => {
+    // Add agent to local state immediately so the avatar shows right away.
+    setConnectedUsers(prev => {
+      if (prev.some(u => u.user_id === "agent")) return prev
+      return [...prev, { user_id: "agent", user: "Agent", color: "#9c5af2", last_seen: Date.now() }]
+    })
+    if (streamUrl && workflow?.id) {
+      stream.sendAgentPresence(workflow.org_id)
+    }
+  }
+
+  const handleAgentStopped = () => {
+    // Remove immediately from local state — no need to wait for network round-trip.
+    setConnectedUsers(prev => prev.filter(u => u.user_id !== "agent"))
+    // Also send remove op so other connected users see it disappear too.
+    if (streamUrl && workflow?.id) {
+      stream.sendAgentPresenceRemove(workflow.org_id)
+    }
+  }
 
   const [usedSubflowApps, setUsedSubflowApps] = React.useState([]);
 
@@ -22490,10 +22523,9 @@ const AngularWorkflow = (defaultprops) => {
           </Box>
 
           {/* AI Button with Gradient */}
-          {(userdata.support == true && isCloud) && (
             <Tooltip
               color="secondary"
-              title="Generate workflow (requires LLM model)"
+              title="Edit the workflow with the AI Agnet"
               placement="top"
             >
               <Button
@@ -22511,7 +22543,6 @@ const AngularWorkflow = (defaultprops) => {
                 <AutoAwesomeIcon sx={{ fontSize: 20 }} />
               </Button>
             </Tooltip>
-          )}
         </Box>
       </div>
     );
@@ -26106,7 +26137,7 @@ const AngularWorkflow = (defaultprops) => {
         <span>
           {ConnectedUsersAvatars()}
           {shownErrors}
-          {(workflowGenerationModalOpen && isCloud) && (
+          {workflowGenerationModalOpen && (
             <AgentChatWidget
               globalUrl={globalUrl}
               theme={theme}
@@ -26115,6 +26146,9 @@ const AngularWorkflow = (defaultprops) => {
               workflowId={workflow?.id}
               workflow={workflow}
               saveWorkflow={saveWorkflow}
+              onAgentStarted={handleAgentPresenceRefresh}
+              onAgentStopped={handleAgentStopped}
+              trackEvent={trackAgentFunnel}
             />
           )}
           <BottomCytoscapeBar />
