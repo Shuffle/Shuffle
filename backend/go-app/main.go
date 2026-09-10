@@ -3022,13 +3022,23 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			if len(foundApp.ID) == 0 { 
 				foundApps, err := shuffle.FindWorkflowAppByName(ctx, name)
 				if err != nil || len(foundApps) == 0 {
+					altName := strings.Title(strings.ReplaceAll(strings.ReplaceAll(name, "-", " "), "_", " "))
+					if altApps, altErr := shuffle.FindWorkflowAppByName(ctx, altName); altErr == nil && len(altApps) > 0 {
+						foundApps = altApps
+					}
+				}
 
+				if err != nil || len(foundApps) == 0 {
 					algoliaApp, err := shuffle.HandleAlgoliaAppSearch(ctx, name)
 					if err != nil {
 						log.Printf("[INFO] Failed to find app by name '%s' in mcp agent run: %s", name, err)
-						resp.WriteHeader(400)
-						resp.Write([]byte(`{"success": false, "reason": "App by that name not found. Valid param.tool_id (app ID) is required"}`))
-						return
+						if runType != "agent" && len(parentExec.ExecutionId) == 0 && foundRequest.Params.ToolID != "shuffle_agent" {
+							resp.WriteHeader(400)
+							resp.Write([]byte(`{"success": false, "reason": "App by that name not found. Valid param.tool_id (app ID) is required"}`))
+							return
+						}
+						// For agent execution or workflow mode, skip this tool instead of aborting the request
+						continue
 					} else {
 						foundApp, err := shuffle.GetApp(ctx, algoliaApp.ObjectID, shuffle.User{}, false)
 						if err == nil && foundApp.ID != "" {
@@ -3044,7 +3054,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 						continue
 					}
 
-					if loopApp.Name == name || loopApp.ID == name {
+					if loopApp.Name == name || loopApp.ID == name || strings.EqualFold(loopApp.Name, name) || strings.EqualFold(loopApp.Name, strings.ReplaceAll(name, "-", " ")) {
 						found = true
 						app = &loopApp
 
@@ -3105,7 +3115,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			toolId = strings.TrimSpace(toolId)
-			if len(toolId) != 32 {
+			if len(toolId) != 32 && len(toolId) != 36 {
 				continue
 			}
 
@@ -3114,7 +3124,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			app, err = shuffle.GetApp(ctx, toolId, user, false)
-			if err != nil || len(app.ID) != 32 {
+			if err != nil || (len(app.ID) != 32 && len(app.ID) != 36) {
 				continue
 			}
 
@@ -3327,7 +3337,7 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 				if len(targetActionId) > 0 && action.ID != targetActionId {
 					continue
 				}
-				if len(targetActionId) == 0 && action.AppName != "AI Agent" {
+				if len(targetActionId) == 0 && action.AppName != "AI Agent" && action.AppID != "shuffle_agent" && action.AppName != "shuffle-ai" && action.AppName != "Shuffle Agent" {
 					continue
 				}
 
