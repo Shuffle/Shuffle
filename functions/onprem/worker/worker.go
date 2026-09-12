@@ -3178,9 +3178,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
-		isAgentAction := actionResult.Action.AppName == "shuffle-ai" || actionResult.Action.AppName == "AI Agent" || actionResult.Action.AppName == "Shuffle Agent" || actionResult.Action.Name == "run_agent"
-		isAgentHybrid := isAgentAction && (strings.Contains(strings.ToLower(actionResult.Result), "hybrid") || actionResult.Action.Name == "run_agent")
-		if isAgentHybrid {
+		isAgentNode := actionResult.Action.AppName == "shuffle-ai" && actionResult.Action.Name == "run_agent"
+		if isAgentNode && actionResult.Status != "FAILURE" && actionResult.Status != "ABORTED" && actionResult.Status != "SKIPPED" {
 			log.Printf("[INFO][%s] AI Agent dispatched to Cloud. Stopping worker execution cleanly to wait for Cloud completion.", workflowExecution.ExecutionId)
 
 			shutdown(*workflowExecution, "", "", false)
