@@ -2728,7 +2728,10 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 			Environments:  []string{foundEnv},
 		}
 
-		parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
+		parsedEnv := foundEnv
+		if runningEnvironment == "cloud" {
+			parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
+		}
 
 		// Check if environment is distributed from parent org
 		if len(workflowExecution.ExecutionOrg) > 0 {
@@ -3448,7 +3451,10 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			Environments:  []string{foundEnv},
 		}
 
-		parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
+		parsedEnv := foundEnv
+		if runningEnvironment == "cloud" {
+			parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
+		}
 
 		// Check if environment is distributed from parent org
 		if len(workflowExecution.ExecutionOrg) > 0 {
