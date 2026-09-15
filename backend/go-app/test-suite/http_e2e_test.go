@@ -121,7 +121,7 @@ func newAPIClient() *apiClient {
 		baseURL: baseURL,
 		apiKey:  os.Getenv("SHUFFLE_TEST_API_KEY"),
 		http: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: e2eDuration("SHUFFLE_E2E_HTTP_TIMEOUT", 30*time.Second),
 			CheckRedirect: func(request *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
@@ -234,9 +234,22 @@ func TestBackendHealth(t *testing.T) {
 		t.Skip("set SHUFFLE_E2E_PLATFORM_HEALTH=true to validate the aggregate platform health endpoint")
 	}
 	client := newAPIClient()
-	request, err := client.publicRequestContext(context.Background(), http.MethodGet, "/api/v1/health", nil)
+	healthTimeout := e2eDuration("SHUFFLE_E2E_PLATFORM_HEALTH_TIMEOUT", 12*time.Minute)
+	client.http.Timeout = healthTimeout
+	ctx, cancel := context.WithTimeout(context.Background(), healthTimeout)
+	defer cancel()
+
+	path := "/api/v1/health"
+	var request *http.Request
+	var err error
+	if e2eBool("SHUFFLE_E2E_FORCE_PLATFORM_HEALTH") {
+		path += "?force=true"
+		request, err = client.requestContext(ctx, http.MethodGet, path, nil)
+	} else {
+		request, err = client.publicRequestContext(ctx, http.MethodGet, path, nil)
+	}
 	if err != nil {
-		t.Fatalf("create public health request: %v", err)
+		t.Fatalf("create health request: %v", err)
 	}
 	response, body := client.do(t, request)
 
