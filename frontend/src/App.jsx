@@ -76,7 +76,7 @@ import AppExplorer from "./views/AppExplorer.jsx";
 var globalUrl = window.location.origin;
 
 // Change the Shuffle version on UI from here
-const SHUFFLE_VERSION = "2.2.1"
+const SHUFFLE_VERSION = "2.3.0-rc1"
 
 // CORS used for testing purposes. Should only happen with specific port and http
 if (window.location.port === "3000") {
