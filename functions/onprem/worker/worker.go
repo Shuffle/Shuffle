@@ -1058,17 +1058,15 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		//log.Printf("[INFO][%s] New appname: %s, image: %s", workflowExecution.ExecutionId, appName, image)
 
 		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" && !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
-			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
-			// FIXME: Not caring if it's ok or not. Just continuing
-			// This is working as intended, just designed to download an updated
-			// image on every Orborus/new worker restart.
-
-			// Running as coroutine for eventual completeness
-			// FIXME: With goroutines it got too much trouble of deploying with an older version
-			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
-			err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
-			if err == nil {
+			if swarmServiceAvailable(appName) {
+				log.Printf("[DEBUG] App service %s is already deployed. Skipping worker image download for %s", appName, image)
 				downloadedImages = append(downloadedImages, image)
+			} else {
+				log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
+				err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+				if err == nil {
+					downloadedImages = append(downloadedImages, image)
+				}
 			}
 		}
 
@@ -4248,6 +4246,41 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 	}
 
 	return exposedPort, nil
+}
+
+func swarmServiceAvailable(name string) bool {
+	dockercli, _, err := shuffle.GetDockerClient()
+	if err != nil {
+		return false
+	}
+	defer dockercli.Close()
+
+	services, err := dockercli.ServiceList(context.Background(), types.ServiceListOptions{})
+	if err != nil {
+		return false
+	}
+	return hasAvailableSwarmService(services, name)
+}
+
+func hasAvailableSwarmService(services []swarm.Service, name string) bool {
+	normalizedName := strings.ReplaceAll(name, ".", "-")
+	for _, service := range services {
+		serviceName := service.Spec.Annotations.Name
+		if serviceName != name && serviceName != normalizedName {
+			continue
+		}
+		if service.Spec.EndpointSpec == nil {
+			return false
+		}
+		for _, endpoint := range service.Spec.EndpointSpec.Ports {
+			if strings.Contains(endpoint.Name, "port") && endpoint.PublishedPort > 0 {
+				return true
+			}
+		}
+		return false
+	}
+
+	return false
 }
 
 // Runs data discovery
