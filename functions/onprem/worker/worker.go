@@ -44,6 +44,7 @@ import (
 	//k8s deps
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -145,6 +146,19 @@ func buildAppImageName(registry, baseImageName, appName, appVersion string) stri
 	}
 
 	return imageName
+}
+
+func privateRegistryAppImages(registry, image string) (string, string, error) {
+	registry = normalizeRegistryName(registry)
+	if registry == "" || registry == "docker.io" || registry == "registry.hub.docker.com" || registry == "index.docker.io" {
+		return "", "", errors.New("Kubernetes app execution requires a private REGISTRY_URL")
+	}
+
+	sourceImage := strings.TrimPrefix(image, registry+"/")
+	for _, publicRegistry := range []string{"docker.io/", "registry.hub.docker.com/", "index.docker.io/"} {
+		sourceImage = strings.TrimPrefix(sourceImage, publicRegistry)
+	}
+	return sourceImage, registry + "/" + sourceImage, nil
 }
 
 func restoreActionConfig(ctx context.Context, executionID string, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) {
@@ -606,59 +620,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// value = strings.ReplaceAll(value, "_", "-")
 	value := identifier
 
-	baseDeployMode := false
-
-	// check if autoDeploy contains a value
-	// that is equal to the image being deployed.
-	for _, value := range autoDeploy {
-		if value == image {
-			baseDeployMode = true
-		}
+	sourceImage, privateImage, err := privateRegistryAppImages(os.Getenv("REGISTRY_URL"), image)
+	if err != nil {
+		return err
 	}
-
-	autoDeployOverride := os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY") == "true"
-
-	localRegistry := ""
-
-	// Checking if app is generated or not
-	if !(baseDeployMode && autoDeployOverride) {
-		localRegistry = normalizeRegistryName(os.Getenv("REGISTRY_URL"))
-	} else {
-		log.Printf("[DEBUG] Detected baseDeploy image (%s) and ghcr override. Resorting to using ghcr instead of registry", image)
-	}
-
-	/*
-		appDetails := strings.Split(image, ":")[1]
-		appDetailsSplit := strings.Split(appDetails, "_")
-		appName := strings.Join(appDetailsSplit[:len(appDetailsSplit)-1], "_")
-		appVersion := appDetailsSplit[len(appDetailsSplit)-1]
-		for _, app := range workflowExecution.Workflow.Actions {
-			// log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
-			// log.Printf("[DEBUG] Checking app %s with version %s", app.AppName, app.AppVersion)
-			if app.AppName == appName && app.AppVersion == appVersion {
-				if app.Generated == true {
-					log.Printf("[DEBUG] Generated app, setting local registry")
-					image = fmt.Sprintf("%s/%s", localRegistry, image)
-					break
-				} else {
-					log.Printf("[DEBUG] Not generated app, setting shuffle registry")
-				}
-			}
-		}
-	*/
-
-	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !(baseDeployMode && autoDeployOverride) {
-		localRegistry = normalizeRegistryName(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY"))
-	}
-
-	if (len(localRegistry) > 0 && !imageHasLocalRegistryPrefix(image, localRegistry) && !imageHasRegistryPrefix(image)) && !(baseDeployMode && autoDeployOverride) {
-		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
-		image = fmt.Sprintf("%s/%s", localRegistry, image)
-	} else {
-		if !imageHasLocalRegistryPrefix(image, localRegistry) && !imageHasRegistryPrefix(image) && strings.Count(image, "/") <= 2 && !strings.HasPrefix(image, "frikky/shuffle:") {
-			image = fmt.Sprintf("frikky/shuffle:%s", image)
-		}
-	}
+	image = privateImage
 
 	log.Printf("[DEBUG] Got kubernetes with namespace %#v to run image '%s'", kubernetesNamespace, image)
 
@@ -782,18 +748,25 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	}
 
-	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app: %s", name),
-		},
-	)
-	if err != nil {
-		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return fmt.Errorf("get existing app deployment %s: %w", name, err)
+	}
+	if err == nil && existing.Status.AvailableReplicas > 0 {
+		log.Printf("[INFO] Found available deployment %s, skipping image download and creation", name)
+		return nil
 	}
 
-	if len(existing.Items) > 0 {
-		log.Printf("[INFO] Found existing deployments, skipping creation")
+	if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+		return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
+	}
+
+	log.Printf("[INFO] App image %s is not deployed. Downloading %s from the backend and pushing it as %s", name, sourceImage, image)
+	if err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, sourceImage); err != nil {
+		return fmt.Errorf("download and push app image %s: %w", sourceImage, err)
+	}
+	if err == nil {
+		log.Printf("[INFO] Pushed image %s for existing deployment %s", image, name)
 		return nil
 	}
 
@@ -861,13 +834,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		)
 	}
 
-	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
-		log.Printf("[INFO] Setting image pull policy to Always as private registry is used.")
-		//containerAttachment.ImagePullPolicy = corev1.PullAlways
-		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
-	} else {
-		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
-	}
+	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
 
 	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -4318,11 +4285,14 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 
 	for _, deployment := range deployments.Items {
 		if deployment.Name == name {
-			if debug {
-				log.Printf("[DEBUG] Found deployment %s - no need to deploy another", name)
-			}
+			if deployment.Status.AvailableReplicas > 0 {
+				if debug {
+					log.Printf("[DEBUG] Found available deployment %s - no need to deploy another", name)
+				}
 
-			return nil
+				return nil
+			}
+			break
 		}
 	}
 
