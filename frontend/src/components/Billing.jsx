@@ -138,7 +138,7 @@ const ProductionStatus = ({ selectedOrganization, userdata, isCloud, theme }) =>
     if (selectedOrganization?.subscriptions && selectedOrganization.subscriptions.length > 0 && selectedOrganization.subscriptions[0]) {
         const sub = selectedOrganization.subscriptions[0];
         const name = sub?.name?.toLowerCase() || "";
-        isProdStatusOn = (name.includes("enterprise") || name.includes("business")) && sub.active;
+        isProdStatusOn = (name.includes("enterprise") || name.includes("business") || name.includes("air gapped")) && sub.active;
     }   
     const themeMode = theme.palette.mode;
     const accent = theme.palette.primary.main;
@@ -3058,6 +3058,7 @@ const Billing = memo((props) => {
 			activeSubscriptionName.includes("business") ||
 			activeSubscriptionName.includes("scale") || 
 			activeSubscriptionName.includes("trial") || 
+			activeSubscriptionName.includes("air gapped") ||
 			activeSubscriptionName.includes("poc"));
 
 	const isOnpremAlertEligible = selectedOrganization?.cloud_sync_active === true &&
