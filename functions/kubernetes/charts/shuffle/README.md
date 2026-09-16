@@ -245,9 +245,11 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 | Name                       | Description                                                                                                                | Value           |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `shuffle.hybrid`           | Connect this Kubernetes location to the Shuffle cloud backend                                                              | `false`         |
 | `shuffle.baseUrl`          | The external base URL under which Shuffle is reachable.                                                                    | `""`            |
 | `shuffle.org`              | Default shuffle organization                                                                                               | `Shuffle`       |
 | `shuffle.appRegistry`      | The registry from / to which shuffle apps are pulled / pushed                                                              | `docker.io`     |
+| `shuffle.appRegistryInsecure` | Use HTTP when pushing apps to the private registry                                                                       | `false`         |
 | `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion> | `frikky/shuffle` |
 | `shuffle.timezone`         | The timezone used by Shuffle                                                                                               | `Europe/Berlin` |
 

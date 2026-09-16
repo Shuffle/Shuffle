@@ -72,6 +72,10 @@ diagnosticMode:
 ## @section Shared Shuffle Parameters
 ##
 shuffle:
+  ## @param shuffle.hybrid Connect this Kubernetes location to the Shuffle cloud backend
+  ##
+  hybrid: false
+
   ## @param shuffle.baseUrl The external base URL under which Shuffle is reachable.
   ##
   baseUrl: ""
@@ -85,6 +89,10 @@ shuffle:
   ## @param shuffle.appRegistry The registry from / to which shuffle apps are pulled / pushed
   ##
   appRegistry: "docker.io"
+
+  ## @param shuffle.appRegistryInsecure Use HTTP when pushing apps to the private registry
+  ##
+  appRegistryInsecure: false
 
   ## @param shuffle.appBaseImageName The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion>
   ##
@@ -2258,7 +2266,7 @@ apps:
   ## Note that you can deploy some apps via helm, while keeping the flexibility of letting workers deploy apps if they are not already deployed.
   ## If you deploy all needed apps via helm and dont want workers to create additional deployments, set worker.manageAppDeployments to false.
   ##
-  enabled: false
+  enabled: true
 
   shuffleTools:
     ## @param apps.shuffleTools.enabled Whether the shuffle-tools app is enabled
@@ -2270,6 +2278,10 @@ apps:
     ## @param apps.shuffleTools.version The version of the shuffle-tools app to deploy.
     ##
     version: 1.2.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: shuffle-tools_1.2.0
     # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   shuffleSubflow:
@@ -2282,6 +2294,10 @@ apps:
     ## @param apps.shuffleSubflow.version The version of the shuffle-subflow app to deploy.
     ##
     version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: shuffle-subflow_1.1.0
     # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   http:
@@ -2294,7 +2310,110 @@ apps:
     ## @param apps.http.version The version of the http app to deploy.
     ##
     version: 1.4.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: http_1.4.0
     # You can override .app.* values here, e.g. replicaCount, resources or image.
+
+  elasticSecurity:
+    enabled: true
+    name: elastic-security
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: elastic_security_1.1.0
+
+  shuffle:
+    enabled: true
+    name: shuffle
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: shuffle_1.1.0
+
+  slack:
+    enabled: true
+    name: slack
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: slack_1.1.0
+
+  jira:
+    enabled: true
+    name: jira
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: jira_1.1.0
+
+  googleWorkspace:
+    enabled: true
+    name: google-workspace
+    version: 1.0.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: gws_1.0.0
+
+  github:
+    enabled: true
+    name: github
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: github_1.1.0
+
+  cloudflare:
+    enabled: true
+    name: cloudflare
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: cloudflare_1.1.0
+
+  sentinelOne:
+    enabled: true
+    name: sentinelone
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: sentinelone_1.1.0
+
+  googleDrive:
+    enabled: true
+    name: google-drive
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: google_drive_1.1.0
+
+  openCti:
+    enabled: true
+    name: opencti
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: opencti_1.1.0
+
+  virusTotal:
+    enabled: true
+    name: virustotal-v3
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: virustotal_v3_1.1.0
 
   ## @extra apps.MY_APP.app [string] The name of the app (required, e.g. shuffle-tools)
   ## @extra apps.MY_APP.version [string] The version of the app (required, e.g. 1.2.0)

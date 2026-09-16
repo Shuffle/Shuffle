@@ -620,11 +620,16 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// value = strings.ReplaceAll(value, "_", "-")
 	value := identifier
 
-	sourceImage, privateImage, err := privateRegistryAppImages(os.Getenv("REGISTRY_URL"), image)
-	if err != nil {
-		return err
+	cloudHybrid := isKubernetes == "true" && (strings.EqualFold(os.Getenv("SHUFFLE_HYBRID"), "true") || strings.EqualFold(os.Getenv("SHUFFLE_CLOUD"), "true"))
+	sourceImage := ""
+	if cloudHybrid {
+		var privateImage string
+		sourceImage, privateImage, err = privateRegistryAppImages(os.Getenv("REGISTRY_URL"), image)
+		if err != nil {
+			return err
+		}
+		image = privateImage
 	}
-	image = privateImage
 
 	log.Printf("[DEBUG] Got kubernetes with namespace %#v to run image '%s'", kubernetesNamespace, image)
 
@@ -752,22 +757,24 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return fmt.Errorf("get existing app deployment %s: %w", name, err)
 	}
-	if err == nil && existing.Status.AvailableReplicas > 0 {
+	if err == nil && (existing.Status.AvailableReplicas > 0 || !cloudHybrid) {
 		log.Printf("[INFO] Found available deployment %s, skipping image download and creation", name)
 		return nil
 	}
 
-	if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
-		return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
-	}
+	if cloudHybrid {
+		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+			return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
+		}
 
-	log.Printf("[INFO] App image %s is not deployed. Downloading %s from the backend and pushing it as %s", name, sourceImage, image)
-	if err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, sourceImage); err != nil {
-		return fmt.Errorf("download and push app image %s: %w", sourceImage, err)
-	}
-	if err == nil {
-		log.Printf("[INFO] Pushed image %s for existing deployment %s", image, name)
-		return nil
+		log.Printf("[INFO] Hybrid app image %s is not deployed. Downloading %s from the cloud backend and pushing it as %s", name, sourceImage, image)
+		if downloadErr := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, sourceImage); downloadErr != nil {
+			return fmt.Errorf("download and push app image %s: %w", sourceImage, downloadErr)
+		}
+		if err == nil {
+			log.Printf("[INFO] Pushed image %s for existing deployment %s", image, name)
+			return nil
+		}
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
