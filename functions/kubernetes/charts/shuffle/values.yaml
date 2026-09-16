@@ -2266,7 +2266,7 @@ apps:
   ## Note that you can deploy some apps via helm, while keeping the flexibility of letting workers deploy apps if they are not already deployed.
   ## If you deploy all needed apps via helm and dont want workers to create additional deployments, set worker.manageAppDeployments to false.
   ##
-  enabled: true
+  enabled: false
 
   shuffleTools:
     ## @param apps.shuffleTools.enabled Whether the shuffle-tools app is enabled
