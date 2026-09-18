@@ -3424,36 +3424,9 @@ func runMCPAction(resp http.ResponseWriter, request *http.Request) {
 			Environments:  []string{foundEnv},
 		}
 
-		parsedEnv := foundEnv
+		parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-"))
 		if runningEnvironment == "cloud" {
 			parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), workflowExecution.ExecutionOrg)
-		}
-
-		// Check if environment is distributed from parent org
-		if len(workflowExecution.ExecutionOrg) > 0 {
-			environments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
-			if err != nil {
-				log.Printf("[ERROR] Failed getting environments for org %s in single action. May fail to verify env.: %s", workflowExecution.ExecutionOrg, err)
-			} else {
-				for _, env := range environments {
-					if env.Archived {
-						continue
-					}
-
-					if env.Name != foundEnv {
-						continue
-					}
-
-					if env.OrgId != workflowExecution.ExecutionOrg && len(env.OrgId) > 0 {
-						if debug {
-							log.Printf("[DEBUG][%s] Found suborg environment %s for org %s in single action. Re-mapping it to org-id %s", workflowExecution.ExecutionId, env.Name, env.OrgId, env.OrgId)
-						}
-
-						parsedEnv = fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(foundEnv, " ", "-"), "_", "-")), env.OrgId)
-						break
-					}
-				}
-			}
 		}
 
 		log.Printf("[INFO][%s] Adding new single-action job to env queue (4 - MCP): %s", workflowExecution.ExecutionId, parsedEnv)
