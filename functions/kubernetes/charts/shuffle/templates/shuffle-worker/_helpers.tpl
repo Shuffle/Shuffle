@@ -138,6 +138,7 @@ Instead, add them directly to the deployment template (shuffle-worker-dpl.yaml).
 */}}
 {{- define "shuffle.workerInstance.env" -}}
 SHUFFLE_SWARM_CONFIG: "run" # Shuffle Worker requires this to be set even when using K8s instead of swarm
+SHUFFLE_HYBRID: {{ .Values.shuffle.hybrid | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
 WORKER_HOSTNAME: {{ include "shuffle.worker.hostname" . }}
 
@@ -145,6 +146,10 @@ WORKER_HOSTNAME: {{ include "shuffle.worker.hostname" . }}
 # Shuffle app images
 REGISTRY_URL: "{{ .Values.shuffle.appRegistry }}"
 SHUFFLE_BASE_IMAGE_NAME: "{{ .Values.shuffle.appBaseImageName }}"
+{{- if and (ne .Values.shuffle.appRegistry "") (ne .Values.shuffle.appRegistry "docker.io") (ne .Values.shuffle.appRegistry "registry.hub.docker.com") (ne .Values.shuffle.appRegistry "index.docker.io") }}
+SHUFFLE_STREAM_PRIVATE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"
+SHUFFLE_STREAM_PRIVATE_REGISTRY_INSECURE: {{ .Values.shuffle.appRegistryInsecure | quote }}
+{{- end }}
 
 # Shuffle app deployment configuration
 SHUFFLE_APP_MOUNT_TMP_VOLUME: {{ .Values.app.mountTmpVolume | quote }}

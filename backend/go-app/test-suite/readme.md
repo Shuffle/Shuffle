@@ -57,9 +57,11 @@ In another terminal, run the strict E2E gate:
 ./test-suite/run_e2e.sh
 ```
 
-The runner defaults to strict mode. It enables managed execution, abort, and
-parent/child subflow fixtures, nine mutation executions, and the forced embedded
-health workflow. It also runs eight simultaneous executions to detect ID,
+The runner defaults to strict mode. It enables managed execution, abort,
+webhook, and parent/child subflow fixtures, nine mutation executions, the
+embedded health workflow, and a fresh aggregate platform health run. The
+aggregate run builds, validates, executes, and deletes a temporary OpenAPI app.
+It also runs eight simultaneous executions to detect ID,
 authorization, payload, result, cache, and history contamination. Missing API/org credentials fail the gate instead of silently
 skipping coverage. For a deliberately non-destructive
 reachability-only run, explicitly set `SHUFFLE_E2E_STRICT=false` and select the
@@ -122,7 +124,24 @@ is not copied or parsed by the tests:
 
 ```sh
 SHUFFLE_E2E_HEALTH_WORKFLOW=true \
-  ./test-suite/run_e2e.sh -run '^TestEmbeddedHealthWorkflow$'
+  ./test-suite/run_e2e.sh -run '^TestHealthWorkflowExecution$'
+```
+
+The webhook lifecycle creates an authenticated webhook, verifies anonymous and
+bot requests are rejected, executes it, checks persisted history, deletes it,
+and verifies the deleted hook cannot execute:
+
+```sh
+./test-suite/run_e2e.sh -run '^TestWebhookExecutionLifecycle$'
+```
+
+The strict gate also forces `/api/v1/health?force=true` instead of accepting a
+cached result. This exercises app building plus workflow, datastore, file, and
+OpenSearch checks. Use the cached endpoint only for a targeted diagnostic run:
+
+```sh
+SHUFFLE_E2E_FORCE_PLATFORM_HEALTH=false \
+  ./test-suite/run_e2e.sh -run '^TestBackendHealth$'
 ```
 
 The bounded mutation campaign replays deterministic payload recipes through
@@ -161,9 +180,12 @@ Override it with `SHUFFLE_E2E_CONCURRENCY`. Each execution must have unique IDs
 and authorization, must reject every neighboring execution's token, and must
 retain its own argument/result in both stream reads and persisted history.
 
-Per-execution polling defaults to five minutes (`SHUFFLE_E2E_TIMEOUT`),
+Individual HTTP requests default to 30 seconds (`SHUFFLE_E2E_HTTP_TIMEOUT`) so
+the 1 MiB boundary cases are not cut off by the previous 10-second client
+timeout. Per-execution polling defaults to five minutes (`SHUFFLE_E2E_TIMEOUT`),
 subflows to three minutes (`SHUFFLE_E2E_SUBFLOW_TIMEOUT`), and the embedded health
-workflow to twelve minutes (`SHUFFLE_E2E_HEALTH_TIMEOUT`). The complete test
+workflow and forced platform health request to twelve minutes
+(`SHUFFLE_E2E_HEALTH_TIMEOUT` and `SHUFFLE_E2E_PLATFORM_HEALTH_TIMEOUT`). The complete test
 process is independently stopped after fifteen minutes by default; change it
 with `SHUFFLE_E2E_TEST_TIMEOUT`.
 

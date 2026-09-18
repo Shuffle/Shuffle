@@ -1,4 +1,25 @@
 services:
+  shuffle-security:
+    build: .
+    image: ghcr.io/shuffle/shuffle-security:latest
+    container_name: shuffle-security
+    hostname: shuffle-security
+    ports:
+      - "${SHUFFLE_SECURITY_PORT:-3002}:80"
+      - "${SHUFFLE_SECURITY_PORT_HTTPS:-3444}:443"
+    networks:
+      - shuffle
+    environment:
+      # Hostname (or container name) of the Shuffle backend service.
+      # Resolved at container start by envsubst into nginx.conf for /api/v1 + /api/v2 proxying.
+      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME:-shuffle-backend}
+      - SHUFFLE_CORE_URL=${SHUFFLE_CORE_URL:-}
+      - SHUFFLE_SECURITY_URL=${SHUFFLE_SECURITY_URL:-}
+      - SHUFFLE_API_URL=${SHUFFLE_API_URL:-}
+    restart: unless-stopped
+    depends_on:
+      - backend
+
   frontend:
     image: ghcr.io/shuffle/shuffle-frontend:latest
     container_name: shuffle-frontend
@@ -45,7 +66,7 @@ services:
       - ENVIRONMENT_NAME=Shuffle
       - ORG_ID=Shuffle
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
-      - DOCKER_API_VERSION=1.40
+      - DOCKER_API_VERSION=1.44
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}

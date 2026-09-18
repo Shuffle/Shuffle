@@ -73,7 +73,9 @@ const EnvironmentTab = memo((props) => {
     useEffect(() => {
         getEnvironments();
         setModalUser({});
-    }, []);
+        const refreshInterval = setInterval(getEnvironments, 30000);
+        return () => clearInterval(refreshInterval);
+    }, [globalUrl, selectedOrganization.id]);
 
     const changeModalData = (field, value) => {
         modalUser[field] = value;

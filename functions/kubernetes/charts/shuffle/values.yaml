@@ -72,6 +72,10 @@ diagnosticMode:
 ## @section Shared Shuffle Parameters
 ##
 shuffle:
+  ## @param shuffle.hybrid Connect this Kubernetes location to the Shuffle cloud backend
+  ##
+  hybrid: false
+
   ## @param shuffle.baseUrl The external base URL under which Shuffle is reachable.
   ##
   baseUrl: ""
@@ -85,6 +89,10 @@ shuffle:
   ## @param shuffle.appRegistry The registry from / to which shuffle apps are pulled / pushed
   ##
   appRegistry: "docker.io"
+
+  ## @param shuffle.appRegistryInsecure Use HTTP when pushing apps to the private registry
+  ##
+  appRegistryInsecure: false
 
   ## @param shuffle.appBaseImageName The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion>
   ##
@@ -569,6 +577,72 @@ backend:
     ## @param backend.apps.forceUpdate Force an update of apps on startup.
     ##
     forceUpdate: false
+
+## @section security Parameters
+##
+security:
+  ## @param security.enabled Deploy the Shuffle Security frontend
+  ##
+  enabled: true
+  ## @param security.image.registry Shuffle Security image registry
+  ## @param security.image.repository Shuffle Security image repository
+  ## @param security.image.tag Shuffle Security image tag
+  ## @param security.image.digest Shuffle Security image digest (overrides the tag)
+  ## @param security.image.pullPolicy Shuffle Security image pull policy
+  ## @param security.image.pullSecrets Shuffle Security image pull secrets
+  ##
+  image:
+    registry: ghcr.io
+    repository: shuffle/shuffle-security
+    tag: latest
+    digest: ""
+    pullPolicy: Always
+    pullSecrets: []
+  ## @param security.replicaCount Number of Shuffle Security replicas
+  ##
+  replicaCount: 1
+  ## @param security.containerPorts.http Shuffle Security HTTP container port
+  ## @param security.containerPorts.https Shuffle Security HTTPS container port
+  ##
+  containerPorts:
+    http: 80
+    https: 443
+  ## @param security.backendHostname Backend hostname. Empty uses the chart backend Service.
+  ## @param security.shuffleCoreUrl Value for SHUFFLE_CORE_URL
+  ## @param security.shuffleSecurityUrl Value for SHUFFLE_SECURITY_URL
+  ## @param security.shuffleApiUrl Value for SHUFFLE_API_URL
+  ##
+  backendHostname: ""
+  shuffleCoreUrl: ""
+  shuffleSecurityUrl: ""
+  shuffleApiUrl: ""
+  ## @param security.resourcesPreset Container resource preset used when resources is empty
+  ## @param security.resources Container resource requests and limits
+  ##
+  resourcesPreset: nano
+  resources: {}
+  ## @param security.podLabels Extra labels for Shuffle Security pods
+  ## @param security.podAnnotations Annotations for Shuffle Security pods
+  ## @param security.nodeSelector Node labels for Shuffle Security pods
+  ## @param security.tolerations Tolerations for Shuffle Security pods
+  ## @param security.affinity Affinity for Shuffle Security pods
+  ##
+  podLabels: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  service:
+    ## @param security.service.type Shuffle Security Service type
+    ## @param security.service.annotations Annotations for the Shuffle Security Service
+    ## @param security.service.ports.http Shuffle Security Service HTTP port
+    ## @param security.service.ports.https Shuffle Security Service HTTPS port
+    ##
+    type: ClusterIP
+    annotations: {}
+    ports:
+      http: 80
+      https: 443
 
 ## @section frontend Parameters
 ##
@@ -2204,6 +2278,10 @@ apps:
     ## @param apps.shuffleTools.version The version of the shuffle-tools app to deploy.
     ##
     version: 1.2.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: shuffle-tools_1.2.0
     # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   shuffleSubflow:
@@ -2216,6 +2294,10 @@ apps:
     ## @param apps.shuffleSubflow.version The version of the shuffle-subflow app to deploy.
     ##
     version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: shuffle-subflow_1.1.0
     # You can override .app.* values here, e.g. replicaCount, resources or image.
 
   http:
@@ -2228,7 +2310,110 @@ apps:
     ## @param apps.http.version The version of the http app to deploy.
     ##
     version: 1.4.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: http_1.4.0
     # You can override .app.* values here, e.g. replicaCount, resources or image.
+
+  elasticSecurity:
+    enabled: true
+    name: elastic-security
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: elastic_security_1.1.0
+
+  shuffle:
+    enabled: true
+    name: shuffle
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: shuffle_1.1.0
+
+  slack:
+    enabled: true
+    name: slack
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: slack_1.1.0
+
+  jira:
+    enabled: true
+    name: jira
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: jira_1.1.0
+
+  googleWorkspace:
+    enabled: true
+    name: google-workspace
+    version: 1.0.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: gws_1.0.0
+
+  github:
+    enabled: true
+    name: github
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: github_1.1.0
+
+  cloudflare:
+    enabled: true
+    name: cloudflare
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: cloudflare_1.1.0
+
+  sentinelOne:
+    enabled: true
+    name: sentinelone
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: sentinelone_1.1.0
+
+  googleDrive:
+    enabled: true
+    name: google-drive
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: google_drive_1.1.0
+
+  openCti:
+    enabled: true
+    name: opencti
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: opencti_1.1.0
+
+  virusTotal:
+    enabled: true
+    name: virustotal-v3
+    version: 1.1.0
+    image:
+      registry: ""
+      repository: frikky/shuffle
+      tag: virustotal_v3_1.1.0
 
   ## @extra apps.MY_APP.app [string] The name of the app (required, e.g. shuffle-tools)
   ## @extra apps.MY_APP.version [string] The version of the app (required, e.g. 1.2.0)

@@ -3,6 +3,39 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 export const Context = createContext();
 
+export const LegacyStatusList = [
+  "Contacted",
+  "Lead",
+  "Demo Done",
+  "Customer",
+  "Old Customer",
+  "Old Lead",
+  "Open Source",
+  "Internal",
+  "Sub Org",
+  "Student",
+  "Creator",
+  "Testing Shuffle",
+  "Distribution Partner",
+]
+
+export const OrgStatusMapping = {
+  POC: 'POC License',
+  OldCustomer: 'Enterprise License (Legacy)',
+  CloudTrial: 'Scale License Cloud Trial',
+  Customer: 'Scale License Cloud',
+  OnpremCustomer: 'Scale License Onprem',
+  OpenSourceLicense: 'Open Source License',
+  BusinessLicenseCloud: 'Business License Cloud',
+  BusinessLicenseOnprem: 'Business License Onprem',
+  EnterpriseLicenseCloud: 'Enterprise License Cloud',
+  EnterpriseLicenseOnprem: 'Enterprise License Onprem',
+  IntegrationPartner: 'Integration Partner',
+  ServicePartner: 'Service Partner',
+  ChannelPartner: 'Channel Partner',
+  TechnologyPartner: 'Technology Partner',
+}
+
 export const AppContext = (props) => {
 	const { serverside } = props
 
@@ -104,7 +137,6 @@ export const AppContext = (props) => {
         if (cleanup) cleanup();
       };
     }, []);
-       
 
     return (
         <Context.Provider value={{

@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/docker/docker/api/types/swarm"
+)
 
 func TestBuildAppImageName(t *testing.T) {
 	tests := []struct {
@@ -82,5 +86,47 @@ func TestImageHasLocalRegistryPrefix(t *testing.T) {
 
 	if imageHasLocalRegistryPrefix("registry.example.com-other/frikky/shuffle:custom-app_1.0.0", "registry.example.com") {
 		t.Fatal("did not expect partial registry name to match")
+	}
+}
+
+func TestPrivateRegistryAppImages(t *testing.T) {
+	source, target, err := privateRegistryAppImages("registry.example.com/team/", "registry.example.com/team/frikky/shuffle:custom-app_1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "frikky/shuffle:custom-app_1.0.0" || target != "registry.example.com/team/frikky/shuffle:custom-app_1.0.0" {
+		t.Fatalf("unexpected source/target: %q %q", source, target)
+	}
+
+	source, target, err = privateRegistryAppImages("registry.example.com/team", "registry.hub.docker.com/frikky/shuffle:http_1.4.0")
+	if err != nil || source != "frikky/shuffle:http_1.4.0" || target != "registry.example.com/team/frikky/shuffle:http_1.4.0" {
+		t.Fatalf("unexpected Docker Hub source/target: %q %q %v", source, target, err)
+	}
+
+	for _, registry := range []string{"", "docker.io", "registry.hub.docker.com", "index.docker.io"} {
+		if _, _, err := privateRegistryAppImages(registry, "frikky/shuffle:http_1.4.0"); err == nil {
+			t.Fatalf("expected registry %q to be rejected", registry)
+		}
+	}
+}
+
+func TestHasAvailableSwarmService(t *testing.T) {
+	service := swarm.Service{Spec: swarm.ServiceSpec{
+		Annotations: swarm.Annotations{Name: "http-1-4-0"},
+		EndpointSpec: &swarm.EndpointSpec{Ports: []swarm.PortConfig{{
+			Name:          "app-port",
+			PublishedPort: 33334,
+		}}},
+	}}
+
+	if !hasAvailableSwarmService([]swarm.Service{service}, "http.1-4-0") {
+		t.Fatal("expected an existing service with a published app port to be available")
+	}
+	if hasAvailableSwarmService([]swarm.Service{service}, "other-app") {
+		t.Fatal("did not expect a differently named service to be available")
+	}
+	service.Spec.EndpointSpec.Ports = nil
+	if hasAvailableSwarmService([]swarm.Service{service}, "http-1-4-0") {
+		t.Fatal("did not expect a service without a published app port to be available")
 	}
 }

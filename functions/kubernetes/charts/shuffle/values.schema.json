@@ -117,6 +117,11 @@
         "shuffle": {
             "type": "object",
             "properties": {
+                "hybrid": {
+                    "type": "boolean",
+                    "description": "Connect this Kubernetes location to the Shuffle cloud backend",
+                    "default": false
+                },
                 "baseUrl": {
                     "type": "string",
                     "description": "The external base URL under which Shuffle is reachable.",
@@ -131,6 +136,11 @@
                     "type": "string",
                     "description": "The registry from / to which shuffle apps are pulled / pushed",
                     "default": "docker.io"
+                },
+                "appRegistryInsecure": {
+                    "type": "boolean",
+                    "description": "Use HTTP when pushing apps to the private registry",
+                    "default": false
                 },
                 "appBaseImageName": {
                     "type": "string",

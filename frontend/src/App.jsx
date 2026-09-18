@@ -22,7 +22,7 @@ import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 // import AgentUI from "./views/AgentUI.jsx";
 import { AgentsView } from '@shuffleio/shuffle-mcps';
-import { CombinedDashboard, FormInput, Usecases as UsecasesSecurity } from '@shuffleio/shuffle-core';
+import { CombinedDashboard, OnboardingFlow, FormInput, Usecases as UsecasesSecurity } from '@shuffleio/shuffle-core';
 
 
 import Welcome from "./views/Welcome.jsx";
@@ -76,7 +76,7 @@ import AppExplorer from "./views/AppExplorer.jsx";
 var globalUrl = window.location.origin;
 
 // Change the Shuffle version on UI from here
-const SHUFFLE_VERSION = "2.2.1"
+const SHUFFLE_VERSION = "2.3.0-rc1"
 
 // CORS used for testing purposes. Should only happen with specific port and http
 if (window.location.port === "3000") {
@@ -770,6 +770,42 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+					exact
+					path="/onboarding"
+					element={
+						<OnboardingFlow
+							cookies={cookies}
+							removeCookie={removeCookie}
+							isLoaded={isLoaded}
+							isLoggedIn={isLoggedIn}
+							globalUrl={globalUrl}
+							cookies={cookies}
+							userdata={userdata}
+							checkLogin={checkLogin}
+							theme={themeMode}
+							{...props}
+						/>
+					}
+				/>
+				<Route
+					exact
+					path="/onboarding/:key"
+					element={
+						<OnboardingFlow
+							cookies={cookies}
+							removeCookie={removeCookie}
+							isLoaded={isLoaded}
+							isLoggedIn={isLoggedIn}
+							globalUrl={globalUrl}
+							cookies={cookies}
+							userdata={userdata}
+							checkLogin={checkLogin}
+							theme={themeMode}
+							{...props}
+						/>
+					}
+				/>
 			<Route exact path="/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
 			<Route exact path="/workflows/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
         	<Route

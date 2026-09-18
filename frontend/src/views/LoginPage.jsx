@@ -296,7 +296,7 @@ const MarketplaceCard = ({ classes, isCloud }) => {
 
 
 const LoginPage = props => {
-	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, inregister, serverside, checkLogin, } = props;
+	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, inregister, serverside, checkLogin, embedded = false, onSuccess, } = props;
 	let navigate = useNavigate();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -364,7 +364,7 @@ const LoginPage = props => {
 
 	// Just a way to force location loading properly
 	// Register & login should be split :3
-	if (window !== undefined) {
+	if (window !== undefined && !embedded) {
 		const path = window.location.pathname;
 		if (path.includes("/login") && register === false) {
 			console.log("Should register instead of login!")
@@ -383,13 +383,13 @@ const LoginPage = props => {
 	}
 
 	const bodyDivStyle = {
-		marginTop: 100,
+		marginTop: embedded ? 0 : 100,
 		width: isMobile ? "100%" : "100%",
-		maxWidth: "1200px", // Increased max-width to accommodate larger cards
-		background: "#1A1A1A",
+		maxWidth: embedded ? "100%" : "1200px",
+		background: embedded ? "transparent" : "#1A1A1A",
 		margin: "auto",
-		display: isMobile ? "block" : "flex",
-		padding: "40px",
+		display: embedded ? "block" : (isMobile ? "block" : "flex"),
+		padding: embedded ? 0 : "40px",
 		gap: "40px",
 		overflow: "hidden",
 		alignItems: "center"
@@ -397,11 +397,11 @@ const LoginPage = props => {
 
 	const boxStyle = {
 		color: "white",
-		padding: "40px",
+		padding: embedded ? 0 : "40px",
 		flex: 1,
-		maxWidth: isMobile ? "100%" : 410,
-		minWidth: isCloud ? 410 : 475, 
-		background: "#212121",
+		maxWidth: embedded ? "100%" : (isMobile ? "100%" : 410),
+		minWidth: embedded ? "auto" : (isCloud ? 410 : 475),
+		background: embedded ? "transparent" : "#212121",
 		borderRadius: "12px",
 		display: "flex",
 		// flexDirection: "column",
@@ -460,7 +460,7 @@ const LoginPage = props => {
 		return (username.length > 1 && password.length > 9);
 	}
 
-	if (isLoggedIn === true && serverside !== true) {
+	if (isLoggedIn === true && serverside !== true && !embedded) {
 		setTimeout(() => {
 			const tmpView = new URLSearchParams(window.location.search).get("view");
 			if (tmpView !== undefined && tmpView !== null) {
@@ -496,6 +496,7 @@ const LoginPage = props => {
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo(responseJson["reason"]);
+            toast.error(responseJson["reason"])
 
 			if (responseJson?.reason?.toLowerCase().includes("connection refused")) { 
 				navigate("/loginsetup")
@@ -554,6 +555,7 @@ const LoginPage = props => {
 			if (loginWithSSO === true) {
 				url = baseurl + '/api/v1/login/sso'
 				setLoginInfo("Logging in with SSO. Please wait while we find a relevant org...")
+				toast.info("Logging in with SSO. Please wait...")
 			}
 
 			fetch(url, {
@@ -588,6 +590,7 @@ const LoginPage = props => {
 						});
 					}
 					setLoginInfo(responseJson["reason"])
+					toast.error(responseJson["reason"])
 					setLoginLoading(false)
 				} else {
 					if (responseJson?.region_url !== undefined && responseJson?.region_url !== null && responseJson?.region_url !== "") {
@@ -597,6 +600,7 @@ const LoginPage = props => {
 
 					if (responseJson["reason"] === "MFA_REDIRECT") {
 						setLoginInfo("Enter the 6-digit MFA code.")
+						toast.info("Enter the 6-digit MFA code.")
 						setMFAField(true)
 						return
 
@@ -612,6 +616,7 @@ const LoginPage = props => {
 					}
 					else if (responseJson["reason"] !== undefined && responseJson["reason"] !== null && responseJson["reason"].includes("error")) {
 						setLoginInfo(responseJson["reason"])
+						toast.error(responseJson["reason"])
 						setLoginLoading(false)
 						return
 					}
@@ -626,6 +631,7 @@ const LoginPage = props => {
 					}
 
 					setLoginInfo("Successful login! Redirecting you in 3 seconds...")
+					toast.success("Successful login! Redirecting you in 3 seconds...")
 					for (var key in responseJson["cookies"]) {
 						setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
 					}
@@ -669,6 +675,7 @@ const LoginPage = props => {
 			})
 			.catch(error => {
 				setLoginInfo("Error from login API: " + error)
+				toast.error("Error from login API: " + error)
 				setLoginLoading(false)
 			});
 		} else {
@@ -692,6 +699,7 @@ const LoginPage = props => {
 								});
 							}
 							setLoginInfo(responseJson["reason"])
+							toast.error(responseJson["reason"])
 							setLoginLoading(false)
 						} else {
 							if (responseJson["reason"] === "shuffle_account") {
@@ -718,7 +726,16 @@ const LoginPage = props => {
 								});
 							}
 							
+							if (embedded && onSuccess) {
+								setLoginInfo("Successful registration!");
+								toast.success("Successful registration!")
+								onSuccess(responseJson);
+								setLoginLoading(false);
+								return;
+							}
+
 							setLoginInfo("Successful registration! Redirecting in 3 seconds...")
+							toast.success("Successful registration!")
 
 
 							setTimeout(() => {
@@ -751,6 +768,7 @@ const LoginPage = props => {
 				)
 				.catch(error => {
 					setLoginInfo("Error in login. Please try again, or contact support@shuffler.io if the problem persists.")
+					toast.error("Error in login. Please try again, or contact support@shuffler.io if the problem persists.")
 					setLoginLoading(false)
 				});
 		}
@@ -818,26 +836,30 @@ const LoginPage = props => {
 					}}
 				>
 					<form onSubmit={onSubmit} style={{ margin: 15, width: isMobile ? "100%" : "360px", width: "max-content", overflow: "hidden", textAlign: "center", }}>
-						<img
-							style={{
-								height: isMobile ? 44 : 60,
-								width: isMobile ? 44 : 60,
-								paddingBottom: isMobile ? null : 40
-							}}
-							src="images/logos/orange_logo.svg"
-							alt="Shuffle Logo"
-						/>
+						{!embedded && (
+							<img
+								style={{
+									height: isMobile ? 44 : 60,
+									width: isMobile ? 44 : 60,
+									paddingBottom: isMobile ? null : 40
+								}}
+								src="images/logos/orange_logo.svg"
+								alt="Shuffle Logo"
+							/>
+						)}
 
-						<Typography
-							color="textSecondary"
-							style={{
-								textAlign: isMobile ? "center" : null,
-								marginTop: 10,
-								marginBottom: 10
-							}}
-						>
-							{message}
-						</Typography>
+						{!embedded && (
+							<Typography
+								color="textSecondary"
+								style={{
+									textAlign: isMobile ? "center" : null,
+									marginTop: 10,
+									marginBottom: 10
+								}}
+							>
+								{message}
+							</Typography>
+						)}
 
 						<h2 style={{
 							marginBottom: 2,
@@ -1041,24 +1063,26 @@ const LoginPage = props => {
 							</Button>
 						</div>
 
-						<div style={{
-							display: "flex",
-							flexDirection: "column",
-							marginTop: "0px",
-							alignItems: isMobile ? "center" : null
-						}}>
-							<div style={{ flex: 1 }}>
-								{formButton}
+						{!embedded && (
+							<div style={{
+								display: "flex",
+								flexDirection: "column",
+								marginTop: "0px",
+								alignItems: isMobile ? "center" : null
+							}}>
+								<div style={{ flex: 1 }}>
+									{formButton}
+								</div>
 							</div>
-						</div>
+						)}
 
 						<div style={{ marginTop: 30, color: "white" }}>
 							{loginInfo}
 						</div>
 
-						{(
-							ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length) > 0 
-							//|| (isCloud && !loginWithSSO && window?.location?.pathname !== "/register")   
+						{!embedded && (
+							ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length) > 0
+							//|| (isCloud && !loginWithSSO && window?.location?.pathname !== "/register")
 							? (
 						  <div>
 							<Typography style={{ textAlign: "center" }}>Or</Typography>
@@ -1087,7 +1111,7 @@ const LoginPage = props => {
 							</div>
 						  </div>
 						) : null}
-						{isCloud && loginWithSSO && (
+						{!embedded && isCloud && loginWithSSO && (
 							<Button 
 								variant="outlined"
 								color="secondary"
@@ -1103,7 +1127,7 @@ const LoginPage = props => {
 					</form>
 				</Paper>
 
-				{isMobile ? null : (
+				{isMobile || embedded ? null : (
 					<>
 						<div className={classes.divider}>
 							<span>OR</span>
@@ -1114,7 +1138,7 @@ const LoginPage = props => {
 			</div>
 		);
 
-	const loadedCheck = isLoaded ?
+	const loadedCheck = (isLoaded || embedded) ?
 		<div>
 			{basedata}
 		</div>
@@ -1123,7 +1147,7 @@ const LoginPage = props => {
 		</div>
 
 	return (
-		<div style={{zoom: 0.8, minHeight: "75vh", paddingTop: 75, paddingBottom: 90 }}>
+		<div style={{zoom: embedded ? 1 : 0.8, minHeight: embedded ? "auto" : "75vh", paddingTop: embedded ? 0 : 75, paddingBottom: embedded ? 0 : 90 }}>
 			{loadedCheck}
 		</div>
 	)

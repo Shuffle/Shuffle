@@ -18,7 +18,11 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "react-toastify";
 
-const AgentChatWidget = ({ globalUrl, theme, widgetLeft, workflowName, workflowId, workflow, saveWorkflow }) => {
+const AgentChatWidget = ({ globalUrl, theme, widgetLeft, workflowName, workflowId, workflow, saveWorkflow, onAgentStarted, onAgentStopped, trackEvent }) => {
+  // Fires a GA event only when trackEvent is provided (cloud only).
+  const track = (action, executionId = "", extra = {}) => {
+    if (trackEvent) trackEvent(action, executionId, extra)
+  }
   const [chatInput, setChatInput] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
   const [answerInput, setAnswerInput] = React.useState("")
@@ -126,7 +130,15 @@ const AgentChatWidget = ({ globalUrl, theme, widgetLeft, workflowName, workflowI
             // answer submission must target that workflow's ID, not workflow.id.
             agentExecWorkflowId: resp.workflow_id || prev?.agentExecWorkflowId,
           }))
-          if (terminal.includes(resp.status)) stopAgentWidgetPoll()
+          if (terminal.includes(resp.status)) {
+            if (resp.status === "FINISHED") {
+              track("agent_finished", execution_id)
+            } else {
+              track("agent_failed", execution_id, { status: resp.status })
+            }
+            stopAgentWidgetPoll()
+            if (onAgentStopped) onAgentStopped()
+          }
         })
         .catch(() => {})
   }
@@ -250,6 +262,8 @@ const AgentChatWidget = ({ globalUrl, theme, widgetLeft, workflowName, workflowI
   const abortAgentWidgetExec = () => {
     if (!agentWidgetExec?.execution_id) return
     stopAgentWidgetPoll()
+    track("agent_aborted", agentWidgetExec.execution_id)
+    if (onAgentStopped) onAgentStopped()
 
     fetch(`${globalUrl}/api/v1/workflows/${workflow.id}/executions/${agentWidgetExec.execution_id}/abort`, {
       method: "GET",
@@ -265,6 +279,25 @@ const AgentChatWidget = ({ globalUrl, theme, widgetLeft, workflowName, workflowI
   React.useEffect(() => {
     return () => stopAgentWidgetPoll()
   }, [])
+
+  const isRunningRef = React.useRef(isRunning)
+  isRunningRef.current = isRunning
+  const isActiveRef = React.useRef(false)
+  isActiveRef.current = isRunning || isWaiting
+  const presenceRefreshTimerRef = React.useRef(null)
+
+  const schedulePresenceRefresh = React.useCallback(() => {
+    if (!onAgentStarted) return
+    if (presenceRefreshTimerRef.current) clearTimeout(presenceRefreshTimerRef.current)
+    presenceRefreshTimerRef.current = setTimeout(() => {
+      presenceRefreshTimerRef.current = null
+      // Refresh while running OR waiting for user input — agent is still active in both states.
+      if (isActiveRef.current) {
+        onAgentStarted()
+        schedulePresenceRefresh()
+      }
+    }, 25000)
+  }, [onAgentStarted])
 
   const submitChatInput = () => {
     const text = chatInput.trim()
@@ -307,6 +340,11 @@ const AgentChatWidget = ({ globalUrl, theme, widgetLeft, workflowName, workflowI
             waitingQuestion: "",
           })
           pollAgentWidgetExec(resp.execution_id, resp.authorization, true)
+          track("agent_started", resp.execution_id)
+          if (onAgentStarted) {
+            onAgentStarted()
+            schedulePresenceRefresh()
+          }
         } else {
           toast.warn(resp.reason || "Agent request failed. Try again.")
         }

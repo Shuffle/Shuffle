@@ -1,0 +1,101 @@
+{{- if .Values.security.enabled }}
+{{- $name := printf "%s-security" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- $labels := include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) }}
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: security
+spec:
+  replicas: {{ .Values.security.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: security
+  template:
+    metadata:
+      labels:
+        {{- $labels | nindent 8 }}
+        app.kubernetes.io/component: security
+        {{- with .Values.security.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.security.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.security.image) "context" $) | nindent 6 }}
+      {{- with .Values.security.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.security.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.security.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: security
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.security.image "global" .Values.global "chart" .Chart) }}
+          imagePullPolicy: {{ .Values.security.image.pullPolicy }}
+          env:
+            - name: BACKEND_HOSTNAME
+              value: {{ default (include "shuffle.backend.name" .) .Values.security.backendHostname | quote }}
+            - name: SHUFFLE_CORE_URL
+              value: {{ .Values.security.shuffleCoreUrl | quote }}
+            - name: SHUFFLE_SECURITY_URL
+              value: {{ .Values.security.shuffleSecurityUrl | quote }}
+            - name: SHUFFLE_API_URL
+              value: {{ .Values.security.shuffleApiUrl | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.security.containerPorts.http }}
+              protocol: TCP
+            - name: https
+              containerPort: {{ .Values.security.containerPorts.https }}
+              protocol: TCP
+          {{- if .Values.security.resources }}
+          resources:
+            {{- toYaml .Values.security.resources | nindent 12 }}
+          {{- else if ne .Values.security.resourcesPreset "none" }}
+          resources:
+            {{- include "common.resources.preset" (dict "type" .Values.security.resourcesPreset) | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: security
+  {{- with .Values.security.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.security.service.type }}
+  selector:
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: security
+  ports:
+    - name: http
+      port: {{ .Values.security.service.ports.http }}
+      targetPort: http
+      protocol: TCP
+      appProtocol: http
+    - name: https
+      port: {{ .Values.security.service.ports.https }}
+      targetPort: https
+      protocol: TCP
+      appProtocol: https
+{{- end }}

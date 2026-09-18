@@ -537,7 +537,7 @@ const TenantsTab = memo((props) => {
                         toast("Successfully disabled sync!");
                         setOrgSyncResponse("Successfully disabled syncronization");
                     } else {
-                        toast("Cloud Syncronization successfully set up!");
+                        toast("SLS (Shuffle Licensing System) successfully set up!");
                         setOrgSyncResponse(
                             "Successfully started syncronization. Cloud features you now have access to can be seen below.",
                         );
@@ -991,7 +991,7 @@ const TenantsTab = memo((props) => {
                     rel="noopener noreferrer"
                     style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
-                    cloud sync
+                    SLS (Shuffle Licensing System)
                 </a>{" "}
                 do?
                 <div style={{ display: "flex", marginBottom: 20 }}>

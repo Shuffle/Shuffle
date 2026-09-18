@@ -11,9 +11,9 @@ import { useContext, useState } from "react";
 import { Context } from "../context/ContextApi.jsx";
 import { useNavigate } from 'react-router-dom';
 
-const Licensed = ({licensed, expanded, showBadge}) => {
+const Licensed = ({licensed, expanded, showBadge, title}) => {
     
-    const { themeMode } = useContext(Context);
+    const { themeMode } = useContext(Context);  
     const navigate = useNavigate()
 
 
@@ -57,7 +57,7 @@ const Licensed = ({licensed, expanded, showBadge}) => {
       const statusConfig = licensed
         ? {
             icon: showBadge ? ShieldIcon : CheckCircle,
-            text: showBadge ? 'Licensed' : 'Enterprise Licensed',
+            text: showBadge ? 'Licensed' : `${title} Licensed`,
             shortText: 'Licensed',
             subtitle: 'Full access',
             color: colors.success,

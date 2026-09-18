@@ -219,6 +219,43 @@ export function createStreamSender(
         id: saveId,
       });
     },
+
+    sendAgentPresence: (currentOrgId) => {
+      if (!baseUrl || !workflowId) {
+        return Promise.resolve(null)
+      }
+      
+      const effectiveOrgId = currentOrgId || orgId
+      const op = {
+        item: ITEMS.PRESENCE,
+        type: TYPES.ADD,
+        user_id: "agent",
+        username: "Agent",
+      };
+      return fetch(buildStreamUrl(baseUrl, workflowId), {
+        method: "POST",
+        headers: buildHeaders(effectiveOrgId),
+        credentials: "include",
+        body: JSON.stringify(op),
+      }).catch((e) => console.log("sendAgentPresence error:", e));
+    },
+
+    sendAgentPresenceRemove: (currentOrgId) => {
+      if (!baseUrl || !workflowId) return Promise.resolve(null)
+      const effectiveOrgId = currentOrgId || orgId
+      const op = {
+        item: ITEMS.PRESENCE,
+        type: TYPES.REMOVE,
+        user_id: "agent",
+        username: "Agent",
+      }
+      return fetch(buildStreamUrl(baseUrl, workflowId), {
+        method: "POST",
+        headers: buildHeaders(effectiveOrgId),
+        credentials: "include",
+        body: JSON.stringify(op),
+      }).catch((e) => console.log("sendAgentPresenceRemove error:", e))
+    },
   };
 }
 
@@ -242,7 +279,7 @@ export function startStream(baseUrl, workflowId, orgId, options) {
   const timeout = 60000;
   const maxFailures = 20;
   const retryDelay = 3000;
-  const presenceIntervalMs = 5000;
+  const presenceIntervalMs = 15000; // This is the interval for the ping request
 
   const url = buildStreamUrl(baseUrl, workflowId);
 
@@ -271,10 +308,11 @@ export function startStream(baseUrl, workflowId, orgId, options) {
         }
 
         const data = await response.json();
-        if (data && data.seq > lastSeq) {
-          lastSeq = data.seq;
-        }
-        if (data && data.count > 1) {
+        // Do NOT advance lastSeq here — the live connection will catch up from
+        // the current lastSeq. Advancing it here would skip ops (including the
+        // agent presence op) that arrived while we were in solo mode.
+        const hasAgent = Array.isArray(data?.users) && data.users.some(u => u.user_id === "agent")
+        if (data && (data.count > 1 || hasAgent)) {
           return true;
         }
       } catch (error) {

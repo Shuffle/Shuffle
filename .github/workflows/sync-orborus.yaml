@@ -21,6 +21,12 @@ jobs:
       matrix:
         version: ["${{ inputs.orborus_version }}"]
     steps:
+      - name: Set version
+        id: set_version
+        env:
+          VERSION: ${{ matrix.version }}
+        run: echo "VERSION=${VERSION#v}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -42,9 +48,9 @@ jobs:
       - name: Retag and push orborus
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }} \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ matrix.version }} \
-            ghcr.io/shuffle/orborus:${{ matrix.version }}
+            -t ghcr.io/shuffle/shuffle-orborus:${{ steps.set_version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-orborus:${{ steps.set_version.outputs.VERSION }} \
+            ghcr.io/shuffle/orborus:${{ steps.set_version.outputs.VERSION }}
 
       - name: Inspect result
-        run: docker buildx imagetools inspect ghcr.io/shuffle/shuffle-orborus:${{ matrix.version }}
+        run: docker buildx imagetools inspect ghcr.io/shuffle/shuffle-orborus:${{ steps.set_version.outputs.VERSION }}
