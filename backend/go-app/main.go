@@ -1962,10 +1962,10 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// 1. Get callback data
 	// 2. Load the configuration
 	// 3. Execute the workflow
-	//cors := shuffle.HandleCors(resp, request)
-	//if cors {
-	//	return
-	//}
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
 
 	log.Printf("[DEBUG] HOOKS: webhook callback: %s", request.URL.String())
 
