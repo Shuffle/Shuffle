@@ -68,6 +68,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import Drift from "react-driftjs";
 
 import { Context } from './context/ContextApi.jsx';
+import GlobalNotificationsDrawer from './components/GlobalNotificationsDrawer.jsx';
+import { GlobalSearchDialog } from './components/GlobalSearchDialog.jsx';
 import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
@@ -1129,6 +1131,9 @@ const App = (message, props) => {
 		  <CookiesProvider>
 			<BrowserRouter>
 			  {includedData}
+			  <GlobalSearchDialog
+				userdata={userdata}
+			  />
 			</BrowserRouter>
 			<ToastContainer 
 				position="bottom-center"
@@ -1141,6 +1146,10 @@ const App = (message, props) => {
 				draggable
 				pauseOnHover
 				theme={themeMode}
+			/>
+			<GlobalNotificationsDrawer
+				themeMode={themeMode}
+				onNotificationsUpdated={getUserNotifications}
 			/>
 		  </CookiesProvider>
 		</ThemeProvider>
