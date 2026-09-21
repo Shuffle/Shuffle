@@ -8,8 +8,10 @@ import {
   HelpOutline as HelpOutlineIcon,
   MeetingRoom as MeetingRoomIcon,
   Search as SearchIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Notifications as NotificationsIcon,
 } from "@mui/icons-material";
+import { NOTIFICATIONS_OPEN_EVENT, navigateToShuffleSecurity } from "@shuffleio/shuffle-core";
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import MonitorIcon from '@mui/icons-material/Monitor';
@@ -659,25 +661,20 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           </MenuItem>
         </Link>
 
-        <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+        <MenuItem
+          onClick={(event) => {
+            handleClose();
+            window.dispatchEvent(new CustomEvent(NOTIFICATIONS_OPEN_EVENT));
+          }}
+          style={{ fontSize: 18 }}
+        >
+          <NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
+            notifications === undefined || notifications === null ? 0 : 
+            notifications?.filter((notification) => notification.read === false).length
+          })
+        </MenuItem>
 
-	  	{/*
-		<Link to="/admin?admin_tab=notifications" style={hrefStyle}>
-		  <MenuItem
-			onClick={(event) => {
-			  handleClose();
-			}}
-      style={{fontSize: 18}}
-		  >
-			<NotificationsIcon style={{ marginRight: 5 }} /> Org Notifications ({
-				notifications === undefined || notifications === null ? 0 : 
-				notifications?.filter((notification) => notification.read === false).length
-			}) 
-		  </MenuItem>
-		</Link>
-
-        <Divider style={{ marginTop: 10, marginBottom: 10, }} />
-	  	*/}
+        <Divider style={{ marginTop: 10, marginBottom: 10 }} />
 
         <Link to={userdata && userdata?.org_status?.includes("integration_partner") && userdata?.active_org?.branding?.documentation_link?.length > 0 ? userdata?.active_org?.branding?.documentation_link : "/docs" } target={userdata?.active_org?.branding?.documentation_link?.length > 0 && userdata?.org_status?.includes("integration_partner") ? "_blank" : "_self" } style={hrefStyle}>
           <MenuItem
@@ -1006,7 +1003,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           if (!isCloud) {
               if (org?.cloud_sync  && (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
-              } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("air gapped") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
+              } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                 setIsProdStatusOn(true);
               } else {
                 setIsProdStatusOn(false);
@@ -1046,14 +1043,12 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
         position: "relative",
         transition: "width 0.3s ease",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" ,
-        resize: 'both',
         zoom: isSafari ? undefined : 0.8,
         transform: isSafari ? "scale(0.8)" : undefined,
         transformOrigin: isSafari ? "top left" : undefined,
         height: "calc((100vh - 32px)*1.2)",
       }}
     >
-      {searchBarModalOpen && !isDocSearchModalOpen ? <ModalView serverside={serverside} userdata={userdata} searchBarModalOpen={searchBarModalOpen} setSearchBarModalOpen={setSearchBarModalOpen} globalUrl={globalUrl} isDocSearchModalOpen={isDocSearchModalOpen} /> : null}
       <Box
         sx={{
           display: "flex",
@@ -1089,10 +1084,10 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           componentsProps={{
             tooltip: {
               sx: {
-                backgroundColor: "rgba(33, 33, 33, 1)",
-                color: "rgba(241, 241, 241, 1)",
+                backgroundColor: theme.palette.tooltip.backgroundColor,
+                color: theme.palette.tooltip.color,
                 fontSize: 12,
-                border: "1px solid rgba(73, 73, 73, 1)",
+                border: theme.palette.tooltip.border,
                 fontFamily: theme?.typography?.fontFamily,
               }
             },
@@ -1180,25 +1175,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
         >
           <MenuItem
             onClick={() => {
-				if (isCloud) { 
-					//ReactGA.event({
-					//	category: "sidebar",
-					//	action: "click_shuffle_security",
-					//	label: "",
-					//})
-
-              		window.location.href = "https://security.shuffler.io/incidents?utm_source=shuffler_sidebar";
-				} else {
-					const { protocol, hostname } = window.location;
-
-					var newPort = 3002;
-					if (protocol === "https") {
-						newPort = 3444
-					}
-					
-					const newUrl = `${protocol}//${hostname}:${newPort}/incidents`;
-					window.location.href = newUrl;
-				}
+              navigateToShuffleSecurity("/incidents?utm_source=shuffler_sidebar");
             }}
             sx={{
               borderRadius: "8px",
@@ -1374,7 +1351,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           </Button>
         </Box>
       </Box>
-      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(true)}} onMouseLeave={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(false);setOpenAutocomplete(false)}}>
+      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: expandLeftNav ? "auto" : "hidden", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(true)}} onMouseLeave={()=>{(!leftSideBarOpenByClick || window?.location?.pathname?.includes("/workflows/")) && setExpandLeftNav(false);setOpenAutocomplete(false)}}>
       <Box
             sx={{
               display: "flex",
@@ -1957,10 +1934,10 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
             componentsProps={{
               tooltip: {
                 sx: {
-                  backgroundColor: "rgba(33, 33, 33, 1)",
-                  color: "rgba(241, 241, 241, 1)",
+                  backgroundColor: theme.palette.tooltip.backgroundColor,
+                  color: theme.palette.tooltip.color,
                   fontSize: 13,
-                  border: "1px solid rgba(73, 73, 73, 1)",
+                  border: theme.palette.tooltip.border,
                   fontFamily: theme?.typography?.fontFamily,
                 }
               },
@@ -2210,57 +2187,54 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           }}
         >
           {expandLeftNav ? (
-            <>
-              <Button
-                onClick={(event) => {
-                  if (anchorElAvatar) {
-                    setAnchorElAvatar(null);
-                  } else {
-                    setAnchorElAvatar(event.currentTarget);
-                  }
-                  setOpenAutocomplete(false);
+            <Button
+              onClick={(event) => {
+                if (anchorElAvatar) {
+                  setAnchorElAvatar(null);
+                } else {
+                  setAnchorElAvatar(event.currentTarget);
+                }
+                setOpenAutocomplete(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "transparent",
+                cursor: "pointer",
+                padding: 0,
+                minWidth: 0,
+                gap: 10,
+                marginLeft: 8,
+              }}
+              disableElevation
+              disableRipple
+            >
+              <Avatar
+                sx={{
+                  width: 48,
+                  height: 48,
+                  backgroundColor: themeMode === 'dark' ? darkHoverColor : lightHoverColor,
+                  color: themeMode === 'dark' ? lightText : darkText,
+                  fontSize: 30,
+                  fontStyle: "bold",
+                  border: hoverOnAvatar ? (themeMode === 'dark' ? "1px solid #494949" : '1px solid #5A5A5A') : "none",
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  backgroundColor: "transparent",
-                  cursor: "pointer",
-                  padding: 0,
-                  minWidth: 0,
-                  gap: 10,
-                  marginLeft: 8,
-                }}
-                disableElevation
-                disableRipple
               >
-                <Avatar
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    backgroundColor: themeMode === 'dark' ? darkHoverColor : lightHoverColor,
-                    color: themeMode === 'dark' ? lightText : darkText,
-                    fontSize: 30,
-                    fontStyle: "bold",
-                    border: hoverOnAvatar ? (themeMode === 'dark' ? "1px solid #494949" : '1px solid #5A5A5A') : "none",
-                  }}
-                >
-                  {userdata?.username?.substring(0, 1).toUpperCase()}
-                </Avatar>
-                <Typography
-                  style={{
-                    color: themeMode === "dark" ? lightText : darkText,
-                    fontSize: 18,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: 150,
-                  }}
-                >
-                  {userdata?.username}
-                </Typography>
-              </Button>
-              {avatarMenu}
-            </>
+                {userdata?.username?.substring(0, 1).toUpperCase()}
+              </Avatar>
+              <Typography
+                style={{
+                  color: themeMode === "dark" ? lightText : darkText,
+                  fontSize: 18,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: 150,
+                }}
+              >
+                {userdata?.username}
+              </Typography>
+            </Button>
           ) : (
             <Button
               onClick={(event) => {
@@ -2295,6 +2269,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
               </Avatar>
             </Button>
           )}
+          {avatarMenu}
         </Box>
       </Box>
       </Box>

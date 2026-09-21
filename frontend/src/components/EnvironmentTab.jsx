@@ -41,6 +41,7 @@ import {
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
 import { green, yellow, red } from '../views/AngularWorkflow.jsx'
+import { MonitorHostTable, HostMonitor } from "@shuffleio/shuffle-core";
 import AppSearch from "../components/AppSearch1.jsx";
 
 const EnvironmentTab = memo((props) => {
@@ -65,6 +66,7 @@ const EnvironmentTab = memo((props) => {
     const [selectedSubOrg, setSelectedSubOrg] = React.useState([]);
 	const [showLocationActionModal, setShowLocationActionModal] = React.useState(undefined)
 	const [currentEnvQueue, setCurrentEnvQueue] = React.useState([])
+	const [envSubTabMap, setEnvSubTabMap] = React.useState({})
 
   const {  themeMode, supportEmail, brandColor } = useContext(Context);
   const theme = getTheme(themeMode, brandColor);
@@ -73,9 +75,7 @@ const EnvironmentTab = memo((props) => {
     useEffect(() => {
         getEnvironments();
         setModalUser({});
-        const refreshInterval = setInterval(getEnvironments, 30000);
-        return () => clearInterval(refreshInterval);
-    }, [globalUrl, selectedOrganization.id]);
+    }, []);
 
     const changeModalData = (field, value) => {
         modalUser[field] = value;
@@ -1088,6 +1088,9 @@ const EnvironmentTab = memo((props) => {
           selectedOrganization.id !== undefined && environment?.org_id !== selectedOrganization.id ?
 			  "N/A"
 		  :
+          environment?.sensor_group === true || (Array.isArray(environment?.sensor_hosts) && environment.sensor_hosts.length > 0)
+          ? `${environment?.sensor_hosts?.length || 0} ${environment?.sensor_hosts?.length === 1 ? "host" : "hosts"}`
+          :
           environment.queue !== undefined && environment.queue !== null
           ? environment.queue < 0
             ? 0
@@ -1131,7 +1134,7 @@ const EnvironmentTab = memo((props) => {
           >
             <ListItemText
             primary={
-              environment?.sensor_group === true ? 
+              environment?.sensor_group === true || (Array.isArray(environment?.sensor_hosts) && environment.sensor_hosts.length > 0) ? 
 				<Tooltip title={`Monitoring group for Shuffle Security host monitors. Total: ${environment?.sensor_hosts?.length || 0}`}>
 					<ComputerIcon />
 				</Tooltip>
@@ -1554,19 +1557,49 @@ const EnvironmentTab = memo((props) => {
                           }
           </ListItem>
           <Collapse in={listItemExpanded === index} timeout="auto" unmountOnExit>
+            {environment?.sensor_group === true ? (
+              <div style={{ padding: "16px 20px", width: "100%", boxSizing: "border-box" }}>
+                <MonitorHostTable
+                  hosts={environment?.sensor_hosts || []}
+                  group={environment}
+                  showAddHost={true}
+                  theme={themeMode}
+                  orgId={userdata?.active_org?.id || userdata?.org_id || selectedOrganization?.id}
+                  onRefresh={getEnvironments}
+                />
+              </div>
+            ) : (
+              <div style={{ width: "100%", boxSizing: "border-box" }}>
+                <div style={{ display: "flex", justifyContent: "center", borderBottom: `1px solid ${themeMode === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, padding: "8px 16px" }}>
+                  <Tabs
+                    value={envSubTabMap[index] ?? (Array.isArray(environment?.sensor_hosts) && environment.sensor_hosts.length > 0 ? "monitors" : "setup")}
+                    onChange={(_, val) => setEnvSubTabMap(prev => ({ ...prev, [index]: val }))}
+                    indicatorColor="primary"
+                    textColor="primary"
+                  >
+                    <Tab value="setup" label="Orborus Setup" style={{ textTransform: "none", fontSize: 13 }} />
+                    <Tab
+                      value="monitors"
+                      label={`Host Monitors (${environment?.sensor_hosts?.length || 0})`}
+                      style={{ textTransform: "none", fontSize: 13 }}
+                    />
+                  </Tabs>
+                </div>
+                {(envSubTabMap[index] ?? (Array.isArray(environment?.sensor_hosts) && environment.sensor_hosts.length > 0 ? "monitors" : "setup")) === "monitors" ? (
+                  <div style={{ padding: "16px 20px", width: "100%", boxSizing: "border-box" }}>
+                    <MonitorHostTable
+                      hosts={environment?.sensor_hosts || []}
+                      group={environment}
+                      showAddHost={true}
+                      theme={themeMode}
+                      orgId={userdata?.active_org?.id || userdata?.org_id || selectedOrganization?.id}
+                      onRefresh={getEnvironments}
+                    />
+                  </div>
+                ) : (
           	<Grid container justifyContent="center" style={{minWidth: 850, maxWidth: 850, }}>
-    			<Grid item xs={12} sm={8} md={6}>
+     			<Grid item xs={12} sm={8} md={6}>
                     <div style={{minWidth: 750, maxWidth: 750, minHeight: 350, display: 'flex', justifyContent: "center", backgroundColor: "transparent", }}>
-						{environment?.sensor_group === true ?
-                        <div style={{ paddingTop: 50, paddingBottom: 100, }}>
-							<Typography variant="h6">
-								Monitoring Group - Host controls available in <a href="https://security.shuffler.io/monitors" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Shuffle Security</a>
-							</Typography> 
-							<Typography>
-								Total registered hosts: {environment?.sensor_hosts?.length || 0}.<br/>Host management and response actions is done in Shuffle Security. Click the link above to manage.
-							</Typography>
-						</div>
-							:
                         <div style={{ paddingTop: 50, paddingBottom: 100, }}>
                           <Typography variant="h6">
                             Self-Hosted Orborus instance
@@ -1750,7 +1783,6 @@ const EnvironmentTab = memo((props) => {
                             }
                           </Typography>
                         </div>
-					  }
                       </div>
 					  {currentEnvQueue.length === 0 ? null : 
 						  <List style={{ minWidth: 700, maxWidth: 700, maxHeight: 300, overflowY: "auto", scrollbarColor: theme.palette.scrollbarColorTransparent, scrollbarWidth: 'thin', }}>
@@ -1797,6 +1829,9 @@ const EnvironmentTab = memo((props) => {
 
 				  </Grid>
 				  </Grid>
+                )}
+              </div>
+            )}
 				</Collapse>
         
                             {showCPUAlert === false ? null : (
