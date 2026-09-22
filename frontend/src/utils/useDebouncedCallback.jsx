@@ -21,5 +21,3 @@ export const useDebouncedCallback = (callback, delay = 300) => {
 };
 
 export default useDebouncedCallback;
-
-
