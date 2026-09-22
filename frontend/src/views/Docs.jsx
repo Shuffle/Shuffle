@@ -1768,10 +1768,10 @@ const Docs = (defaultprops) => {
                         componentsProps={{
                             tooltip: {
                             sx: {
-                                backgroundColor: "rgba(33, 33, 33, 1)",
-                                color: "rgba(241, 241, 241, 1)",
+                                backgroundColor: theme.palette.tooltip.backgroundColor,
+                                color: theme.palette.tooltip.color,
                                 fontSize: 14,
-                                border: "1px solid rgba(73, 73, 73, 1)",
+                                border: theme.palette.tooltip.border,
                                 fontFamily: theme?.typography?.fontFamily,
                             }
                             },

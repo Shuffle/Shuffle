@@ -15096,7 +15096,7 @@ const AngularWorkflow = (defaultprops) => {
           border: theme.palette.defaultBorder,
 
           borderRadius: theme.palette.borderRadius,
-          backgroundColor: "black",
+          backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
         },
       }}
       onClose={() => {
@@ -15219,7 +15219,7 @@ const AngularWorkflow = (defaultprops) => {
           minWidth: isMobile ? "90%" : 750,
 
           borderRadius: theme.palette.borderRadius,
-          backgroundColor: "black",
+          backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
         },
       }}
       onClose={() => {
@@ -21181,6 +21181,7 @@ const AngularWorkflow = (defaultprops) => {
   
                       return (
                         <MenuItem
+						  disabled={data?.archived === true || data?.sensor_group === true}
                           key={data.Name}
                           sx={{
                             backgroundColor:"transparent",
@@ -26195,7 +26196,7 @@ const AngularWorkflow = (defaultprops) => {
             minWidth: isMobile ? bodyWidth - 100 : 800,
 
             borderRadius: theme.palette.borderRadius,
-            backgroundColor: "black",
+            backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
           },
         }}
       >
@@ -26373,7 +26374,7 @@ const AngularWorkflow = (defaultprops) => {
             maxWidth: isMobile ? bodyWidth - 100 : "100%",
 
             borderRadius: theme.palette.borderRadius,
-            backgroundColor: "black",
+            backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
           },
         }}
       >
@@ -26851,7 +26852,7 @@ const AngularWorkflow = (defaultprops) => {
             border: theme.palette.defaultBorder,
 
             borderRadius: theme.palette.borderRadius,
-            backgroundColor: "black",
+            backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
           },
         }}
       >
@@ -27339,7 +27340,7 @@ const AngularWorkflow = (defaultprops) => {
           border: theme.palette.defaultBorder,
 
           borderRadius: theme.palette.borderRadius,
-          backgroundColor: "black",
+          backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
         },
       }}
     >
@@ -27776,7 +27777,7 @@ const AngularWorkflow = (defaultprops) => {
             transition: "padding-left 0.3s",
 
             borderRadius: theme.palette.borderRadius,
-            backgroundColor: "black",
+            backgroundColor: themeMode === "dark" ? "black" : theme.palette.surfaceColor,
           },
         }}
       >

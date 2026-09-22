@@ -1126,7 +1126,6 @@ const LicencePopup = (props) => {
       const planName = localSub?.name?.toLowerCase() ?? "";
       const isUnlimitedPlan =
         planName.includes("business") ||
-        planName.includes("air gapped") ||
         planName.includes("enterprise");
       if (isUnlimitedPlan) return "∞";
       const isScalePlan = planName.includes("scale") && !planName.includes("trial");
@@ -1789,11 +1788,11 @@ const LicencePopup = (props) => {
                       componentsProps={{
                         tooltip: {
                           sx: {
-                            backgroundColor: "rgba(33, 33, 33, 1)",
-                            color: "rgba(241, 241, 241, 1)",
+                            backgroundColor: theme.palette.tooltip.backgroundColor,
+                            color: theme.palette.tooltip.color,
                             fontSize: 14,
                             padding: 2,
-                            border: "1px solid rgba(73, 73, 73, 1)",
+                            border: theme.palette.tooltip.border,
                             fontFamily: theme?.typography?.fontFamily,
                           }
                         },
@@ -1828,11 +1827,11 @@ const LicencePopup = (props) => {
                       componentsProps={{
                         tooltip: {
                           sx: {
-                            backgroundColor: "rgba(33, 33, 33, 1)",
-                            color: "rgba(241, 241, 241, 1)",
+                            backgroundColor: theme.palette.tooltip.backgroundColor,
+                            color: theme.palette.tooltip.color,
                             fontSize: 14,
                             padding: 2,
-                            border: "1px solid rgba(73, 73, 73, 1)",
+                            border: theme.palette.tooltip.border,
                             fontFamily: theme?.typography?.fontFamily,
                           }
                         },
@@ -1938,7 +1937,7 @@ const LicencePopup = (props) => {
             )}
             {/* Shuffle Support */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {localSub?.name?.toLowerCase().includes("enterprise") || localSub?.name?.toLowerCase().includes("air gapped") ||  localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("poc")
+              {localSub?.name?.toLowerCase().includes("enterprise") || localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("poc")
                 ? <DoneIcon style={{ color: "#9be39b", fontSize: 18 }} />
                 : <CloseIcon style={{ color: "#ff5252", fontSize: 18 }} />}
               <Typography variant="body2">Shuffle Support</Typography>

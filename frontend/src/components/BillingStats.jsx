@@ -157,12 +157,13 @@ const AppStats = (defaultprops) => {
 	  }
   }, [])
 
-  const handleDataSetting = useCallback((inputdata, grouping) => {
+  const handleDataSetting = useCallback((inputdata, grouping, useStatKey = null) => {
 		if (inputdata === undefined || inputdata === null) {
 			return 
 		}
 
-		const statKey = syncStats === true ? "onprem_stats" : "daily_statistics"
+		// Allow caller to override which key to use (for checkbox filtering)
+		const statKey = useStatKey !== null ? useStatKey : (syncStats === true ? "onprem_stats" : "daily_statistics")
 		const dailyStats = inputdata[statKey]
 		if (dailyStats === undefined || dailyStats === null) {
 			setAppruns(undefined)
@@ -198,6 +199,14 @@ const AppStats = (defaultprops) => {
 			"data": []
 		}
 
+		// CRITICAL FIX: Backend sends multiple entries per day (sometimes hundreds with second-level timestamps)
+		// We must aggregate by calendar day to show one bar per day
+		const appRunsMap = new Map();
+		const childAppRunsMap = new Map();
+		const workflowRunsMap = new Map();
+		const subflowRunsMap = new Map();
+		const appCostRunsMap = new Map();
+
 		for (let key in dailyStats) {
 			// Always skips first one as it has accumulated data in it
 			if (key === 0) {
@@ -210,42 +219,56 @@ const AppStats = (defaultprops) => {
 				continue
 			}
 
-			// Check if app_executions key in item
-			if (item["app_executions"] !== undefined && item["app_executions"] !== null) {
-				appRuns["data"].push({
-					key: new Date(item["date"]).toISOString(), 
-					data: item["app_executions"]
-				})
+			// Normalize to midnight UTC - groups all entries from same calendar day
+			const date = new Date(item["date"]);
+			date.setUTCHours(0, 0, 0, 0);
+			const dateKey = date.toISOString();
 
-				// Add number 
-				appcostRuns["data"].push({
-					key: new Date(item["date"]).toISOString(),
-					data: (item["app_executions"] * invocationCost).toFixed(2)
-				})
+			// Sum values for same day (don't skip duplicates!)
+			if (item["app_executions"] !== undefined && item["app_executions"] !== null) {
+				const existing = appRunsMap.get(dateKey) || 0;
+				appRunsMap.set(dateKey, existing + item["app_executions"]);
+				
+				const existingCost = appCostRunsMap.get(dateKey) || 0;
+				appCostRunsMap.set(dateKey, existingCost + (item["app_executions"] * invocationCost));
 			} 
 
 			if (item["child_app_executions"] !== undefined && item["child_app_executions"] !== null) {
-				childorgappRuns["data"].push({
-					key: new Date(item["date"]).toISOString(),
-					data: item["child_app_executions"]
-				})
+				const existing = childAppRunsMap.get(dateKey) || 0;
+				childAppRunsMap.set(dateKey, existing + item["child_app_executions"]);
 			}
 
-			// Check if workflow_executions key in item
 			if (item["workflow_executions"] !== undefined && item["workflow_executions"] !== null) {
-				workflowRuns["data"].push({
-					key: new Date(item["date"]).toISOString(),
-					data: item["workflow_executions"]
-				})
+				const existing = workflowRunsMap.get(dateKey) || 0;
+				workflowRunsMap.set(dateKey, existing + item["workflow_executions"]);
 			}
 
 			if (item["subflow_executions"] !== undefined && item["subflow_executions"] !== null) {
-				subflowRuns["data"].push({
-					key: new Date(item["date"]).toISOString(),
-					data: item["subflow_executions"]
-				})
+				const existing = subflowRunsMap.get(dateKey) || 0;
+				subflowRunsMap.set(dateKey, existing + item["subflow_executions"]);
 			}
 		}
+
+		// Convert Maps back to arrays for chart
+		appRunsMap.forEach((value, key) => {
+			appRuns["data"].push({ key, data: value });
+		});
+
+		childAppRunsMap.forEach((value, key) => {
+			childorgappRuns["data"].push({ key, data: value });
+		});
+
+		workflowRunsMap.forEach((value, key) => {
+			workflowRuns["data"].push({ key, data: value });
+		});
+
+		subflowRunsMap.forEach((value, key) => {
+			subflowRuns["data"].push({ key, data: value });
+		});
+
+		appCostRunsMap.forEach((value, key) => {
+			appcostRuns["data"].push({ key, data: value.toFixed(2) });
+		});
 
 
 
@@ -259,12 +282,6 @@ const AppStats = (defaultprops) => {
 		setAppruns(appRuns)
 		setApprunCosts(appcostRuns)
 	}, [syncStats, endTime, startTime])
-
-  useEffect(() => {
-	if (statistics && statistics?.org_id?.length > 0) {
-		handleDataSetting(statistics, "day")
-	}
-}, [statistics])
 
   useEffect(() => {
 	setStartTime("")
@@ -483,7 +500,31 @@ const AppStats = (defaultprops) => {
 		if (currentTab === 0 && !syncStats) {
 			const cloudList = cloudChecked ? filterByRange(statistics[isCloud ? "daily_statistics" : "onprem_stats"]) : []
 			const onpremList = onpremChecked ? filterByRange(statistics[isCloud ? "onprem_stats" : "daily_statistics"]) : []
-			newlist = (cloudChecked && onpremChecked) ? mergeStatsByDate(cloudList, onpremList) : [...cloudList, ...onpremList]
+			
+			// If neither is checked, return early with empty charts
+			if (!cloudChecked && !onpremChecked) {
+				setAppruns(undefined)
+				setWorkflowRuns(undefined)
+				setSubflowRuns(undefined)
+				setChildOrgsAppRuns(undefined)
+				setApprunCosts(undefined)
+				setPeriodParentAppRuns(0)
+				setPeriodChildAppRuns(0)
+				
+				// Clear the summary box by setting monthly_app_executions to 0
+				var emptyStats = JSON.parse(JSON.stringify(statistics))
+				emptyStats["monthly_app_executions"] = 0
+				emptyStats["monthly_child_app_executions"] = 0
+				setFilteredStatistics(emptyStats)
+				return
+			}
+			
+			// Merge if both selected, otherwise concatenate
+			if (cloudChecked && onpremChecked) {
+				newlist = mergeStatsByDate(cloudList, onpremList)
+			} else {
+				newlist = [...cloudList, ...onpremList]
+			}
 		} else {
 			newlist = filterByRange(statistics[statKey])
 		}
@@ -552,7 +593,7 @@ const AppStats = (defaultprops) => {
 		}
 
 		setFilteredStatistics(tmpstats)
-		handleDataSetting(tmpstats, "day")
+		handleDataSetting(tmpstats, "day", statKey)
 
 		if (!syncStats) {
 			setPeriodParentAppRuns(parentAppRuns)

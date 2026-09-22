@@ -42,7 +42,9 @@ import {
 	Cached as CachedIcon,
 	FilterAltOff as FilterAltOffIcon,
 	Send as SendIcon, 
+	Visibility as VisibilityIcon,
 } from '@mui/icons-material';
+import { WorkflowRunExplorerDrawer } from "@shuffleio/shuffle-core";
 
 import { DataGrid } from '@mui/x-data-grid'
 import {
@@ -54,6 +56,7 @@ import {
   } from "@mui/material"
 
 import ClearIcon from '@mui/icons-material/Clear';
+import * as ShuffleCore from '@shuffleio/shuffle-core';
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -61,7 +64,7 @@ const useStyles = makeStyles({
   },
 });
 
-const RuntimeDebugger = (props) => {
+const RuntimeDebuggerLegacy = (props) => {
 	const { userdata, globalUrl, } = props
 
   	const classes = useStyles();
@@ -92,6 +95,9 @@ const RuntimeDebugger = (props) => {
 	const [workflows, setWorkflows] = useState([
 		{"id": "", "name": "All Workflows",}
 	])
+	const [selectedExecutionId, setSelectedExecutionId] = useState(urlParams.get('execution_id') || "")
+	const [selectedExecutionAuth, setSelectedExecutionAuth] = useState(urlParams.get('authorization') || "")
+	const [explorerDrawerOpen, setExplorerDrawerOpen] = useState(Boolean(urlParams.get('execution_id')))
 
 	if (document != undefined) { 
 		document.title = "Workflow Run Debugger"
@@ -552,7 +558,7 @@ const RuntimeDebugger = (props) => {
 	    {
 			field: 'id',
 			headerName: 'Explore',
-			width: 120,
+			width: 160,
 			renderCell: (params) => {
 				const parsedResult = params.row.result === null || params.row.result === undefined || params.row.result === "" ? "" : params.row.result
 
@@ -649,6 +655,18 @@ const RuntimeDebugger = (props) => {
 							  </Link>
 						  }
 						</span>
+						</Tooltip>
+						<Tooltip arrow title="Explore execution in drawer"> 
+						  <IconButton
+							style={{marginLeft: 5, }}
+							onClick={() => {
+								setSelectedExecutionId(params.row.execution_id || params.row.id)
+								setSelectedExecutionAuth(params.row.authorization || "")
+								setExplorerDrawerOpen(true)
+							}}
+						  >
+							<VisibilityIcon fontSize="small" />
+						  </IconButton>
 						</Tooltip>
 						<Tooltip arrow title={`Force continue workflow. Only workflows for workflows in EXECUTING state. This is NOT a rerun, but way for Shuffle to figure out the next steps automatically. If the execution doesn't finish even after trying this, please contact ${supportEmail}`}> 
 						  <IconButton
@@ -1270,8 +1288,43 @@ const RuntimeDebugger = (props) => {
 					// Track which items are selected
 				  />
 			</div> 
+
+			<WorkflowRunExplorerDrawer
+				open={explorerDrawerOpen}
+				executionId={selectedExecutionId}
+				authorization={selectedExecutionAuth}
+				onClose={() => {
+					setExplorerDrawerOpen(false);
+					setSelectedExecutionId("");
+					setSelectedExecutionAuth("");
+				}}
+				theme={themeMode}
+				globalUrl={globalUrl}
+				userdata={userdata}
+			/>
 		</div>
 	)
 }
 
+const RuntimeDebugger = (props) => {
+	const { userdata, globalUrl } = props;
+	const { themeMode, supportEmail } = useContext(Context);
+
+	if (ShuffleCore && ShuffleCore.WorkflowRunDebugger) {
+		const SharedWorkflowRunDebugger = ShuffleCore.WorkflowRunDebugger;
+		return (
+			<SharedWorkflowRunDebugger
+				{...props}
+				userdata={userdata}
+				globalUrl={globalUrl}
+				theme={themeMode}
+				supportEmail={supportEmail}
+			/>
+		);
+	}
+
+	return <RuntimeDebuggerLegacy {...props} />;
+};
+
 export default RuntimeDebugger;
+

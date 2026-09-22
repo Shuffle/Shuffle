@@ -915,64 +915,7 @@ const Navbar = (props) => {
   </Dialog>
 
 
-  const modalView = (
-    <Dialog
-      open={searchBarModalOpen && !isDocSearchModalOpen}
-      onClose={() => {
-        setSearchBarModalOpen(false);
-      }}
-      PaperProps={{
-        sx: {
-          color: "white",
-          minWidth: "750px",
-          height: "785px",
-          borderRadius: "16px",
-          border: "1px solid var(--Container-Stroke, #494949)",
-          background: currentTheme.palette.DialogStyle.backgroundColor,
-          boxShadow: "0px 16px 24px 8px rgba(0, 0, 0, 0.25)",
-        },
-        '& .MuiDialogContent-root': {
-          backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor,
-        },
-        '& .MuiDialogTitle-root': {
-          backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor,
-        },
-      }}
-      sx={{
-        zIndex: 50005,
-      }}
-    >
-        <Box sx={{ display: "flex", justifyContent: "space-between",backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor, alignItems: "center", px: 2, pt: 2 }}>
-          <DialogTitle 
-            sx={{ 
-              color: "var(--Paragraph-text, #C8C8C8)",
-              p: 0,
-              m: 0,
-              fontFamily: theme.typography.fontFamily,
-            }}
-          >
-            Search for Docs, Apps, Workflows and more
-          </DialogTitle>
-          <IconButton 
-            onClick={() => setSearchBarModalOpen(false)}
-            sx={{ 
-              color: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-              }
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      <DialogContent style={{backgroundColor: currentTheme?.palette?.DialogStyle?.backgroundColor}} >
-        <Box sx={{ pt: 3 }}>
-          <SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
-        </Box>
-      </DialogContent> 
-      <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}/>
-    </Dialog>
-  );
+  const modalView = null;
 
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
@@ -2066,10 +2009,10 @@ const Navbar = (props) => {
                            componentsProps={{
                              tooltip: {
                                sx: {
-                                 backgroundColor: "rgba(33, 33, 33, 1)",
-                                 color: "rgba(241, 241, 241, 1)",
+                                 backgroundColor: theme.palette.tooltip.backgroundColor,
+                                 color: theme.palette.tooltip.color,
                                  fontSize: 12,
-                                 border: "1px solid rgba(73, 73, 73, 1)",
+                                 border: theme.palette.tooltip.border,
                                  fontFamily: theme?.typography?.fontFamily,
                                }
                              },
@@ -2284,7 +2227,7 @@ const Navbar = (props) => {
                                   componentsProps={{
                                     tooltip: {
                                       sx: {
-                                        backgroundColor: '#2F2F2F',
+                                        backgroundColor: theme.palette.tooltip.backgroundColor,
                                         fontSize: '12px',
                                         padding: '8px 12px',
                                         borderRadius: '4px'
@@ -2710,10 +2653,10 @@ const Navbar = (props) => {
                       componentsProps={{
                         tooltip: {
                             sx: {
-                              backgroundColor: "rgba(33, 33, 33, 1)",
-                              color: "rgba(241, 241, 241, 1)",
+                              backgroundColor: theme.palette.tooltip.backgroundColor,
+                              color: theme.palette.tooltip.color,
                               fontSize: 12,
-                              border: "1px solid rgba(73, 73, 73, 1)",
+                              border: theme.palette.tooltip.border,
                               fontFamily: theme?.typography?.fontFamily,
                               }
                             },
@@ -2935,7 +2878,8 @@ export const AppRunsLimitBanner = ({ userdata, globalUrl, onDismiss, onVisibilit
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const limit = userdata?.app_execution_limit || 0
 
-  const sub = (orgData?.subscriptions || []).slice().reverse()[0]
+  const subs = orgData?.subscriptions || []
+  const sub = subs.find(s => s.active) || subs.slice().reverse()[0]
   const subName = sub?.name?.toLowerCase() || ""
   const upgradeLicenses = ["scale license", "open source", "cloud trial"]
   const isCancelled = sub?.cancellationdate > 0 && sub.cancellationdate * 1000 < Date.now()

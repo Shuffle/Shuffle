@@ -267,8 +267,8 @@ export const getTheme = (themeMode, brandColor) => {
           backgroundColor: resolvedMode === "dark" ? "#212121" : "#f5f5f5",
         },
         tooltip: {
-          backgroundColor: resolvedMode === "dark" ? "#212121" : "#ffffff",
-          color: resolvedMode === "dark" ? "#ffffff" : "#000000",
+          backgroundColor: resolvedMode === "dark" ? "#27292d" : "#EFEFEF",
+          color: resolvedMode === "dark" ? "rgba(255, 255, 255, 0.8)" : "rgba(26, 26, 26, 0.8)",
           border: resolvedMode === "dark" ? "1px solid #494949" : "1px solid #cccccc",
         },
         chipStyle: {
@@ -326,6 +326,32 @@ export const getTheme = (themeMode, brandColor) => {
         },
       },
       components: {
+        MuiTooltip: {
+          defaultProps: {
+            arrow: true,
+          },
+          styleOverrides: {
+            tooltip: {
+              backgroundColor: themeMode === "dark" ? "#27292d" : "#EFEFEF",
+              color: themeMode === "dark" ? "rgba(255, 255, 255, 0.8)" : "rgba(26, 26, 26, 0.8)",
+              border: `1px solid ${themeMode === "dark" ? "#494949" : "#CCCCCC"}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              maxWidth: 320,
+              fontSize: 13,
+              lineHeight: 1.5,
+              fontWeight: 400,
+              boxShadow: themeMode === "dark" ? "0 8px 24px rgba(0, 0, 0, 0.4)" : "0 6px 20px rgba(0, 0, 0, 0.12)",
+            },
+            arrow: {
+              color: themeMode === "dark" ? "#27292d" : "#EFEFEF",
+              "&::before": {
+                border: `1px solid ${themeMode === "dark" ? "#494949" : "#CCCCCC"}`,
+                boxSizing: "border-box",
+              },
+            },
+          },
+        },
         MuiButton: {
           styleOverrides: {
             root: {
