@@ -1,0 +1,31 @@
+name: "Notify shaffuru: frontend changed on nightly"
+
+# A push to this repo can't trigger a workflow that lives in the (private)
+# shaffuru repo, so when shared frontend files change on nightly we send a
+# repository_dispatch to shaffuru, which runs the actual Shuffle -> shaffuru
+# ORT sync. All sync logic (script + allowlist) lives in shaffuru; this file
+# is just the doorbell.
+on:
+  push:
+    branches: [nightly]
+    paths:
+      - "frontend/src/**"
+      - "frontend/public/icons/workflow-page/**"
+
+concurrency:
+  group: notify-shaffuru-sync
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch sync to shaffuru
+        env:
+          GH_TOKEN: ${{ secrets.FRONTEND_SYNC_PAT }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/Monilprajapati/shaffuru/dispatches \
+            -f "event_type=sync-from-shuffle"
