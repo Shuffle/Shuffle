@@ -620,11 +620,13 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// value = strings.ReplaceAll(value, "_", "-")
 	value := identifier
 
-	cloudHybrid := isKubernetes == "true" && (strings.EqualFold(os.Getenv("SHUFFLE_HYBRID"), "true") || strings.EqualFold(os.Getenv("SHUFFLE_CLOUD"), "true"))
+	localRegistry := normalizeRegistryName(os.Getenv("REGISTRY_URL"))
+	privateRegistryConfigured := localRegistry != "" && localRegistry != "docker.io" && localRegistry != "registry.hub.docker.com" && localRegistry != "index.docker.io"
+	cloudHybridPrivateRegistry := isKubernetes == "true" && (strings.EqualFold(os.Getenv("SHUFFLE_HYBRID"), "true") || strings.EqualFold(os.Getenv("SHUFFLE_CLOUD"), "true")) && privateRegistryConfigured
 	sourceImage := ""
-	if cloudHybrid {
+	if cloudHybridPrivateRegistry {
 		var privateImage string
-		sourceImage, privateImage, err = privateRegistryAppImages(os.Getenv("REGISTRY_URL"), image)
+		sourceImage, privateImage, err = privateRegistryAppImages(localRegistry, image)
 		if err != nil {
 			return err
 		}
@@ -757,12 +759,12 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return fmt.Errorf("get existing app deployment %s: %w", name, err)
 	}
-	if err == nil && (existing.Status.AvailableReplicas > 0 || !cloudHybrid) {
+	if err == nil && (existing.Status.AvailableReplicas > 0 || !cloudHybridPrivateRegistry) {
 		log.Printf("[INFO] Found available deployment %s, skipping image download and creation", name)
 		return nil
 	}
 
-	if cloudHybrid {
+	if cloudHybridPrivateRegistry {
 		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
 			return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
 		}
@@ -1858,14 +1860,18 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		*/
 
-		// Uses a few ways of getting / checking if an app is available
+		// Docker and Swarm use a few ways of getting / checking if an app is available.
+		// Kubernetes must only use the configured registry image.
 		// 1. Try original with lowercase
 		// 2. Go to original (no spaces)
 		// 3. Add remote repo location
-		images := []string{
-			imageName,
-			buildAppImageName(registryName, baseimagename, parsedAppname, action.AppVersion),
-			buildAppImageName("", baseimagename, parsedAppname, action.AppVersion),
+		images := []string{imageName}
+		if isKubernetes != "true" {
+			images = append(
+				images,
+				buildAppImageName(registryName, baseimagename, parsedAppname, action.AppVersion),
+				buildAppImageName("", baseimagename, parsedAppname, action.AppVersion),
+			)
 		}
 
 		// This is the weirdest shit ever looking back at
@@ -1878,6 +1884,10 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (2)")
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+					return
+				}
+				if isKubernetes == "true" {
+					log.Printf("[ERROR] Kubernetes app deployment failed for image %s; registry fallback is disabled: %s", imageName, err)
 					return
 				}
 
@@ -1988,6 +1998,10 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+					return
+				}
+				if isKubernetes == "true" {
+					log.Printf("[ERROR] Kubernetes app deployment failed for image %s; registry fallback is disabled: %s", imageName, err)
 					return
 				}
 
