@@ -2967,5 +2967,4 @@ export const AppRunsLimitBanner = ({ userdata, globalUrl, onDismiss, onVisibilit
   )
 }
 
-// sync-test: change from Shuffle/nightly
 export default Navbar;
