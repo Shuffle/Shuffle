@@ -1459,7 +1459,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           <Box sx={{ display: "flex", flexDirection: "row", marginTop: 2.5, width: expandLeftNav ? "100%" : 48, padding: "0px", }}>
             <Button
               component={Link}
-              to={userdata?.support === true ? "/dashboard" : "/workflows"}
+              to="/dashboard"
               onClick={(event) => {
                 if(!userdata?.support){
                   return;
