@@ -31,11 +31,12 @@ import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { InstantSearch, connectHits, connectSearchBox } from 'react-instantsearch-dom';
 import algoliasearch from "algoliasearch/lite";
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { Context } from '../context/ContextApi.jsx';
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "c8f882473ff42d41158430be09ec2b4e"
+  ALGOLIA_CLIENT_KEY
 );;
 
 const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {

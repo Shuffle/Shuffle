@@ -46,11 +46,12 @@ import {
 import Markdown from "react-markdown";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import algoliasearch from "algoliasearch/lite";
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { green } from "../views/AngularWorkflow.jsx"
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "c8f882473ff42d41158430be09ec2b4e"
+  ALGOLIA_CLIENT_KEY
 )
 
 // Lazy loading of ApiExplorer component to reduce initial load time

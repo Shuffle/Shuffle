@@ -9,6 +9,7 @@ import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon, C
 import aa from 'search-insights'
 
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { InstantSearch, Configure, connectSearchBox, connectHits } from 'react-instantsearch-dom';
 import { 
 	Zoom, 
@@ -30,7 +31,7 @@ import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
 	
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 const DocsGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, userdata, }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows

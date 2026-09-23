@@ -126,6 +126,7 @@ import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 // import theme from "./theme.jsx";
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinementList } from 'react-instantsearch-dom';
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
@@ -134,7 +135,7 @@ import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/Angul
 import Licensed from "../components/Licensed.jsx";
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY);
 
 const svgSize = 24;
 const imagesize = 23;

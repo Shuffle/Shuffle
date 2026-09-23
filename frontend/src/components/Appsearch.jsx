@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
 //import algoliasearch from 'algoliasearch/lite';
 import algoliasearch from 'algoliasearch';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { InstantSearch, connectSearchBox, connectHits } from 'react-instantsearch-dom';
 import { 
 	Grid, 
@@ -20,7 +21,7 @@ import {
 } from '@mui/material';
 
 import aa from 'search-insights'
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 const Appsearch = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp, inputHeight, apps, }  = props
 	const { themeMode } = useContext(Context)

@@ -58,6 +58,7 @@ import {
 import aa from 'search-insights'
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 
 import YAML from "yaml";
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -279,7 +280,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
   return parsedValues;
 };
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, serverside, } = props;
 
@@ -1302,7 +1303,7 @@ const Apps = (props) => {
             		    if (queryID !== undefined && queryID !== null) {
             		      aa("init", {
             		        appId: "JNSS5CFDZZ",
-            		        apiKey: "c8f882473ff42d41158430be09ec2b4e",
+            		        apiKey: ALGOLIA_CLIENT_KEY,
             		      });
 
             		      const timestamp = new Date().getTime();
@@ -2032,7 +2033,7 @@ const Apps = (props) => {
                     if (queryID !== undefined && queryID !== null) {
                       aa('init', {
                         appId: "JNSS5CFDZZ",
-                        apiKey: "c8f882473ff42d41158430be09ec2b4e",
+                        apiKey: ALGOLIA_CLIENT_KEY,
                       })
 
                       const timestamp = new Date().getTime()

@@ -13,6 +13,7 @@ import {
 	Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { InstantSearch, Configure, connectSearchBox, connectHits } from 'react-instantsearch-dom';
 import { 
 	Grid, 
@@ -38,7 +39,7 @@ import {
 } from "@mui/material"
 import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 const CreatorGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, isHeader }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
