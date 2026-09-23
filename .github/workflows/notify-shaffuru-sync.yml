@@ -16,16 +16,25 @@ concurrency:
   group: notify-shaffuru-sync
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   notify:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Dispatch sync to shaffuru
         env:
           GH_TOKEN: ${{ secrets.FRONTEND_SYNC_PAT }}
+          SHAFFURU_REPO: ${{ vars.SHAFFURU_REPO }}
         run: |
+          if [ -z "$SHAFFURU_REPO" ]; then
+            echo "::error::vars.SHAFFURU_REPO is not set (expected 'owner/repo')"
+            exit 1
+          fi
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            /repos/Monilprajapati/shaffuru/dispatches \
+            "/repos/${SHAFFURU_REPO}/dispatches" \
             -f "event_type=sync-from-shuffle"
