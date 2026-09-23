@@ -71,10 +71,11 @@ const inputColor = "#383B40";
 
 const chipStyle = {
   backgroundColor: "#3d3f43",
-  height: 28,
+  height: 30,
   marginRight: 5,
   paddingLeft: 5,
   paddingRight: 5,
+  height: 28,
   cursor: "pointer",
   borderColor: "#3d3f43",
   color: "white",
@@ -634,7 +635,7 @@ const Apps = (props) => {
   // dropdown with copy etc I guess
   const AppPaper = (props) => {
 	const { app } = props
-	let data = app
+	const data = app
 
     if (data.name === "" && data.id === "") {
       return null;
@@ -802,6 +803,7 @@ const Apps = (props) => {
                     justifyContent: "center",
                     overflow: "hidden",
                     maxHeight: 43,
+                    overflow: "hidden",
                   }}
                 >
                   <Typography variant="body2" color="textSecondary">
@@ -1164,6 +1166,7 @@ const Apps = (props) => {
                 position: "absolute",
                 top: -10,
                 right: isCloud ? 50 : 0,
+                backgroundColor: theme.palette.surfaceColor,
                 backgroundColor: inputColor,
                 color: "white",
                 height: 35,
@@ -1509,6 +1512,7 @@ const Apps = (props) => {
                             borderRadius: 17 / 2,
                             backgroundColor: itemColor,
                             marginRight: 10,
+                            marginTop: 2,
                             marginTop: "auto",
                             marginBottom: "auto",
                           }}
@@ -1942,7 +1946,7 @@ const Apps = (props) => {
       const baseImage = <LibraryBooksIcon />
 
       return (
-        <div style={{ position: "absolute", marginTop: 15, marginLeft: 0, marginRight: 10, color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
+        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
           <List style={{ backgroundColor: theme.palette.inputColor, }}>
             {hits.length === 0 ?
               <ListItem style={outerlistitemStyle}>
@@ -3012,7 +3016,7 @@ const Apps = (props) => {
       <FormControl>
         <DialogTitle>
           <div style={{ color: "rgba(255,255,255,0.9)" }}>
-		  	Generate an app based on documentation (beta)
+		  	Generate an app based on documentation
           </div>
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>

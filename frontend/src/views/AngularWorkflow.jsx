@@ -9186,6 +9186,10 @@ const AngularWorkflow = (defaultprops) => {
         var found = false
         var showEnvCnt = 0
         for (let jsonkey in responseJson) {
+          if (responseJson[jsonkey]?.sensor_group === true) {
+			  continue
+		  }
+
           if (responseJson[jsonkey].default && !found) {
             setDefaultEnvironmentIndex(jsonkey)
             found = true

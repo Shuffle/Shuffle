@@ -438,7 +438,7 @@ const CollectIngestModal = (props) => {
 
 				<Grid container>
 					<IngestItem type="Ingest Tickets" appCategory={"cases"} webhook={true} index={1} />
-					<IngestItem type="Enable Threat feeds" index={2} />
+					<IngestItem type="Enable Threat feeds" index={2} webhook={true} />
 					<IngestItem type="Ingest Assets" appCategory={"assets"} index={2} />
 					<IngestItem type="Ingest Users " appCategory={"users"} index={2} />
 					<IngestItem type="Enable Search" index={2} />

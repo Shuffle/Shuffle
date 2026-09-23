@@ -1172,7 +1172,7 @@ const Workflows2 = (props) => {
                 setCurrentOrg(org);
                 if (org?.cloud_sync  && (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
-                } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
+                } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("air gapped") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
                 } else {
                   setIsProdStatusOn(false);

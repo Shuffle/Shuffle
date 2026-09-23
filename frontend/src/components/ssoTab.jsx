@@ -111,9 +111,19 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 	const { themeMode, supportEmail, brandColor } = useContext(Context);
 	const theme = getTheme(themeMode, brandColor);
 
-    // Function to fetch users and check current user's SSO status
-    const checkUserSSOStatus = () => {
-        setCheckingSSOStatus(true);
+    useEffect(() => {
+        if (userdata?.sso_infos && Array.isArray(userdata.sso_infos)) {
+            const hasSSOForThisOrg = userdata.sso_infos.some(ssoInfo =>
+                ssoInfo.org_id === selectedOrganization?.id && ssoInfo.sub
+            );
+            setUserSSOConnected(hasSSOForThisOrg);
+        } else {
+            setUserSSOConnected(false);
+        }
+        setCheckingSSOStatus(false);
+    }, [userdata?.sso_infos, selectedOrganization?.id]);
+
+    const fetchOrgUsers = () => {
         fetch(effectiveGlobalUrl + "/api/v1/getusers", {
             method: "GET",
             headers: {
@@ -131,32 +141,18 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
             .then((responseJson) => {
                 if (responseJson && Array.isArray(responseJson)) {
                     setUsers(responseJson);
-                    
-                    // Find current user and check if they have SSO info for this org
-                    const currentUser = responseJson.find(user => user.id === userdata?.id);
-                    if (currentUser && currentUser.sso_infos && Array.isArray(currentUser.sso_infos)) {
-                        const hasSSOForThisOrg = currentUser.sso_infos.some(ssoInfo => 
-                            ssoInfo.org_id === selectedOrganization?.id && ssoInfo.sub
-                        );
-                        setUserSSOConnected(hasSSOForThisOrg);
-                    } else {
-                        setUserSSOConnected(false);
-                    }
                 }
-                setCheckingSSOStatus(false);
             })
             .catch((error) => {
                 console.log("Error fetching users:", error);
-                setCheckingSSOStatus(false);
             });
     };
 
-    // Check SSO status on component mount and when organization changes
     useEffect(() => {
-        if (userdata?.id && selectedOrganization?.id) {
-            checkUserSSOStatus();
+        if (isAdmin && selectedOrganization?.id) {
+            fetchOrgUsers();
         }
-    }, [userdata?.id, selectedOrganization?.id]);
+    }, [isAdmin, selectedOrganization?.id]);
 
     useEffect(()=>{
         
@@ -450,7 +446,10 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 						{ duration: 3000 }
 					);
 					// Refresh the SSO status after disconnecting
-					checkUserSSOStatus();
+					setUserSSOConnected(false);
+					if (isAdmin) {
+						fetchOrgUsers();
+					}
 				} else {
 					toast.error(
 						responseJson.reason || "Failed to disconnect SSO.",
@@ -589,7 +588,7 @@ const SSOTab = ({selectedOrganization, userdata, isEditOrgTab, globalUrl, handle
 
 				</div>
 				{/* auto privisiong in sso */}
-				<div
+				 <div
 					style={{
 						display: "flex",
 						flexDirection: "column",
