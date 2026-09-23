@@ -38,7 +38,7 @@ import { ClearRefinements, connectInfiniteHits, connectSearchBox, connectStateRe
 import { removeQuery } from "../components/ScrollToTop.jsx";
 import { toast } from "react-toastify";
 import algoliasearch from "algoliasearch/lite";
-import { ALGOLIA_CLIENT_KEY } from "../algolia";
+import { ALGOLIA_GRID_KEY } from "../algolia";
 import { debounce } from "lodash";
 import AppSelection from "../components/AppSelection.jsx";
 import AppModal from "../components/AppModal.jsx";
@@ -48,7 +48,7 @@ import Dropzone from "../components/Dropzone.jsx";
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  ALGOLIA_CLIENT_KEY
+  ALGOLIA_GRID_KEY
 );
 
 // AppCard Component

@@ -7,7 +7,7 @@ import { removeQuery } from '../components/ScrollToTop.jsx';
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 
 import algoliasearch from 'algoliasearch/lite';
-import { ALGOLIA_CLIENT_KEY } from "../algolia";
+import { ALGOLIA_GRID_KEY } from "../algolia";
 import { InstantSearch, Configure, connectSearchBox, connectHits } from 'react-instantsearch-dom';
 import { 
 	Grid, 
@@ -26,7 +26,7 @@ import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"
 
-const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_GRID_KEY)
 const AppGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, onlyResults, inputsearch } = props
 

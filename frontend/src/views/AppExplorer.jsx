@@ -4,7 +4,7 @@ import {getTheme} from "../theme.jsx";
 import ReactGA from "react-ga4";
 import Markdown from "react-markdown";
 import algoliasearch from "algoliasearch/lite";
-import { ALGOLIA_CLIENT_KEY } from "../algolia";
+import { ALGOLIA_EXPLORER_KEY, ALGOLIA_EXPLORER_INSIGHTS_KEY } from "../algolia";
 import ReactJson from "react-json-view-ssr";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
@@ -93,7 +93,7 @@ import aa from "search-insights";
 // 2 = OpenAPI (Invalid)
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  ALGOLIA_CLIENT_KEY
+  ALGOLIA_EXPLORER_KEY
 )
 
 export const setAppCache = (globalUrl, appId, alias) => {
@@ -4359,7 +4359,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                 if (queryID !== undefined && queryID !== null) {
                   aa("init", {
                     appId: "JNSS5CFDZZ",
-                    apiKey: ALGOLIA_CLIENT_KEY,
+                    apiKey: ALGOLIA_EXPLORER_INSIGHTS_KEY,
                   });
 
                   const timestamp = new Date().getTime();
@@ -4448,7 +4448,7 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
                 if (queryID !== undefined && queryID !== null) {
                   aa("init", {
                     appId: "JNSS5CFDZZ",
-                    apiKey: ALGOLIA_CLIENT_KEY,
+                    apiKey: ALGOLIA_EXPLORER_KEY,
                   });
 
                   const timestamp = new Date().getTime();
