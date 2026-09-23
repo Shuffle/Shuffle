@@ -22,7 +22,8 @@ import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 // import AgentUI from "./views/AgentUI.jsx";
 import { AgentsView } from '@shuffleio/shuffle-mcps';
-import { CombinedDashboard, OnboardingFlow, FormInput, Usecases as UsecasesSecurity } from '@shuffleio/shuffle-core';
+import { CombinedDashboard, OnboardingFlow, FormInput, Usecases as UsecasesSecurity, useSyncHostBaseUrl } from '@shuffleio/shuffle-core';
+import '@shuffleio/shuffle-core/shuffle-core.css';
 
 
 import Welcome from "./views/Welcome.jsx";
@@ -68,6 +69,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import Drift from "react-driftjs";
 
 import { Context } from './context/ContextApi.jsx';
+import GlobalNotificationsDrawer from './components/GlobalNotificationsDrawer.jsx';
+import { GlobalSearchDialog } from './components/GlobalSearchDialog.jsx';
 import Navbar from "./components/Navbar.jsx";
 import Workflows2 from "./views/Workflows2.jsx";
 import AppExplorer from "./views/AppExplorer.jsx";
@@ -103,6 +106,8 @@ const App = (message, props) => {
   const currentTheme = getTheme(themeMode, brandColor);
   const mainColor = currentTheme?.palette?.backgroundColor
   const [isPreviousThemeLight, setIsPreviousThemeLight] = useState(false)
+
+  useSyncHostBaseUrl(globalUrl);
 
   useEffect(() => {
     if (dataset === false) {
@@ -1129,6 +1134,9 @@ const App = (message, props) => {
 		  <CookiesProvider>
 			<BrowserRouter>
 			  {includedData}
+			  <GlobalSearchDialog
+				userdata={userdata}
+			  />
 			</BrowserRouter>
 			<ToastContainer 
 				position="bottom-center"
@@ -1141,6 +1149,10 @@ const App = (message, props) => {
 				draggable
 				pauseOnHover
 				theme={themeMode}
+			/>
+			<GlobalNotificationsDrawer
+				themeMode={themeMode}
+				onNotificationsUpdated={getUserNotifications}
 			/>
 		  </CookiesProvider>
 		</ThemeProvider>

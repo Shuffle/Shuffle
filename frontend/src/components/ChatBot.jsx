@@ -689,6 +689,7 @@ const ChatBot = (props) => {
     margin: "auto",
     maxWidth: "100%",
     minWidth: "100%",
+    overflow: "hidden",
     fontSize: isMobile ? "1.3rem" : "1.0rem",
   }
 

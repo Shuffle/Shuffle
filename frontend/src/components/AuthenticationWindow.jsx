@@ -4,7 +4,7 @@ import theme from '../theme.jsx';
 import { v4 as uuidv4 } from "uuid";
 import { toast } from 'react-toastify';
 
-import {
+import { 
 	Divider,
 	MenuItem,
 	Button,

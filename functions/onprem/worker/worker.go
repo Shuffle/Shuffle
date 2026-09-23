@@ -44,6 +44,7 @@ import (
 	//k8s deps
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -145,6 +146,19 @@ func buildAppImageName(registry, baseImageName, appName, appVersion string) stri
 	}
 
 	return imageName
+}
+
+func privateRegistryAppImages(registry, image string) (string, string, error) {
+	registry = normalizeRegistryName(registry)
+	if registry == "" || registry == "docker.io" || registry == "registry.hub.docker.com" || registry == "index.docker.io" {
+		return "", "", errors.New("Kubernetes app execution requires a private REGISTRY_URL")
+	}
+
+	sourceImage := strings.TrimPrefix(image, registry+"/")
+	for _, publicRegistry := range []string{"docker.io/", "registry.hub.docker.com/", "index.docker.io/"} {
+		sourceImage = strings.TrimPrefix(sourceImage, publicRegistry)
+	}
+	return sourceImage, registry + "/" + sourceImage, nil
 }
 
 func restoreActionConfig(ctx context.Context, executionID string, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) {
@@ -606,58 +620,17 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// value = strings.ReplaceAll(value, "_", "-")
 	value := identifier
 
-	baseDeployMode := false
-
-	// check if autoDeploy contains a value
-	// that is equal to the image being deployed.
-	for _, value := range autoDeploy {
-		if value == image {
-			baseDeployMode = true
+	localRegistry := normalizeRegistryName(os.Getenv("REGISTRY_URL"))
+	privateRegistryConfigured := localRegistry != "" && localRegistry != "docker.io" && localRegistry != "registry.hub.docker.com" && localRegistry != "index.docker.io"
+	cloudHybridPrivateRegistry := isKubernetes == "true" && (strings.EqualFold(os.Getenv("SHUFFLE_HYBRID"), "true") || strings.EqualFold(os.Getenv("SHUFFLE_CLOUD"), "true")) && privateRegistryConfigured
+	sourceImage := ""
+	if cloudHybridPrivateRegistry {
+		var privateImage string
+		sourceImage, privateImage, err = privateRegistryAppImages(localRegistry, image)
+		if err != nil {
+			return err
 		}
-	}
-
-	autoDeployOverride := os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY") == "true"
-
-	localRegistry := ""
-
-	// Checking if app is generated or not
-	if !(baseDeployMode && autoDeployOverride) {
-		localRegistry = normalizeRegistryName(os.Getenv("REGISTRY_URL"))
-	} else {
-		log.Printf("[DEBUG] Detected baseDeploy image (%s) and ghcr override. Resorting to using ghcr instead of registry", image)
-	}
-
-	/*
-		appDetails := strings.Split(image, ":")[1]
-		appDetailsSplit := strings.Split(appDetails, "_")
-		appName := strings.Join(appDetailsSplit[:len(appDetailsSplit)-1], "_")
-		appVersion := appDetailsSplit[len(appDetailsSplit)-1]
-		for _, app := range workflowExecution.Workflow.Actions {
-			// log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
-			// log.Printf("[DEBUG] Checking app %s with version %s", app.AppName, app.AppVersion)
-			if app.AppName == appName && app.AppVersion == appVersion {
-				if app.Generated == true {
-					log.Printf("[DEBUG] Generated app, setting local registry")
-					image = fmt.Sprintf("%s/%s", localRegistry, image)
-					break
-				} else {
-					log.Printf("[DEBUG] Not generated app, setting shuffle registry")
-				}
-			}
-		}
-	*/
-
-	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !(baseDeployMode && autoDeployOverride) {
-		localRegistry = normalizeRegistryName(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY"))
-	}
-
-	if (len(localRegistry) > 0 && !imageHasLocalRegistryPrefix(image, localRegistry) && !imageHasRegistryPrefix(image)) && !(baseDeployMode && autoDeployOverride) {
-		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
-		image = fmt.Sprintf("%s/%s", localRegistry, image)
-	} else {
-		if !imageHasLocalRegistryPrefix(image, localRegistry) && !imageHasRegistryPrefix(image) && strings.Count(image, "/") <= 2 && !strings.HasPrefix(image, "frikky/shuffle:") {
-			image = fmt.Sprintf("frikky/shuffle:%s", image)
-		}
+		image = privateImage
 	}
 
 	log.Printf("[DEBUG] Got kubernetes with namespace %#v to run image '%s'", kubernetesNamespace, image)
@@ -782,19 +755,28 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	}
 
-	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app: %s", name),
-		},
-	)
-	if err != nil {
-		log.Printf("[ERROR] Failed listing existing deployments: %v", err)
+	existing, err := clientset.AppsV1().Deployments(kubernetesNamespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return fmt.Errorf("get existing app deployment %s: %w", name, err)
+	}
+	if err == nil && (existing.Status.AvailableReplicas > 0 || !cloudHybridPrivateRegistry) {
+		log.Printf("[INFO] Found available deployment %s, skipping image download and creation", name)
+		return nil
 	}
 
-	if len(existing.Items) > 0 {
-		log.Printf("[INFO] Found existing deployments, skipping creation")
-		return nil
+	if cloudHybridPrivateRegistry {
+		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+			return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
+		}
+
+		log.Printf("[INFO] Hybrid app image %s is not deployed. Downloading %s from the cloud backend and pushing it as %s", name, sourceImage, image)
+		if downloadErr := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, sourceImage); downloadErr != nil {
+			return fmt.Errorf("download and push app image %s: %w", sourceImage, downloadErr)
+		}
+		if err == nil {
+			log.Printf("[INFO] Pushed image %s for existing deployment %s", image, name)
+			return nil
+		}
 	}
 
 	replicaNumberInt32 := int32(replicaNumber)
@@ -861,13 +843,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		)
 	}
 
-	if len(os.Getenv("REGISTRY_URL")) > 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_NAME")) > 0 {
-		log.Printf("[INFO] Setting image pull policy to Always as private registry is used.")
-		//containerAttachment.ImagePullPolicy = corev1.PullAlways
-		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
-	} else {
-		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
-	}
+	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
 
 	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -1058,17 +1034,15 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		//log.Printf("[INFO][%s] New appname: %s, image: %s", workflowExecution.ExecutionId, appName, image)
 
 		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" && !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
-			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
-			// FIXME: Not caring if it's ok or not. Just continuing
-			// This is working as intended, just designed to download an updated
-			// image on every Orborus/new worker restart.
-
-			// Running as coroutine for eventual completeness
-			// FIXME: With goroutines it got too much trouble of deploying with an older version
-			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
-			err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
-			if err == nil {
+			if swarmServiceAvailable(appName) {
+				log.Printf("[DEBUG] App service %s is already deployed. Skipping worker image download for %s", appName, image)
 				downloadedImages = append(downloadedImages, image)
+			} else {
+				log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
+				err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+				if err == nil {
+					downloadedImages = append(downloadedImages, image)
+				}
 			}
 		}
 
@@ -1886,14 +1860,18 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		*/
 
-		// Uses a few ways of getting / checking if an app is available
+		// Docker and Swarm use a few ways of getting / checking if an app is available.
+		// Kubernetes must only use the configured registry image.
 		// 1. Try original with lowercase
 		// 2. Go to original (no spaces)
 		// 3. Add remote repo location
-		images := []string{
-			imageName,
-			buildAppImageName(registryName, baseimagename, parsedAppname, action.AppVersion),
-			buildAppImageName("", baseimagename, parsedAppname, action.AppVersion),
+		images := []string{imageName}
+		if isKubernetes != "true" {
+			images = append(
+				images,
+				buildAppImageName(registryName, baseimagename, parsedAppname, action.AppVersion),
+				buildAppImageName("", baseimagename, parsedAppname, action.AppVersion),
+			)
 		}
 
 		// This is the weirdest shit ever looking back at
@@ -1906,6 +1884,10 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (2)")
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+					return
+				}
+				if isKubernetes == "true" {
+					log.Printf("[ERROR] Kubernetes app deployment failed for image %s; registry fallback is disabled: %s", imageName, err)
 					return
 				}
 
@@ -2016,6 +1998,10 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+					return
+				}
+				if isKubernetes == "true" {
+					log.Printf("[ERROR] Kubernetes app deployment failed for image %s; registry fallback is disabled: %s", imageName, err)
 					return
 				}
 
@@ -3178,6 +3164,15 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
+		isAgentAction := actionResult.Action.AppName == "shuffle-ai" || actionResult.Action.AppName == "AI Agent" || actionResult.Action.AppName == "Shuffle Agent" || actionResult.Action.Name == "run_agent"
+		isAgentNode:= isAgentAction && (strings.Contains(strings.ToLower(actionResult.Result), "hybrid") || actionResult.Action.Name == "run_agent")
+		if isAgentNode && actionResult.Status != "FAILURE" && actionResult.Status != "ABORTED" && actionResult.Status != "SKIPPED" {
+			log.Printf("[INFO][%s] AI Agent dispatched to Cloud. Stopping worker execution cleanly to wait for Cloud completion.", workflowExecution.ExecutionId)
+
+			shutdown(*workflowExecution, "", "", false)
+			return
+		}
+
 		/*** STARTREMOVE ***/
 		if workflowExecution.Status == "WAITING" && (os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm") {
 			log.Printf("[INFO][%s] Workflow execution is waiting while in swarm. Sending info to backend to ensure execution stops.", workflowExecution.ExecutionId)
@@ -4241,6 +4236,41 @@ func findAppInfo(image, name string, redeploy bool) (int, error) {
 	return exposedPort, nil
 }
 
+func swarmServiceAvailable(name string) bool {
+	dockercli, _, err := shuffle.GetDockerClient()
+	if err != nil {
+		return false
+	}
+	defer dockercli.Close()
+
+	services, err := dockercli.ServiceList(context.Background(), types.ServiceListOptions{})
+	if err != nil {
+		return false
+	}
+	return hasAvailableSwarmService(services, name)
+}
+
+func hasAvailableSwarmService(services []swarm.Service, name string) bool {
+	normalizedName := strings.ReplaceAll(name, ".", "-")
+	for _, service := range services {
+		serviceName := service.Spec.Annotations.Name
+		if serviceName != name && serviceName != normalizedName {
+			continue
+		}
+		if service.Spec.EndpointSpec == nil {
+			return false
+		}
+		for _, endpoint := range service.Spec.EndpointSpec.Ports {
+			if strings.Contains(endpoint.Name, "port") && endpoint.PublishedPort > 0 {
+				return true
+			}
+		}
+		return false
+	}
+
+	return false
+}
+
 // Runs data discovery
 /*** STARTREMOVE ***/
 
@@ -4276,11 +4306,14 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 
 	for _, deployment := range deployments.Items {
 		if deployment.Name == name {
-			if debug {
-				log.Printf("[DEBUG] Found deployment %s - no need to deploy another", name)
-			}
+			if deployment.Status.AvailableReplicas > 0 {
+				if debug {
+					log.Printf("[DEBUG] Found available deployment %s - no need to deploy another", name)
+				}
 
-			return nil
+				return nil
+			}
+			break
 		}
 	}
 

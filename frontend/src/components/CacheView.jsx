@@ -563,7 +563,6 @@ const CacheView = memo((props) => {
 							if (!Array.isArray(responseJson.category_config.automations[key].options)) {
 								responseJson.category_config.automations[key].options = []
 							}
-
 							//if (responseJson.category_config.automations[key].icon === undefined || responseJson.category_config.automations[key].icon === null || responseJson.category_config.automations[key].icon === "") {
 							const foundItem = defaultAutomation.find((automation) => automation.name === responseJson.category_config.automations[key].name)
 							if (foundItem) {

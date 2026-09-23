@@ -126,6 +126,7 @@ import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 // import theme from "./theme.jsx";
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinementList } from 'react-instantsearch-dom';
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
@@ -134,7 +135,7 @@ import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/Angul
 import Licensed from "../components/Licensed.jsx";
 
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e");
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY);
 
 const svgSize = 24;
 const imagesize = 23;
@@ -1171,7 +1172,7 @@ const Workflows2 = (props) => {
                 setCurrentOrg(org);
                 if (org?.cloud_sync  && (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
-                } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
+                } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("air gapped") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
                   setIsProdStatusOn(true);
                 } else {
                   setIsProdStatusOn(false);
@@ -3693,10 +3694,10 @@ const Workflows2 = (props) => {
                                 componentsProps={{
                                 tooltip: {
                                 sx: {
-                                    backgroundColor: "rgba(33, 33, 33, 1)",
-                                    color: "rgba(241, 241, 241, 1)",
+                                    backgroundColor: theme.palette.tooltip.backgroundColor,
+                                    color: theme.palette.tooltip.color,
                                     fontSize: 12,
-                                    border: "1px solid rgba(73, 73, 73, 1)",
+                                    border: theme.palette.tooltip.border,
                                     fontFamily: theme?.typography?.fontFamily,
                                 }
                                 },

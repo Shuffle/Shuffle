@@ -708,7 +708,7 @@ const AppCreationModal = ({ open, onClose, theme, globalUrl, isCloud, startOpenA
                         fontWeight: 500,
                         fontFamily: theme?.typography?.fontFamily,
                     }}>
-                        Generate an app based on documentation (beta)
+                        Generate an app based on documentation
                     </Typography>
                     <IconButton
                         onClick={() => {

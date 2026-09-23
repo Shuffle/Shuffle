@@ -1768,10 +1768,10 @@ const Docs = (defaultprops) => {
                         componentsProps={{
                             tooltip: {
                             sx: {
-                                backgroundColor: "rgba(33, 33, 33, 1)",
-                                color: "rgba(241, 241, 241, 1)",
+                                backgroundColor: theme.palette.tooltip.backgroundColor,
+                                color: theme.palette.tooltip.color,
                                 fontSize: 14,
-                                border: "1px solid rgba(73, 73, 73, 1)",
+                                border: theme.palette.tooltip.border,
                                 fontFamily: theme?.typography?.fontFamily,
                             }
                             },
@@ -1789,7 +1789,7 @@ const Docs = (defaultprops) => {
                         </Tooltip>
                     )}
 					<div />
-					{isCloud && window.location.pathname !== "/docs" ? 
+					{/* {isCloud && window.location.pathname !== "/docs" ? 
 						 <Link to="/chat">
 							 <Button 
 								variant="outlined" 
@@ -1799,7 +1799,7 @@ const Docs = (defaultprops) => {
 								Support LLM
 							 </Button>
 						 </Link>
-					 : null}
+					 : null} */}
                     {tocLines.length > 0 ?
                         (
                             <h4 style={{ marginTop: 20, fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px", color: theme.palette.text.primary, }}>Table Of Content</h4>

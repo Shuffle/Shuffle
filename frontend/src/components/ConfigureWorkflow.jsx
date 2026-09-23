@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import { useInterval } from "react-powerhooks";
 import { toast } from 'react-toastify';
 import {getTheme} from "../theme.jsx";
@@ -633,7 +634,7 @@ const ConfigureWorkflow = (props) => {
 		if (aa !== undefined) {
 			aa('init', {
 					appId: "JNSS5CFDZZ",
-					apiKey: "c8f882473ff42d41158430be09ec2b4e",
+					apiKey: ALGOLIA_CLIENT_KEY,
 			})
 
 			const timestamp = new Date().getTime()

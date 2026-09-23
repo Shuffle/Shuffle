@@ -86,9 +86,17 @@ IS_KUBERNETES: "true"
 ENVIRONMENT_NAME: "{{ .Values.shuffle.org }}"
 ORG_ID: "{{ .Values.shuffle.org }}"
 TZ: "{{ .Values.shuffle.timezone }}"
+{{- if .Values.shuffle.baseUrl }}
+BASE_URL: "{{ .Values.shuffle.baseUrl }}"
+{{- else }}
 BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
+{{- end }}
 KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: {{ .Values.orborus.executionConcurrency | quote }}
+{{- if and (ne .Values.shuffle.appRegistry "") (ne .Values.shuffle.appRegistry "docker.io") (ne .Values.shuffle.appRegistry "registry.hub.docker.com") (ne .Values.shuffle.appRegistry "index.docker.io") }}
+SHUFFLE_STREAM_PRIVATE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"
+SHUFFLE_STREAM_PRIVATE_REGISTRY_INSECURE: {{ .Values.shuffle.appRegistryInsecure | quote }}
+{{- end }}
 {{- if .Values.orborus.debug }}
 DEBUG: "true"
 {{- end }}

@@ -77,7 +77,7 @@ const theme = createTheme(adaptV4Theme({
     defaultImage: "/images/no_image.png",
 	singulOrange: "/images/singul_orange.png",
 	singulGreen: "/images/singul_green.png",
-	singulBlackWhite: "/images/singul_black_white.png",
+    singulBlackWhite: "/icons/workflow-page/shuffle_agent.png", // For AI Agent stuff 
   },
   typography: {
     fontFamily: `"inter", "Roboto", "Helvetica", "Arial", sans-serif`,
@@ -201,7 +201,8 @@ export const getTheme = (themeMode, brandColor) => {
         linkColor: brandColor === "#ff8544" ? "#f86a3e" : brandColor,
         slateGrayColor: resolvedMode === "dark" ? "#494949" : "#CCCCCC",
         parsedAppPaperColor: resolvedMode === "dark" ? "#2f2f2f" : "#CCCCCC",
-
+        welcomeCardSubtextColor: resolvedMode === "dark" ? "#C8C8C8" : "#2f2f2f",
+        deleteColor: resolvedMode === "dark" ? "#FD4C62" : "#d32f2f",
         borderRadius: 10,
         loaderColor: resolvedMode === "dark" ? "#1a1a1a" : "#E0E0E0",
         jsonIconStyle: "round",
@@ -266,8 +267,8 @@ export const getTheme = (themeMode, brandColor) => {
           backgroundColor: resolvedMode === "dark" ? "#212121" : "#f5f5f5",
         },
         tooltip: {
-          backgroundColor: resolvedMode === "dark" ? "#212121" : "#ffffff",
-          color: resolvedMode === "dark" ? "#ffffff" : "#000000",
+          backgroundColor: resolvedMode === "dark" ? "#27292d" : "#EFEFEF",
+          color: resolvedMode === "dark" ? "rgba(255, 255, 255, 0.8)" : "rgba(26, 26, 26, 0.8)",
           border: resolvedMode === "dark" ? "1px solid #494949" : "1px solid #cccccc",
         },
         chipStyle: {
@@ -325,6 +326,32 @@ export const getTheme = (themeMode, brandColor) => {
         },
       },
       components: {
+        MuiTooltip: {
+          defaultProps: {
+            arrow: true,
+          },
+          styleOverrides: {
+            tooltip: {
+              backgroundColor: themeMode === "dark" ? "#27292d" : "#EFEFEF",
+              color: themeMode === "dark" ? "rgba(255, 255, 255, 0.8)" : "rgba(26, 26, 26, 0.8)",
+              border: `1px solid ${themeMode === "dark" ? "#494949" : "#CCCCCC"}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              maxWidth: 320,
+              fontSize: 13,
+              lineHeight: 1.5,
+              fontWeight: 400,
+              boxShadow: themeMode === "dark" ? "0 8px 24px rgba(0, 0, 0, 0.4)" : "0 6px 20px rgba(0, 0, 0, 0.12)",
+            },
+            arrow: {
+              color: themeMode === "dark" ? "#27292d" : "#EFEFEF",
+              "&::before": {
+                border: `1px solid ${themeMode === "dark" ? "#494949" : "#CCCCCC"}`,
+                boxSizing: "border-box",
+              },
+            },
+          },
+        },
         MuiButton: {
           styleOverrides: {
             root: {
@@ -545,5 +572,5 @@ export const getTheme = (themeMode, brandColor) => {
         },
       },
     });
-}
 
+}
