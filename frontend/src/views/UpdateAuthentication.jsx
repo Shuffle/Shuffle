@@ -25,6 +25,8 @@ const SetAuthentication = (props) => {
   const [loadFail, setLoadFail] = useState("");
   const [appAuthentication, setAppAuthentication] = React.useState([]);
 
+  const [showShuffle, setShowShuffle] = React.useState(false);
+
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   //const alert = useAlert();
 
@@ -107,8 +109,14 @@ const SetAuthentication = (props) => {
 			// Set the orgsession to be a cookie for __session cookie
 
 			setTimeout(() => {
+				// Not sure this does anything lol
 				document.cookie = "__session=" + orgsession + "; path=/; max-age=1800; SameSite=Lax"; // Cookie expires in 30 min 
 			}, 1000)
+		}
+
+		const fromSource = urlParams.get("source")
+		if (fromSource === "shuffle") {
+			setShowShuffle(true)
 		}
 
 		if (appid === null) {
@@ -145,24 +153,30 @@ const SetAuthentication = (props) => {
 
 	const appname = app.name !== undefined ? app.name : ""
 	const appLink = "/apps/" + app.id || ""
-
-	console.log("App: ", app)
 	
 	return (
-		<div style={{width: 1000, margin: "auto", paddingTop: 50, }}>
+		<div style={{width: 1000, margin: "auto", paddingTop: 50, backgroundColor: theme.palette.backgroundColor, height: "200vh",}}>
 			{loadFail !== "" ? 
 				loadFail
 				:
 				<><div>
 					<Typography variant="h4" style={{ marginBottom: 20, }}>
-						You are invited to: Configure <a href={appLink} target="_blank" style={{ color: '#FF8444', textDecoration: 'none' }}>{appname}</a> Authentication
+						{showShuffle ? 
+							<span><a href={"https://shuffler.io"} target="_blank" style={{color: "#ff8444", textDecoration: "none", }}>Shuffle</a> Core handles this type of login to keep it securely stored.</span>
+							:
+							<span>You are invited to: Configure <a href={appLink} target="_blank" style={{ color: '#FF8444', textDecoration: 'none' }}>{appname}</a> Authentication</span>
+						}
 					</Typography>
 
 					<Typography variant="h6" style={{ marginBottom: 20, }}>
 						What does this mean?
 					</Typography>
 					<Typography variant="body1" style={{ marginBottom: 20, color: "rgba(255,255,255,0.4)", }}>
-						A Shuffle Organization has invited you to configure authentication for this app so that they can use this authentication in one of their workflows.
+						{showShuffle ? 
+							`By authenticating, you make it possible for Shuffle Security to use ${appname} in your security automation. Click the button below to get started. After authentication is done, you may close this window.`
+							:
+							"A Shuffle Organization has invited you to configure authentication for this app so that they can use this authentication in one of their workflows."
+						}
 					</Typography>
 
 					<Typography variant="body1" style={{ marginBottom: 20, }}>
@@ -171,24 +185,36 @@ const SetAuthentication = (props) => {
 							:
 							app.authentication.type === "oauth2" || app.authentication.type === "oauth2-app" ?
 								<AuthenticationOauth2
-									selectedApp={app}
+									selectedApp={{
+										...app,
+										"name": app.name?.replaceAll(" ", "_")
+									}}
 									selectedAction={{
-										"app_name": app.name,
+										"app_name": app.name?.replaceAll(" ", "_"),
 										"app_id": app.id,
-										"app_version": app.version,
+										"app_version": app.app_version,
 										"large_image": app.large_image,
 									}}
 									authenticationType={app.authentication}
 									isCloud={true}
 									authButtonOnly={true}
-									getAppAuthentication={undefined} />
+									getAppAuthentication={undefined} 
+									autoAuth={true}
+								/>
 								:
 								<AuthenticationWindow
 									globalUrl={globalUrl}
-									selectedApp={app}
+									selectedApp={{
+										...app,
+										"name": app.name?.toLowerCase()?.replaceAll(" ", "_"),
+									}}
 									authFieldsOnly={true}
 									getAppAuthentication={undefined}
 									appAuthentication={appAuthentication} />}
+					</Typography>
+
+					<Typography variant="body1" style={{ marginBottom: 20, color: "rgba(255,255,255,0.4)", }}>
+						If you need any help, please contact support@shuffler.io
 					</Typography>
 
 					{/*

@@ -780,4 +780,3 @@ function computeTodayValueForOrg(key, orgStats) {
 
 export default RunsOverTimeWidget;
 
-
