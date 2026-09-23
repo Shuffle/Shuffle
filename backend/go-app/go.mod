@@ -27,7 +27,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/opensearch-go/v4 v4.0.0
 	github.com/shuffle/shuffle-shared v1.3.20
-	github.com/shuffle/singul v0.0.33
+	github.com/shuffle/singul v0.0.36
 	golang.org/x/crypto v0.53.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.34.2
