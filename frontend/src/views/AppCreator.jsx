@@ -260,6 +260,12 @@ export const appCategories = [
 		"action_labels": ["Answer Question", "Run Action", "Run LLM",],
 	},
 	{
+		"name": "Internal",
+		"color": "#FFC107",
+		"icon": "internal",
+		"action_labels": ["Answer Question", "Run Action", "Run LLM",],
+	},
+	{
 		"name": "Other",
 		"color": "#FFC107",
 		"icon": "other",
@@ -345,7 +351,7 @@ const getJsonObject = (properties) => {
 
 // Should be different if logged in :|
 const AppCreator = (defaultprops) => {
-  const { globalUrl, isLoaded } = defaultprops;
+  const { globalUrl, userdata, isLoaded } = defaultprops;
   const classes = useStyles();
   //const alert = useAlert();
 
@@ -4458,7 +4464,7 @@ const AppCreator = (defaultprops) => {
 		const hasFile = (data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
 			
 		if (data?.action_label[0] !== 'No Label') {
-			console.log("Action label: ", data?.name, data?.action_label)
+			//console.log("Action label: ", data?.name, data?.action_label)
 		}
 
 		var currentActionLabels = JSON.parse(JSON.stringify(actionLabels))
@@ -4478,7 +4484,7 @@ const AppCreator = (defaultprops) => {
 			}
 
 			if (!found) {
-				console.log(`Not found: '${label}' in ${currentActionLabels}`)
+				//console.log(`Not found: '${label}' in ${currentActionLabels}`)
 				currentActionLabels.push(data?.action_label[labelKey])
 			}
 		}
@@ -4575,22 +4581,32 @@ const AppCreator = (defaultprops) => {
 
 								if (e.target.value.length === 0) {
 									e.target.value = ["No Label"]
-								}
-
-								const foundIndex = actions.findIndex((action) => action.name === data.name)
-								if (foundIndex !== undefined && foundIndex !== null && foundIndex >= 0) {
-									if (e.target.value.includes("no_label") || e.target.value.includes("No_Label") || e.target.value.includes("No Label")) {
-										actions[foundIndex].action_label = ["No Label"]
-										setActions(actions)
-										setUpdate(Math.random())
-
-										return
+								} else if (e.target.value.length >= 1) {
+									var foundother = false
+									for (var labelkey in e.target.value) {
+										const label = e.target.value[labelkey]
+										if (label !== "no_label" && label !== "No_Label" && label !== "No Label") {
+											foundother = true
+											break
+										}
 									}
 
-									console.log("Should change: ", e.target.value, " Index: ", index)
-									actions[foundIndex].action_label = e.target.value
+									if (foundother) {
+										e.target.value = e.target.value.filter(label => label !== "no_label" && label !== "No_Label" && label !== "No Label")
+
+									} else {
+										e.target.value = ["No Label"]
+									}
+
+								}
+
+								const foundActionIndex = actions.findIndex((action) => action.name === data.name)
+								if (foundActionIndex !== undefined && foundActionIndex !== null && foundActionIndex >= 0) {
+									actions[foundActionIndex].action_label = e.target.value
 									setActions(actions)
 									setUpdate(Math.random())
+								} else {
+									console.log("Could not find action: ", data.name)
 								}
 							}}
 							value={data?.action_label}
@@ -4763,7 +4779,11 @@ const AppCreator = (defaultprops) => {
 				style={{ backgroundColor: theme.palette.backgroundColor, color: theme.palette.text.primary, height: "50px" }}
 			  >
 				{categories.map((data, index) => {
-					if (data === undefined || data === null || data === "" || data === undefined || data === null || data === "") {
+					if (data === undefined || data === null || data === "" || data.name === undefined || data.name  === null || data.name === "") {
+						return null
+					}
+
+					if (data.name === "Internal" && userdata?.support !== true) {
 						return null
 					}
 

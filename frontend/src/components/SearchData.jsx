@@ -38,6 +38,7 @@ import { Context } from '../context/ContextApi.jsx';
 import { Search as SearchIcon, Close as CloseIcon, Folder as FolderIcon, Code as CodeIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material'
 
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import aa from 'search-insights'
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 //import { InstantSearch, SearchBox, Hits, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
@@ -47,7 +48,7 @@ const chipStyle = {
     backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 const SearchData = props => {
     const { serverside, globalUrl, userdata } = props
     let navigate = useNavigate();

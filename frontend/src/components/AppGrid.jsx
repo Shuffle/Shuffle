@@ -22,6 +22,7 @@ import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import algoliasearch from "algoliasearch/lite";
+import { ALGOLIA_GRID_KEY } from "../algolia";
 import {
   InstantSearch,
   Configure,
@@ -54,7 +55,7 @@ import {
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "c8f882473ff42d41158430be09ec2b4e"
+  ALGOLIA_GRID_KEY
 );
 //const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
 

@@ -1126,6 +1126,7 @@ const LicencePopup = (props) => {
       const planName = localSub?.name?.toLowerCase() ?? "";
       const isUnlimitedPlan =
         planName.includes("business") ||
+        planName.includes("air gapped") ||
         planName.includes("enterprise");
       if (isUnlimitedPlan) return "∞";
       const isScalePlan = planName.includes("scale") && !planName.includes("trial");
@@ -1937,7 +1938,7 @@ const LicencePopup = (props) => {
             )}
             {/* Shuffle Support */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {localSub?.name?.toLowerCase().includes("enterprise") || localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("poc")
+              {localSub?.name?.toLowerCase().includes("enterprise") || localSub?.name?.toLowerCase().includes("air gapped") ||  localSub?.name?.toLowerCase().includes("business") || localSub?.name?.toLowerCase().includes("poc")
                 ? <DoneIcon style={{ color: "#9be39b", fontSize: 18 }} />
                 : <CloseIcon style={{ color: "#ff5252", fontSize: 18 }} />}
               <Typography variant="body2">Shuffle Support</Typography>

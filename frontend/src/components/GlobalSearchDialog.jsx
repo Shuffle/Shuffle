@@ -16,6 +16,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import {
   Dialog,
   DialogContent,
@@ -52,7 +53,7 @@ import {
 export const SEARCH_OPEN_EVENT = 'search:open';
 
 const ALGOLIA_APP_ID = 'JNSS5CFDZZ';
-const ALGOLIA_API_KEY = '33e4e3564f4f060e96e0531957bed552';
+const ALGOLIA_API_KEY = ALGOLIA_CLIENT_KEY;
 
 const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
 

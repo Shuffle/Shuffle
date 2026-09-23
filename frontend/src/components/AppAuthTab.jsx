@@ -52,6 +52,7 @@ import {
 } from "@mui/material";
 
 import algoliasearch from "algoliasearch/lite";
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import {
   InstantSearch,
   Configure,
@@ -68,7 +69,7 @@ import SubOrgDistributionDialog from './SubOrgDistributionDialog.jsx';
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
-  "c8f882473ff42d41158430be09ec2b4e"
+  ALGOLIA_CLIENT_KEY
 )
 
 const AppAuthTab = memo((props) => {

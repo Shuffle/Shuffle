@@ -77,7 +77,7 @@ const theme = createTheme(adaptV4Theme({
     defaultImage: "/images/no_image.png",
 	singulOrange: "/images/singul_orange.png",
 	singulGreen: "/images/singul_green.png",
-	singulBlackWhite: "/images/singul_black_white.png",
+    singulBlackWhite: "/icons/workflow-page/shuffle_agent.png", // For AI Agent stuff 
   },
   typography: {
     fontFamily: `"inter", "Roboto", "Helvetica", "Arial", sans-serif`,
@@ -197,12 +197,12 @@ export const getTheme = (themeMode, brandColor) => {
         usecaseDialogFieldColor: resolvedMode === "dark" ? "#2B2B2B" : "#F5F5F5",
         accentColor: resolvedMode === "dark" ? "#ff8544" : "#ff8544",
         green: resolvedMode === "dark" ? "#5cc879" : "#008000",
-        deleteColor: resolvedMode === "dark" ? "#FD4C62" : "#d32f2f",
         defaultBorder: resolvedMode === "dark" ? '1px solid #494949' : '1px solid #CCCCCC',
         linkColor: brandColor === "#ff8544" ? "#f86a3e" : brandColor,
         slateGrayColor: resolvedMode === "dark" ? "#494949" : "#CCCCCC",
         parsedAppPaperColor: resolvedMode === "dark" ? "#2f2f2f" : "#CCCCCC",
-
+        welcomeCardSubtextColor: resolvedMode === "dark" ? "#C8C8C8" : "#2f2f2f",
+        deleteColor: resolvedMode === "dark" ? "#FD4C62" : "#d32f2f",
         borderRadius: 10,
         loaderColor: resolvedMode === "dark" ? "#1a1a1a" : "#E0E0E0",
         jsonIconStyle: "round",
@@ -572,5 +572,5 @@ export const getTheme = (themeMode, brandColor) => {
         },
       },
     });
-}
 
+}

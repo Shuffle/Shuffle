@@ -22,6 +22,7 @@ import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
 import useDebouncedCallback from "../utils/useDebouncedCallback.jsx";
 import { createStreamSender, startStream } from "../views/workflowStream.jsx";
 import {
@@ -539,7 +540,7 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 
 
 const AngularWorkflow = (defaultprops) => {
@@ -9185,6 +9186,10 @@ const AngularWorkflow = (defaultprops) => {
         var found = false
         var showEnvCnt = 0
         for (let jsonkey in responseJson) {
+          if (responseJson[jsonkey]?.sensor_group === true) {
+			  continue
+		  }
+
           if (responseJson[jsonkey].default && !found) {
             setDefaultEnvironmentIndex(jsonkey)
             found = true
@@ -13361,7 +13366,7 @@ const AngularWorkflow = (defaultprops) => {
         if (queryID !== undefined && queryID !== null) {
           aa('init', {
             appId: "JNSS5CFDZZ",
-            apiKey: "c8f882473ff42d41158430be09ec2b4e",
+            apiKey: ALGOLIA_CLIENT_KEY,
           })
 
           const timestamp = new Date().getTime()
@@ -22160,7 +22165,7 @@ const AngularWorkflow = (defaultprops) => {
                   if (queryID !== undefined && queryID !== null) {
                     aa('init', {
                       appId: "JNSS5CFDZZ",
-                      apiKey: "33e4e3564f4f060e96e0531957bed552",
+                      apiKey: ALGOLIA_CLIENT_KEY,
                     })
                     const timestamp = new Date().getTime();
                     aa('sendEvents', [

@@ -34,7 +34,8 @@ import {
 } from '../views/AngularWorkflow.jsx'
 
 import algoliasearch from 'algoliasearch/lite';
-const searchClient = algoliasearch("JNSS5CFDZZ", "c8f882473ff42d41158430be09ec2b4e")
+import { ALGOLIA_CLIENT_KEY } from "../algolia";
+const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 
 const CollectIngestModal = (props) => {
 	const { globalUrl, open, setOpen, workflows, getWorkflows, apps,  } = props;
@@ -437,7 +438,7 @@ const CollectIngestModal = (props) => {
 
 				<Grid container>
 					<IngestItem type="Ingest Tickets" appCategory={"cases"} webhook={true} index={1} />
-					<IngestItem type="Enable Threat feeds" index={2} />
+					<IngestItem type="Enable Threat feeds" index={2} webhook={true} />
 					<IngestItem type="Ingest Assets" appCategory={"assets"} index={2} />
 					<IngestItem type="Ingest Users " appCategory={"users"} index={2} />
 					<IngestItem type="Enable Search" index={2} />

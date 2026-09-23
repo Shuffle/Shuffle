@@ -512,4 +512,3 @@ const DashboardOnboarding = ({
 
 export default DashboardOnboarding;
 
-
