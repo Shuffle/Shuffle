@@ -1195,6 +1195,7 @@ const AppFramework = (props) => {
 			parsedFrameworkData.Network = {}
 		}
 
+		// sync-merge-test: comment added near IAM handling in shuffle
 		if (frameworkData.iam !== undefined) {
 			if (frameworkData.iam.large_image === undefined && frameworkData.iam.large_image === null || frameworkData.iam.large_image === "") {
 				frameworkData.iam = {}
