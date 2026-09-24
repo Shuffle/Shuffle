@@ -559,13 +559,10 @@ const CacheView = memo((props) => {
 					if (responseJson?.category_config?.automations !== undefined && responseJson?.category_config?.automations !== null && responseJson?.category_config?.automations?.length > 0) {
 						// Find icons if they exist
 						for (var key in responseJson.category_config.automations) {
-<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 							// Options may be null if an automation was stored without any (no omitempty on the backend field)
 							if (!Array.isArray(responseJson.category_config.automations[key].options)) {
 								responseJson.category_config.automations[key].options = []
 							}
-=======
->>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 							//if (responseJson.category_config.automations[key].icon === undefined || responseJson.category_config.automations[key].icon === null || responseJson.category_config.automations[key].icon === "") {
 							const foundItem = defaultAutomation.find((automation) => automation.name === responseJson.category_config.automations[key].name)
 							if (foundItem) {
