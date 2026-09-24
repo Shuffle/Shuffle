@@ -109,14 +109,20 @@ export default function defaultCytoscapeStyle(theme, apps) {
         padding: "5px",
         margin: "0px",
         "background-color": "data(backgroundcolor)",
+<<<<<<< Shuffle/Shuffle (nightly) @ 4c57790ea969f31e7043a0f4b25d79513cfc2be7
         "background-image": "data(backgroundimage)",
         "border-color": "#ffffff",
         "text-margin-x": "data(textMarginX)",
         "text-margin-y": "data(textMarginY)",
+=======
+        "background-image": function(el) { const img = el.data("backgroundimage"); return img && img.length > 0 ? img : "none" },
+        "border-color": "#ffffff",
+>>>>>>> Shuffle/shaffuru (master) @ c8abceaa35614e9dac7429c0092eae47b86563b2
         "z-index": 4999,
         "border-radius": "5px",
         "background-opacity": "0.5",
         "text-wrap": "wrap",
+<<<<<<< Shuffle/Shuffle (nightly) @ 4c57790ea969f31e7043a0f4b25d79513cfc2be7
         "text-max-width": "data(width)",
         "text-halign": function(element) {
         const align = element?.data("textHalign")
@@ -134,6 +140,13 @@ export default function defaultCytoscapeStyle(theme, apps) {
         
         return align
       }
+=======
+        "text-max-width": function(el) { return (parseInt(el.data("width")) || 250) - 20 + "px" },
+        "font-size": "14px",
+        "text-halign": "center",
+        "text-valign": "center",
+        "text-justification": function(el) { return el.data("textJustification") || "center" }
+>>>>>>> Shuffle/shaffuru (master) @ c8abceaa35614e9dac7429c0092eae47b86563b2
       },
     },
     {
