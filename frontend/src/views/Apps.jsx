@@ -635,7 +635,7 @@ const Apps = (props) => {
   // dropdown with copy etc I guess
   const AppPaper = (props) => {
 	const { app } = props
-	const data = app
+	let data = app
 
     if (data.name === "" && data.id === "") {
       return null;
