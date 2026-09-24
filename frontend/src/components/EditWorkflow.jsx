@@ -217,7 +217,11 @@ const EditWorkflow = (props) => {
 					}
 
 					if (selectedUsecases === []) {
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 						setSelectedUsecases(responseJson.usecase_ids)
+=======
+						selectedUsecases = responseJson.usecase_ids
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 					}
 
 					innerWorkflow.id = responseJson.id

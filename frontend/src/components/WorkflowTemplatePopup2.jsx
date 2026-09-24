@@ -394,10 +394,16 @@ const WorkflowTemplatePopup = (props) => {
 			return
 		}
 
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 		let localSrcapp = srcapp
 		console.log("SRCAPP: ", localSrcapp, "DSTAPP: ", dstapp)
 		if (localSrcapp === undefined || localSrcapp === null) {
 			localSrcapp = ""
+=======
+		console.log("SRCAPP: ", srcapp, "DSTAPP: ", dstapp)
+		if (srcapp === undefined || srcapp === null) {
+			srcapp = ""
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 		}
 
 		if ((srcapp !== undefined && srcapp !== null && srcapp.includes(":default")) || (dstapp !== undefined && dstapp !== null && dstapp.includes(":default"))) {

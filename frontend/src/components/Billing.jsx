@@ -1044,8 +1044,13 @@ const Billing = memo((props) => {
 		const today = new Date()
 		const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
 		monthStart.setHours(0, 0, 0, 0)
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 		const monthEnd = new Date(today)
 		monthEnd.setHours(23, 59, 59, 999)
+=======
+		const todayStart = new Date(today)
+		todayStart.setHours(0, 0, 0, 0)
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 
 		let parent = 0
 		let child = 0
@@ -1057,7 +1062,11 @@ const Billing = memo((props) => {
 
 			const date = new Date(item.date)
 			date.setHours(0, 0, 0, 0)
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 			if (date >= monthStart && date <= monthEnd) {
+=======
+			if (date >= monthStart && date < todayStart) {
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 				parent += item.app_executions ?? 0
 				child += item.child_app_executions ?? 0
 			}
@@ -4175,10 +4184,14 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 		const filterStart = parseStatsDate(graphStartTime || null, false)
 		const filterEnd = parseStatsDate(graphEndTime || null, true)
 
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 		const appRuns = {
 			"key": "App Runs",
 			"data": []
 		}
+=======
+		const appRunsMap = new Map()
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 
 		for (const item of daily) {
 			if (item["date"] === undefined) {
@@ -4186,12 +4199,17 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 			}
 
 			const d = new Date(item["date"])
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 			d.setHours(0, 0, 0, 0)
+=======
+			d.setUTCHours(0, 0, 0, 0)
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 			if (d < filterStart || d > filterEnd) {
 				continue
 			}
 
 			if (item["app_executions"] !== undefined && item["app_executions"] !== null) {
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 				appRuns["data"].push({
 					key: new Date(item["date"]).toISOString(),
 					data: item["app_executions"]
@@ -4209,6 +4227,26 @@ const BillingStatsChildOrg = memo(({ userdata, globalUrl, selectedOrganization, 
 			})
 		}
 
+=======
+				const dateKey = d.toISOString()
+				appRunsMap.set(dateKey, (appRunsMap.get(dateKey) || 0) + item["app_executions"])
+			}
+		}
+
+		// Merge today's live counter into the same day bucket
+		const todayStart = new Date()
+		todayStart.setUTCHours(0, 0, 0, 0)
+		if (todayStart >= filterStart && todayStart <= filterEnd && stat["daily_app_executions"] !== undefined && stat["daily_app_executions"] !== null) {
+			const todayKey = todayStart.toISOString()
+			appRunsMap.set(todayKey, (appRunsMap.get(todayKey) || 0) + stat["daily_app_executions"])
+		}
+
+		const appRuns = { "key": "App Runs", "data": [] }
+		appRunsMap.forEach((value, key) => {
+			appRuns["data"].push({ key, data: value })
+		})
+
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 		return appRuns
 	}, [subOrgStats, subOrgs, selectedChildIndex, graphStartTime, graphEndTime])
 

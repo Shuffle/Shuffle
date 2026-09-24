@@ -1616,7 +1616,11 @@ const CodeEditor = (props) => {
 				  if (e.srcElement.className === "ace_content") {
 					  console.log("DRAG STOP IN CONTENT!", e.srcElement.className)
 
+<<<<<<< Shuffle/Shuffle (nightly) @ c8efb806228f323e7d6cb3150c821528583c479e
 					  let usedposition = e.offsetY
+=======
+					  const usedposition = e.offsetY
+>>>>>>> Shuffle/shaffuru (master) @ d6f79373a914f88fdee9bf926fb7f0b7a70e1e13
 					  if (usedposition  === undefined || usedposition === null) {
 						  toast.info(`Error: LayerY is undefined or null. Please contact ${supportEmail}`)
 						  return
