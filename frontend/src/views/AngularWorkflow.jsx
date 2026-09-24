@@ -17734,9 +17734,27 @@ const AngularWorkflow = (defaultprops) => {
     </div>
 
 
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
   const CommentSidebar = () => {
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
 
+=======
+  const updateComment = (patch) => {
+    const node = cy?.getElementById(selectedComment.id);
+    if (node) {
+      node.data(patch);
+      const styleMap = { label: "label", backgroundcolor: "background-color", backgroundimage: "background-image", color: "color", width: "width", height: "height", textJustification: "text-justification" };
+      Object.keys(patch).forEach((key) => {
+        const prop = styleMap[key];
+        if (prop) node.style(prop, key === "backgroundimage" ? (patch[key] || "none") : patch[key]);
+      });
+    } 
+    setSelectedComment((prev) => ({ ...prev, ...patch }));
+  };
+
+  const CommentSidebar = () => {
+    if (Object.getOwnPropertyNames(selectedComment).length > 0) {
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
       return (
         <div style={appApiViewStyle}>
           <h3 style={{ marginBottom: "5px" }}>Comment</h3>
@@ -17777,6 +17795,7 @@ const AngularWorkflow = (defaultprops) => {
             defaultValue={selectedComment.label}
             placeholder="Comment"
             onChange={(event) => {
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
               selectedComment.label = event.target.value;
               setSelectedComment(selectedComment);
             }}
@@ -17785,10 +17804,20 @@ const AngularWorkflow = (defaultprops) => {
             <div style={{
               width: "50%"
             }}>
+=======
+              const node = cy?.getElementById(selectedComment.id);
+              if (node) node.style("label", event.target.value);
+            }}
+            onBlur={(event) => updateComment({ label: event.target.value })}
+          />
+          <div style={{ display: "flex", marginTop: 10 }}>
+            <div style={{ width: "50%" }}>
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
               <div>Justify</div>
               <Select
                 style={{ backgroundColor: theme.palette.inputColor }}
                 fullWidth
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 defaultValue="center"
                 value={selectedComment.textHalign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textHalign === "left" ? "right" : "left" : "center"}
                 onChange={(event) => {
@@ -17815,12 +17844,17 @@ const AngularWorkflow = (defaultprops) => {
 
                   // Use useEffect or separate logging to confirm state changes
                 }}
+=======
+                value={selectedComment.textJustification || "center"}
+                onChange={(event) => updateComment({ textJustification: event.target.value })}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
               >
                 <MenuItem value="left">Left</MenuItem>
                 <MenuItem value="center">Center</MenuItem>
                 <MenuItem value="right">Right</MenuItem>
               </Select>
             </div>
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
             <div style={{ marginLeft: 5, width: "50%" }}>
               <div>Align</div>
               <Select
@@ -17853,6 +17887,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem value="bottom">Bottom</MenuItem>
               </Select>
             </div>
+=======
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
           </div>
           <div style={{ display: "flex", marginTop: 10 }}>
             <div>
@@ -17862,17 +17898,27 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 InputProps={{
                   style: {
                   },
                 }}
+=======
+                InputProps={{ style: {} }}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
                 fullWidth
                 color="primary"
                 placeholder={"150"}
                 defaultValue={selectedComment.height}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 onChange={(event) => {
                   selectedComment.height = event.target.value;
                   setSelectedComment(selectedComment);
+=======
+                onBlur={(event) => {
+                  const v = parseInt(event.target.value);
+                  if (!isNaN(v) && v > 0) updateComment({ height: v });
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
                 }}
               />
             </div>
@@ -17883,17 +17929,27 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 InputProps={{
                   style: {
                   },
                 }}
+=======
+                InputProps={{ style: {} }}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
                 fullWidth
                 color="primary"
                 placeholder={"200"}
                 defaultValue={selectedComment.width}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 onChange={(event) => {
                   selectedComment.width = event.target.value;
                   setSelectedComment(selectedComment);
+=======
+                onBlur={(event) => {
+                  const v = parseInt(event.target.value);
+                  if (!isNaN(v) && v > 0) updateComment({ width: v });
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
                 }}
               />
             </div>
@@ -17906,18 +17962,26 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 InputProps={{
                   style: {
                   },
                 }}
+=======
+                InputProps={{ style: {} }}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
                 fullWidth
                 color="primary"
                 placeholder={"#1f2023"}
                 defaultValue={selectedComment["backgroundcolor"]}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 onChange={(event) => {
                   selectedComment.backgroundcolor = event.target.value;
                   setSelectedComment(selectedComment);
                 }}
+=======
+                onBlur={(event) => updateComment({ backgroundcolor: event.target.value })}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
               />
             </div>
             <div style={{ marginLeft: 5 }}>
@@ -17927,18 +17991,26 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 InputProps={{
                   style: {
                   },
                 }}
+=======
+                InputProps={{ style: {} }}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
                 fullWidth
                 color="primary"
                 placeholder={"#ffffff"}
                 defaultValue={selectedComment.color}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
                 onChange={(event) => {
                   selectedComment.color = event.target.value;
                   setSelectedComment(selectedComment);
                 }}
+=======
+                onBlur={(event) => updateComment({ color: event.target.value })}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
               />
             </div>
           </div>
@@ -17948,18 +18020,26 @@ const AngularWorkflow = (defaultprops) => {
               backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette?.borderRadius,
             }}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
             InputProps={{
               style: {
               },
             }}
+=======
+            InputProps={{ style: {} }}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
             fullWidth
             color="primary"
             placeholder={"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr69kkDcJiR4Vm59ypxhGkD1JDIV0oLVDiBQ&usqp=CAU"}
             defaultValue={selectedComment["backgroundimage"]}
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
             onChange={(event) => {
               selectedComment.backgroundimage = event.target.value;
               setSelectedComment(selectedComment);
             }}
+=======
+            onBlur={(event) => updateComment({ backgroundimage: event.target.value })}
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
           />
         </div>
       );
@@ -22592,8 +22672,13 @@ const AngularWorkflow = (defaultprops) => {
         const rawHeight = Math.abs(handlePos.y - parentPos.y) * 2 - handleOffset * 2;
 
         // Apply min/max constraints
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
         const constrainedWidth = Math.max(100, Math.min(rawWidth, 500));
         const constrainedHeight = Math.max(50, Math.min(rawHeight, 300));
+=======
+        const constrainedWidth = Math.max(150, rawWidth);
+        const constrainedHeight = Math.max(80, rawHeight);
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
 
         // Update node size
         parent.style({
@@ -22666,11 +22751,16 @@ const AngularWorkflow = (defaultprops) => {
         position,
         backgroundcolor: "#1f2023",
         color: "#ffffff",
+<<<<<<< Shuffle/Shuffle (nightly) @ f79ddd0af464743858782bc4e00996d96bc2e3b0
 
         textHalign: "right",
         textValign: "bottom",
         textMarginX: "-250px",
         textMarginY: "-150px",
+=======
+        textHalign: "center",
+        textValign: "center",
+>>>>>>> Shuffle/shaffuru (master) @ ae9abaf094b58743141e15a89b494bc686ef0c56
       },
       position,
     });
