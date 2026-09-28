@@ -3708,7 +3708,7 @@ const Workflows2 = (props) => {
                                 }}
                             >
                                 <img
-                                    src="/images/security/shuffle-icon.png"
+                                    src={theme.palette.singulBlackWhite}
                                     alt="Shuffle Security"
                                     style={{ position: "absolute", top: 12, right: 42, width: 24, height: 24, borderRadius: 6, border: "2.5px solid #ff8544", cursor: "pointer" }}
                                 />
