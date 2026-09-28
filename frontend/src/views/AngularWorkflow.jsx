@@ -17734,9 +17734,21 @@ const AngularWorkflow = (defaultprops) => {
     </div>
 
 
+  const updateComment = (patch) => {
+    const node = cy?.getElementById(selectedComment.id);
+    if (node) {
+      node.data(patch);
+      const styleMap = { label: "label", backgroundcolor: "background-color", backgroundimage: "background-image", color: "color", width: "width", height: "height", textJustification: "text-justification" };
+      Object.keys(patch).forEach((key) => {
+        const prop = styleMap[key];
+        if (prop) node.style(prop, key === "backgroundimage" ? (patch[key] || "none") : patch[key]);
+      });
+    } 
+    setSelectedComment((prev) => ({ ...prev, ...patch }));
+  };
+
   const CommentSidebar = () => {
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
-
       return (
         <div style={appApiViewStyle}>
           <h3 style={{ marginBottom: "5px" }}>Comment</h3>
@@ -17777,80 +17789,23 @@ const AngularWorkflow = (defaultprops) => {
             defaultValue={selectedComment.label}
             placeholder="Comment"
             onChange={(event) => {
-              selectedComment.label = event.target.value;
-              setSelectedComment(selectedComment);
+              const node = cy?.getElementById(selectedComment.id);
+              if (node) node.style("label", event.target.value);
             }}
+            onBlur={(event) => updateComment({ label: event.target.value })}
           />
           <div style={{ display: "flex", marginTop: 10 }}>
-            <div style={{
-              width: "50%"
-            }}>
+            <div style={{ width: "50%" }}>
               <div>Justify</div>
               <Select
                 style={{ backgroundColor: theme.palette.inputColor }}
                 fullWidth
-                defaultValue="center"
-                value={selectedComment.textHalign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textHalign === "left" ? "right" : "left" : "center"}
-                onChange={(event) => {
-                  const alignment = event.target.value;
-                  const width = selectedComment.width || 250; // Default width if undefined
-
-                  // Compute new values
-                  let textHalign = alignment !== "center" ? alignment === "left" ? "right" : "left" : "center";
-                  let textMarginX = "0px"; // Default for center alignment
-
-                  if (alignment === "left") {
-                    textMarginX = `-${width}px`;
-                  } else if (alignment === "right") {
-                    textMarginX = `${width}px`;
-                  }
-                  selectedComment.textHalign = textHalign;
-                  selectedComment.textMarginX = textMarginX;
-                  // Update state properly
-                  setSelectedComment((prev) => ({
-                    ...prev,
-                    textHalign,
-                    textMarginX,
-                  }));
-
-                  // Use useEffect or separate logging to confirm state changes
-                }}
+                value={selectedComment.textJustification || "center"}
+                onChange={(event) => updateComment({ textJustification: event.target.value })}
               >
                 <MenuItem value="left">Left</MenuItem>
                 <MenuItem value="center">Center</MenuItem>
                 <MenuItem value="right">Right</MenuItem>
-              </Select>
-            </div>
-            <div style={{ marginLeft: 5, width: "50%" }}>
-              <div>Align</div>
-              <Select
-                fullWidth
-                style={{ backgroundColor: theme.palette.inputColor }}
-                defaultValue="center"
-                value={selectedComment.textValign !== "center" && selectedComment.textHalign !== undefined ? selectedComment.textValign === "top" ? "bottom" : "top" : "center" || "center"}
-                onChange={(event) => {
-                  const height = selectedComment.height || 150; // Default width if undefined
-
-                  let textValign = event.target.value === "center" ? "center" : event.target.value === "top" ? "bottom" : "top";
-                  let textMarginY = "0px"; // Default for center alignment
-
-                  if (textValign === "top") {
-                    textMarginY = `${height}px`;
-                  } else if (textValign === "bottom") {
-                    textMarginY = `-${height}px`;
-                  }
-                  selectedComment.textValign = textValign;
-                  selectedComment.textMarginY = textMarginY;
-                  setSelectedComment((prev) => ({
-                    ...prev,
-                    textValign,
-                    textMarginY
-                  }));
-                }}
-              >
-                <MenuItem value="top">Top</MenuItem>
-                <MenuItem value="center">Center</MenuItem>
-                <MenuItem value="bottom">Bottom</MenuItem>
               </Select>
             </div>
           </div>
@@ -17862,17 +17817,14 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
-                InputProps={{
-                  style: {
-                  },
-                }}
+                InputProps={{ style: {} }}
                 fullWidth
                 color="primary"
                 placeholder={"150"}
                 defaultValue={selectedComment.height}
-                onChange={(event) => {
-                  selectedComment.height = event.target.value;
-                  setSelectedComment(selectedComment);
+                onBlur={(event) => {
+                  const v = parseInt(event.target.value);
+                  if (!isNaN(v) && v > 0) updateComment({ height: v });
                 }}
               />
             </div>
@@ -17883,17 +17835,14 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
-                InputProps={{
-                  style: {
-                  },
-                }}
+                InputProps={{ style: {} }}
                 fullWidth
                 color="primary"
                 placeholder={"200"}
                 defaultValue={selectedComment.width}
-                onChange={(event) => {
-                  selectedComment.width = event.target.value;
-                  setSelectedComment(selectedComment);
+                onBlur={(event) => {
+                  const v = parseInt(event.target.value);
+                  if (!isNaN(v) && v > 0) updateComment({ width: v });
                 }}
               />
             </div>
@@ -17906,18 +17855,12 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
-                InputProps={{
-                  style: {
-                  },
-                }}
+                InputProps={{ style: {} }}
                 fullWidth
                 color="primary"
                 placeholder={"#1f2023"}
                 defaultValue={selectedComment["backgroundcolor"]}
-                onChange={(event) => {
-                  selectedComment.backgroundcolor = event.target.value;
-                  setSelectedComment(selectedComment);
-                }}
+                onBlur={(event) => updateComment({ backgroundcolor: event.target.value })}
               />
             </div>
             <div style={{ marginLeft: 5 }}>
@@ -17927,18 +17870,12 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
                 }}
-                InputProps={{
-                  style: {
-                  },
-                }}
+                InputProps={{ style: {} }}
                 fullWidth
                 color="primary"
                 placeholder={"#ffffff"}
                 defaultValue={selectedComment.color}
-                onChange={(event) => {
-                  selectedComment.color = event.target.value;
-                  setSelectedComment(selectedComment);
-                }}
+                onBlur={(event) => updateComment({ color: event.target.value })}
               />
             </div>
           </div>
@@ -17948,18 +17885,12 @@ const AngularWorkflow = (defaultprops) => {
               backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette?.borderRadius,
             }}
-            InputProps={{
-              style: {
-              },
-            }}
+            InputProps={{ style: {} }}
             fullWidth
             color="primary"
             placeholder={"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr69kkDcJiR4Vm59ypxhGkD1JDIV0oLVDiBQ&usqp=CAU"}
             defaultValue={selectedComment["backgroundimage"]}
-            onChange={(event) => {
-              selectedComment.backgroundimage = event.target.value;
-              setSelectedComment(selectedComment);
-            }}
+            onBlur={(event) => updateComment({ backgroundimage: event.target.value })}
           />
         </div>
       );
@@ -22592,8 +22523,8 @@ const AngularWorkflow = (defaultprops) => {
         const rawHeight = Math.abs(handlePos.y - parentPos.y) * 2 - handleOffset * 2;
 
         // Apply min/max constraints
-        const constrainedWidth = Math.max(100, Math.min(rawWidth, 500));
-        const constrainedHeight = Math.max(50, Math.min(rawHeight, 300));
+        const constrainedWidth = Math.max(150, rawWidth);
+        const constrainedHeight = Math.max(80, rawHeight);
 
         // Update node size
         parent.style({
@@ -22666,11 +22597,8 @@ const AngularWorkflow = (defaultprops) => {
         position,
         backgroundcolor: "#1f2023",
         color: "#ffffff",
-
-        textHalign: "right",
-        textValign: "bottom",
-        textMarginX: "-250px",
-        textMarginY: "-150px",
+        textHalign: "center",
+        textValign: "center",
       },
       position,
     });
