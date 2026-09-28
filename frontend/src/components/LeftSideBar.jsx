@@ -1001,9 +1001,9 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           setActiveOrgData(org);
           setUpdateOrg(false);
           if (!isCloud) {
-              if (org?.cloud_sync  && (org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
+              if (org?.cloud_sync  && (org?.subscriptions?.[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions?.[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions?.[0]?.active) {
                 setIsProdStatusOn(true);
-              } else if ((org?.subscriptions[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions[0]?.name?.toLowerCase().includes("air gapped") || org?.subscriptions[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions[0]?.active) {
+              } else if ((org?.subscriptions?.[0]?.name?.toLowerCase().includes("enterprise") || org?.subscriptions?.[0]?.name?.toLowerCase().includes("air gapped") || org?.subscriptions?.[0]?.name?.toLowerCase().includes("business")) && org?.subscriptions?.[0]?.active) {
                 setIsProdStatusOn(true);
               } else {
                 setIsProdStatusOn(false);
@@ -1922,7 +1922,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           <Licensed
             expanded={expandLeftNav}
             licensed={isProdStatusOn}
-            title={activeOrgData?.subscriptions[0]?.name?.toLowerCase()?.includes("business") ? "Business" : "Enterprise"}
+            title={activeOrgData?.subscriptions?.[0]?.name?.toLowerCase()?.includes("business") ? "Business" : "Enterprise"}
           />
           )}
         </>
