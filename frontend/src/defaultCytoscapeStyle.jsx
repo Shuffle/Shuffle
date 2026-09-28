@@ -109,31 +109,17 @@ export default function defaultCytoscapeStyle(theme, apps) {
         padding: "5px",
         margin: "0px",
         "background-color": "data(backgroundcolor)",
-        "background-image": "data(backgroundimage)",
+        "background-image": function(el) { const img = el.data("backgroundimage"); return img && img.length > 0 ? img : "none" },
         "border-color": "#ffffff",
-        "text-margin-x": "data(textMarginX)",
-        "text-margin-y": "data(textMarginY)",
         "z-index": 4999,
         "border-radius": "5px",
         "background-opacity": "0.5",
         "text-wrap": "wrap",
-        "text-max-width": "data(width)",
-        "text-halign": function(element) {
-        const align = element?.data("textHalign")
-        if (align === null || align === undefined || align === "") {
-          return "center"
-        }
-  
-        return align
-      },
-        "text-valign": function(element) {
-        const align = element?.data("textValign")
-        if (align === null || align === undefined || align === "") {
-          return "center"
-        }
-        
-        return align
-      }
+        "text-max-width": function(el) { return (parseInt(el.data("width")) || 250) - 20 + "px" },
+        "font-size": "14px",
+        "text-halign": "center",
+        "text-valign": "center",
+        "text-justification": function(el) { return el.data("textJustification") || "center" }
       },
     },
     {
