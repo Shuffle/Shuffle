@@ -1653,7 +1653,7 @@ print('"' + encoded + '"')
 						) : null}
 					</div>
 
-					<NotificationComponent notifications={notifications} showRead={showRead} selectedExecutionId={selectedExecutionId} selectedWorkflow={selectedWorkflow} highlightKMS={highlightKMS} userdata={userdata} imagesize={imagesize} boxColor={boxColor} clickedFromOrgTab={clickedFromOrgTab} notificationWidth={notificationWidth} dismissNotification={dismissNotification} />
+					<NotificationComponent globalUrl={globalUrl} notifications={notifications} showRead={showRead} selectedExecutionId={selectedExecutionId} selectedWorkflow={selectedWorkflow} highlightKMS={highlightKMS} userdata={userdata} imagesize={imagesize} boxColor={boxColor} clickedFromOrgTab={clickedFromOrgTab} notificationWidth={notificationWidth} dismissNotification={dismissNotification} />
 
 					{clickedFromOrgTab ? null : <Divider style={{ marginTop: 50, marginBottom: 50, }} />}
 
@@ -1710,7 +1710,7 @@ export default Priorities;
 
 
 const NotificationItem = memo((props) => {
-	const { data, selectedExecutionId, selectedWorkflow, highlightKMS, userdata, imagesize, boxColor, clickedFromOrgTab, notificationWidth, dismissNotification } = props
+	const { globalUrl, data, selectedExecutionId, selectedWorkflow, highlightKMS, userdata, imagesize, boxColor, clickedFromOrgTab, notificationWidth, dismissNotification } = props
 
 	var image = "";
 	var orgName = "";
@@ -1942,12 +1942,244 @@ const NotificationItem = memo((props) => {
 				</Typography>
 			</div>
 
+			<AiFixPanel globalUrl={globalUrl} data={data} theme={theme} />
 		</Box>
 	);
 })
 
 
-const NotificationComponent = memo(({ notifications, showRead, selectedExecutionId, selectedWorkflow, highlightKMS, userdata, imagesize, boxColor, clickedFromOrgTab, notificationWidth, dismissNotification }) => {
+// Mirrors IsNotificationAiFixable in shuffle-shared/notification_fix.go
+const aiFixOrigins = ["workflow_silent_failure", "action_failure", "liquid_syntax", "app_error", "workflow_execution"]
+const aiFixTitlePrefixes = ["Potential error in Workflow", "Error in Workflow", "Liquid Syntax Error in Workflow", "App error for node", "Bad Status code in Workflow"]
+const isAiFixable = (data) => {
+	const hasExecution = (data.execution_id !== undefined && data.execution_id !== null && data.execution_id.length > 0) || (data.reference_url || "").includes("execution_id=")
+	if (!hasExecution) {
+		return false
+	}
+
+	if (data.origin !== undefined && data.origin !== null && data.origin.length > 0) {
+		return aiFixOrigins.includes(data.origin)
+	}
+
+	return aiFixTitlePrefixes.some((prefix) => (data.title || "").startsWith(prefix))
+}
+
+const AiFixPanel = memo(({ globalUrl, data, theme }) => {
+	// idle | loading | ready | applying | applied | unavailable
+	const [status, setStatus] = useState("idle")
+	const [suggestion, setSuggestion] = useState(null)
+	const [error, setError] = useState("")
+
+	// On load, show "Fix applied" if this failure was already fixed. GET only reads the cache, never calls the AI.
+	useEffect(() => {
+		if (globalUrl === undefined || !isAiFixable(data)) {
+			return
+		}
+
+		fetch(`${globalUrl}/api/v1/notifications/${data.id}/fix`, {
+			method: "GET",
+			headers: { "Content-Type": "application/json", Accept: "application/json" },
+			credentials: "include",
+		})
+			.then((response) => response.status === 200 ? response.json() : null)
+			.then((responseJson) => {
+				if (responseJson !== null && responseJson.success === true && responseJson.applied === true) {
+					setSuggestion(responseJson)
+					setStatus("applied")
+				}
+			})
+			.catch((err) => console.log("AI fix cache check error: ", err))
+	}, [globalUrl, data.id, data.execution_id])
+
+	if (globalUrl === undefined || !isAiFixable(data) || status === "unavailable") {
+		return null
+	}
+
+	const getFix = (refresh) => {
+		setStatus("loading")
+		setError("")
+		fetch(`${globalUrl}/api/v1/notifications/${data.id}/fix${refresh ? "?refresh=true" : ""}`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json", Accept: "application/json" },
+			credentials: "include",
+		})
+			.then((response) => {
+				// Older backends don't have the endpoint: hide the feature
+				if (response.status === 404 || response.status === 405) {
+					setStatus("unavailable")
+					return null
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson === null) {
+					return
+				}
+
+				if (responseJson.success !== true) {
+					setError(responseJson.reason || "Failed getting a suggestion")
+					setStatus("idle")
+					return
+				}
+
+				setSuggestion(responseJson)
+				setStatus(responseJson.applied ? "applied" : "ready")
+			})
+			.catch((err) => {
+				console.log("AI fix error: ", err)
+				setError("Failed getting a suggestion")
+				setStatus("idle")
+			})
+	}
+
+	const applyFix = () => {
+		setStatus("applying")
+		setError("")
+		fetch(`${globalUrl}/api/v1/notifications/${data.id}/fix/apply`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json", Accept: "application/json" },
+			credentials: "include",
+			// The server only applies the exact suggestion shown here
+			body: JSON.stringify({ suggestion_id: suggestion.suggestion_id }),
+		})
+			.then((response) => response.json())
+			.then((responseJson) => {
+				if (responseJson.success !== true) {
+					// A newer suggestion or a newer failure replaced this one: show the current one instead
+					if (responseJson.replaced === true) {
+						toast.info("This suggestion was replaced by a newer one. Showing the latest.")
+						getFix(false)
+						return
+					}
+
+					// The node was edited after the suggestion was made: fetch one based on the current workflow
+					if (responseJson.stale === true) {
+						toast.info("The workflow changed since this suggestion was made. Generating a new one.")
+						getFix(true)
+						return
+					}
+
+					setError(responseJson.reason || "Failed applying the fix")
+					setStatus("ready")
+					return
+				}
+
+				toast.success("Fix applied to the workflow")
+				setStatus("applied")
+			})
+			.catch((err) => {
+				console.log("AI fix apply error: ", err)
+				setError("Failed applying the fix")
+				setStatus("ready")
+			})
+	}
+
+	const codeStyle = {
+		margin: 0,
+		padding: 10,
+		maxHeight: 220,
+		overflow: "auto",
+		fontSize: 13,
+		whiteSpace: "pre-wrap",
+		wordBreak: "break-word",
+		borderRadius: 6,
+		color: theme.palette.text?.primary || theme.palette.textColor,
+		backgroundColor: theme.palette.inputColor || "rgba(0,0,0,0.25)",
+	}
+
+	return (
+		<div style={{ marginTop: 20 }}>
+			{status === "idle" || status === "loading" ?
+				<Button
+					variant="outlined"
+					color="primary"
+					style={{ textTransform: "none" }}
+					disabled={status === "loading"}
+					onClick={() => getFix(false)}
+				>
+					{status === "loading" ? "Analyzing the failure..." : "Suggest a fix with AI"}
+				</Button>
+				: null}
+
+			{error.length > 0 ?
+				<Typography variant="body2" color="error" style={{ marginTop: 10 }}>
+					{error}
+				</Typography>
+				: null}
+
+			{suggestion !== null && status !== "idle" && status !== "loading" ?
+				<div style={{ padding: 15, borderRadius: 8, border: theme.palette.defaultBorder }}>
+					<Typography variant="body1" color="textPrimary">
+						<b>{status === "applied" ? `Fix applied to ${suggestion.node_label}` : suggestion.fixable ? `Suggested fix for ${suggestion.node_label}` : "No automatic fix available"}</b>
+					</Typography>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 8, fontSize: 15 }}>
+						{suggestion.explanation}
+					</Typography>
+
+					{suggestion.changes?.map((change, index) => (
+						<div key={index} style={{ marginTop: 15 }}>
+							<Typography variant="body2" color="textSecondary">
+								Parameter <b>{change.parameter}</b>
+							</Typography>
+							<div style={{ display: "flex", gap: 10, marginTop: 5, flexWrap: "wrap" }}>
+								<div style={{ flex: "1 1 250px", minWidth: 0 }}>
+									<Typography variant="caption" color="textSecondary">Before</Typography>
+									<pre style={codeStyle}>{change.before}</pre>
+								</div>
+								<div style={{ flex: "1 1 250px", minWidth: 0 }}>
+									<Typography variant="caption" color="textSecondary">After</Typography>
+									<pre style={codeStyle}>{change.after}</pre>
+								</div>
+							</div>
+						</div>
+					))}
+
+					<div style={{ display: "flex", gap: 10, marginTop: 15 }}>
+						{suggestion.fixable && status !== "applied" ?
+							<Button
+								variant="contained"
+								color="primary"
+								style={{ textTransform: "none" }}
+								disabled={status === "applying"}
+								onClick={applyFix}
+							>
+								{status === "applying" ? "Applying..." : "Apply fix"}
+							</Button>
+							: null}
+						{status === "applied" ?
+							<Button
+								variant="outlined"
+								color="primary"
+								style={{ textTransform: "none" }}
+								onClick={() => window.open(`/workflows/${suggestion.workflow_id}`, "_blank")}
+							>
+								Fix applied. Open workflow
+							</Button>
+							: null}
+						<Button
+							variant="outlined"
+							color="secondary"
+							style={{ textTransform: "none" }}
+							disabled={status === "applying"}
+							onClick={() => getFix(true)}
+						>
+							Regenerate
+						</Button>
+					</div>
+
+					{suggestion.changes?.length > 0 && status !== "applied" ?
+						<Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 12 }}>
+							AI generated code should be double checked before applying.
+						</Typography>
+						: null}
+				</div>
+				: null}
+		</div>
+	)
+})
+
+const NotificationComponent = memo(({ globalUrl, notifications, showRead, selectedExecutionId, selectedWorkflow, highlightKMS, userdata, imagesize, boxColor, clickedFromOrgTab, notificationWidth, dismissNotification }) => {
 
 	return (
 		<div>
@@ -1961,7 +2193,7 @@ const NotificationComponent = memo(({ notifications, showRead, selectedExecution
 						}
 
 						return (
-							<NotificationItem data={notification} key={index} selectedExecutionId={selectedExecutionId} selectedWorkflow={selectedWorkflow} highlightKMS={highlightKMS} userdata={userdata} imagesize={imagesize} boxColor={boxColor} clickedFromOrgTab={clickedFromOrgTab} notificationWidth={notificationWidth} dismissNotification={dismissNotification} />
+							<NotificationItem globalUrl={globalUrl} data={notification} key={notification.id || index} selectedExecutionId={selectedExecutionId} selectedWorkflow={selectedWorkflow} highlightKMS={highlightKMS} userdata={userdata} imagesize={imagesize} boxColor={boxColor} clickedFromOrgTab={clickedFromOrgTab} notificationWidth={notificationWidth} dismissNotification={dismissNotification} />
 						)
 					})}
 				</div>

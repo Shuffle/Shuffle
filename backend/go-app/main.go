@@ -6828,6 +6828,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/notifications/{notificationId}/fix", shuffle.HandleGetNotificationFix).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/notifications/{notificationId}/fix/apply", shuffle.HandleApplyNotificationFix).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
