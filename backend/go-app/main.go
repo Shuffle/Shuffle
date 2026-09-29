@@ -5306,7 +5306,8 @@ func runInitEs(ctx context.Context) {
 	log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
 	time.Sleep(30 * time.Second)
 
-	shuffle.InitOpensearchIndexes()
+	shuffle.InitOpensearchIndices()
+	shuffle.StartExecutionLifecycleJobs(ctx)
 
 	// FIXME: This should ONLY run on one backend instance. This may cause interference.
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
