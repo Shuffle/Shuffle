@@ -93,6 +93,15 @@ BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 {{- end }}
 KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: {{ .Values.orborus.executionConcurrency | quote }}
+{{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
+{{- if or (eq .Values.shuffle.appRegistry "") (eq .Values.shuffle.appRegistry "docker.io") (eq .Values.shuffle.appRegistry "registry.hub.docker.com") (eq .Values.shuffle.appRegistry "index.docker.io") }}
+{{- fail "orborus.imageManager.enabled requires shuffle.appRegistry to be a private registry" }}
+{{- end }}
+DOCKER_HOST: "tcp://127.0.0.1:2375"
+SHUFFLE_ORBORUS_DOCKER_IMAGE_MANAGER: "true"
+SHUFFLE_ORBORUS_IMAGE_MANAGER_ADDRESS: ":{{ .Values.orborus.imageManager.port }}"
+SHUFFLE_ORBORUS_IMAGE_MANAGER_URL: "http://{{ include "shuffle.orborus.name" . }}:{{ .Values.orborus.imageManager.port }}"
+{{- end }}
 {{- if and (ne .Values.shuffle.appRegistry "") (ne .Values.shuffle.appRegistry "docker.io") (ne .Values.shuffle.appRegistry "registry.hub.docker.com") (ne .Values.shuffle.appRegistry "index.docker.io") }}
 SHUFFLE_STREAM_PRIVATE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"
 SHUFFLE_STREAM_PRIVATE_REGISTRY_INSECURE: {{ .Values.shuffle.appRegistryInsecure | quote }}

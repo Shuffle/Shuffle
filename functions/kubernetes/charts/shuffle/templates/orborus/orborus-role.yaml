@@ -23,6 +23,9 @@ rules:
       - list
       - create
       - delete
+      {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
+      - update
+      {{- end }}
     apiGroups:
       - apps
     resources:
@@ -37,6 +40,9 @@ rules:
       - services
   - verbs:
       - list
+      {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
+      - update
+      {{- end }}
     apiGroups:
       - apps
     resources:

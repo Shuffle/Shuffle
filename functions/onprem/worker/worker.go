@@ -161,6 +161,40 @@ func privateRegistryAppImages(registry, image string) (string, string, error) {
 	return sourceImage, registry + "/" + sourceImage, nil
 }
 
+func ensureImageWithOrborus(sourceImage string) error {
+	managerURL := strings.TrimSuffix(strings.TrimSpace(os.Getenv("SHUFFLE_ORBORUS_IMAGE_MANAGER_URL")), "/")
+	if managerURL == "" {
+		return errors.New("SHUFFLE_ORBORUS_IMAGE_MANAGER_URL is not configured")
+	}
+
+	body, err := json.Marshal(ImageRequest{Image: sourceImage})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, managerURL+"/api/v1/images/ensure", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 12 * time.Minute}
+	response, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 1024*1024))
+	if readErr != nil {
+		return readErr
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("Orborus image manager returned %s: %s", response.Status, strings.TrimSpace(string(responseBody)))
+	}
+
+	return nil
+}
+
 func restoreActionConfig(ctx context.Context, executionID string, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) {
 	if len(executionID) == 0 || action == nil {
 		return
@@ -769,12 +803,20 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
 		}
 
-		log.Printf("[INFO] Hybrid app image %s is not deployed. Downloading %s from the cloud backend and pushing it as %s", name, sourceImage, image)
-		if downloadErr := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, sourceImage); downloadErr != nil {
-			return fmt.Errorf("download and push app image %s: %w", sourceImage, downloadErr)
+		managerURL := strings.TrimSpace(os.Getenv("SHUFFLE_ORBORUS_IMAGE_MANAGER_URL"))
+		if managerURL != "" {
+			log.Printf("[INFO] Asking Orborus to ensure hybrid app image %s is available as %s", sourceImage, image)
+			if ensureErr := ensureImageWithOrborus(sourceImage); ensureErr != nil {
+				return fmt.Errorf("ensure app image %s with Orborus: %w", sourceImage, ensureErr)
+			}
+		} else {
+			log.Printf("[INFO] Hybrid app image %s is not deployed. Downloading %s from the cloud backend and pushing it as %s", name, sourceImage, image)
+			if downloadErr := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, sourceImage); downloadErr != nil {
+				return fmt.Errorf("download and push app image %s: %w", sourceImage, downloadErr)
+			}
 		}
 		if err == nil {
-			log.Printf("[INFO] Pushed image %s for existing deployment %s", image, name)
+			log.Printf("[INFO] Image %s is ready for existing deployment %s", image, name)
 			return nil
 		}
 	}
@@ -844,6 +886,9 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	}
 
 	deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
+	if cloudHybridPrivateRegistry {
+		deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
+	}
 
 	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 	if err != nil {

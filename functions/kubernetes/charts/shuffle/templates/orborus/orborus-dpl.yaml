@@ -92,6 +92,18 @@ spec:
             {{- if .Values.orborus.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
+            {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled .Values.orborus.imageManager.registryAuthSecret }}
+            - name: SHUFFLE_REGISTRY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orborus.imageManager.registryAuthSecret | quote }}
+                  key: {{ .Values.orborus.imageManager.registryUsernameKey | quote }}
+            - name: SHUFFLE_REGISTRY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.orborus.imageManager.registryAuthSecret | quote }}
+                  key: {{ .Values.orborus.imageManager.registryPasswordKey | quote }}
+            {{- end }}
           envFrom:
             {{- if .Values.orborus.extraEnvVarsCM }}
             - configMapRef:
@@ -107,6 +119,11 @@ spec:
           resources: {{- include "common.resources.preset" (dict "type" .Values.orborus.resourcesPreset) | nindent 12 }}
           {{- end }}
           ports:
+            {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
+            - name: image-manager
+              containerPort: {{ .Values.orborus.imageManager.port }}
+              protocol: TCP
+            {{- end }}
             {{- if .Values.orborus.extraContainerPorts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraContainerPorts "context" $) | nindent 12 }}
             {{- end }}
@@ -137,12 +154,50 @@ spec:
           {{- if .Values.orborus.extraVolumeMounts }}
           {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraVolumeMounts "context" $) | nindent 12 }}
           {{- end }}
+        {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
+        - name: docker-image-manager
+          image: {{ .Values.orborus.imageManager.dockerImage | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_HOST
+              value: tcp://127.0.0.1:2375
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          args:
+            - --host=tcp://127.0.0.1:2375
+            - --tls=false
+            {{- if .Values.shuffle.appRegistryInsecure }}
+            - --insecure-registry={{ .Values.shuffle.appRegistry }}
+            {{- end }}
+          readinessProbe:
+            exec:
+              command: ["docker", "info"]
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          volumeMounts:
+            - name: docker-image-manager-data
+              mountPath: /var/lib/docker
+          {{- if .Values.orborus.imageManager.resources }}
+          resources: {{- toYaml .Values.orborus.imageManager.resources | nindent 12 }}
+          {{- end }}
+        {{- end }}
         {{- if .Values.orborus.sidecars }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes:
         - name: empty-dir
           emptyDir: {}
+        {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
+        - name: docker-image-manager-data
+          emptyDir:
+            {{- if .Values.orborus.imageManager.storageSizeLimit }}
+            sizeLimit: {{ .Values.orborus.imageManager.storageSizeLimit | quote }}
+            {{- end }}
+        {{- end }}
         {{- if .Values.orborus.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.orborus.extraVolumes "context" $) | nindent 8 }}
         {{- end }}

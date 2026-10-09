@@ -173,6 +173,26 @@ You can override any value set in `app.*` (e.g. `app.image`, `app.replicaCount`,
 
 It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
 
+For a cloud-connected hybrid cluster without a local Shuffle backend, Orborus can copy app images from Shuffle Cloud into a private registry. Enable `orborus.imageManager.enabled`, set `shuffle.appRegistry`, and allow the Orborus Pod to run the privileged Docker sidecar. `orborus.imageManager.registryAuthSecret` must contain the configured username and password keys when the registry requires authentication. App Pods also need a Kubernetes registry pull secret through `app.serviceAccount.imagePullSecrets`. Keep `orborus.networkPolicy.enabled=true`; when external egress is restricted, add rules that allow Shuffle Cloud and the private registry.
+
+```yaml
+shuffle:
+  hybrid: true
+  appRegistry: registry.example.com
+
+orborus:
+  imageManager:
+    enabled: true
+    registryAuthSecret: shuffle-app-registry-credentials
+
+app:
+  serviceAccount:
+    imagePullSecrets:
+      - shuffle-app-registry-pull
+```
+
+On first use, the Worker asks the internal Orborus image-manager service for the app image. Orborus downloads the image archive from Shuffle Cloud, loads it into its Pod-local Docker daemon, pushes it to `shuffle.appRegistry`, verifies the pushed manifest, and then lets the Worker create the app Deployment. Cloud image-update queue items follow the same path and are acknowledged only after the push and app rollout reconciliation succeed.
+
 If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=true`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
 You are required to deploy all apps that are in use by your Shuffle instance manually using Helm.
 
@@ -487,6 +507,14 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `orborus.image.pullPolicy`                                  | orborus image pull policy                                                                                                                                                                                                          | `IfNotPresent`            |
 | `orborus.image.pullSecrets`                                 | orborus image pull secrets                                                                                                                                                                                                         | `[]`                      |
 | `orborus.replicaCount`                                      | Number of orborus replicas to deploy                                                                                                                                                                                               | `1`                       |
+| `orborus.imageManager.enabled`                              | Enable the hybrid Orborus image manager. Requires privileged Pods.                                                                                                                                                                 | `false`                   |
+| `orborus.imageManager.port`                                 | Internal image manager HTTP port                                                                                                                                                                                                   | `33334`                   |
+| `orborus.imageManager.dockerImage`                          | Docker-in-Docker sidecar image                                                                                                                                                                                                     | `docker:28-dind`          |
+| `orborus.imageManager.storageSizeLimit`                     | Ephemeral Docker storage limit                                                                                                                                                                                                     | `20Gi`                    |
+| `orborus.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password                                                                                                                                                                         | `""`                      |
+| `orborus.imageManager.registryUsernameKey`                  | Username key in registryAuthSecret                                                                                                                                                                                                 | `username`                |
+| `orborus.imageManager.registryPasswordKey`                  | Password key in registryAuthSecret                                                                                                                                                                                                 | `password`                |
+| `orborus.imageManager.resources`                            | Docker sidecar resource requests and limits                                                                                                                                                                                        | `{}`                      |
 | `orborus.extraContainerPorts`                               | Optionally specify extra list of additional ports for orborus containers                                                                                                                                                           | `[]`                      |
 | `orborus.livenessProbe.enabled`                             | Enable livenessProbe on orborus containers                                                                                                                                                                                         | `false`                   |
 | `orborus.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                            | `0`                       |

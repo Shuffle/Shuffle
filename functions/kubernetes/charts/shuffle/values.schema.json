@@ -1516,6 +1516,51 @@
                     "description": "Number of orborus replicas to deploy",
                     "default": 1
                 },
+                "imageManager": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable the hybrid Orborus image manager",
+                            "default": false
+                        },
+                        "port": {
+                            "type": "number",
+                            "description": "Internal image manager HTTP port",
+                            "default": 33334
+                        },
+                        "dockerImage": {
+                            "type": "string",
+                            "description": "Docker-in-Docker sidecar image",
+                            "default": "docker:28-dind"
+                        },
+                        "storageSizeLimit": {
+                            "type": "string",
+                            "description": "Ephemeral Docker storage limit",
+                            "default": "20Gi"
+                        },
+                        "registryAuthSecret": {
+                            "type": "string",
+                            "description": "Existing Secret containing registry username and password",
+                            "default": ""
+                        },
+                        "registryUsernameKey": {
+                            "type": "string",
+                            "description": "Username key in registryAuthSecret",
+                            "default": "username"
+                        },
+                        "registryPasswordKey": {
+                            "type": "string",
+                            "description": "Password key in registryAuthSecret",
+                            "default": "password"
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Docker sidecar resource requests and limits",
+                            "default": {}
+                        }
+                    }
+                },
                 "extraContainerPorts": {
                     "type": "array",
                     "description": "Optionally specify extra list of additional ports for orborus containers",
