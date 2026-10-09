@@ -83,7 +83,7 @@ KEY: VALUE
 {{- define "shuffle.orborus.env" -}}
 RUNNING_MODE: kubernetes
 IS_KUBERNETES: "true"
-ENVIRONMENT_NAME: "{{ .Values.shuffle.org }}"
+ENVIRONMENT_NAME: "{{ default .Values.shuffle.org .Values.shuffle.environmentName }}"
 ORG_ID: "{{ .Values.shuffle.org }}"
 TZ: "{{ .Values.shuffle.timezone }}"
 {{- if .Values.shuffle.baseUrl }}
@@ -93,14 +93,22 @@ BASE_URL: {{ include "shuffle.backend.baseUrl" . | quote }}
 {{- end }}
 KUBERNETES_NAMESPACE: "{{ .Release.Namespace }}"
 SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY: {{ .Values.orborus.executionConcurrency | quote }}
-{{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
-{{- if or (eq .Values.shuffle.appRegistry "") (eq .Values.shuffle.appRegistry "docker.io") (eq .Values.shuffle.appRegistry "registry.hub.docker.com") (eq .Values.shuffle.appRegistry "index.docker.io") }}
-{{- fail "orborus.imageManager.enabled requires shuffle.appRegistry to be a private registry" }}
+{{- if .Values.worker.imageManager.enabled }}
+{{- if not .Values.shuffle.hybrid }}
+{{- fail "worker.imageManager.enabled requires shuffle.hybrid=true" }}
 {{- end }}
-DOCKER_HOST: "tcp://127.0.0.1:2375"
-SHUFFLE_ORBORUS_DOCKER_IMAGE_MANAGER: "true"
-SHUFFLE_ORBORUS_IMAGE_MANAGER_ADDRESS: ":{{ .Values.orborus.imageManager.port }}"
-SHUFFLE_ORBORUS_IMAGE_MANAGER_URL: "http://{{ include "shuffle.orborus.name" . }}:{{ .Values.orborus.imageManager.port }}"
+{{- if not .Values.worker.enableHelmDeployment }}
+{{- fail "worker.imageManager.enabled requires worker.enableHelmDeployment=true" }}
+{{- end }}
+{{- if .Values.orborus.manageWorkerDeployments }}
+{{- fail "worker.imageManager.enabled requires orborus.manageWorkerDeployments=false" }}
+{{- end }}
+{{- if not .Values.worker.manageAppDeployments }}
+{{- fail "worker.imageManager.enabled requires worker.manageAppDeployments=true" }}
+{{- end }}
+{{- if or (eq .Values.shuffle.appRegistry "") (eq .Values.shuffle.appRegistry "docker.io") (eq .Values.shuffle.appRegistry "registry.hub.docker.com") (eq .Values.shuffle.appRegistry "index.docker.io") }}
+{{- fail "worker.imageManager.enabled requires shuffle.appRegistry to be a private registry" }}
+{{- end }}
 {{- end }}
 {{- if and (ne .Values.shuffle.appRegistry "") (ne .Values.shuffle.appRegistry "docker.io") (ne .Values.shuffle.appRegistry "registry.hub.docker.com") (ne .Values.shuffle.appRegistry "index.docker.io") }}
 SHUFFLE_STREAM_PRIVATE_REGISTRY: "{{ .Values.shuffle.appRegistry }}"

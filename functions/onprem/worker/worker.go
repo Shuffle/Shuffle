@@ -161,40 +161,6 @@ func privateRegistryAppImages(registry, image string) (string, string, error) {
 	return sourceImage, registry + "/" + sourceImage, nil
 }
 
-func ensureImageWithOrborus(sourceImage string) error {
-	managerURL := strings.TrimSuffix(strings.TrimSpace(os.Getenv("SHUFFLE_ORBORUS_IMAGE_MANAGER_URL")), "/")
-	if managerURL == "" {
-		return errors.New("SHUFFLE_ORBORUS_IMAGE_MANAGER_URL is not configured")
-	}
-
-	body, err := json.Marshal(ImageRequest{Image: sourceImage})
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest(http.MethodPost, managerURL+"/api/v1/images/ensure", bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 12 * time.Minute}
-	response, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 1024*1024))
-	if readErr != nil {
-		return readErr
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("Orborus image manager returned %s: %s", response.Status, strings.TrimSpace(string(responseBody)))
-	}
-
-	return nil
-}
-
 func restoreActionConfig(ctx context.Context, executionID string, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) {
 	if len(executionID) == 0 || action == nil {
 		return
@@ -610,7 +576,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 }
 
 // ** STARTREMOVE ***/
-func deployk8sApp(image string, identifier string, env []string) error {
+func deployk8sApp(image string, identifier string, env []string, authorization, orgID string) error {
 	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 {
 		kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 	} else {
@@ -803,11 +769,10 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
 		}
 
-		managerURL := strings.TrimSpace(os.Getenv("SHUFFLE_ORBORUS_IMAGE_MANAGER_URL"))
-		if managerURL != "" {
-			log.Printf("[INFO] Asking Orborus to ensure hybrid app image %s is available as %s", sourceImage, image)
-			if ensureErr := ensureImageWithOrborus(sourceImage); ensureErr != nil {
-				return fmt.Errorf("ensure app image %s with Orborus: %w", sourceImage, ensureErr)
+		if imageManagerEnabled() {
+			log.Printf("[INFO] Ensuring hybrid app image %s is available as %s", sourceImage, image)
+			if ensureErr := ensureImage(ctx, sourceImage, authorization, orgID, false); ensureErr != nil {
+				return fmt.Errorf("ensure app image %s: %w", sourceImage, ensureErr)
 			}
 		} else {
 			log.Printf("[INFO] Hybrid app image %s is not deployed. Downloading %s from the cloud backend and pushing it as %s", name, sourceImage, image)
@@ -1108,7 +1073,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			//	exposedPort = deployport
 			//}
 
-			err = findAppInfoKubernetes(image, appName, env)
+			err = findAppInfoKubernetes(image, appName, env, workflowExecution.Authorization, workflowExecution.ExecutionOrg)
 			if err != nil {
 				log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
 				return err
@@ -4319,7 +4284,7 @@ func hasAvailableSwarmService(services []swarm.Service, name string) bool {
 // Runs data discovery
 /*** STARTREMOVE ***/
 
-func findAppInfoKubernetes(image, name string, env []string) error {
+func findAppInfoKubernetes(image, name string, env []string, authorization, orgID string) error {
 	clientset, _, err := shuffle.GetKubernetesClient()
 	if err != nil {
 		log.Printf("[ERROR] Failed getting kubernetes: %s", err)
@@ -4362,7 +4327,7 @@ func findAppInfoKubernetes(image, name string, env []string) error {
 		}
 	}
 
-	err = deployk8sApp(image, name, env)
+	err = deployk8sApp(image, name, env, authorization, orgID)
 	return err
 }
 
@@ -5403,6 +5368,21 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[ERROR] Error in unmarshalling body: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	if imageManagerEnabled() {
+		authorization := strings.TrimSpace(request.Header.Get("Authorization"))
+		authorization = strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
+		if err := ensureImage(request.Context(), imageBody.Image, authorization, request.Header.Get("Org-Id"), true); err != nil {
+			log.Printf("[ERROR] Failed ensuring image %s: %s", imageBody.Image, err)
+			resp.WriteHeader(http.StatusBadGateway)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, err.Error())))
+			return
+		}
+
+		resp.WriteHeader(http.StatusOK)
+		resp.Write([]byte(`{"success": true, "status": "image ready"}`))
 		return
 	}
 

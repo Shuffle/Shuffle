@@ -173,7 +173,7 @@ You can override any value set in `app.*` (e.g. `app.image`, `app.replicaCount`,
 
 It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
 
-For a cloud-connected hybrid cluster without a local Shuffle backend, Orborus can copy app images from Shuffle Cloud into a private registry. Enable `orborus.imageManager.enabled`, set `shuffle.appRegistry`, and allow the Orborus Pod to run the privileged Docker sidecar. `orborus.imageManager.registryAuthSecret` must contain the configured username and password keys when the registry requires authentication. App Pods also need a Kubernetes registry pull secret through `app.serviceAccount.imagePullSecrets`. Keep `orborus.networkPolicy.enabled=true`; when external egress is restricted, add rules that allow Shuffle Cloud and the private registry.
+For a cloud-connected hybrid cluster without a local Shuffle backend, the Worker can copy app images from Shuffle Cloud into a private registry. Enable the Helm-managed Worker and `worker.imageManager.enabled`, set `shuffle.appRegistry`, and disable Orborus-managed Worker deployments. The Worker Pod runs a privileged Docker sidecar used only for image load and push. `worker.imageManager.registryAuthSecret` must contain the configured username and password keys when the registry requires authentication. App Pods also need a Kubernetes registry pull secret through `app.serviceAccount.imagePullSecrets`.
 
 ```yaml
 shuffle:
@@ -181,6 +181,10 @@ shuffle:
   appRegistry: registry.example.com
 
 orborus:
+  manageWorkerDeployments: false
+
+worker:
+  enableHelmDeployment: true
   imageManager:
     enabled: true
     registryAuthSecret: shuffle-app-registry-credentials
@@ -191,7 +195,7 @@ app:
       - shuffle-app-registry-pull
 ```
 
-On first use, the Worker asks the internal Orborus image-manager service for the app image. Orborus downloads the image archive from Shuffle Cloud, loads it into its Pod-local Docker daemon, pushes it to `shuffle.appRegistry`, verifies the pushed manifest, and then lets the Worker create the app Deployment. Cloud image-update queue items follow the same path and are acknowledged only after the push and app rollout reconciliation succeed.
+On first use, the Worker downloads the image archive from Shuffle Cloud, loads it into its Pod-local Docker daemon, pushes it to `shuffle.appRegistry`, verifies the pushed manifest, and then creates or refreshes the app Deployment. No internal image-manager HTTP service is exposed.
 
 If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=true`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
 You are required to deploy all apps that are in use by your Shuffle instance manually using Helm.
@@ -268,6 +272,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `shuffle.hybrid`           | Connect this Kubernetes location to the Shuffle cloud backend                                                              | `false`         |
 | `shuffle.baseUrl`          | The external base URL under which Shuffle is reachable.                                                                    | `""`            |
 | `shuffle.org`              | Default shuffle organization                                                                                               | `Shuffle`       |
+| `shuffle.environmentName`  | Hybrid execution environment name. Defaults to shuffle.org when empty.                                                     | `""`            |
 | `shuffle.appRegistry`      | The registry from / to which shuffle apps are pulled / pushed                                                              | `docker.io`     |
 | `shuffle.appRegistryInsecure` | Use HTTP when pushing apps to the private registry                                                                       | `false`         |
 | `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion> | `frikky/shuffle` |
@@ -507,14 +512,6 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `orborus.image.pullPolicy`                                  | orborus image pull policy                                                                                                                                                                                                          | `IfNotPresent`            |
 | `orborus.image.pullSecrets`                                 | orborus image pull secrets                                                                                                                                                                                                         | `[]`                      |
 | `orborus.replicaCount`                                      | Number of orborus replicas to deploy                                                                                                                                                                                               | `1`                       |
-| `orborus.imageManager.enabled`                              | Enable the hybrid Orborus image manager. Requires privileged Pods.                                                                                                                                                                 | `false`                   |
-| `orborus.imageManager.port`                                 | Internal image manager HTTP port                                                                                                                                                                                                   | `33334`                   |
-| `orborus.imageManager.dockerImage`                          | Docker-in-Docker sidecar image                                                                                                                                                                                                     | `docker:28-dind`          |
-| `orborus.imageManager.storageSizeLimit`                     | Ephemeral Docker storage limit                                                                                                                                                                                                     | `20Gi`                    |
-| `orborus.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password                                                                                                                                                                         | `""`                      |
-| `orborus.imageManager.registryUsernameKey`                  | Username key in registryAuthSecret                                                                                                                                                                                                 | `username`                |
-| `orborus.imageManager.registryPasswordKey`                  | Password key in registryAuthSecret                                                                                                                                                                                                 | `password`                |
-| `orborus.imageManager.resources`                            | Docker sidecar resource requests and limits                                                                                                                                                                                        | `{}`                      |
 | `orborus.extraContainerPorts`                               | Optionally specify extra list of additional ports for orborus containers                                                                                                                                                           | `[]`                      |
 | `orborus.livenessProbe.enabled`                             | Enable livenessProbe on orborus containers                                                                                                                                                                                         | `false`                   |
 | `orborus.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                            | `0`                       |
@@ -625,6 +622,13 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.image.pullSecrets`                                 | worker image pull secrets. Only effective with worker.enableHelmDeployment.                                                                                                                                                     | `[]`                     |
 | `worker.replicaCount`                                      | Number of worker replicas to deploy. Only effective with worker.enableHelmDeployment.                                                                                                                                           | `1`                      |
 | `worker.containerPorts.http`                               | backend HTTP container port                                                                                                                                                                                                     | `33333`                  |
+| `worker.imageManager.enabled`                              | Enable the hybrid Worker image manager. Requires a privileged Docker sidecar and a Helm-managed Worker.                                                                                                                         | `false`                  |
+| `worker.imageManager.dockerImage`                          | Docker-in-Docker sidecar image                                                                                                                                                                                                  | `docker:28-dind`         |
+| `worker.imageManager.storageSizeLimit`                     | Ephemeral Docker storage limit                                                                                                                                                                                                  | `20Gi`                   |
+| `worker.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password                                                                                                                                                                      | `""`                     |
+| `worker.imageManager.registryUsernameKey`                  | Username key in registryAuthSecret                                                                                                                                                                                              | `username`               |
+| `worker.imageManager.registryPasswordKey`                  | Password key in registryAuthSecret                                                                                                                                                                                              | `password`               |
+| `worker.imageManager.resources`                            | Docker sidecar resource requests and limits                                                                                                                                                                                     | `{}`                     |
 | `worker.extraContainerPorts`                               | Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.                                                                                                       | `[]`                     |
 | `worker.livenessProbe.enabled`                             | Enable livenessProbe on worker containers. Only effective with worker.enableHelmDeployment.                                                                                                                                     | `false`                  |
 | `worker.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                         | `0`                      |

@@ -86,6 +86,10 @@ shuffle:
   ##
   org: Shuffle
 
+  ## @param shuffle.environmentName Hybrid execution environment name. Defaults to shuffle.org when empty.
+  ##
+  environmentName: ""
+
   ## @param shuffle.appRegistry The registry from / to which shuffle apps are pulled / pushed
   ##
   appRegistry: "docker.io"
@@ -1070,26 +1074,6 @@ orborus:
   ## @param orborus.replicaCount Number of orborus replicas to deploy
   ##
   replicaCount: 1
-  ## Run a Pod-local Docker daemon so hybrid Orborus can load Cloud image archives
-  ## and push them to shuffle.appRegistry. Requires privileged Pods.
-  ## @param orborus.imageManager.enabled Enable the hybrid Orborus image manager
-  ## @param orborus.imageManager.port Internal image manager HTTP port
-  ## @param orborus.imageManager.dockerImage Docker-in-Docker sidecar image
-  ## @param orborus.imageManager.storageSizeLimit Ephemeral Docker storage limit
-  ## @param orborus.imageManager.registryAuthSecret Existing Secret containing registry username and password
-  ## @param orborus.imageManager.registryUsernameKey Username key in registryAuthSecret
-  ## @param orborus.imageManager.registryPasswordKey Password key in registryAuthSecret
-  ## @param orborus.imageManager.resources Docker sidecar resource requests and limits
-  ##
-  imageManager:
-    enabled: false
-    port: 33334
-    dockerImage: docker:28-dind
-    storageSizeLimit: 20Gi
-    registryAuthSecret: ""
-    registryUsernameKey: username
-    registryPasswordKey: password
-    resources: {}
   ## @param orborus.extraContainerPorts Optionally specify extra list of additional ports for orborus containers
   ## e.g:
   ## extraContainerPorts:
@@ -1502,6 +1486,24 @@ worker:
   ##
   containerPorts:
     http: 33333
+  ## Run a Pod-local Docker daemon so the hybrid worker can load Cloud image archives
+  ## and push them to shuffle.appRegistry. Requires privileged Pods and a Helm-managed worker.
+  ## @param worker.imageManager.enabled Enable the hybrid worker image manager
+  ## @param worker.imageManager.dockerImage Docker-in-Docker sidecar image
+  ## @param worker.imageManager.storageSizeLimit Ephemeral Docker storage limit
+  ## @param worker.imageManager.registryAuthSecret Existing Secret containing registry username and password
+  ## @param worker.imageManager.registryUsernameKey Username key in registryAuthSecret
+  ## @param worker.imageManager.registryPasswordKey Password key in registryAuthSecret
+  ## @param worker.imageManager.resources Docker sidecar resource requests and limits
+  ##
+  imageManager:
+    enabled: false
+    dockerImage: docker:28-dind
+    storageSizeLimit: 20Gi
+    registryAuthSecret: ""
+    registryUsernameKey: username
+    registryPasswordKey: password
+    resources: {}
   ## @param worker.extraContainerPorts Optionally specify extra list of additional ports for worker containers. Only effective with worker.enableHelmDeployment.
   ## e.g:
   ## extraContainerPorts:

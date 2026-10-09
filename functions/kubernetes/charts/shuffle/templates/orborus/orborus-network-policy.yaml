@@ -54,17 +54,6 @@ spec:
     {{- end }}
     {{- end }}
   ingress:
-    {{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
-    - ports:
-        - port: {{ .Values.orborus.imageManager.port }}
-          protocol: TCP
-      from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels: {{ include "shuffle.worker.matchLabels" . | nindent 14 }}
-    {{- end }}
     {{- if .Values.orborus.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.orborus.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
     {{- end }}

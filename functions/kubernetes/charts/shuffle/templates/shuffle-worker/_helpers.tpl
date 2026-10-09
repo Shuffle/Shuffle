@@ -141,8 +141,9 @@ SHUFFLE_SWARM_CONFIG: "run" # Shuffle Worker requires this to be set even when u
 SHUFFLE_HYBRID: {{ .Values.shuffle.hybrid | quote }}
 SHUFFLE_APP_EXPOSED_PORT: {{ .Values.app.exposedContainerPort | quote }}
 WORKER_HOSTNAME: {{ include "shuffle.worker.hostname" . }}
-{{- if and .Values.shuffle.hybrid .Values.orborus.imageManager.enabled }}
-SHUFFLE_ORBORUS_IMAGE_MANAGER_URL: "http://{{ include "shuffle.orborus.name" . }}:{{ .Values.orborus.imageManager.port }}"
+{{- if and .Values.shuffle.hybrid .Values.worker.imageManager.enabled }}
+DOCKER_HOST: "tcp://127.0.0.1:2375"
+SHUFFLE_WORKER_IMAGE_MANAGER: "true"
 {{- end }}
 
 {{- if .Values.worker.manageAppDeployments }}
