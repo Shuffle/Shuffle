@@ -1,7 +1,11 @@
 package main
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,11 +14,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/registry"
 	dockerclient "github.com/docker/docker/client"
@@ -24,6 +30,9 @@ import (
 
 var imageManagerLock sync.Mutex
 var imageManagerDocker *dockerclient.Client
+
+const faultyAppSHA256 = "607c9de1de3172a73f8fa0deb4d349d2119a12df427d21f1852af4293dd09386"
+const maxInspectedAppSize = 1024 * 1024
 
 func imageManagerEnabled() bool {
 	return isKubernetes == "true" && strings.EqualFold(os.Getenv("SHUFFLE_WORKER_IMAGE_MANAGER"), "true")
@@ -126,6 +135,100 @@ func dockerLoadReference(stream io.Reader) (string, error) {
 	}
 }
 
+func appFileSHA256(archive io.Reader) (string, error) {
+	reader := tar.NewReader(archive)
+	for {
+		header, err := reader.Next()
+		if errors.Is(err, io.EOF) {
+			return "", nil
+		}
+		if err != nil {
+			return "", err
+		}
+		if path.Base(header.Name) != "app.py" || (header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA) {
+			continue
+		}
+		if header.Size > maxInspectedAppSize {
+			return "", nil
+		}
+		hash := sha256.New()
+		if _, err := io.Copy(hash, reader); err != nil {
+			return "", err
+		}
+		return hex.EncodeToString(hash.Sum(nil)), nil
+	}
+}
+
+func inspectAppFileSHA256(ctx context.Context, client *dockerclient.Client, imageID string) (hash string, err error) {
+	created, err := client.ContainerCreate(ctx, &container.Config{Image: imageID}, nil, nil, nil, "")
+	if err != nil {
+		return "", fmt.Errorf("create inspection container: %w", err)
+	}
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if removeErr := client.ContainerRemove(cleanupCtx, created.ID, container.RemoveOptions{Force: true}); removeErr != nil {
+			log.Printf("[ERROR] Failed removing image inspection container %s: %s", created.ID, removeErr)
+			err = fmt.Errorf("remove inspection container %s: %w", created.ID, removeErr)
+		}
+	}()
+
+	archive, _, err := client.CopyFromContainer(ctx, created.ID, "/app/app.py")
+	if dockerclient.IsErrNotFound(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("copy app.py from image %s: %w", imageID, err)
+	}
+	defer archive.Close()
+	return appFileSHA256(archive)
+}
+
+func reportFaultyImage(ctx context.Context, source, authorization, executionID string) error {
+	if authorization == "" {
+		return errors.New("report authorization is missing")
+	}
+	body, err := json.Marshal(struct {
+		Image       string `json:"image"`
+		SHA256      string `json:"sha256"`
+		ExecutionID string `json:"execution_id"`
+	}{source, faultyAppSHA256, executionID})
+	if err != nil {
+		return err
+	}
+	endpoint := strings.TrimSuffix(baseUrl, "/") + "/api/v1/report_faulty_app_image"
+	client := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+	for attempt := 0; attempt < 2; attempt++ {
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+		if err != nil {
+			return err
+		}
+		request.Header.Set("Authorization", "Bearer "+authorization)
+		request.Header.Set("Content-Type", "application/json")
+		response, err := client.Do(request)
+		if err == nil {
+			responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 1024))
+			response.Body.Close()
+			if readErr != nil {
+				return readErr
+			}
+			if response.StatusCode == http.StatusOK {
+				return nil
+			}
+			err = fmt.Errorf("cloud report returned %s: %s", response.Status, strings.TrimSpace(string(responseBody)))
+			if response.StatusCode < 500 {
+				return err
+			}
+		}
+		if attempt == 1 {
+			return err
+		}
+	}
+	return errors.New("cloud report failed")
+}
+
 func imageManagerDockerClient(ctx context.Context) (*dockerclient.Client, error) {
 	if imageManagerDocker != nil {
 		if _, err := imageManagerDocker.Info(ctx); err == nil {
@@ -156,7 +259,7 @@ func imageManagerDockerClient(ctx context.Context) (*dockerclient.Client, error)
 	}
 }
 
-func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client, source, authorization, orgID string) error {
+func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client, source, authorization, orgID, executionID string) error {
 	endpoint, err := url.Parse(strings.TrimSuffix(baseUrl, "/") + "/api/v1/get_docker_image")
 	if err != nil {
 		return fmt.Errorf("build cloud image URL: %w", err)
@@ -219,29 +322,49 @@ func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client,
 		return fmt.Errorf("load %s: %w", source, err)
 	}
 
-	if _, _, err := client.ImageInspectWithRaw(ctx, source); err == nil {
-		return nil
-	}
+	loadedID := ""
 	if loadedReference != "" {
-		if err := client.ImageTag(ctx, loadedReference, source); err == nil {
-			return nil
+		loaded, _, inspectErr := client.ImageInspectWithRaw(ctx, loadedReference)
+		if inspectErr != nil {
+			return fmt.Errorf("inspect loaded image %s: %w", loadedReference, inspectErr)
 		}
-	}
-
-	images, err := client.ImageList(ctx, image.ListOptions{All: true})
-	if err != nil {
-		return fmt.Errorf("find loaded image for %s: %w", source, err)
-	}
-	for _, current := range images {
-		if !existingImages[current.ID] {
-			if err := client.ImageTag(ctx, current.ID, source); err != nil {
-				return fmt.Errorf("tag loaded image %s as %s: %w", current.ID, source, err)
+		loadedID = loaded.ID
+	} else {
+		images, listErr := client.ImageList(ctx, image.ListOptions{All: true})
+		if listErr != nil {
+			return fmt.Errorf("find loaded image for %s: %w", source, listErr)
+		}
+		for _, current := range images {
+			if !existingImages[current.ID] {
+				if loadedID != "" {
+					return fmt.Errorf("Docker loaded multiple images without identifying %s", source)
+				}
+				loadedID = current.ID
 			}
-			return nil
 		}
 	}
+	if loadedID == "" {
+		return fmt.Errorf("Docker loaded the archive but did not identify image %s", source)
+	}
 
-	return fmt.Errorf("Docker loaded the archive but did not expose image %s", source)
+	hash, err := inspectAppFileSHA256(ctx, client, loadedID)
+	if hash == faultyAppSHA256 {
+		reportErr := reportFaultyImage(ctx, source, authorization, executionID)
+		if reportErr != nil {
+			return fmt.Errorf("refusing known faulty image %s (support report failed: %w)", source, reportErr)
+		}
+		return fmt.Errorf("refusing known faulty image %s; support was notified", source)
+	}
+	if err != nil {
+		return fmt.Errorf("inspect loaded image %s: %w", source, err)
+	}
+	if hash == "" {
+		log.Printf("[WARNING] Image %s has no inspectable /app/app.py (missing or over 1 MiB); known faulty app fingerprint was not checked", source)
+	}
+	if err := client.ImageTag(ctx, loadedID, source); err != nil {
+		return fmt.Errorf("tag loaded image %s as %s: %w", loadedID, source, err)
+	}
+	return nil
 }
 
 func pushImageToPrivateRegistry(ctx context.Context, source string) (string, error) {
@@ -308,7 +431,7 @@ func registryImageExists(ctx context.Context, source string) (bool, error) {
 	return true, nil
 }
 
-func ensureImage(ctx context.Context, source, authorization, orgID string, force bool) error {
+func ensureImage(ctx context.Context, source, authorization, orgID, executionID string, force bool) error {
 	imageManagerLock.Lock()
 	defer imageManagerLock.Unlock()
 
@@ -338,7 +461,7 @@ func ensureImage(ctx context.Context, source, authorization, orgID string, force
 	if err != nil {
 		return err
 	}
-	if err := downloadAndLoadCloudImage(ctx, client, source, authorization, orgID); err != nil {
+	if err := downloadAndLoadCloudImage(ctx, client, source, authorization, orgID, executionID); err != nil {
 		return fmt.Errorf("download and load %s: %w", source, err)
 	}
 

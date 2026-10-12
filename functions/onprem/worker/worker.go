@@ -771,7 +771,14 @@ func deployk8sApp(image string, identifier string, env []string, authorization, 
 
 		if imageManagerEnabled() {
 			log.Printf("[INFO] Ensuring hybrid app image %s is available as %s", sourceImage, image)
-			if ensureErr := ensureImage(ctx, sourceImage, authorization, orgID, false); ensureErr != nil {
+			executionID := ""
+			for _, value := range env {
+				if strings.HasPrefix(value, "EXECUTIONID=") {
+					executionID = strings.TrimPrefix(value, "EXECUTIONID=")
+					break
+				}
+			}
+			if ensureErr := ensureImage(ctx, sourceImage, authorization, orgID, executionID, false); ensureErr != nil {
 				return fmt.Errorf("ensure app image %s: %w", sourceImage, ensureErr)
 			}
 		} else {
@@ -5374,7 +5381,7 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 	if imageManagerEnabled() {
 		authorization := strings.TrimSpace(request.Header.Get("Authorization"))
 		authorization = strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
-		if err := ensureImage(request.Context(), imageBody.Image, authorization, request.Header.Get("Org-Id"), true); err != nil {
+		if err := ensureImage(request.Context(), imageBody.Image, authorization, request.Header.Get("Org-Id"), request.Header.Get("Execution-Id"), true); err != nil {
 			log.Printf("[ERROR] Failed ensuring image %s: %s", imageBody.Image, err)
 			resp.WriteHeader(http.StatusBadGateway)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, err.Error())))
