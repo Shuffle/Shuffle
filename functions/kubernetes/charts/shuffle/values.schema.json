@@ -152,6 +152,26 @@
                     "description": "The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion>",
                     "default": "frikky/shuffle"
                 },
+                                "appSdkImage": {
+                    "type": "string",
+                    "description": "Exact image used as the app SDK base. Leave empty to derive from appRegistry/appBaseImageName.",
+                    "default": ""
+                },
+                "appBuildAirgapped": {
+                    "type": "boolean",
+                    "description": "When true, generate app Dockerfiles that only copy source into the SDK base image.",
+                    "default": false
+                },
+                "appBuilderImage": {
+                    "type": "string",
+                    "description": "Image used for the in-cluster app builder (Kaniko) job. Leave empty to use gcr.io/kaniko-project/executor:latest. Set this to a mirrored image in air-gapped clusters.",
+                    "default": ""
+                },
+                "appRegistrySecret": {
+                    "type": "string",
+                    "description": "Name of an existing kubernetes.io/dockerconfigjson secret used by the app builder to push app images to shuffle.appRegistry",
+                    "default": ""
+                },
                 "timezone": {
                     "type": "string",
                     "description": "The timezone used by Shuffle",
