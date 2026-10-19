@@ -90,7 +90,7 @@ shuffle:
   ##
   environmentName: ""
 
-  ## @param shuffle.appRegistry The registry from / to which shuffle apps are pulled / pushed
+  ## @param shuffle.appRegistry Registry host and optional repository prefix for Shuffle apps (e.g. REGION-docker.pkg.dev/PROJECT/REPOSITORY)
   ##
   appRegistry: "docker.io"
 
@@ -1491,7 +1491,7 @@ worker:
   ## @param worker.imageManager.enabled Enable the hybrid worker image manager
   ## @param worker.imageManager.dockerImage Docker-in-Docker sidecar image
   ## @param worker.imageManager.storageSizeLimit Ephemeral Docker storage limit
-  ## @param worker.imageManager.registryAuthSecret Existing Secret containing registry username and password
+  ## @param worker.imageManager.registryAuthSecret Existing Secret containing registry username and password. If empty, Artifact Registry uses Google application-default credentials (GKE Workload Identity).
   ## @param worker.imageManager.registryUsernameKey Username key in registryAuthSecret
   ## @param worker.imageManager.registryPasswordKey Password key in registryAuthSecret
   ## @param worker.imageManager.resources Docker sidecar resource requests and limits

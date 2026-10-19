@@ -25,11 +25,15 @@ import (
 	"github.com/docker/docker/api/types/registry"
 	dockerclient "github.com/docker/docker/client"
 	shuffle "github.com/shuffle/shuffle-shared"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var imageManagerLock sync.Mutex
 var imageManagerDocker *dockerclient.Client
+var artifactRegistryTokenLock sync.Mutex
+var artifactRegistryToken *oauth2.Token
 
 const faultyAppSHA256 = "607c9de1de3172a73f8fa0deb4d349d2119a12df427d21f1852af4293dd09386"
 const maxInspectedAppSize = 1024 * 1024
@@ -62,17 +66,47 @@ func privateRegistryImage(source string) (string, error) {
 		source = "frikky/shuffle:" + source
 	}
 
-	return localRegistry + "/" + source, nil
+	target := localRegistry + "/" + source
+	host := strings.SplitN(target, "/", 2)[0]
+	if strings.HasSuffix(host, "-docker.pkg.dev") && len(strings.SplitN(target, "/", 4)) < 4 {
+		return "", fmt.Errorf("Artifact Registry image %q requires HOST/PROJECT/REPOSITORY/IMAGE:TAG; set shuffle.appRegistry to HOST/PROJECT/REPOSITORY and shuffle.appBaseImageName to frikky/shuffle", target)
+	}
+	return target, nil
 }
 
-func registryAuth(target string) (string, error) {
+func registryAuth(ctx context.Context, target string) (string, error) {
 	host := strings.SplitN(target, "/", 2)[0]
-	return registry.EncodeAuthConfig(registry.AuthConfig{
+	auth := registry.AuthConfig{
 		Username:      os.Getenv("SHUFFLE_REGISTRY_USERNAME"),
 		Password:      os.Getenv("SHUFFLE_REGISTRY_PASSWORD"),
 		IdentityToken: os.Getenv("SHUFFLE_REGISTRY_IDENTITY_TOKEN"),
 		ServerAddress: host,
-	})
+	}
+	if strings.HasSuffix(host, "-docker.pkg.dev") && auth.Username == "" && auth.Password == "" && auth.IdentityToken == "" {
+		artifactRegistryTokenLock.Lock()
+		defer artifactRegistryTokenLock.Unlock()
+		// Refresh before a cached token could expire during an image push.
+		if !artifactRegistryToken.Valid() || time.Until(artifactRegistryToken.Expiry) < 5*time.Minute {
+			authCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			source, err := google.DefaultTokenSource(authCtx, "https://www.googleapis.com/auth/cloud-platform")
+			if err != nil {
+				return "", fmt.Errorf("find Artifact Registry application default credentials (configure GKE Workload Identity): %w", err)
+			}
+			token, err := source.Token()
+			if err != nil {
+				return "", fmt.Errorf("get Artifact Registry access token: %w", err)
+			}
+			if !token.Valid() {
+				return "", errors.New("Artifact Registry credentials returned an invalid access token")
+			}
+			artifactRegistryToken = token
+			log.Printf("[INFO] Obtained Artifact Registry access token for %s using application default credentials", host)
+		}
+		auth.Username = "oauth2accesstoken"
+		auth.Password = artifactRegistryToken.AccessToken
+	}
+	return registry.EncodeAuthConfig(auth)
 }
 
 func dockerPushError(stream io.Reader) error {
@@ -385,9 +419,9 @@ func pushImageToPrivateRegistry(ctx context.Context, source string) (string, err
 		return "", fmt.Errorf("tag %s as %s: %w", source, target, err)
 	}
 
-	auth, err := registryAuth(target)
+	auth, err := registryAuth(ctx, target)
 	if err != nil {
-		return "", fmt.Errorf("encode registry authentication: %w", err)
+		return "", fmt.Errorf("authenticate to registry: %w", err)
 	}
 
 	stream, err := client.ImagePush(ctx, target, image.PushOptions{RegistryAuth: auth})
@@ -417,7 +451,7 @@ func registryImageExists(ctx context.Context, source string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	auth, err := registryAuth(target)
+	auth, err := registryAuth(ctx, target)
 	if err != nil {
 		return false, err
 	}
@@ -438,7 +472,11 @@ func ensureImage(ctx context.Context, source, authorization, orgID, executionID 
 	if !imageManagerEnabled() {
 		return errors.New("Kubernetes worker image manager is not enabled")
 	}
-	if _, err := privateRegistryImage(source); err != nil {
+	target, err := privateRegistryImage(source)
+	if err != nil {
+		return err
+	}
+	if _, err := registryAuth(ctx, target); err != nil {
 		return err
 	}
 
@@ -446,7 +484,6 @@ func ensureImage(ctx context.Context, source, authorization, orgID, executionID 
 		exists, err := registryImageExists(ctx, source)
 		if err == nil && exists {
 			log.Printf("[DEBUG] Hybrid image %s already exists in the private registry", source)
-			target, _ := privateRegistryImage(source)
 			if err := restartKubernetesAppsUsingImage(ctx, target); err != nil {
 				return fmt.Errorf("restart apps using %s: %w", target, err)
 			}
@@ -465,7 +502,7 @@ func ensureImage(ctx context.Context, source, authorization, orgID, executionID 
 		return fmt.Errorf("download and load %s: %w", source, err)
 	}
 
-	target, err := pushImageToPrivateRegistry(ctx, source)
+	target, err = pushImageToPrivateRegistry(ctx, source)
 	if err != nil {
 		return err
 	}

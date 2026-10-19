@@ -173,7 +173,9 @@ You can override any value set in `app.*` (e.g. `app.image`, `app.replicaCount`,
 
 It is possible to use a hybrid approach - deploy some apps using helm, while still allowing Worker to create additional apps on-demand.
 
-For a cloud-connected hybrid cluster without a local Shuffle backend, the Worker can copy app images from Shuffle Cloud into a private registry. Enable the Helm-managed Worker and `worker.imageManager.enabled`, set `shuffle.appRegistry`, and disable Orborus-managed Worker deployments. The Worker Pod runs a privileged Docker sidecar used only for image load and push. `worker.imageManager.registryAuthSecret` must contain the configured username and password keys when the registry requires authentication. App Pods also need a Kubernetes registry pull secret through `app.serviceAccount.imagePullSecrets`.
+For a cloud-connected hybrid cluster without a local Shuffle backend, the Worker can copy app images from Shuffle Cloud into a private registry. Enable the Helm-managed Worker and `worker.imageManager.enabled`, set `shuffle.appRegistry`, and disable Orborus-managed Worker deployments. The Worker Pod runs a privileged Docker sidecar used only for image load and push. For username/password authentication, `worker.imageManager.registryAuthSecret` contains the configured username and password keys. For Google Artifact Registry, a Worker build containing ADC support automatically uses Google application-default credentials when no explicit registry credentials are configured. On GKE, grant the Worker's workload identity Artifact Registry Writer access to the repository. Tokens are cached in memory and refreshed on expiry; no JSON key or Docker login is needed. Explicit registry credentials take precedence.
+
+Kubernetes image pulls are authenticated separately. Configure `app.serviceAccount.imagePullSecrets` when needed; on GKE, grant the node service account Artifact Registry Reader access instead. Workload Identity on the Worker does not change the identity used by kubelet to pull app images.
 
 ```yaml
 shuffle:
@@ -197,7 +199,9 @@ app:
 
 On first use, the Worker downloads the image archive from Shuffle Cloud, loads it into its Pod-local Docker daemon, pushes it to `shuffle.appRegistry`, verifies the pushed manifest, and then creates or refreshes the app Deployment. No internal image-manager HTTP service is exposed.
 
-If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=true`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
+For Artifact Registry, use `shuffle.appRegistry: REGION-docker.pkg.dev/PROJECT/REPOSITORY` and `shuffle.appBaseImageName: frikky/shuffle`. GitHub then maps to `REGION-docker.pkg.dev/PROJECT/REPOSITORY/frikky/shuffle:github_1.1.0`. These settings apply to all Worker-managed app images. Enabled Helm apps also inherit `shuffle.appRegistry` when their registry is empty. Set explicit `apps.<key>.image.registry`, `repository`, and `tag` values to retain existing Docker Hub or custom image paths; inspect `helm template` before applying a global registry change. `global.imageRegistry`, if set, overrides Helm image registries and should be empty for a mixed-registry deployment. See the [Hybrid Kubernetes setup](https://shuffler.io/docs/configuration#kubernetes-runtime) for the GKE IAM and Helm configuration.
+
+If you do not want Worker to manage app deployments, set `worker.manageAppDeployments=false`. This effectively removes the required permissions from the Shuffle Worker Kubernetes Service Account.
 You are required to deploy all apps that are in use by your Shuffle instance manually using Helm.
 
 ### Shuffle App Service Accounts
@@ -273,7 +277,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `shuffle.baseUrl`          | The external base URL under which Shuffle is reachable.                                                                    | `""`            |
 | `shuffle.org`              | Default shuffle organization                                                                                               | `Shuffle`       |
 | `shuffle.environmentName`  | Hybrid execution environment name. Defaults to shuffle.org when empty.                                                     | `""`            |
-| `shuffle.appRegistry`      | The registry from / to which shuffle apps are pulled / pushed                                                              | `docker.io`     |
+| `shuffle.appRegistry`      | Registry host and optional repository prefix for Shuffle apps (e.g. REGION-docker.pkg.dev/PROJECT/REPOSITORY)                | `docker.io`     |
 | `shuffle.appRegistryInsecure` | Use HTTP when pushing apps to the private registry                                                                       | `false`         |
 | `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion> | `frikky/shuffle` |
 | `shuffle.timezone`         | The timezone used by Shuffle                                                                                               | `Europe/Berlin` |
@@ -625,7 +629,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.imageManager.enabled`                              | Enable the hybrid Worker image manager. Requires a privileged Docker sidecar and a Helm-managed Worker.                                                                                                                         | `false`                  |
 | `worker.imageManager.dockerImage`                          | Docker-in-Docker sidecar image                                                                                                                                                                                                  | `docker:28-dind`         |
 | `worker.imageManager.storageSizeLimit`                     | Ephemeral Docker storage limit                                                                                                                                                                                                  | `20Gi`                   |
-| `worker.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password                                                                                                                                                                      | `""`                     |
+| `worker.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password. Empty uses Google ADC for Artifact Registry when supported by the Worker image.                                                                                      | `""`                     |
 | `worker.imageManager.registryUsernameKey`                  | Username key in registryAuthSecret                                                                                                                                                                                              | `username`               |
 | `worker.imageManager.registryPasswordKey`                  | Password key in registryAuthSecret                                                                                                                                                                                              | `password`               |
 | `worker.imageManager.resources`                            | Docker sidecar resource requests and limits                                                                                                                                                                                     | `{}`                     |
