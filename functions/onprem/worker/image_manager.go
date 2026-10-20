@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -37,6 +38,8 @@ var artifactRegistryToken *oauth2.Token
 
 const faultyAppSHA256 = "607c9de1de3172a73f8fa0deb4d349d2119a12df427d21f1852af4293dd09386"
 const maxInspectedAppSize = 1024 * 1024
+
+var malformedRegistryTroubleshooterURL = regexp.MustCompile(`https://console\.cloud\.google\.com/iam-admin/troubleshooter(?:/summary)?;errorId=[^\s]*%![^\s]*`)
 
 func imageManagerEnabled() bool {
 	return isKubernetes == "true" && strings.EqualFold(os.Getenv("SHUFFLE_WORKER_IMAGE_MANAGER"), "true")
@@ -126,11 +129,14 @@ func dockerPushError(stream io.Reader) error {
 			return fmt.Errorf("decode Docker push response: %w", err)
 		}
 
-		if message.ErrorDetail.Message != "" {
-			return errors.New(message.ErrorDetail.Message)
+		errorMessage := message.ErrorDetail.Message
+		if errorMessage == "" {
+			errorMessage = message.Error
 		}
-		if message.Error != "" {
-			return errors.New(message.Error)
+		if errorMessage != "" {
+			// Docker can return a corrupted errorId; keep a usable link without guessing the ID.
+			errorMessage = malformedRegistryTroubleshooterURL.ReplaceAllString(errorMessage, "https://console.cloud.google.com/iam-admin/troubleshooter")
+			return errors.New(errorMessage)
 		}
 	}
 }

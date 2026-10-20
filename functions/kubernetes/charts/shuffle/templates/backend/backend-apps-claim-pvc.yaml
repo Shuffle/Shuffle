@@ -1,5 +1,5 @@
-# This PVC is always enabled, regardless of .Values.persistence.enabled,
-# as app building does not work without it.
+{{- if or (not .Values.shuffle.hybrid) (gt (int .Values.backend.replicaCount) 0) .Values.backend.autoscaling.hpa.enabled }}
+# A local backend needs this volume even when general persistence is disabled.
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -26,3 +26,4 @@ spec:
   selector: {{- include "common.tplvalues.render" (dict "value" .Values.persistence.appBuilder.selector "context" $) | nindent 2 }}
   {{- end }}
   {{- include "common.storage.class" ( dict "persistence" .Values.persistence.appBuilder "global" .Values.global ) | nindent 2 }}
+{{- end }}
