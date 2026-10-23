@@ -1,5 +1,5 @@
 # Build environment
-FROM node:23 AS builder
+FROM node:24.22.1 AS builder
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
