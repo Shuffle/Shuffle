@@ -93,6 +93,7 @@ https://shuffler.io/docs/configuration
 ### Useful info
 * Check out [getting started](https://shuffler.io/docs/getting_started)
 * The default state of Shuffle is NOT scalable. See [production setup](https://shuffler.io/docs/configuration#production_readiness) for more info
+* Starting with Shuffle 2.3.0, production deployments exposed to the internet should use a non-default Orborus environment instead of the default `Shuffle` environment.
 * The server is available on http://localhost:3001 (or your servername)
 * Further configurations can be done in docker-compose.yml and .env.
 * Default database location is in the same folder: ./shuffle-database
