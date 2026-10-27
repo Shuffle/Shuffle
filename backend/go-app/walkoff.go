@@ -312,7 +312,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	// After 1788778295. 2.3.0 release date~
 	auth := request.Header.Get("Authorization")
-	if strings.ToLower(env.Name) == strings.ToLower(environment) && strings.ToLower(environment) != "shuffle" && env.Created > 1788778295 && len(env.Auth) > 0 {
+	if strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(env.Name, " ", "-"), "_", "-")) == parsedEnvName && parsedEnvName != "Shuffle" && env.Created > 1788778295 && len(env.Auth) > 0 {
 		// Overriding for default env (ENVIRONMENT_NAME)
 		defaultEnv := os.Getenv("ENVIRONMENT_NAME")
 		if len(defaultEnv) > 0 && strings.ToLower(defaultEnv) == strings.ToLower(environment) {
@@ -433,7 +433,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	// After 1788778295. 2.3.0 release date~
 	auth := request.Header.Get("Authorization")
-	if strings.ToLower(env.Name) == strings.ToLower(environment) && strings.ToLower(environment) != "shuffle" && env.Created > 1788778295 && len(env.Auth) > 0 {
+	if strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(env.Name, " ", "-"), "_", "-")) == parsedEnvName && parsedEnvName != "shuffle" && env.Created > 1788778295 && len(env.Auth) > 0 {
 		// Overriding for default env (ENVIRONMENT_NAME)
 		defaultEnv := os.Getenv("ENVIRONMENT_NAME")
 		if len(defaultEnv) > 0 && strings.ToLower(defaultEnv) == strings.ToLower(environment) {
