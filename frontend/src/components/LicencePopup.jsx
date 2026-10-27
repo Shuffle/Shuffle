@@ -1774,7 +1774,7 @@ const LicencePopup = (props) => {
                 </span>
               </Typography>
             </div>
-          ) : (isCloud || (!isCloud && selectedOrganization.cloud_sync)) && (
+          ) : (isCloud || (!isCloud && selectedOrganization.cloud_sync) || localSub?.name?.toLowerCase().includes("air gapped")) && (
             <div style={{ marginBottom: 14 }}>
               {localSub?.active && isNearingLimit ? (
                 <>
