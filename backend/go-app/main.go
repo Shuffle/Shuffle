@@ -652,14 +652,37 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 			// Get the user
 			users, err := shuffle.FindUser(ctx, data.Username)
-			if err != nil || len(users) == 0 {
+			if err != nil || len(users) != 1 {
 				log.Printf("[WARNING] Failed finding user %s: %s", data.Username, err)
 				resp.WriteHeader(400)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				resp.Write([]byte(`{"success": false, "reason": "Failed finding user"}`))
 				return
 			}
 
 			newUser := users[0]
+			canAdd := len(newUser.Orgs) == 0
+			for _, orgId := range newUser.Orgs {
+				if org, err := shuffle.GetOrg(ctx, orgId); err == nil {
+					for _, orgUser := range org.Users {
+						if orgUser.Id == user.Id && orgUser.Role == "admin" {
+							canAdd = true
+							break
+						}
+					}
+				}
+
+				if canAdd {
+					break
+				}
+			}
+
+			if !canAdd {
+				log.Printf("[AUDIT] User %s (%s) tried to add existing user %s to org %s without being admin in any of their orgs", user.Username, user.Id, newUser.Username, currentOrg.Id)
+				resp.WriteHeader(403)
+				resp.Write([]byte(`{"success": false, "reason": "User already exists"}`))
+				return
+			}
+
 			if !shuffle.ArrayContains(newUser.Orgs, currentOrg.Id) {
 				newUser.Orgs = append(newUser.Orgs, currentOrg.Id)
 			}
