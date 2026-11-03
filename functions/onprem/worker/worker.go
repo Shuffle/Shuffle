@@ -3144,6 +3144,42 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	//log.Printf("[DEBUG][%s] IN WORKFLOWEXECUTION SUB!", actionResult.ExecutionId)
+	claimKey := ""
+	releaseClaim := func() {
+		if claimKey == "" {
+			return
+		}
+
+		if err := shuffle.DeleteCache(ctx, claimKey); err != nil {
+			log.Printf("[WARNING][%s] Failed releasing execution update lock: %s", workflowExecutionId, err)
+		}
+		claimKey = ""
+	}
+	defer releaseClaim()
+
+	if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
+		newClaimKey := fmt.Sprintf("workflowexecution_%s_update", workflowExecutionId)
+		claimed := false
+		var claimErr error
+		for attempt := 0; attempt < 300; attempt++ {
+			claimed, claimErr = shuffle.ClaimCacheKey(newClaimKey, 120)
+			if claimErr != nil || claimed {
+				break
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if claimErr != nil || !claimed {
+			log.Printf("[WARNING][%s] Failed claiming execution update lock: %v", workflowExecutionId, claimErr)
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Write([]byte(`{"success": false, "reason": "Execution update is busy. Retry the result."}`))
+			return
+		}
+
+		claimKey = newClaimKey
+	}
+
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
 		log.Printf("[WARNING][%s] Failed to find execution in cache requesting backend (2): %s", actionResult.ExecutionId, err)
@@ -3156,7 +3192,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
-	resultLength := len(workflowExecution.Results)
 	setExecution := true
 
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
@@ -3176,6 +3211,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				log.Printf("[ERROR][%s] Failed marshalling execution (35): %s", workflowExecution.ExecutionId, err)
 			}
 
+			releaseClaim()
 			sendResult(*workflowExecution, shutdownData)
 			shutdown(*workflowExecution, "", "", false)
 			return
@@ -3186,6 +3222,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if isAgentNode && actionResult.Status != "FAILURE" && actionResult.Status != "ABORTED" && actionResult.Status != "SKIPPED" {
 			log.Printf("[INFO][%s] AI Agent dispatched to Cloud. Stopping worker execution cleanly to wait for Cloud completion.", workflowExecution.ExecutionId)
 
+			releaseClaim()
 			shutdown(*workflowExecution, "", "", false)
 			return
 		}
@@ -3198,6 +3235,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			if err != nil {
 				log.Printf("[ERROR][%s] Failed marshalling execution (36) - not sending backend WAITING: %s", workflowExecution.ExecutionId, err)
 			} else {
+				releaseClaim()
 				sendResult(*workflowExecution, shutdownData)
 				shutdown(*workflowExecution, "", "", false)
 			}
@@ -3223,7 +3261,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				}
 			}
 
-			resultLength = len(workflowExecution.Results)
 			setExecution = true
 
 			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
@@ -3250,37 +3287,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//	log.Printf("[DEBUG][%s] There may have been an issue in transaction queue. Result lengths: %d vs %d. Should check which exists the base results, but not in entire execution, then append.", workflowExecution.ExecutionId, len(results), len(workflowExecution.Results))
 	//}
 
-	// Validating that action results hasn't changed
-	// Handled using cachhing, so actually pretty fast
-	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
-	cache, err := shuffle.GetCache(ctx, cacheKey)
-	if err == nil {
-		//parsedValue := value.(*shuffle.WorkflowExecution)
-
-		parsedValue := &shuffle.WorkflowExecution{}
-		cacheData := []byte(cache.([]uint8))
-		err = json.Unmarshal(cacheData, &workflowExecution)
-		if err != nil {
-			log.Printf("[ERROR][%s] Failed unmarshalling workflowexecution: %s", workflowExecution.ExecutionId, err)
-		}
-
-		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
-			setExecution = false
-			if attempts > 5 {
-			}
-
-			attempts += 1
-			log.Printf("[DEBUG][%s] Rerunning transaction as results has changed. %d vs %d", workflowExecution.ExecutionId, len(parsedValue.Results), resultLength)
-			/*
-				if len(workflowExecution.Results) <= len(workflowExecution.Workflow.Actions) {
-					log.Printf("[DEBUG][%s] Rerunning transaction as results has changed. %d vs %d", workflowExecution.ExecutionId, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
-					runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
-					return
-				}
-			*/
-		}
-	}
-
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
@@ -3295,6 +3301,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
 			return
 		}
+		releaseClaim()
 
 		/*** STARTREMOVE ***/
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
@@ -3317,6 +3324,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		/*** ENDREMOVE ***/
 	} else {
 		log.Printf("[INFO][%s] Skipping setexec with status %s", workflowExecution.ExecutionId, workflowExecution.Status)
+		releaseClaim()
 
 		// Just in case. Should MAYBE validate finishing another time as well.
 		// This fixes issues with e.g. shuffle.Action -> shuffle.Trigger -> shuffle.Action.

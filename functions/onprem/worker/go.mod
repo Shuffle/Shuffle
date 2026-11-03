@@ -9,7 +9,7 @@ require (
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v1.3.33
+	github.com/shuffle/shuffle-shared v1.3.37-memcache
 	github.com/shuffle/singul v0.0.36
 	golang.org/x/oauth2 v0.36.0
 	k8s.io/api v0.34.2

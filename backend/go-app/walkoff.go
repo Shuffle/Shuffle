@@ -168,16 +168,16 @@ func scheduleExecutionJob(schedule shuffle.ScheduleOld, fallbackOrgID string) fu
 				claimTTL = 2592000
 			}
 
-			//claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
-			//claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
-		//	if err != nil {
-		//		log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
-		//		return
-		//	}
-		//	if !claimed {
-		//		log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
-		//		return
-		//	}
+			claimKey := fmt.Sprintf("schedule_execution_%s_%d", schedule.Id, time.Now().Unix()/int64(windowSeconds))
+			claimed, err := shuffle.ClaimCacheKey(claimKey, int32(claimTTL))
+			if err != nil {
+				log.Printf("[ERROR] Skipping schedule %s because its execution claim failed: %s", schedule.Id, err)
+				return
+			}
+			if !claimed {
+				log.Printf("[DEBUG] Schedule %s is running on another backend", schedule.Id)
+				return
+			}
 
 			storedSchedule, err := shuffle.GetSchedule(context.Background(), schedule.Id)
 			if err != nil || storedSchedule.WorkflowId != schedule.WorkflowId {
@@ -713,6 +713,29 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	log.Printf("[DEBUG][%s] Running workflow execution update with result from %s (%s) of status %s", workflowExecutionId, actionResult.Action.Label, actionResult.Action.ID, actionResult.Status)
+
+	if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
+		claimKey := fmt.Sprintf("workflowexecution_%s_update", workflowExecutionId)
+		claimed := false
+		var claimErr error
+		for attempt := 0; attempt < 300; attempt++ {
+			claimed, claimErr = shuffle.ClaimCacheKey(claimKey, 120)
+			if claimErr != nil || claimed {
+				break
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if claimErr != nil || !claimed {
+			log.Printf("[WARNING][%s] Failed claiming execution update lock: %v", workflowExecutionId, claimErr)
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Write([]byte(`{"success": false, "reason": "Execution update is busy. Retry the result."}`))
+			return
+		}
+
+		defer shuffle.DeleteCache(ctx, claimKey)
+	}
 
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
