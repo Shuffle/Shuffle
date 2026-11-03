@@ -109,6 +109,14 @@ shuffle:
   ## @param shuffle.appBuildAirgapped When true, generate app Dockerfiles that only copy source into the SDK base image.
   ##
   appBuildAirgapped: false
+  
+  ## @param shuffle.appBuilderImage Image used for the in-cluster app builder (Kaniko) job. Leave empty to use gcr.io/kaniko-project/executor:latest. Set this to a mirrored image in air-gapped clusters.
+  ##
+  appBuilderImage: ""
+
+  ## @param shuffle.appRegistrySecret Name of an existing kubernetes.io/dockerconfigjson secret used by the app builder to push app images to shuffle.appRegistry
+  ##
+  appRegistrySecret: ""
 
   ## @param shuffle.timezone The timezone used by Shuffle
   ##

@@ -280,6 +280,10 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `shuffle.appRegistry`      | Registry host and optional repository prefix for Shuffle apps (e.g. REGION-docker.pkg.dev/PROJECT/REPOSITORY)                | `docker.io`     |
 | `shuffle.appRegistryInsecure` | Use HTTP when pushing apps to the private registry                                                                       | `false`         |
 | `shuffle.appBaseImageName` | The base image used for shuffle apps. The final image for an app is <appRegistry>/<appBaseImageName>:<appName>_<appVersion> | `frikky/shuffle` |
+| `shuffle.appSdkImage`      | Exact image used as the app SDK base. Leave empty to derive from appRegistry/appBaseImageName.                              | `""`            |
+| `shuffle.appBuildAirgapped` | When true, generate app Dockerfiles that only copy source into the SDK base image.                                        | `false`         |
+| `shuffle.appBuilderImage`  | Image used for the in-cluster app builder (Kaniko) job. Leave empty to use `gcr.io/kaniko-project/executor:latest`. Set this to a mirrored image in air-gapped clusters. | `""` |
+| `shuffle.appRegistrySecret` | Name of an existing `kubernetes.io/dockerconfigjson` secret used by the app builder to push app images to `shuffle.appRegistry` | `""` |
 | `shuffle.timezone`         | The timezone used by Shuffle                                                                                               | `Europe/Berlin` |
 
 #### backend Parameters

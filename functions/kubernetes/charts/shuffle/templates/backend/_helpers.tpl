@@ -117,6 +117,12 @@ SHUFFLE_REGISTRY_INSECURE: {{ .Values.shuffle.appRegistryInsecure | quote }} # U
 SHUFFLE_BASE_IMAGE_NAME: "{{ .Values.shuffle.appBaseImageName }}" # Used by app builder
 SHUFFLE_APP_SDK_IMAGE: "{{ .Values.shuffle.appSdkImage }}" # Used by app builder
 SHUFFLE_APP_BUILD_AIRGAPPED: {{ .Values.shuffle.appBuildAirgapped | quote }} # Used by app builder
+{{- if .Values.shuffle.appBuilderImage }}
+SHUFFLE_BUILDER_IMAGE: {{ .Values.shuffle.appBuilderImage | quote }} # Used by app builder
+{{- end }}
+{{- if .Values.shuffle.appRegistrySecret }}
+SHUFFLE_REGISTRY_SECRET: {{ .Values.shuffle.appRegistrySecret | quote }} # Used by app builder
+{{- end }}
 {{- if .Values.backend.debug }}
 DEBUG: "true"
 {{- end }}
