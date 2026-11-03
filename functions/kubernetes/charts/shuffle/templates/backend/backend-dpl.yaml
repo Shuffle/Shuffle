@@ -91,7 +91,7 @@ spec:
             - name: shuffle-files
               mountPath: /shuffle-files
               {{- if .Values.persistence.files.subPath }}
-              subPath: {{ .Values.persistence.apps.subPath }}
+              subPath: {{ .Values.persistence.files.subPath }}
               {{- end }}
         {{- end }}
         {{- if .Values.backend.initContainers }}
@@ -183,7 +183,7 @@ spec:
             - name: shuffle-files
               mountPath: /shuffle-files
               {{- if .Values.persistence.files.subPath }}
-              subPath: {{ .Values.persistence.apps.subPath }}
+              subPath: {{ .Values.persistence.files.subPath }}
               {{- end }}
             - name: empty-dir
               mountPath: /tmp
