@@ -6,6 +6,7 @@ import (
 
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -764,7 +765,7 @@ func deployk8sApp(image string, identifier string, env []string, authorization, 
 		return nil
 	}
 
-	if cloudHybridPrivateRegistry {
+	if cloudHybridPrivateRegistry && !strings.Contains(image, "@sha256:") {
 		if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
 			return fmt.Errorf("image %s is not deployed and SHUFFLE_AUTO_IMAGE_DOWNLOAD is false", image)
 		}
@@ -863,7 +864,7 @@ func deployk8sApp(image string, identifier string, env []string, authorization, 
 	}
 
 	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		log.Printf("[ERROR] Failed creating deployment: %v", err)
 		return err
 	}
@@ -889,7 +890,7 @@ func deployk8sApp(image string, identifier string, env []string, authorization, 
 	}
 
 	_, err = clientset.CoreV1().Services(kubernetesNamespace).Create(context.TODO(), service, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		log.Printf("[ERROR] Failed creating service: %v", err)
 		return err
 	}
@@ -1075,6 +1076,15 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		} else {
 			// ** STARTREMOVE ***/
 			exposedPort = 80
+			if imageManagerEnabled() && os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" {
+				image, err = resolveWeeklyKubernetesImage(context.Background(), image, workflowExecution.Authorization, workflowExecution.ExecutionOrg, workflowExecution.ExecutionId, false)
+				if err != nil {
+					return fmt.Errorf("resolve weekly app image: %w", err)
+				}
+				// New actions use a versioned service; in-flight actions retain their old service.
+				version := fmt.Sprintf("%x", sha256.Sum256([]byte(appName+image)))[:16]
+				appName = strings.TrimRight(appName[:min(len(appName), 46)], "-.") + "-" + version
+			}
 			//deployport, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXPOSED_PORT"))
 			//if err == nil {
 			//	exposedPort = deployport

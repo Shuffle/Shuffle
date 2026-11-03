@@ -17,6 +17,7 @@ import (
 	"path"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +29,10 @@ import (
 	shuffle "github.com/shuffle/shuffle-shared"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 var imageManagerLock sync.Mutex
@@ -299,7 +303,7 @@ func imageManagerDockerClient(ctx context.Context) (*dockerclient.Client, error)
 	}
 }
 
-func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client, source, authorization, orgID, executionID string) error {
+func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client, source, authorization, orgID, executionID string, metadata ...map[string]string) error {
 	endpoint, err := url.Parse(strings.TrimSuffix(baseUrl, "/") + "/api/v1/get_docker_image")
 	if err != nil {
 		return fmt.Errorf("build cloud image URL: %w", err)
@@ -318,6 +322,9 @@ func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client,
 	}
 	if orgID != "" {
 		request.Header.Set("Org-Id", orgID)
+	}
+	if len(metadata) > 0 {
+		request.Header.Set("If-None-Match", metadata[0]["etag"])
 	}
 
 	cloudClient := &http.Client{
@@ -338,6 +345,10 @@ func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client,
 		return fmt.Errorf("download %s: %w", source, err)
 	}
 	defer response.Body.Close()
+	if response.StatusCode == http.StatusNotModified && len(metadata) > 0 {
+		metadata[0]["unchanged"] = "true"
+		return nil
+	}
 	if response.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 1024*1024))
 		return fmt.Errorf("download %s returned %s: %s", source, response.Status, strings.TrimSpace(string(body)))
@@ -404,10 +415,161 @@ func downloadAndLoadCloudImage(ctx context.Context, client *dockerclient.Client,
 	if err := client.ImageTag(ctx, loadedID, source); err != nil {
 		return fmt.Errorf("tag loaded image %s as %s: %w", loadedID, source, err)
 	}
+	if len(metadata) > 0 {
+		metadata[0]["etag"] = response.Header.Get("ETag")
+	}
 	return nil
 }
 
-func pushImageToPrivateRegistry(ctx context.Context, source string) (string, error) {
+// The ConfigMap is durable image state and a resourceVersion-based claim shared by workers.
+// It contains no execution credentials. Existing deployments are never restarted here.
+func weeklyKubernetesImage(ctx context.Context, kube kubernetes.Interface, target string, force bool, refresh func(map[string]string) error) (string, error) {
+	if strings.LastIndex(target, ":") <= strings.LastIndex(target, "/") || strings.Contains(target, "@") {
+		return "", errors.New("weekly refresh requires a tagged registry image")
+	}
+	key := sha256.Sum256([]byte(target))
+	name := "shuffle-image-" + hex.EncodeToString(key[:])[:40]
+	maps := kube.CoreV1().ConfigMaps(kubernetesNamespace)
+	for {
+		state, err := maps.Get(ctx, name, metav1.GetOptions{})
+		if k8serrors.IsNotFound(err) {
+			state, err = maps.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name}, Data: map[string]string{}}, metav1.CreateOptions{})
+			if k8serrors.IsAlreadyExists(err) {
+				continue
+			}
+		}
+		if err != nil {
+			return "", fmt.Errorf("read image refresh state: %w", err)
+		}
+		if state.Data == nil {
+			state.Data = map[string]string{}
+		}
+		now := time.Now()
+		checked, _ := strconv.ParseInt(state.Data["checked"], 10, 64)
+		retry, _ := strconv.ParseInt(state.Data["retry"], 10, 64)
+		lease, _ := strconv.ParseInt(state.Data["lease"], 10, 64)
+		digest := state.Data["digest"]
+		if digest != "" && !regexp.MustCompile(`^sha256:[a-f0-9]{64}$`).MatchString(digest) {
+			return "", errors.New("invalid digest in image refresh state")
+		}
+		if !force && digest != "" && (now.Before(time.Unix(checked, 0).Add(7*24*time.Hour)) || now.Unix() < retry || now.Unix() < lease) {
+			return target[:strings.LastIndex(target, ":")] + "@" + digest, nil
+		}
+		if now.Unix() < lease {
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(time.Second):
+				continue
+			}
+		}
+		state.Data["lease"] = strconv.FormatInt(now.Add(2*imagedownloadTimeout).Unix(), 10)
+		state, err = maps.Update(ctx, state, metav1.UpdateOptions{})
+		if k8serrors.IsConflict(err) {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("claim image refresh: %w", err)
+		}
+		// Keep the last working state if download, validation, or push fails.
+		candidate := map[string]string{"etag": state.Data["etag"], "digest": digest}
+		if force {
+			delete(candidate, "etag")
+		}
+		refreshErr := refresh(candidate)
+		if refreshErr == nil && !regexp.MustCompile(`^sha256:[a-f0-9]{64}$`).MatchString(candidate["digest"]) {
+			refreshErr = errors.New("registry did not return a valid image digest")
+		}
+		delete(state.Data, "lease")
+		if refreshErr == nil {
+			state.Data["digest"] = candidate["digest"]
+			state.Data["etag"] = candidate["etag"]
+			state.Data["checked"] = strconv.FormatInt(time.Now().Unix(), 10)
+			delete(state.Data, "retry")
+		} else {
+			if digest == "" && regexp.MustCompile(`^sha256:[a-f0-9]{64}$`).MatchString(candidate["fallbackDigest"]) {
+				state.Data["digest"] = candidate["fallbackDigest"]
+			}
+			state.Data["retry"] = strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)
+			log.Printf("[WARNING] Weekly image refresh failed for %s; retaining previous image: %s", target, refreshErr)
+		}
+		saveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		_, err = maps.Update(saveCtx, state, metav1.UpdateOptions{})
+		cancel()
+		if err != nil {
+			return "", fmt.Errorf("save image refresh state: %w", err)
+		}
+		if state.Data["digest"] == "" || (force && refreshErr != nil) {
+			return "", refreshErr
+		}
+		return target[:strings.LastIndex(target, ":")] + "@" + state.Data["digest"], nil
+	}
+}
+
+func resolveWeeklyKubernetesImage(ctx context.Context, source, authorization, orgID, executionID string, force bool) (string, error) {
+	imageManagerLock.Lock()
+	defer imageManagerLock.Unlock()
+	target, err := privateRegistryImage(source)
+	if err != nil {
+		return "", err
+	}
+	if strings.LastIndex(target, ":") < strings.LastIndex(target, "/") || strings.Contains(target, "@") {
+		return "", fmt.Errorf("weekly refresh requires a tagged image: %s", target)
+	}
+	localRegistry := os.Getenv("SHUFFLE_STREAM_PRIVATE_REGISTRY")
+	if localRegistry == "" {
+		localRegistry = os.Getenv("REGISTRY_URL")
+	}
+	localRegistry = strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(localRegistry), "https://"), "http://"), "/")
+	source = strings.TrimPrefix(target, localRegistry+"/")
+	legacyTarget := target
+	// Keep architecture-specific refreshes from overwriting each other's mutable tag.
+	target += "-" + runtime.GOARCH
+	kube, _, err := shuffle.GetKubernetesClient()
+	if err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(ctx, imagedownloadTimeout)
+	defer cancel()
+	return weeklyKubernetesImage(ctx, kube, target, force, func(metadata map[string]string) error {
+		client, err := imageManagerDockerClient(ctx)
+		if err != nil {
+			return err
+		}
+		// Bootstrap older installations without discarding their existing registry image
+		// if the first Cloud check fails. This does not count as a successful check.
+		if metadata["digest"] == "" {
+			if auth, authErr := registryAuth(ctx, target); authErr == nil {
+				if existing, inspectErr := client.DistributionInspect(ctx, target, auth); inspectErr == nil {
+					metadata["fallbackDigest"] = existing.Descriptor.Digest.String()
+				} else if existing, inspectErr := client.DistributionInspect(ctx, legacyTarget, auth); inspectErr == nil && existing.Descriptor.Platform != nil && existing.Descriptor.Platform.Architecture == runtime.GOARCH {
+					metadata["fallbackDigest"] = existing.Descriptor.Digest.String()
+				}
+			}
+		}
+		if err := downloadAndLoadCloudImage(ctx, client, source, authorization, orgID, executionID, metadata); err != nil {
+			return err
+		}
+		if metadata["unchanged"] == "true" {
+			return nil
+		}
+		if _, err := pushImageToPrivateRegistry(ctx, source, target); err != nil {
+			return err
+		}
+		auth, err := registryAuth(ctx, target)
+		if err != nil {
+			return err
+		}
+		distribution, err := client.DistributionInspect(ctx, target, auth)
+		if err != nil {
+			return err
+		}
+		metadata["digest"] = distribution.Descriptor.Digest.String()
+		return nil
+	})
+}
+
+func pushImageToPrivateRegistry(ctx context.Context, source string, targets ...string) (string, error) {
 	client, err := imageManagerDockerClient(ctx)
 	if err != nil {
 		return "", err
@@ -416,6 +578,9 @@ func pushImageToPrivateRegistry(ctx context.Context, source string) (string, err
 	target, err := privateRegistryImage(source)
 	if err != nil {
 		return "", err
+	}
+	if len(targets) > 0 {
+		target = targets[0]
 	}
 
 	if _, _, err := client.ImageInspectWithRaw(ctx, source); err != nil {
@@ -472,6 +637,10 @@ func registryImageExists(ctx context.Context, source string) (bool, error) {
 }
 
 func ensureImage(ctx context.Context, source, authorization, orgID, executionID string, force bool) error {
+	if force && imageManagerEnabled() {
+		_, err := resolveWeeklyKubernetesImage(ctx, source, authorization, orgID, executionID, true)
+		return err
+	}
 	imageManagerLock.Lock()
 	defer imageManagerLock.Unlock()
 
