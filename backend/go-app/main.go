@@ -5602,6 +5602,26 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	// Independent of a user's API key: recover stale runs across every organization.
+	recoveryInterval := 300
+	if configured, err := strconv.Atoi(os.Getenv("SHUFFLE_RERUN_SCHEDULE")); err == nil && configured >= recoveryInterval {
+		recoveryInterval = configured
+	}
+	_, err = newscheduler.Every(recoveryInterval).Seconds().Run(func() {
+		recoveryCtx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+		defer cancel()
+		port := os.Getenv("BACKEND_PORT")
+		if port == "" {
+			port = "5001"
+		}
+		if err := recoverOnpremExecutions(recoveryCtx, "http://localhost:"+port); err != nil {
+			log.Printf("[ERROR] Persisted execution recovery failed: %s", err)
+		}
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed scheduling persisted execution recovery: %s", err)
+	}
+
 	// Getting apps to see if we should initialize a test
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)

@@ -492,8 +492,12 @@ func (client *apiClient) getExecution(ctx context.Context, executionID, authoriz
 	return execution, response.StatusCode, nil
 }
 
-func (client *apiClient) getWorkflowExecutions(ctx context.Context, workflowID string) ([]executionResponse, error) {
-	path := "/api/v1/workflows/" + workflowID + "/executions?top=100"
+func (client *apiClient) getWorkflowExecutions(ctx context.Context, workflowID string, limit ...int) ([]executionResponse, error) {
+	top := 100
+	if len(limit) > 0 {
+		top = limit[0]
+	}
+	path := fmt.Sprintf("/api/v1/workflows/%s/executions?top=%d", workflowID, top)
 	response, body, err := client.jsonRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -516,7 +520,7 @@ func waitForExecutionHistory(ctx context.Context, client *apiClient, workflowID,
 		executions, err := client.getWorkflowExecutions(ctx, workflowID)
 		if err == nil {
 			for _, execution := range executions {
-				if execution.ExecutionID == executionID {
+				if execution.ExecutionID == executionID && isTerminalExecutionStatus(execution.Status) {
 					return execution, nil
 				}
 			}
@@ -1455,8 +1459,8 @@ func TestConcurrentExecutionIsolation(t *testing.T) {
 		}
 		t.Skip("set SHUFFLE_E2E_CONCURRENCY to run concurrent execution isolation")
 	}
-	if amount < 2 || amount > 32 {
-		t.Fatalf("SHUFFLE_E2E_CONCURRENCY must be between 2 and 32, got %d", amount)
+	if amount < 2 || amount > 256 {
+		t.Fatalf("SHUFFLE_E2E_CONCURRENCY must be between 2 and 256, got %d", amount)
 	}
 
 	client := newAPIClient()
@@ -1472,10 +1476,11 @@ func TestConcurrentExecutionIsolation(t *testing.T) {
 		err       error
 	}
 	outcomes := make([]concurrentOutcome, amount)
+	burstStarted := time.Now()
 	var wait sync.WaitGroup
 	for index := range outcomes {
 		index := index
-		outcomes[index].argument = fmt.Sprintf(`{"case":%d,"marker":%q}`, index, "concurrent-"+uuid.NewV4().String())
+		outcomes[index].argument = fmt.Sprintf(`{"case":%d,"marker":%q,"step":"burst"}`, index, "concurrent-"+uuid.NewV4().String())
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
@@ -1483,15 +1488,22 @@ func TestConcurrentExecutionIsolation(t *testing.T) {
 		}()
 	}
 	wait.Wait()
+	admitted := 0
 	for index := range outcomes {
 		if outcomes[index].err != nil {
-			t.Fatalf("start concurrent execution %d: %v", index, outcomes[index].err)
+			t.Errorf("start concurrent execution %d: %v", index, outcomes[index].err)
+			continue
 		}
+		admitted++
 	}
+	t.Logf("burst_admission requested=%d accepted=%d failed=%d", amount, admitted, amount-admitted)
 
 	reader := executionTokenClient(client)
 	for index := range outcomes {
 		index := index
+		if outcomes[index].err != nil {
+			continue
+		}
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
@@ -1500,6 +1512,7 @@ func TestConcurrentExecutionIsolation(t *testing.T) {
 	}
 	wait.Wait()
 
+	t.Logf("burst_terminal count=%d elapsed_ms=%d", amount, time.Since(burstStarted).Milliseconds())
 	ids := map[string]bool{}
 	authorizations := map[string]bool{}
 	for index, outcome := range outcomes {
@@ -1540,12 +1553,28 @@ func TestConcurrentExecutionIsolation(t *testing.T) {
 
 	historyCtx, historyCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer historyCancel()
-	for index := range outcomes {
-		history, err := waitForExecutionHistory(historyCtx, client, workflow.ID, outcomes[index].started.ExecutionID)
+	historyByID := map[string]executionResponse{}
+	for {
+		history, err := client.getWorkflowExecutions(historyCtx, workflow.ID, amount)
 		if err != nil {
-			t.Errorf("concurrent execution %d missing from history: %v", index, err)
-			continue
+			t.Fatalf("read concurrent execution history: %v", err)
 		}
+		for _, execution := range history {
+			if ids[execution.ExecutionID] && isTerminalExecutionStatus(execution.Status) {
+				historyByID[execution.ExecutionID] = execution
+			}
+		}
+		if len(historyByID) == amount {
+			break
+		}
+		select {
+		case <-historyCtx.Done():
+			t.Fatalf("concurrent execution history contains %d/%d completed runs: %v", len(historyByID), amount, historyCtx.Err())
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+	for index := range outcomes {
+		history := historyByID[outcomes[index].started.ExecutionID]
 		if history.ExecutionArgument != outcomes[index].argument || history.Status != outcomes[index].execution.Status {
 			t.Errorf("concurrent execution %d history was contaminated", index)
 		}

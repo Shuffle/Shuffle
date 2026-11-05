@@ -89,11 +89,51 @@ const Priorities = memo((props) => {
 
 	useEffect(() => {
 		prepareNotificationAppList()
-
-		if (notifications === undefined || notifications === null || notifications.length === 0) {
-			getNotifications() 
-		}
 	}, []);
+
+	const notificationOrgId = selectedOrganization?.id || userdata?.active_org?.id;
+	useEffect(() => {
+		if (!notificationOrgId) return;
+		let active = true;
+		let loading = false;
+		const controller = new AbortController();
+		const getNotifications = () => {
+			if (!active || loading) return;
+			loading = true;
+			fetch(`${globalUrl}/api/v1/notifications`, {
+				credentials: "include",
+				cache: "no-store",
+				signal: controller.signal,
+				method: "GET",
+				headers: { "Content-Type": "application/json", "Org-Id": notificationOrgId },
+			})
+			.then((response) => {
+				if (response.status !== 200) throw new Error("Failed loading notifications");
+				return response.json();
+			})
+			.then((responseJson) => {
+				if (!active) return;
+				if (responseJson?.success !== false && Array.isArray(responseJson?.notifications)) {
+					setNotifications(responseJson.notifications);
+				} else {
+					toast("Failed loading notifications. Please try again later.");
+				}
+			})
+			.catch((error) => {
+				if (active && error.name !== "AbortError") console.log("error in notification loading: ", error);
+			})
+			.finally(() => { loading = false; });
+		};
+		getNotifications();
+		const interval = setInterval(getNotifications, 30000);
+		window.addEventListener("focus", getNotifications);
+		return () => {
+			active = false;
+			controller.abort();
+			clearInterval(interval);
+			window.removeEventListener("focus", getNotifications);
+		};
+	}, [globalUrl, notificationOrgId, setNotifications]);
 
 	let navigate = useNavigate();
 	const classes = useStyles();
@@ -1117,34 +1157,6 @@ print('"' + encoded + '"')
 			.catch((error) => {
 				console.log("err in framework: ", error.toString());
 			})
-	}
-
-	const getNotifications = () => {
-		fetch(`${globalUrl}/api/v1/notifications`, {
-			credentials: "include",
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-			},
-		})
-		.then(function (response) {
-			if (response.status !== 200) {
-				console.log("Error in response");
-			}
-
-			return response.json();
-		})
-		.then(function (responseJson) {
-			if (responseJson?.success !== false && responseJson?.notifications !== undefined && responseJson?.notifications !== null) { 
-				setNotifications(responseJson.notifications || [])
-			} else {
-				toast("Failed loading notifications. Please try again later.");
-			}
-		})
-		.catch((error) => {
-			console.log("error in notification loading: ", error);
-		});
-	
 	}
 
 	const clearNotifications = () => {

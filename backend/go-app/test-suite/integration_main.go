@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	//"log"
 	"net/http"
 	"net/http/httptest"
@@ -333,6 +334,47 @@ func TestMemcacheHighAvailability(t *testing.T) {
 		t.Log("need at least two live Memcached servers to test claim quorum with one node down")
 		return
 	}
+	if len(liveAddresses) >= 3 {
+		partialClaimKey := ""
+		for attempt := 0; ; attempt++ {
+			candidate := fmt.Sprintf("integration_memcache_partial_claim_%d_%s", attempt, uuid.NewV4().String())
+			if int(crc32.ChecksumIEEE([]byte(candidate))%3) == 0 {
+				partialClaimKey = candidate
+				break
+			}
+		}
+		for _, client := range liveClients {
+			claimKey := partialClaimKey
+			t.Cleanup(func() {
+				if err := client.Delete(claimKey); err != nil && err != gomemcache.ErrCacheMiss {
+					t.Errorf("clean up partial claim: %v", err)
+				}
+			})
+		}
+		if err := liveClients[liveAddresses[1]].Add(&gomemcache.Item{Key: partialClaimKey, Value: []byte("1"), Expiration: 30}); err != nil {
+			t.Fatalf("seed conflicting claim: %v", err)
+		}
+		if err := os.Setenv("SHUFFLE_MEMCACHED", strings.Join(liveAddresses[:3], ",")); err != nil {
+			t.Fatalf("configure partial claim quorum: %v", err)
+		}
+		if _, err := shuffle.RunInit(project.Dbclient, project.StorageClient, project.GceProject, project.Environment, project.CacheDb, project.DbType, false, 0); err != nil {
+			t.Fatalf("initialize partial claim quorum: %v", err)
+		}
+		claimed, err := shuffle.ClaimCacheKey(partialClaimKey, 30)
+		if err != nil || claimed {
+			t.Fatalf("conflicting claim returned claimed=%t error=%v", claimed, err)
+		}
+		if _, err := liveClients[liveAddresses[0]].Get(partialClaimKey); err != gomemcache.ErrCacheMiss {
+			t.Fatalf("failed claim left a partial lock on the first replica: %v", err)
+		}
+		if err := liveClients[liveAddresses[1]].Delete(partialClaimKey); err != nil {
+			t.Fatalf("remove conflicting claim: %v", err)
+		}
+		claimed, err = shuffle.ClaimCacheKey(partialClaimKey, 30)
+		if err != nil || !claimed {
+			t.Fatalf("claim did not recover after conflict removal: claimed=%t error=%v", claimed, err)
+		}
+	}
 
 	claimAddresses := []string{failedAddress, liveAddresses[0], liveAddresses[1]}
 	if err := os.Setenv("SHUFFLE_MEMCACHED", strings.Join(claimAddresses, ",")); err != nil {
@@ -342,7 +384,14 @@ func TestMemcacheHighAvailability(t *testing.T) {
 		t.Fatalf("initialize claim quorum: %v", err)
 	}
 	claimKey := "integration_memcache_ha_claim_" + uuid.NewV4().String()
-	registerCacheCleanup(t, claimKey)
+	for _, client := range liveClients {
+		claimKey := claimKey
+		t.Cleanup(func() {
+			if err := client.Delete(claimKey); err != nil && err != gomemcache.ErrCacheMiss {
+				t.Errorf("clean up HA claim: %v", err)
+			}
+		})
+	}
 	requireSingleCacheClaimWinner(t, claimKey)
 
 	noQuorumAddresses := []string{"127.0.0.1:1", "127.0.0.1:2", liveAddresses[0]}

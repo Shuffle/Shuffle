@@ -6,7 +6,7 @@ WORKDIR /app
 COPY ./go-app/go.mod ./go-app/go.sum ./
 RUN go mod download
 
-COPY ./go-app/main.go ./go-app/walkoff.go ./go-app/docker.go ./
+COPY ./go-app/main.go ./go-app/walkoff.go ./go-app/docker.go ./go-app/execution_recovery.go ./
 COPY ./app_gen /app_gen
 
 RUN wget -O /app_sdk/app_base.py https://raw.githubusercontent.com/Shuffle/app_sdk/refs/heads/main/shuffle_sdk/shuffle_sdk.py

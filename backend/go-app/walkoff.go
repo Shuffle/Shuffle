@@ -453,6 +453,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	err = shuffle.HandleOrborusFailover(ctx, request, resp, env)
 	if err != nil {
 		log.Printf("[WARNING] Failed handling Orborus failover: %s", err)
+		return
 	}
 
 	if len(env.OrgId) > 0 {
@@ -649,8 +650,8 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 	}
 
 	ctx := context.Background()
-	err = shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
-	if err == nil {
+	validationErr := shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
+	if validationErr == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated the execution"}`)))
 		return
@@ -662,9 +663,27 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
 		log.Printf("[WARNING] Failed ActionResult unmarshaling (queue): %s", err)
-		//resp.WriteHeader(401)
-		//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		//return
+		resp.WriteHeader(http.StatusBadRequest)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid execution update"}`))
+		return
+	}
+
+	// A rejected full snapshot is not an empty action result. Keep it retryable.
+	if actionResult.Action.ID == "" && actionResult.Action.Name == "" {
+		if validationErr.Error() == "Bad authorization when validating execution" {
+			resp.WriteHeader(http.StatusUnauthorized)
+			resp.Write([]byte(`{"success": false, "reason": "Bad authorization key"}`))
+			return
+		}
+		if validationErr.Error() == "Execution is already finished, not overriding" {
+			resp.WriteHeader(http.StatusOK)
+			resp.Write([]byte(`{"success": true, "reason": "Execution is already terminal"}`))
+			return
+		}
+		log.Printf("[WARNING][%s] Full execution update was rejected: %s", actionResult.ExecutionId, validationErr)
+		resp.WriteHeader(http.StatusServiceUnavailable)
+		resp.Write([]byte(`{"success": false, "reason": "Full execution update was not accepted. Retry the result."}`))
+		return
 	}
 
 	// 1. Get the WorkflowExecution(ExecutionId) from the database
@@ -3537,33 +3556,54 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[DEBUG][%s] Workflow: %s (%s)", exec.ExecutionId, exec.Workflow.Name, exec.Workflow.ID)
 	if exec.Workflow.ID == "" || exec.Workflow.Name == "" {
 		log.Printf("[ERROR][%s] No workflow ID found for execution", exec.ExecutionId)
-		shuffle.DeleteKey(ctx, "workflowexecution", exec.ExecutionId)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "No workflow name / ID found. Can't run. Contact support@shuffler.io if this persists."}`)))
+		resp.WriteHeader(http.StatusUnprocessableEntity)
+		resp.Write([]byte(`{"success": false, "reason": "Execution is missing its workflow metadata. Context retained for recovery."}`))
 		return
 	}
 
-	environment := exec.Workflow.Actions[0].Environment
-	log.Printf("[DEBUG][%s] Not a cloud env workflow. Re-adding job in queue for env %s.", exec.ExecutionId, environment)
-
-	parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-")), exec.ExecutionOrg)
-	log.Printf("[DEBUG][%s] Adding new run job to env (2): %s", exec.ExecutionId, parsedEnv)
+	environments := []string{}
+	for _, action := range exec.Workflow.Actions {
+		environment := action.Environment
+		if strings.EqualFold(environment, "cloud") {
+			continue
+		}
+		if environment == "" {
+			environment = os.Getenv("ENVIRONMENT_NAME")
+			if environment == "" {
+				environment = "Shuffle"
+			}
+		}
+		if !shuffle.ArrayContains(environments, environment) {
+			environments = append(environments, environment)
+		}
+	}
+	if len(environments) == 0 {
+		resp.WriteHeader(http.StatusConflict)
+		resp.Write([]byte(`{"success": false, "reason": "No on-prem environment found for recovery"}`))
+		return
+	}
 
 	executionRequest := shuffle.ExecutionRequest{
 		ExecutionId:   exec.ExecutionId,
 		WorkflowId:    exec.Workflow.ID,
 		Authorization: exec.Authorization,
-		Environments:  []string{environment},
+		Environments:  environments,
 	}
 
 	// Increase priority on reruns to catch up
 	executionRequest.Priority = 11
-	err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
-	if err != nil {
-		log.Printf("[ERROR] Failed adding execution to db: %s", err)
+	for _, environment := range environments {
+		// Use the same queue as initial on-prem dispatch; Cloud's org suffix is wrong here.
+		err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
+		if err != nil {
+			log.Printf("[ERROR][%s] Failed requeueing execution: %s", exec.ExecutionId, err)
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Write([]byte(`{"success": false, "reason": "Failed requeueing execution. Retry recovery."}`))
+			return
+		}
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Reran workflow in %s"}`, parsedEnv)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Requeued workflow in %d environments"}`, len(environments))))
 
 }
