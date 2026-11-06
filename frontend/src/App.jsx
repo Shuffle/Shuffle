@@ -1132,13 +1132,17 @@ const App = (message, props) => {
       </div>
 
   return (
-		<ThemeProvider theme={currentTheme} defaultMode="dark">
+		<ThemeProvider theme={currentTheme}>
 		  <CssBaseline />
 		  <CookiesProvider>
 			<BrowserRouter>
 			  {includedData}
 			  <GlobalSearchDialog
 				userdata={userdata}
+			  />
+			  <GlobalNotificationsDrawer
+				themeMode={themeMode}
+				onNotificationsUpdated={getUserNotifications}
 			  />
 			</BrowserRouter>
 			<ToastContainer 
@@ -1152,10 +1156,6 @@ const App = (message, props) => {
 				draggable
 				pauseOnHover
 				theme={themeMode}
-			/>
-			<GlobalNotificationsDrawer
-				themeMode={themeMode}
-				onNotificationsUpdated={getUserNotifications}
 			/>
 		  </CookiesProvider>
 		</ThemeProvider>
