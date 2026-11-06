@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import AdminNavBar from '../components/AdminNavBar.jsx';
 import { toast } from "react-toastify";
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 import { useNavigate, Link } from "react-router-dom";
 
 
@@ -15,7 +15,6 @@ const Admin2 = (props) => {
     const [orgRequest, setOrgRequest] = React.useState(true);
     const [isOrgLoaded, setIsOrgLoaded] = React.useState(false);
     const {brandName, updateOrg, setUpdateOrg}  = useContext(Context)
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
     let navigate = useNavigate();        
 

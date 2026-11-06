@@ -27,7 +27,7 @@ import {
 
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import {
   ContentCopy as ContentCopyIcon,
   Draw as DrawIcon,
@@ -58,10 +58,6 @@ const LicencePopup = (props) => {
     licensePopup = false,
   } = props;
 
-  	const isCloud =
-		window.location.host === "localhost:3002" ||
-		window.location.host === "shuffler.io" || 
-		window.location.host === "sandbox.shuffler.io";
   //const alert = useAlert();
   let navigate = useNavigate();
   const [shuffleVariant, setShuffleVariant] = useState(isCloud ? 0 : 1);
@@ -982,10 +978,6 @@ const LicencePopup = (props) => {
       isLoading = false,
     } = props;
 
-    const isCloud =
-		window.location.host === "localhost:3002" ||
-		window.location.host === "shuffler.io" || 
-		window.location.host === "sandbox.shuffler.io";
 
     const [signatureOpen, setSignatureOpen] = React.useState(false);
     const [tosChecked, setTosChecked] = React.useState(
@@ -1135,6 +1127,9 @@ const LicencePopup = (props) => {
     };
 
     const isCancelled = localSub.cancellationdate !== 0;
+    const subEndEpoch = localSub?.enddate || localSub?.Enddate || 0;
+    const isExpired = subEndEpoch > 0 && subEndEpoch < Math.floor(Date.now() / 1000);
+    const isSubActive = !!localSub?.active && !isExpired;
     const isPaidPlan = localSub.amount !== "0" || (!isCloud && localSub.name.toLowerCase().includes("enterprise") && !selectedOrganization.cloud_sync);
     const amountToshow = isPaidPlan
       ? String(localSub.currency || "").toLowerCase() === "usd"
@@ -1730,16 +1725,16 @@ const LicencePopup = (props) => {
                 gap: 6,
                 padding: "3px 10px",
                 borderRadius: 20,
-                background: localSub?.active ? "rgba(43, 192, 126, 0.1)" : "rgba(255, 82, 82, 0.1)",
+                background: isSubActive ? "rgba(43, 192, 126, 0.1)" : "rgba(255, 82, 82, 0.1)",
               }}>
                 <span style={{
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: localSub?.active ? "#2BC07E" : "#FD4C62",
+                  background: isSubActive ? "#2BC07E" : "#FD4C62",
                 }} />
-                <Typography variant="caption" style={{ color: localSub?.active ? "#2BC07E" : "#FD4C62" }}>
-                  {localSub?.active ? "Active" : "Inactive"}
+                <Typography variant="caption" style={{ color: isSubActive ? "#2BC07E" : "#FD4C62" }}>
+                  {isSubActive ? "Active" : "Inactive"}
                 </Typography>
               </div>
             )}

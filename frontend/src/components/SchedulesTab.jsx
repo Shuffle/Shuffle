@@ -28,7 +28,7 @@ import {
 	Delete as DeleteIcon,
 	Check as CheckIcon,
 } from "@mui/icons-material"
-import { green, yellow, red } from '../views/AngularWorkflow.jsx'
+import { green, yellow, red } from '../utils/workflowHelpers.js'
 import { Box, Skeleton, Typography } from '@mui/material';
 import { Context } from '../context/ContextApi.jsx';
 import RunDetectionTest from '../components/RunDetectionTest.jsx';

@@ -26,7 +26,7 @@ import { getTheme } from '../theme.jsx';
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import Drift from "react-driftjs";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 const Welcome = (props) => {
 	const { themeMode } = React.useContext(Context);
@@ -53,7 +53,6 @@ const Welcome = (props) => {
 		}
 	}, [activeStep])
 
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 		const [steps, setSteps] = useState([
 			"Help us get to know you", 
 			"Find your Apps", 

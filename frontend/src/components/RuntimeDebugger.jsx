@@ -25,7 +25,7 @@ import {getTheme} from '../theme.jsx';
 import dayjs from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import Pagination from '@mui/material/Pagination';
-import { triggers as alltriggers } from "../views/AngularWorkflow.jsx"
+import { triggers as alltriggers } from "../utils/workflowHelpers.js"
 import { 
 	DatePicker, 
 	DateTimePicker,

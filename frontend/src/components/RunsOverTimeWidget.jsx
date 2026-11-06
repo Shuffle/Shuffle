@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { BarChart, BarSeries, Bar, GridlineSeries, Gridline, TooltipArea, ChartTooltip, LinearYAxis, LinearYAxisTickSeries, LinearYAxisTickLabel } from 'reaviz';
 import theme from '../theme.jsx';
-import {green, yellow, red} from "../views/AngularWorkflow.jsx"
+import {green, yellow, red} from "../utils/workflowHelpers.js"
 import {
 	OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';

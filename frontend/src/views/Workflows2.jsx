@@ -14,7 +14,7 @@ import LineChartWrapper from "../components/LineChartWrapper.jsx";
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import Priority from "../components/Priority.jsx";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 // Material UI Components
 import {
@@ -131,7 +131,7 @@ import { InstantSearch, Configure, connectHits, connectSearchBox, connectRefinem
 import { debounce } from "lodash";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 
-import {green, yellow, red, grey, triggers as wfTriggers, } from "../views/AngularWorkflow.jsx"
+import {green, yellow, red, grey, triggers as wfTriggers, } from "../utils/workflowHelpers.js"
 import Licensed from "../components/Licensed.jsx";
 
 
@@ -1007,7 +1007,6 @@ const Workflows2 = (props) => {
     const [view, setView] = useState(localStorage?.getItem("workflowView") || "grid");
     const [currentOrg, setCurrentOrg] = useState(null);
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	const [showExecutionStats, setShowExecutionStats] = React.useState(localStorage?.getItem("showExecutionStats") !== "false") 
 	const [showWorkflowImages, setShowWorkflowImages] = React.useState(localStorage?.getItem("showWorkflowImages") === "true")
 

@@ -7,11 +7,10 @@ import { toast } from 'react-toastify';
 
 import ReactJson from "react-json-view-ssr";
 import {  validateJson, handleReactJsonClipboard,  GetIconInfo, } from "../views/Workflows2.jsx";
-import { green, red } from "../views/AngularWorkflow.jsx";
+import { green, red } from "../utils/workflowHelpers.js";
 import CollectIngestModal from "../components/CollectIngestModal.jsx";
 import CorrelationGraph from "../components/CorrelationGraph.jsx";
-import { CategoryAutomationsDialog } from "@shuffleio/shuffle-core";
-import { useSyncHostBaseUrl, setRegionUrl } from "@shuffleio/shuffle-mcps";
+import { CategoryAutomationsDialog, useSyncHostBaseUrl, setRegionUrl } from "@shuffleio/shuffle-core";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {
 	Typography,
@@ -117,7 +116,7 @@ const CacheView = memo((props) => {
     const { globalUrl, userdata, serverside, orgId, isSelectedDataStore, selectedOrganization } = props;
 
     // CategoryAutomationsDialog (from @shuffleio/shuffle-core) makes its own internal
-    // fetches (workflows, authenticated apps) via the Shuffle-MCPs API module, which
+    // fetches (workflows, authenticated apps) via the Shuffle-Core API module, which
     // defaults to its own bundled backend URL and has no org context unless told.
     // Register shaffuru's own globalUrl/orgId so those internal fetches hit the right
     // backend/org instead of returning empty results.

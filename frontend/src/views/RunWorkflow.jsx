@@ -3,7 +3,7 @@ import React, {useState, useEffect, useContext} from 'react';
 import ReactDOM from "react-dom"
 
 import ReactJson from "react-json-view-ssr";
-import { green, yellow, red, grey} from "../views/AngularWorkflow.jsx";
+import { green, yellow, red, grey} from "../utils/workflowHelpers.js";
 import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { validateJson, collapseField, GetIconInfo } from "../views/Workflows2.jsx";
@@ -1069,7 +1069,13 @@ const RunWorkflow = (defaultprops) => {
 				return
 			}
 
-			if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && disableButtons === false && responseJson?.status !== "" && responseJson?.status !== "WAITING") {
+			const waitingForInput = responseJson?.status === "WAITING" || responseJson?.results?.some((result) => result?.status === "WAITING")
+			if (waitingForInput) {
+				setDisableButtons(false)
+				setExecutionRunning(false)
+			}
+
+			if (!waitingForInput && execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null && execution_id.length > 0 && authorization.length > 0 && disableButtons === false && responseJson?.status !== "" && responseJson?.status !== "WAITING") {
 				console.log("IN here 1")
 				setDisableButtons(true)
 			}
@@ -1697,7 +1703,7 @@ const RunWorkflow = (defaultprops) => {
 									: 
 										<Fade in={true} timeout={2500}>
 											<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-												{disabledButtons ? "Question answered. You may close this window." : ""}
+												{buttonClicked.length > 0 ? "Question answered. You may close this window." : ""}
 											</Typography>
 										</Fade>
 									}

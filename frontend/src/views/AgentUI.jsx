@@ -51,7 +51,7 @@ import {
 	green,
 	yellow,
 	red,
-} from '../views/AngularWorkflow.jsx'
+} from '../utils/workflowHelpers.js'
 
 const AgentUI = (props) => {
   	const { globalUrl, isLoggedIn, isLoaded, userdata, } = props

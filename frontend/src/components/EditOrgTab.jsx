@@ -3,7 +3,7 @@ import OrgHeaderexpanded from "../components/OrgHeaderexpandedNew.jsx";
 import OrgHeader from '../components/OrgHeaderNew.jsx';
 import { toast } from "react-toastify";
 import CloudSyncTab from '../components/CloudSyncTab.jsx';
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 import { getTheme  } from '../theme.jsx';
 import {
     FileCopy as FileCopyIcon,
@@ -30,7 +30,6 @@ const EditOrgTab = (props) => {
     const [organizationFeatures, setOrganizationFeatures] = React.useState({});
     const [users, setUsers] = React.useState([]);
     const [orgRequest, setOrgRequest] = React.useState(true);
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
     useEffect(() => { 
         if(users.length === 0) {
             getUsers();

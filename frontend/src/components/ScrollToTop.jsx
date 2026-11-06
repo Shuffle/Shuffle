@@ -1,6 +1,8 @@
-import { useEffect } from "react";
-//import { withRouter } from "react-router-dom";
+import { useEffect } from 'react';
+//import { withRouter } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
+import ReactGA from 'react-ga4';
+import { isCloud } from "../context/ContextApi.jsx";
 
 export const removeQuery = (query) => {
 	const urlSearchParams = new URLSearchParams(window.location.search)
@@ -16,16 +18,22 @@ export const removeQuery = (query) => {
 	window.history.pushState({path:newurl},'',newurl)
 }
 
-// ensures scrolling happens in the right way on different pages and when changing
-function ScrollToTop({ getUserNotifications, curpath, setCurpath, history }) {
-	let location = useLocation();
+function ScrollToTop({getUserNotifications, curpath, setCurpath, history, isLoggedIn,}) {
+	let location = useLocation()
+    useEffect(() => {
 
-  useEffect(() => {
-		// Custom handler for certain scroll mechanics
-		//
-		//console.log("OLD: ", curpath, "NeW: ", window.location.pathname)
-		if (curpath === window.location.pathname && (curpath === "/usecases" || 
-			(curpath === "/docs" && location.hash.length > 0))) {
+		if (isCloud) {
+			ReactGA.send({
+				hitType: "pageview",
+				page: window.location.pathname,
+			});
+		}
+
+		if (curpath === window.location.pathname && curpath === "/usecases") {
+		} else if (curpath.includes("/search")) {
+		} else if (curpath.includes("/docs") && location.hash.length !== 0) {
+			// Skip docs
+		} else if (curpath.includes("/pricing")) {
 		} else { 
 
 			window.scroll({
@@ -35,14 +43,16 @@ function ScrollToTop({ getUserNotifications, curpath, setCurpath, history }) {
 			});
 
 			setCurpath(window.location.pathname);
-			getUserNotifications();
+
+			if (isLoggedIn === true) {
+				//getUserNotifications();
+			}
 		}
   }, [location]);
 
-  return null;
+  return (null);
 }
 
 // https://stackoverflow.com/questions/36904185/react-router-scroll-to-top-on-every-transition
 //export default withRouter(ScrollToTop);
-// https://v5.reactrouter.com/web/api/Hooks/uselocation
 export default ScrollToTop;

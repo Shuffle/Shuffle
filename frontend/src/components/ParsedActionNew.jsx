@@ -6,13 +6,21 @@ import {getTheme} from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
-import { sortByKey, getActionState, setActionState } from "../views/AngularWorkflow.jsx";
+import { sortByKey, getActionState, setActionState } from "../utils/workflowHelpers.js";
 import { NestedMenuItem } from "mui-nested-menu";
 import { parsedDatatypeImages } from "../components/AppFramework.jsx";
-import { green, yellow, red } from "../views/AngularWorkflow.jsx"
+import { green, yellow, red } from "../utils/workflowHelpers.js"
 import ReactGA from 'react-ga4';
 //import { useAlert 
 import { Context } from "../context/ContextApi.jsx";
+import {
+	AgentPresets,
+	AGENT_PRESETS,
+	LocalLLMConfig,
+} from "@shuffleio/shuffle-mcps";
+import {
+	AppSearchDrawer,
+} from "@shuffleio/shuffle-core";
 import {
 	Chip,
 	ButtonGroup,
@@ -213,10 +221,100 @@ const ParsedAction = (props) => {
 	const [parentAction, setParentAction] = useState(null);
 	const isIntegration = selectedAction.app_id === "integration"
 	const isAgent = selectedAction.app_id === "shuffle_agent"
+	const [toolSearchOpen, setToolSearchOpen] = useState(false)
+	const [llmConfigOpen, setLlmConfigOpen] = useState(false)
 	const [distributeAuthToSuborgs, setDistributeAuthToSuborgs] = useState(selectedAction?.selectedAuthentication?.suborg_distributed || false)
 	const [activeMainTab, setActiveMainTab] = useState("setup")
 	const [optionalParamsOpen, setOptionalParamsOpen] = useState(false)
 	const [authSectionOpen, setAuthSectionOpen] = useState(true)
+
+	const getAgentParam = (name) => {
+		return selectedAction?.parameters?.find((p) => p.name === name)?.value || ""
+	}
+
+	const setAgentParam = (name, value) => {
+		if (!selectedAction) return
+		if (!selectedAction.parameters) selectedAction.parameters = []
+		const paramIndex = selectedAction.parameters.findIndex((p) => p.name === name)
+		if (paramIndex === -1) {
+			selectedAction.parameters.push({
+				name: name,
+				value: value,
+				required: false,
+			})
+		} else {
+			selectedAction.parameters[paramIndex].value = value
+		}
+
+		if (cy !== undefined && cy !== null) {
+			const node = cy.getElementById(selectedAction.id)
+			if (node !== undefined && node !== null && node.length > 0) {
+				node.data("parameters", selectedAction.parameters)
+			}
+		}
+
+		if (setLastSaved !== undefined) {
+			setLastSaved(false)
+		}
+
+		setSelectedAction(selectedAction)
+		setSelectedActionParameters([...selectedAction.parameters])
+		setUpdate(Math.random())
+	}
+
+	const currentSkillId = isAgent ? getAgentParam("template") : ""
+	const selectedSkillPreset = useMemo(() => {
+		if (!isAgent || !currentSkillId) return null
+		return (AGENT_PRESETS || []).find((p) => p.id === currentSkillId) || null
+	}, [isAgent, currentSkillId, selectedAction?.parameters])
+
+	const handleSelectSkillPreset = (preset) => {
+		setAgentParam("template", preset?.id || "")
+		if (preset?.defaultApps?.length > 0) {
+			const existing = (getAgentParam("app_name") || "")
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean)
+			const combined = Array.from(
+				new Set([...existing, ...preset.defaultApps.map((a) => a.name)])
+			)
+			setAgentParam("app_name", combined.join(","))
+		}
+	}
+
+	const handleRemoveSkillPreset = () => {
+		setAgentParam("template", "")
+	}
+
+	const agentToolNames = useMemo(() => {
+		if (!isAgent) return []
+		const raw = getAgentParam("app_name")
+		if (!raw) return []
+		return raw.split(",").map((s) => s.trim()).filter(Boolean)
+	}, [isAgent, selectedAction?.parameters])
+
+	const agentToolApps = useMemo(() => {
+		return agentToolNames.map((name) => ({ name }))
+	}, [agentToolNames])
+
+	const handleToolsChange = (selected) => {
+		const names = (selected || []).map((a) => a.name).filter(Boolean)
+		setAgentParam("app_name", names.join(","))
+	}
+
+	const handleRemoveTool = (toolName) => {
+		const remaining = agentToolNames.filter((n) => n !== toolName)
+		setAgentParam("app_name", remaining.join(","))
+	}
+
+	const OPENAI_APP_ID = "5d19dd82517870c68d40cacad9b5ca91"
+	const agentLlmAuths = useMemo(() => {
+		if (!isAgent || !appAuthentication) return []
+		return appAuthentication.filter((auth) => {
+			const app = auth?.app || auth
+			return app?.id === OPENAI_APP_ID || (app?.name || "").toLowerCase() === "openai"
+		})
+	}, [isAgent, appAuthentication])
 
 	useEffect(() => {
 		if (setLastSaved !== undefined) {
@@ -722,6 +820,7 @@ const ParsedAction = (props) => {
 	const appMayNeedAuth = useMemo(() => {
 		// Show if there are already existing authentications
 		if (hasAuth) return true;
+		if (isAgent) return true;
 		
 		// Show when requiresAuthentication is true (preserves original behavior for agents/integrations)
 		if (selectedApp?.name !== undefined && requiresAuthentication) {
@@ -2835,6 +2934,104 @@ const ParsedAction = (props) => {
 						) : null
 					} placement="left">
 						<div style={{ display: "flex", }}>
+							{isAgent ? (
+								<Select
+									MenuProps={{
+										disableScrollLock: true,
+										PaperProps: {
+											sx: {
+												'& .MuiList-root': {
+													backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+													color: theme.palette.textFieldStyle.color,
+												},
+											},
+										},
+									}}
+									labelId="select-agent-auth"
+									value={
+										selectedAction?.authentication_id
+											? (agentLlmAuths.find((a) => a.id === selectedAction.authentication_id) || "shuffle_ai")
+											: "shuffle_ai"
+									}
+									SelectDisplayProps={{
+										style: {
+											maxWidth: 250,
+										},
+									}}
+									fullWidth
+									onChange={(e) => {
+										if (e.target.value === "shuffle_ai") {
+											selectedAction.selectedAuthentication = {};
+											selectedAction.authentication_id = "";
+										} else {
+											selectedAction.selectedAuthentication = e.target.value;
+											selectedAction.authentication_id = e.target.value?.id || "";
+										}
+
+										if (cy !== undefined && cy !== null) {
+											const node = cy.getElementById(selectedAction.id);
+											if (node !== undefined && node !== null && node.length > 0) {
+												node.data("authentication_id", selectedAction.authentication_id || "");
+											}
+										}
+
+										if (setLastSaved !== undefined) {
+											setLastSaved(false);
+										}
+
+										setSelectedAction(selectedAction);
+										setUpdate(Math.random());
+									}}
+									style={{
+										backgroundColor: theme.palette.actionSidebarField.backgroundColor,
+										color: theme.palette.actionSidebarField.color,
+										height: theme.palette.actionSidebarField.height,
+										maxWidth: rightsidebarStyle.maxWidth - 80,
+										borderRadius: theme.palette.actionSidebarField.borderRadius,
+									}}
+									sx={{
+										'& .MuiOutlinedInput-notchedOutline': {
+											border: 'none',
+										},
+										'&:hover .MuiOutlinedInput-notchedOutline': {
+											border: 'none',
+										},
+										'&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+											border: 'none',
+										},
+									}}
+								>
+									<MenuItem
+										value="shuffle_ai"
+										sx={{
+											backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+											color: theme.palette.textFieldStyle.color,
+											'&:hover': {
+												backgroundColor: theme.palette.textFieldStyle.hoverBackgroundColor,
+											},
+										}}
+									>
+										Shuffle AI (Default)
+									</MenuItem>
+									{agentLlmAuths.map((data) => (
+										<MenuItem
+											key={data.id}
+											value={data}
+											sx={{
+												backgroundColor: theme.palette.textFieldStyle.backgroundColor,
+												color: theme.palette.textFieldStyle.color,
+												maxWidth: 500,
+												overflowX: "auto",
+												'&:hover': {
+													backgroundColor: theme.palette.hoverColor,
+												},
+											}}
+										>
+											{data.label || data.name || "Custom LLM"}
+										</MenuItem>
+									))}
+								</Select>
+							) : (
 							<Select
 								MenuProps={{
 									disableScrollLock: true,
@@ -3003,10 +3200,11 @@ const ParsedAction = (props) => {
 								})}
 
 							</Select>
+							)}
 
 							<Tooltip
 								color="primary"
-								title={"Add authentication option"}
+								title={isAgent ? "Configure AI Provider" : "Add authentication option"}
 								placement="top"
 							>
 								<IconButton
@@ -3014,15 +3212,19 @@ const ParsedAction = (props) => {
 									variant="outlined"
 									style={{}}
 									onClick={() => {
-										if (isCloud) { 
-											ReactGA.event({
-												category: "Integration",
-												action: "Authenticate",
-												label: `${selectedApp?.name} - Open 2`,
-											})
-										}
+										if (isAgent) {
+											setLlmConfigOpen(true);
+										} else {
+											if (isCloud) { 
+												ReactGA.event({
+													category: "Integration",
+													action: "Authenticate",
+													label: `${selectedApp?.name} - Open 2`,
+												})
+											}
 
-										setAuthenticationModalOpen(true);
+											setAuthenticationModalOpen(true);
+										}
 									}}
 								>
 									<AddIcon />
@@ -3542,7 +3744,57 @@ const ParsedAction = (props) => {
 
 			{activeMainTab === "configuration" ? (
 			<React.Fragment>	
-				{(isIntegration || isAgent) && selectedAction && selectedAction !== null && typeof selectedAction === 'object' && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters?.length > 0 && selectedAction?.name !== "Translate standard" && selectedAction.parameters.find((param) => param.name === "app_name")?.custom_value !== true ?
+				{isAgent && selectedAction && typeof selectedAction === 'object' && Object.getOwnPropertyNames(selectedAction).length > 0 ? (
+					<div style={{ marginTop: 20 }}>
+						<div style={{ marginBottom: 16 }}>
+							<Typography variant="body2" color="textSecondary" style={{ marginBottom: 8, fontWeight: 500 }}>
+								Agent Skill
+							</Typography>
+							<AgentPresets
+								selectedPreset={selectedSkillPreset}
+								onSelectPreset={handleSelectSkillPreset}
+								onRemoveSelected={handleRemoveSkillPreset}
+								theme={themeMode}
+							/>
+						</div>
+
+						<div>
+							<Typography variant="body2" color="textSecondary" style={{ marginBottom: 8, fontWeight: 500 }}>
+								Allowed MCPs
+							</Typography>
+							<div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+								<Button
+									size="small"
+									variant="outlined"
+									onClick={() => setToolSearchOpen(true)}
+									style={{
+										textTransform: "none",
+										borderRadius: 999,
+										borderColor: theme.palette?.divider || (themeMode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"),
+										color: theme.palette.text?.primary || "inherit",
+										fontSize: "0.8rem",
+									}}
+								>
+									+ Add Tool
+								</Button>
+								{agentToolApps.map((tool) => (
+									<Chip
+										key={tool.name}
+										label={tool.name.replaceAll("_", " ")}
+										size="small"
+										variant="outlined"
+										onDelete={() => handleRemoveTool(tool.name)}
+										style={{
+											borderRadius: 999,
+											borderColor: theme.palette?.divider || (themeMode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"),
+											fontSize: "0.8rem",
+										}}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				) : isIntegration && selectedAction && selectedAction !== null && typeof selectedAction === 'object' && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters?.length > 0 && selectedAction?.name !== "Translate standard" && selectedAction.parameters.find((param) => param.name === "app_name")?.custom_value !== true ?
 					apps !== undefined && apps !== null && apps.length > 0 && wrapperapp !== undefined && newimage !== undefined ?
 						<div style={{marginTop: 20, }}>
 							<Typography variant="body1" color="textSecondary">
@@ -4016,6 +4268,13 @@ const ParsedAction = (props) => {
 									if ((isIntegration || isAgent) && data.name === "app_name") { 
 										if (data?.custom_value === true) { 
 											//data.label = "Allowed MCPs"
+										} else {
+											return null
+										}
+									} 
+
+									if (isAgent && data.name === "template") { 
+										if (data?.custom_value === true) { 
 										} else {
 											return null
 										}
@@ -6048,6 +6307,65 @@ const ParsedAction = (props) => {
 					</Tooltip>
 				</div>
 			) : null}
+			{isAgent && (
+				<React.Fragment>
+					<AppSearchDrawer
+						open={toolSearchOpen}
+						onClose={() => setToolSearchOpen(false)}
+						multiSelect={true}
+						selectedApps={agentToolApps}
+						onSelectionChange={handleToolsChange}
+						title="Allowed MCPs"
+						subtitle="Search and select tools available to the AI Agent"
+						globalUrl={globalUrl}
+						theme={themeMode}
+						userdata={props.userdata}
+						isLoaded={props.isLoaded}
+						isLoggedIn={props.isLoggedIn}
+					/>
+					<Dialog
+						open={llmConfigOpen}
+						onClose={() => {
+							setLlmConfigOpen(false);
+							if (getAppAuthentication !== undefined) {
+								getAppAuthentication(true);
+							}
+						}}
+						maxWidth="md"
+						fullWidth
+					>
+						<DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+							AI Provider Configuration
+							<IconButton
+								size="small"
+								onClick={() => {
+									setLlmConfigOpen(false);
+									if (getAppAuthentication !== undefined) {
+										getAppAuthentication(true);
+									}
+								}}
+							>
+								<CloseIcon />
+							</IconButton>
+						</DialogTitle>
+						<DialogContent dividers sx={{ p: 2 }}>
+							<LocalLLMConfig
+								open={llmConfigOpen}
+								globalUrl={globalUrl}
+								theme={themeMode}
+								userdata={props.userdata}
+								isLoaded={props.isLoaded}
+								isLoggedIn={props.isLoggedIn}
+								onSave={() => {
+									if (getAppAuthentication !== undefined) {
+										getAppAuthentication(true);
+									}
+								}}
+							/>
+						</DialogContent>
+					</Dialog>
+				</React.Fragment>
+			)}
 			</React.Fragment>
 			)}
 		</div>

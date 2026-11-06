@@ -220,6 +220,16 @@ export function createStreamSender(
       });
     },
 
+    // Same op the backend's stream revert sends: everyone else reloads the workflow.
+    // Our own ops aren't streamed back to us, so the sender reloads by itself.
+    sendWorkflowRewind: (username) => {
+      return sendOp({
+        item: "system",
+        type: "rewind",
+        username: username,
+      });
+    },
+
     sendAgentPresence: (currentOrgId) => {
       if (!baseUrl || !workflowId) {
         return Promise.resolve(null)
@@ -266,7 +276,7 @@ export function createStreamSender(
 // parsed operation. Returns a stop() function.
 
 // options:
-//   onOp(op)               — called for each parsed StreamWorkflowOperation
+//   onOp(op, replayed)     — called for each parsed StreamWorkflowOperation; replayed is true during the since=0 catch-up
 //   onSeqUpdate(seq)       — called when a new sequence number is seen
 //   onStatusChange(status) — called with "active", "denied", "disconnected"
 //   onError(err)           — called on fetch errors (after backoff)
@@ -357,6 +367,7 @@ export function startStream(baseUrl, workflowId, orgId, options) {
       // immediately drop back to solo mode if presence update hasn't arrived yet. Gets updated
       // when we receive a presence operation from the server.
       let lastPresenceCount = 2;
+      let replaying = lastSeq === 0;
 
       try {
         const response = await fetchWithTimeout(`${url}?since=${lastSeq}`, {
@@ -391,9 +402,13 @@ export function startStream(baseUrl, workflowId, orgId, options) {
             lastPresenceCount = Array.isArray(op.users) ? op.users.length : 0;
           }
 
+          if (op.item === "system" && op.type === "init_complete") {
+            replaying = false;
+          }
+
           // Forward to caller
           if (onOp) {
-            onOp(op);
+            onOp(op, replaying);
           }
         });
 

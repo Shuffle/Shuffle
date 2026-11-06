@@ -1172,7 +1172,7 @@ const AppAuthTab = memo((props) => {
                                       padding: 8
                                     }
                                   }}
-                            primary={new Date(data.edited * 1000).toISOString()}
+                            primary={data.edited > 0 ? new Date(data.edited * 1000).toISOString() : data.created > 0 ? new Date(data.created * 1000).toISOString() : "-"}
                               />
                               <ListItemText
                                 style={{

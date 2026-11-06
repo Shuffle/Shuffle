@@ -22,8 +22,7 @@ import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 // import AgentUI from "./views/AgentUI.jsx";
 import { AgentsView } from '@shuffleio/shuffle-mcps';
-import { CombinedDashboard, OnboardingFlow, FormInput, Usecases as UsecasesSecurity, useSyncHostBaseUrl } from '@shuffleio/shuffle-core';
-import '@shuffleio/shuffle-core/shuffle-core.css';
+import { CombinedDashboard, OnboardingFlow, FormInput, Usecases as UsecasesSecurity, useSyncHostBaseUrl, AppSearchDrawer, AppDetailDrawer } from '@shuffleio/shuffle-core';
 
 
 import Welcome from "./views/Welcome.jsx";
@@ -1081,6 +1080,8 @@ const App = (message, props) => {
 						globalUrl={globalUrl}
 						userdata={userdata}
 						theme={themeMode}
+						renderToolDrawer={(p) => <AppSearchDrawer {...p} />}
+						renderAppDetailDrawer={(p) => <AppDetailDrawer {...p} />}
 						{...props}
 					/>
 				}
@@ -1096,6 +1097,8 @@ const App = (message, props) => {
 						globalUrl={globalUrl}
 						userdata={userdata}
 						theme={themeMode}
+						renderToolDrawer={(p) => <AppSearchDrawer {...p} />}
+						renderAppDetailDrawer={(p) => <AppDetailDrawer {...p} />}
 						{...props}
 					/>
 				}

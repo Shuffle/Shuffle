@@ -32,7 +32,7 @@ import { Link } from 'react-router-dom';
 import { InstantSearch, connectHits, connectSearchBox } from 'react-instantsearch-dom';
 import algoliasearch from "algoliasearch/lite";
 import { ALGOLIA_CLIENT_KEY } from "../algolia";
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
@@ -490,11 +490,6 @@ const AppModal = ({ open, onClose, app, globalUrl, getApps}) => {
       });
   };
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-      window.location.host === "shuffler.io"
-      ? true
-      : false;
 
   var newAppname = app?.name;
   if (newAppname === undefined) {

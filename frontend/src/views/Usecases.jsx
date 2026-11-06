@@ -36,7 +36,7 @@ import {
 } from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
-import { removeParam } from "../views/AngularWorkflow.jsx"
+import { removeParam } from "../utils/workflowHelpers.js"
 
 // core components
 //import {
@@ -64,6 +64,7 @@ import {
 	TreeMapRect,
 } from 'reaviz';
 import { isMobile } from "react-device-detect"
+import { isCloud } from "../context/ContextApi.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -1164,9 +1165,6 @@ const Dashboard = (props) => {
   const [frameworkData, setFrameworkData] = useState(undefined);
 
 	let navigate = useNavigate();
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
 
 	useEffect(() => {

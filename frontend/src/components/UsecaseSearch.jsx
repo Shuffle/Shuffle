@@ -27,6 +27,7 @@ import {
 		Tooltip,
 		Divider,
 } from "@mui/material";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const defaultValue = {"id": "", "name": "Build your own", 
 		"source": {"text": "No trigger selected", "error": ""}, 
@@ -349,7 +350,6 @@ const UsecaseSearch = (props) => {
   const [selectedAction, setSelectedAction] = React.useState({});
   const [firstRequest, setFirstRequest] = React.useState(true);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   //const alert = useAlert()
 
 	useEffect(() => {

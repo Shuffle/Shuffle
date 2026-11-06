@@ -30,6 +30,7 @@ import {
 	TableBody,
 	Table,
 } from '@mui/material';
+import { isCloud } from '../context/ContextApi.jsx';
 
 const hrefStyle = {
 	color: "#FF8444",
@@ -311,7 +312,6 @@ const LoginPage = props => {
 	const [showPassword, setShowPassword] = useState(false)
 	const [ssoUrl, setSSOUrl] = useState("");
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io" || window.location.host === "sandbox.shuffler.io";
 	const parsedsearch = serverside === true ? "" : window.location.search
 
 	useEffect(() => {

@@ -11,13 +11,18 @@ import {
   TextField,
   Modal,
   Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify";
 import "../codeeditor-index.css";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
-import { FileCopy, Visibility, VisibilityOff } from "@mui/icons-material";
+import { FileCopy, Visibility, VisibilityOff, DeleteOutline } from "@mui/icons-material";
 import IconButton from "@mui/material/IconButton";
 import { Tooltip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -62,6 +67,9 @@ const Settings = (props) => {
   const [userSettings, setUserSettings] = useState({});
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyCopied, setApiKeyCopied] = useState(false);
+  const [showRolloverApiKey, setShowRolloverApiKey] = useState(false);
+  const [rolloverApiKeyCopied, setRolloverApiKeyCopied] = useState(false);
+  const [deleteOldKeyDialogOpen, setDeleteOldKeyDialogOpen] = useState(false);
 
   const [accountDeleteButtonClicked, setAccountDeleteButtonClicked] = useState(false);
 
@@ -73,10 +81,18 @@ const Settings = (props) => {
     }, 2000);
   }
 
+  const handleCopyRolloverApiKey = () => {
+    navigator.clipboard.writeText(userSettings.rollover_apikey);
+    setRolloverApiKeyCopied(true);
+    setTimeout(() => {
+      setRolloverApiKeyCopied(false);
+    }, 2000);
+  }
+
+  const hasRolloverApiKey = userSettings.rollover_apikey !== undefined && userSettings.rollover_apikey !== null && userSettings.rollover_apikey.length > 0;
+  const hasApiKey = userSettings.apikey !== undefined && userSettings.apikey !== null && userSettings.apikey.length > 0;
+
   //Returns the value from a storage position at a given address.
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io"
 
   const bodyDivStyle = {
     margin: "auto",
@@ -534,29 +550,64 @@ const Settings = (props) => {
       });
   };
 
-  const generateApikey = () => {
-	toast.info("Generating new API key. This may take a bit.");
+  // Creates a second (rollover) API key while keeping the current one valid,
+  // so anything still using the old key keeps working during migration.
+  const createRolloverApikey = () => {
+    toast.info("Generating a new API key. This may take a bit.");
 
-    fetch(globalUrl + "/api/v1/generateapikey", {
-      method: "GET",
+    fetch(globalUrl + "/api/v1/apikey/rollover", {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       credentials: "include",
     })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for WORKFLOW EXECUTION :O!");
-		}
-
-        return response.json();
-      })
+      .then((response) => response.json())
       .then((responseJson) => {
+        if (responseJson.success === false) {
+          toast.error("Failed to create rollover key: " + (responseJson.reason || ""));
+          return;
+        }
+
         setUserSettings(responseJson);
+        setShowRolloverApiKey(true);
+        toast.success("New API key created. Both keys work until you delete the old one.");
       })
       .catch((error) => {
         console.log(error);
+        toast.error("Failed to create rollover key");
+      });
+  };
+
+  // Deletes the old key and promotes the rollover key into its place.
+  const promoteRolloverApikey = () => {
+    toast.info("Deleting old API key...");
+
+    fetch(globalUrl + "/api/v1/apikey/rollover/promote", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => response.json())
+      .then((responseJson) => {
+        setDeleteOldKeyDialogOpen(false);
+        if (responseJson.success === false) {
+          toast.error("Failed to delete old key: " + (responseJson.reason || ""));
+          return;
+        }
+
+        setUserSettings(responseJson);
+        setShowRolloverApiKey(false);
+        toast.success("Old API key deleted. The new key is now your API key.");
+      })
+      .catch((error) => {
+        console.log(error);
+        setDeleteOldKeyDialogOpen(false);
+        toast.error("Failed to delete old key");
       });
   };
 
@@ -832,6 +883,13 @@ const Settings = (props) => {
                 <FileCopy />
               </IconButton>
             </Tooltip>
+            {hasRolloverApiKey ? (
+              <Tooltip title={"Delete old API key"}>
+                <IconButton onClick={() => setDeleteOldKeyDialogOpen(true)}>
+                  <DeleteOutline style={{ color: "#f85a3e" }} />
+                </IconButton>
+              </Tooltip>
+            ) : null}
           </>
           ),
         }}
@@ -845,19 +903,86 @@ const Settings = (props) => {
         margin="normal"
         variant="outlined"
       />
-        <Button
-          style={{ 
-			width: "100%", 
-			height: "40px", 
+      {hasRolloverApiKey ? (
+        <>
+        <Typography variant="body2" style={{ marginTop: 10, textAlign: "left", color: theme.palette.text.secondary }}>
+          New API key — update your integrations to use this one, then delete the old key above.
+        </Typography>
+        <TextField
+        style={{ backgroundColor: theme.palette.inputColor, flex: "1" }}
+        InputProps={{
+          style: {
+            height: "50px",
+            color: theme.palette.text.primary,
+          },
+          endAdornment: (
+            <>
+            <Tooltip title={showRolloverApiKey ? "Hide API Key" : "Show API Key"}>
+              <IconButton onClick={() => setShowRolloverApiKey(!showRolloverApiKey)}>
+                {showRolloverApiKey ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={rolloverApiKeyCopied ? "API Key copied!" : "Copy API Key"}>
+              <IconButton onClick={handleCopyRolloverApiKey}>
+                <FileCopy />
+              </IconButton>
+            </Tooltip>
+          </>
+          ),
+        }}
+        color="primary"
+        value={showRolloverApiKey ? userSettings.rollover_apikey : '*'.repeat(36)}
+        required
+        disabled
+        fullWidth
+        placeholder="ROLLOVER APIKEY"
+        id="rollover-apikey"
+        margin="normal"
+        variant="outlined"
+      />
+      </>
+      ) : null}
+        {hasRolloverApiKey ? null : (
+          <Button
+            style={{
+			width: "100%",
+			height: "40px",
 			marginTop: "10px",
 			textTransform: "none",
 		  }}
-          variant="outlined"
-          color="primary"
-          onClick={() => generateApikey()}
+            variant="outlined"
+            color="primary"
+            onClick={() => createRolloverApikey()}
+          >
+            {hasApiKey ? "Create new API key (old one keeps working)" : "Generate API key"}
+          </Button>
+        )}
+        <Dialog
+          open={deleteOldKeyDialogOpen}
+          onClose={() => setDeleteOldKeyDialogOpen(false)}
+          PaperProps={{
+            style: {
+              backgroundColor: theme.palette.surfaceColor,
+              color: theme.palette.text.primary,
+            },
+          }}
         >
-          Re-Generate APIKEY
-        </Button>
+          <DialogTitle>Delete old API key?</DialogTitle>
+          <DialogContent>
+            <DialogContentText style={{ color: theme.palette.text.secondary }}>
+              The old API key will stop working immediately. The new key becomes your only API key.
+              Make sure nothing is still using the old key before deleting it.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteOldKeyDialogOpen(false)} color="primary" style={{ textTransform: "none" }}>
+              Cancel
+            </Button>
+            <Button onClick={() => promoteRolloverApikey()} style={{ color: "#f85a3e", textTransform: "none" }}>
+              Delete old key
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Divider style={{ marginTop: "40px" }} />
         {/*
 						<TextField

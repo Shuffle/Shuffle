@@ -49,6 +49,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon
 } from "@mui/icons-material";
 import zIndex from "@mui/material/styles/zIndex.js";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const useStyles = makeStyles((theme) => ({
   menuButton: {
@@ -216,12 +217,6 @@ const Header = (props) => {
     lineHeight: "normal",
   }
 
-  const isCloud =
-    serverside === true || typeof window === "undefined"
-      ? true
-      : window.location.host === "localhost:3002" ||
-      window.location.host === "shuffler.io" ||
-      window.location.host === "localhost:5002";
 
 
   const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")

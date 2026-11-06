@@ -3,7 +3,7 @@ import React, { useContext, useState } from "react";
 import { Typography, CircularProgress } from "@mui/material";
 import theme from '../theme.jsx';
 
-import { red,  } from "../views/AngularWorkflow.jsx"
+import { red,  } from "../utils/workflowHelpers.js"
 import { Context } from "../context/ContextApi.jsx";
 
 const SetAuthentication = (props) => {

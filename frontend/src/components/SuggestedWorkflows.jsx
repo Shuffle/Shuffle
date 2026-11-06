@@ -21,6 +21,7 @@ import {
 	AutoFixHigh as AutoFixHighIcon,
 	Done as DoneIcon,
 } from "@mui/icons-material";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const SuggestedWorkflows = (props) => {
   const { globalUrl, userdata, usecaseSuggestions, frameworkData, setUsecaseSuggestions, inputSearch, apps, } = props
@@ -31,9 +32,6 @@ const SuggestedWorkflows = (props) => {
 	const [previousUsecase, setPreviousUsecase] = React.useState("")
 	const [closeWindow, setCloseWindow] = React.useState(false)
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
 
 	useEffect(() => {

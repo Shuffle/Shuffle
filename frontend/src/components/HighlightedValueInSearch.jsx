@@ -32,17 +32,25 @@ const HighlightedValueInSearch = ({ value, searchTerm, theme }) => {
     }
   }, []);
 
+  const escapeHtml = (str) => String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
   const highlightInJson = useCallback((jsonStr, term) => {
-    if (!term) return jsonStr;
-    
+    const safeJson = escapeHtml(jsonStr);
+    if (!term) return safeJson;
+
     try {
-      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedTerm = escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedTerm})`, 'gi');
       const highlightId = `highlight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      return jsonStr.replace(regex, `<mark id="${highlightId}" style="background: rgba(255,255,0,0.4); padding: 0 2px; border-radius: 2px;">$1</mark>`);
+
+      return safeJson.replace(regex, `<mark id="${highlightId}" style="background: rgba(255,255,0,0.4); padding: 0 2px; border-radius: 2px;">$1</mark>`);
     } catch {
-      return jsonStr;
+      return safeJson;
     }
   }, []);
 

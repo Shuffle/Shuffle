@@ -47,7 +47,7 @@ import {
 	Slider,
 
 } from "@mui/material";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import {
 	DatePicker,
 	LocalizationProvider,
@@ -256,9 +256,6 @@ const EditWorkflow = (props) => {
 	var upload = "";
 	var total_count = 0
 
-    const isCloud =
-        window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io";
 
 	return (
 		<Drawer

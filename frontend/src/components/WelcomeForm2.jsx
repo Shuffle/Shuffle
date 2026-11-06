@@ -46,6 +46,7 @@ import WorkflowPaper from "../components/WorkflowPaper.jsx";
 import UsecaseSearch from "../components/UsecaseSearch.jsx";
 import ExploreWorkflow from "../components/ExploreWorkflow.jsx";
 import AppSelection from "../components/AppSelection.jsx";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const responsive = {
   0: { items: 1 },
@@ -161,7 +162,6 @@ const WelcomeForm = (props) => {
   const [clickdiff, setclickdiff] = useState(0);
   const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   //const alert = useAlert();
   let navigate = useNavigate();
 

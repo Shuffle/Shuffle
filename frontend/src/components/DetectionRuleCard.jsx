@@ -20,6 +20,7 @@ import {
 import { toast } from "react-toastify";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from '../theme.jsx';
+import { isCloud } from '../context/ContextApi.jsx';
 
 const RuleCard = (props) => {
   const { ruleName, description, file_id, globalUrl, folderDisabled, isDetectionActive, availableDetection, ruleMapping, setRuleMapping, ruleDetails, key, ...otherProps } = props
@@ -30,7 +31,6 @@ const RuleCard = (props) => {
   const [filteredBarchart, setFilteredBarchart] = React.useState(null) 
 
   const [responseValue, setResponseValue] = React.useState("No response action")
-  const isCloud = ["localhost:3002", "shuffler.io"].includes(window.location.host);
 
   useEffect(() => {
 		if (key < 10) {

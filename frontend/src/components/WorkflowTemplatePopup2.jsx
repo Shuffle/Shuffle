@@ -6,7 +6,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import AppSearchButtons from "../components/AppSearchButtons.jsx";
 import { isMobile } from "react-device-detect";
 import RenderCytoscape from "../components/RenderCytoscape.jsx";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import {
 	Button,
 	Typography,
@@ -35,7 +35,7 @@ import {
 	yellow,
 	red,
 	grey,
-} from "../views/AngularWorkflow.jsx"
+} from "../utils/workflowHelpers.js"
 
 //import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup2.jsx";
 import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup2.jsx";
@@ -121,7 +121,6 @@ const WorkflowTemplatePopup = (props) => {
 		fetchWorkflow(inputWorkflowId)
 	}
 
-	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 	useEffect(() => {
 		if (modalOpen !== true) {

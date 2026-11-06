@@ -19,7 +19,7 @@ import {
   DialogActions,
   IconButton,
 } from "@mui/material";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 import {
   Add as AddIcon,
@@ -54,7 +54,6 @@ const searchClient = algoliasearch(
 // AppCard Component
 const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata, fetchApps, appsToShow, setAppsToShow, setUserApps, }) => {
   const navigate = useNavigate();
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   //const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
   const appUrl = `/apps/${data.id}` 
   const { themeMode } = useContext(Context);
@@ -310,7 +309,6 @@ const Hits = ({
 }) => {
   const [hoverEffect, setHoverEffect] = useState(-1);
   const [allActivatedAppIds, setAllActivatedAppIds] = useState([]);
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -1200,11 +1198,6 @@ const Apps2 = (props) => {
 
   const baseRepository = "https://github.com/frikky/shuffle-apps";
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-      window.location.host === "shuffler.io"
-      ? true
-      : false;
 
   // Set the current tab based on the query parameter
   useEffect(() => {

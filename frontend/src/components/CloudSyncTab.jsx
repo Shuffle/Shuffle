@@ -29,8 +29,8 @@ import {
 } from "@mui/icons-material";
 import { getTheme } from "../theme.jsx";
 import { styled } from '@mui/styles';
-import { Context } from "../context/ContextApi.jsx";
-import { red } from "../views/AngularWorkflow.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
+import { red } from "../utils/workflowHelpers.js";
 
 const CloudSyncTab = (props) => {
     const {
@@ -52,7 +52,6 @@ const CloudSyncTab = (props) => {
     const [aiCloudSync, setAiCloudSync] = React.useState(false);
     const [, forceUpdate] = React.useState();
     const itemColor = "white";
-    const isCloud = window?.location?.host === "localhost:3002" || window?.location?.host === "shuffler.io";
 
     const { themeMode, brandColor, setUpdateOrg } = useContext(Context);
     const theme = getTheme(themeMode, brandColor);

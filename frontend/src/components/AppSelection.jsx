@@ -36,6 +36,7 @@ import {
     ListItemAvatar,
     ListItemText,
 } from '@mui/material';
+import { isCloud } from '../context/ContextApi.jsx';
 
 const AppSelection = props => {
     const {
@@ -64,7 +65,6 @@ const AppSelection = props => {
   	document.title = "Choose your apps"
     const ref = useRef()
     let navigate = useNavigate();
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
     useEffect(() => {
         if (newSelectedApp === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID.length === 0) {

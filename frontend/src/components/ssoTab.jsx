@@ -15,7 +15,7 @@ import theme from "../theme.jsx";
 import { toast } from "react-toastify";
 import { Context } from "../context/ContextApi.jsx";
 import { getTheme } from "../theme.jsx";
-import { red } from "../views/AngularWorkflow.jsx"
+import { red } from "../utils/workflowHelpers.js"
 
 const useStyles = makeStyles({
 	notchedOutline: {

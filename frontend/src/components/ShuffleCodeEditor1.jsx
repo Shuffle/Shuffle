@@ -23,7 +23,7 @@ import Checkbox from '@mui/material/Checkbox';
 import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
-import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
+import { SetJsonDotnotation } from "../utils/workflowHelpers.js";
 import Draggable from "react-draggable";
 
 import {

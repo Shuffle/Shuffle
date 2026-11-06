@@ -4,7 +4,7 @@ import { getTheme } from "../theme.jsx";
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from "react-router-dom";
 import { findSpecificApp } from "../components/AppFramework.jsx"
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import {
 	Paper,
   Typography,
@@ -25,7 +25,6 @@ const Priority = (props) => {
   	const { globalUrl, clickedFromOrgTab,userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, appFramework, } = props;
 	const { themeMode, supportEmail } = useContext(Context);
 	const theme = getTheme(themeMode);
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 
 	if (window.location.pathname === "/workflows") {

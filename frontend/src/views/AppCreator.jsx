@@ -58,7 +58,7 @@ import { ToastContainer, toast } from "react-toastify"
 import { split } from "shellwords";
 
 import AvatarEditor from "react-avatar-editor";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -569,7 +569,6 @@ const AppCreator = (defaultprops) => {
   };
   
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {

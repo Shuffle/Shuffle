@@ -12,7 +12,7 @@ import {
 	Check as CheckIcon,
 	OpenInNew as OpenInNewIcon,
 } from "@mui/icons-material";
-import { green, yellow, red } from '../views/AngularWorkflow.jsx'
+import { green, yellow, red } from '../utils/workflowHelpers.js'
 
 const RunDetectionTest = (props) => {
 	const { 

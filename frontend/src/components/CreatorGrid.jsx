@@ -39,6 +39,7 @@ import {
   AvatarGroup,
 } from "@mui/material"
 import { useDebouncedCallback } from "../utils/useDebouncedCallback.jsx";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 const CreatorGrid = props => {
@@ -49,9 +50,6 @@ const CreatorGrid = props => {
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 
 
-	const isCloud =
-		window.location.host === "localhost:3002" ||
-		window.location.host === "shuffler.io";
 
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3

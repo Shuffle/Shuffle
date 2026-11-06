@@ -62,7 +62,7 @@ import {
 import ForkRightIcon from '@mui/icons-material/ForkRight';
 
 import Alert from "@mui/material/Alert";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 import {
   SearchBox,
@@ -76,12 +76,12 @@ import AppStats from "../components/AppStats.jsx";
 import ParsedAction from "../components/ParsedActionNew.jsx";
 import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";
 import { base64_decode, appCategories } from "../views/AppCreator.jsx";
-import { triggers as workflowTriggers } from "../views/AngularWorkflow.jsx";
+import { triggers as workflowTriggers } from "../utils/workflowHelpers.js";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
 import { CodeHandler, Img, OuterLink, CopyToClipboard, } from "../views/Docs.jsx";
 import { useStyles, } from "../components/ParsedActionNew.jsx";
-import { sortByKey } from "../views/AngularWorkflow.jsx";
+import { sortByKey } from "../utils/workflowHelpers.js";
 
 import { v4 as uuidv4 } from "uuid";
 import aa from "search-insights";
@@ -97,7 +97,6 @@ const searchClient = algoliasearch(
 )
 
 export const setAppCache = (globalUrl, appId, alias) => {
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   if (!isCloud) return;
   fetch(globalUrl + "/api/v1/apps/" + appId + "/cache?alias=" + encodeURIComponent(alias), {
     method: "POST",
@@ -258,7 +257,6 @@ const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)";
     read_time: 1,
   })
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 
   // FIXME: This is used, as useEffect() creates an issue with apps not loading at all
