@@ -168,8 +168,7 @@ import HighlightedValueInSearch from "../components/HighlightedValueInSearch.jsx
 import { act } from "react";
 import { Context, isCloud } from "../context/ContextApi.jsx";
 import WorkflowGenerationModal from "../components/WorkflowGenerationModal.jsx";
-import { AskAiWidget, AGENT_WORKFLOW_CHANGED_EVENT, AGENT_FOCUS_NODE_EVENT, AGENT_OPEN_EXECUTION_EVENT } from "@shuffleio/shuffle-mcps";
-import { AppSearchDrawer, AppDetailDrawer } from "@shuffleio/shuffle-core";
+import { useWorkflowDock, WorkflowDockTabs, WorkflowAgentSidebar } from "../components/WorkflowAgentDock.jsx";
 import WorkflowHistory from "../components/WorkflowHistory.jsx";
 import CodeMirror from '@uiw/react-codemirror';
 import { python } from '@codemirror/lang-python';
@@ -298,41 +297,6 @@ const AngularWorkflow = (defaultprops) => {
   const [aiQueryModalOpen, setAiQueryModalOpen] = React.useState(false)
   const [workflowGenerationModalOpen, setWorkflowGenerationModalOpen] = React.useState(false);
 
-  // The agent sidebar (AskAiWidget) publishes its width as --ask-ai-panel-width;
-  // the canvas gives up that much room instead of being covered
-  const [agentSidebarWidth, setAgentSidebarWidth] = React.useState(0)
-
-  // Clicking text in the agent sidebar doesn't move focus, so the keys typed after it target <body>,
-  // not the sidebar. Remember where the last click was to tell those keys apart from canvas ones.
-  const lastPointerInAgentPanelRef = React.useRef(false)
-  React.useEffect(() => {
-    const onPointerDown = (event) => {
-      lastPointerInAgentPanelRef.current = !!event.target?.closest?.("[data-ask-ai-panel]")
-    }
-    document.addEventListener("pointerdown", onPointerDown, true)
-    return () => document.removeEventListener("pointerdown", onPointerDown, true)
-  }, [])
-  const isAgentPanelKey = (event) => {
-    const target = event.target
-    if (target?.closest?.("[data-ask-ai-panel]")) return true
-    return lastPointerInAgentPanelRef.current && (!target || target === document.body || target === document.documentElement)
-  }
-  React.useEffect(() => {
-    const readWidth = () => setAgentSidebarWidth(parseInt(getComputedStyle(document.documentElement).getPropertyValue("--ask-ai-panel-width")) || 0)
-    // Dragging the sidebar changes its width every frame; re-render the editor once it settles
-    let timer
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer)
-      timer = setTimeout(readWidth, 100)
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] })
-    readWidth()
-    return () => {
-      observer.disconnect()
-      clearTimeout(timer)
-    }
-  }, [])
-
   const [workflowDescription, setWorkflowDescription] = React.useState("");
   const [executionVariablesModalOpen, setExecutionVariablesModalOpen] =
     React.useState(false);
@@ -433,50 +397,25 @@ const AngularWorkflow = (defaultprops) => {
   const [executionRunning, setExecutionRunning] = React.useState(false);
   const [executionModalOpen, setExecutionModalOpen] = React.useState(false);
 
-  // With the agent sidebar open, the run panel docks at the right edge as a plain side panel (no backdrop),
-  // the sidebar moves left of it, and the editor gives up room for both instead of being covered
-  const debugDocked = agentSidebarWidth > 0 && !isMobile
-  const debugPanelWidth = debugDocked ? 430 : 490
-  const debugOffset = debugDocked && executionModalOpen ? debugPanelWidth : 0
-  // The node/trigger config panel docks the same way: at the right edge (left of a docked run panel), with the sidebar moved left of it
-  const configPanelWidth = 370
-  const configDocked = debugDocked && rightSideBarOpen && [selectedAction, selectedTrigger, selectedComment, selectedEdge].some((item) => Object.getOwnPropertyNames(item || {}).length > 0)
-  const rightPanelsWidth = agentSidebarWidth + debugOffset + (configDocked ? configPanelWidth : 0)
+  // The docked run panel has no backdrop to click away, so it gets its own close button and Esc.
+  // Dropping execution_id keeps it from reopening on the next load.
+  const closeDockedRunPanel = () => {
+    setExecutionModalOpen(false)
+    navigate(window.location.pathname + (removeParam("execution_id", window.location.search) || ""), { replace: true })
+  }
 
-  const crowdedRight = [agentSidebarWidth > 0, debugOffset > 0, configDocked].filter(Boolean).length >= 2
-  const leftAutoCollapseRef = React.useRef({ crowded: false, collapsed: false, width: 0 })
-  React.useEffect(() => {
-    const autoCollapse = leftAutoCollapseRef.current
-    const becameCrowded = crowdedRight && !autoCollapse.crowded
-    autoCollapse.crowded = crowdedRight
-
-    if (becameCrowded && leftViewOpen) {
-      autoCollapse.collapsed = true
-      autoCollapse.width = leftBarSize
-      setLeftBarSize(0)
-      setLeftViewOpen(false)
-      return
-    }
-
-    if (crowdedRight) {
-      if (leftViewOpen) {
-        autoCollapse.collapsed = false
-      }
-      return
-    }
-
-    if (autoCollapse.collapsed && !leftViewOpen) {
-      setLeftBarSize(autoCollapse.width || 235)
-      setLeftViewOpen(true)
-    }
-    autoCollapse.collapsed = false
-  }, [crowdedRight, leftViewOpen, leftBarSize])
-
-  React.useEffect(() => {
-    if (!cy) return
-    const timer = setTimeout(() => cy.resize(), 350)
-    return () => clearTimeout(timer)
-  }, [rightPanelsWidth, cy])
+  // The agent chat, node config and run panels share the right dock (components/WorkflowAgentDock.jsx)
+  const configOpen = rightSideBarOpen && [selectedAction, selectedTrigger, selectedComment, selectedEdge].some((item) => Object.getOwnPropertyNames(item || {}).length > 0)
+  const dock = useWorkflowDock({
+    isMobile,
+    agentOpen: workflowGenerationModalOpen && !!workflow?.id && workflow.public !== true,
+    configOpen,
+    configKey: configOpen ? selectedAction.id || selectedTrigger.id || selectedComment.id || selectedEdge.id || "open" : "",
+    runOpen: executionModalOpen,
+    onCloseRunPanel: closeDockedRunPanel,
+    cy,
+  })
+  const { docked, dockTabHeight, shownTab, configHidden, dockWidth, rightPanelsWidth, isAgentPanelKey } = dock
 
   // Bottom toolbar: centred on the canvas area that is actually visible (from the canvas' left edge to where the
   // docked right panels start). Measured, since page margins and the left panels aren't all in leftBarSize.
@@ -506,24 +445,6 @@ const AngularWorkflow = (defaultprops) => {
       window.removeEventListener("resize", measure)
     }
   }, [bottomBarEl, rightPanelsWidth, leftBarSize, leftSideBarOpenByClick])
-
-  // The docked panel has no backdrop to click away, so it gets its own close button and Esc.
-  // Dropping execution_id keeps it from reopening on the next load.
-  const closeDockedRunPanel = () => {
-    setExecutionModalOpen(false)
-    navigate(window.location.pathname + (removeParam("execution_id", window.location.search) || ""), { replace: true })
-  }
-
-  const closeDockedRunPanelRef = React.useRef(closeDockedRunPanel)
-  closeDockedRunPanelRef.current = closeDockedRunPanel
-  React.useEffect(() => {
-    if (!debugDocked || !executionModalOpen) return
-    const onKeyDown = (event) => {
-      if (event.key === "Escape" && !isAgentPanelKey(event)) closeDockedRunPanelRef.current()
-    }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [debugDocked, executionModalOpen])
   const [executionModalView, setExecutionModalView] = React.useState(0);
   const [executionData, setExecutionData] = React.useState({});
   const [appsLoaded, setAppsLoaded] = React.useState(false);
@@ -1621,8 +1542,13 @@ const AngularWorkflow = (defaultprops) => {
         cy.removeListener("free");
         cy.removeListener("cxttap");
 
-        setTimeout(() => {
-          setupGraph(workflow)
+        setTimeout(async () => {
+          // Drawing is async: nodes added with the listeners on would be broadcast as the user's own edits
+          try {
+            await setupGraph(workflow)
+          } catch (error) {
+            console.log("Error drawing the workflow: ", error)
+          }
 
           cy.on("select", "node", (e) => {
             onNodeSelect(e, appAuthentication);
@@ -4776,99 +4702,6 @@ const AngularWorkflow = (defaultprops) => {
     }
   }
 
-  // Agent panel: show the agent's edits on the canvas
-  const flashAgentNodes = (nodeIds) => {
-    if (!cy || !nodeIds || nodeIds.length === 0) return
-    for (const nodeId of nodeIds) {
-      const node = cy.getElementById(nodeId)
-      if (!node || node.length === 0) continue
-      node.style({ "border-width": "6px", "border-color": "#9c5af2", "border-opacity": "1" })
-      setTimeout(() => {
-        if (node.removed()) return
-        node.removeStyle("border-width border-color border-opacity")
-        // removeStyle also drops the red border of a node with validation errors, so put it back
-        if (node.data("is_valid") === false) {
-          node.style({ "border-width": "2px", "border-opacity": ".9", "border-color": red })
-        }
-      }, 2500)
-    }
-  }
-
-  // Nodes the agent changed that the canvas hasn't shown yet
-  const agentPendingNodeIdsRef = React.useRef([])
-  const reloadAgentChanges = () => {
-    const nodeIds = agentPendingNodeIdsRef.current
-    agentPendingNodeIdsRef.current = []
-    getWorkflow(workflow.id, {})
-    setTimeout(() => flashAgentNodes(nodeIds), 1500)
-  }
-
-  const handleAgentWorkflowChanged = (nodeIds, reverted) => {
-    if (reverted) {
-      agentPendingNodeIdsRef.current = []
-      getWorkflow(workflow.id, {})
-      if (multiplayerEnabledRef.current && streamUrl) {
-        stream.sendWorkflowRewind(userdata?.username)
-      }
-      return
-    }
-
-    if (multiplayerEnabledRef.current) {
-      flashAgentNodes(nodeIds)
-      return
-    }
-
-    agentPendingNodeIdsRef.current = [...agentPendingNodeIdsRef.current, ...nodeIds]
-  }
-
-  // The agent works on the saved workflow, so save unsaved edits before it starts
-  const workflowForAgentRef = React.useRef(workflow)
-  workflowForAgentRef.current = workflow
-  const saveBeforeAgentRun = () => saveWorkflow(workflowForAgentRef.current, undefined, undefined, undefined, true)
-
-  const agentTerminalStatuses = ["FINISHED", "FAILURE", "ABORTED", "CANCELLED"]
-  const [agentRunning, setAgentRunning] = React.useState(false)
-  const agentWaitingRef = React.useRef(false)
-  const handleAgentRunStatus = ({ executionId, status, previousStatus, running, waiting }) => {
-    setAgentRunning(running)
-    const startedWaiting = waiting && !agentWaitingRef.current
-    agentWaitingRef.current = waiting
-
-    // Only a change seen live counts. Opening an old run must not report it again.
-    const wasActive = !!previousStatus && !agentTerminalStatuses.includes(previousStatus)
-    if (!wasActive) return
-
-    // Settled: finished, or paused on a question the user may want to answer looking at the canvas
-    if ((agentTerminalStatuses.includes(status) || startedWaiting) && agentPendingNodeIdsRef.current.length > 0) {
-      if (lastSaved) {
-        reloadAgentChanges()
-      } else {
-        agentPendingNodeIdsRef.current = []
-        toast("The agent changed this workflow. Save or discard your own changes, then reload to see its changes.")
-      }
-    }
-
-    // Same events and fields as the old agent widget, so the funnel data stays comparable
-    if (status === "FINISHED") {
-      trackAgentFunnel("agent_finished", executionId)
-    } else if (status === "ABORTED") {
-      trackAgentFunnel("agent_aborted", executionId)
-    } else if (agentTerminalStatuses.includes(status)) {
-      trackAgentFunnel("agent_failed", executionId, { status })
-    }
-  }
-
-  const focusAgentNode = (nodeId) => {
-    const node = cy ? cy.getElementById(nodeId) : null
-    if (!node || node.length === 0) {
-      toast("That node isn't in the workflow anymore")
-      return
-    }
-    cy.elements().unselect()
-    node.select()
-    cy.animate({ center: { eles: node }, duration: 300 })
-  }
-
   // Shows a run the agent started in the debug view, the same way as a run started here
   const openAgentExecution = (executionId, authorization) => {
     navigate(`?execution_id=${executionId}`)
@@ -4881,49 +4714,6 @@ const AngularWorkflow = (defaultprops) => {
     start()
   }
 
-  // Stable props for the memoized agent sidebar, so editor re-renders don't re-render the whole agent tree
-  const agentCallbacksRef = React.useRef({})
-  agentCallbacksRef.current = { track: trackAgentFunnel, beforeRun: saveBeforeAgentRun, runStatus: handleAgentRunStatus }
-  const agentUIProps = React.useMemo(() => ({
-    workflowId: workflow?.id,
-    initialView: "chat",
-    // The editor's own ?execution_id belongs to workflow runs, not agent runs
-    readUrlParams: false,
-    apiBaseUrl: globalUrl,
-    // A run that never started is its own event: agent_failed stays "a started run failed"
-    onRun: ({ success, executionId, error }) => agentCallbacksRef.current.track(success ? "agent_started" : "agent_start_failed", executionId || "", error ? { reason: error } : {}),
-    onBeforeRun: () => agentCallbacksRef.current.beforeRun(),
-    onRunStatusChange: (info) => agentCallbacksRef.current.runStatus(info),
-    renderToolDrawer: (p) => <AppSearchDrawer {...p} />,
-    renderAppDetailDrawer: (p) => <AppDetailDrawer {...p} />,
-  }), [workflow?.id, globalUrl])
-
-  // Latest handlers, so the listeners below subscribe once per workflow
-  const agentEventHandlersRef = React.useRef({})
-  agentEventHandlersRef.current = { changed: handleAgentWorkflowChanged, focus: focusAgentNode, openExecution: openAgentExecution }
-
-  React.useEffect(() => {
-    if (!workflow?.id) return
-    const onChanged = (event) => {
-      if (event.detail?.workflowId !== workflow.id) return
-      agentEventHandlersRef.current.changed(event.detail.nodeIds || [], event.detail.reverted)
-    }
-    const onFocus = (event) => {
-      if (event.detail?.workflowId === workflow.id) agentEventHandlersRef.current.focus(event.detail.nodeId)
-    }
-    const onOpenExecution = (event) => {
-      if (event.detail?.workflowId === workflow.id && event.detail.executionId) agentEventHandlersRef.current.openExecution(event.detail.executionId, event.detail.authorization)
-    }
-    window.addEventListener(AGENT_WORKFLOW_CHANGED_EVENT, onChanged)
-    window.addEventListener(AGENT_FOCUS_NODE_EVENT, onFocus)
-    window.addEventListener(AGENT_OPEN_EXECUTION_EVENT, onOpenExecution)
-    return () => {
-      window.removeEventListener(AGENT_WORKFLOW_CHANGED_EVENT, onChanged)
-      window.removeEventListener(AGENT_FOCUS_NODE_EVENT, onFocus)
-      window.removeEventListener(AGENT_OPEN_EXECUTION_EVENT, onOpenExecution)
-    }
-  }, [workflow?.id])
-
   const handleAgentStopped = () => {
     // Remove immediately from local state — no need to wait for network round-trip.
     setConnectedUsers(prev => prev.filter(u => u.user_id !== "agent"))
@@ -4932,26 +4722,6 @@ const AngularWorkflow = (defaultprops) => {
       stream.sendAgentPresenceRemove(workflow.org_id)
     }
   }
-
-  // The agent shows as present to other editors while it runs (or waits for an answer),
-  // whether or not its sidebar is open
-  const agentPresenceRef = React.useRef({})
-  agentPresenceRef.current = { refresh: handleAgentPresenceRefresh, stop: handleAgentStopped }
-  React.useEffect(() => {
-    if (!agentRunning) return
-    agentPresenceRef.current.refresh()
-    const timer = setInterval(() => agentPresenceRef.current.refresh(), 25000)
-    return () => {
-      clearInterval(timer)
-      agentPresenceRef.current.stop()
-    }
-  }, [agentRunning])
-
-  // The agent sidebar mounts the first time it's opened, then stays for the rest of the visit
-  const [agentSidebarOpened, setAgentSidebarOpened] = React.useState(false)
-  React.useEffect(() => {
-    if (workflowGenerationModalOpen) setAgentSidebarOpened(true)
-  }, [workflowGenerationModalOpen])
 
   const [usedSubflowApps, setUsedSubflowApps] = React.useState([]);
 
@@ -5229,7 +4999,7 @@ const AngularWorkflow = (defaultprops) => {
       })
   }
 
-  const getWorkflow = (workflow_id, sourcenode) => {
+  const getWorkflow = (workflow_id, sourcenode, redraw) => {
     fetch(`${globalUrl}/api/v1/workflows/${workflow_id}`, {
       method: "GET",
       headers: {
@@ -5568,6 +5338,15 @@ const AngularWorkflow = (defaultprops) => {
 		  		setupWorkflowYaml(responseJson) 
 			  }, 2500)
 		  }
+
+          // Drawing only adds nodes, so removed ones would stay. The [workflow] effect redraws and re-adds the listeners.
+          if (redraw && cy) {
+            cy.elements().unselect()
+            for (const event of ["select", "unselect", "add", "remove"]) {
+              cy.removeListener(event)
+            }
+            cy.elements().remove()
+          }
 
           setWorkflow(responseJson);
           setWorkflowDone(true);
@@ -14169,18 +13948,19 @@ const AngularWorkflow = (defaultprops) => {
     zoom: isSafari ? undefined : 0.9,
     transform: isSafari ? "scale(0.9)" : undefined,
     transformOrigin: isSafari ? "top right" : undefined,
-    // Docked: full height at the right edge. The 0.9 zoom/scale shrinks sizes and offsets, so they're divided by it.
-    ...(configDocked ? {
-      top: 0,
-      right: debugOffset / (isSafari ? 1 : 0.9),
-      height: "calc(100vh / 0.9)",
+    // The 0.9 zoom shrinks sizes and offsets, so they're divided by it (Safari's top-right scale leaves offsets alone)
+    ...(docked ? {
+      top: dockTabHeight / (isSafari ? 1 : 0.9),
+      right: 0,
+      height: `calc((100vh - ${dockTabHeight}px) / 0.9)`,
       maxHeight: "none",
-      width: configPanelWidth / 0.9,
-      minWidth: configPanelWidth / 0.9,
-      maxWidth: configPanelWidth / 0.9,
+      width: dockWidth / 0.9,
+      minWidth: dockWidth / 0.9,
+      maxWidth: dockWidth / 0.9,
       resize: "none",
       border: "none",
-      borderLeft: "1px solid rgb(91, 96, 100)",
+      // The same edge as the other dock tabs
+      borderLeft: theme.palette.defaultBorder,
       borderRadius: 0,
     } : {}),
   };
@@ -22551,7 +22331,7 @@ const AngularWorkflow = (defaultprops) => {
         :
         <span>
           {/*<Fade in={true} style={{ transitionDelay: `$0ms` }}>*/}
-          <div id="rightside_actions" style={rightsidebarStyle}>
+          <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
             {defaultReturn}
           </div>
         </span>
@@ -23575,7 +23355,8 @@ const AngularWorkflow = (defaultprops) => {
   const executionModal = (
     <Drawer
       anchor={"right"}
-      open={executionModalOpen}
+      open={executionModalOpen && (!docked || shownTab === "run")}
+      transitionDuration={docked ? 0 : undefined}
       onClose={() => {
         setExecutionModalOpen(false)
         setBuildDebugMode("build")
@@ -23583,11 +23364,11 @@ const AngularWorkflow = (defaultprops) => {
         //navigate(curpath + newitem)
       }}
       style={{
-        resize: debugDocked ? "none" : "both",
+        resize: docked ? "none" : "both",
         overflow: "auto",
       }}
       hideBackdrop={false}
-      variant={debugDocked ? "persistent" : "temporary"}
+      variant={docked ? "persistent" : "temporary"}
       BackdropProps={{
         style: {
           //backgroundColor: "transparent",
@@ -23595,38 +23376,23 @@ const AngularWorkflow = (defaultprops) => {
       }}
       PaperProps={{
         style: {
-          resize: debugDocked ? "none" : "both",
+          resize: docked ? "none" : "both",
           overflow: "auto",
-          minWidth: isMobile ? "100%" : debugPanelWidth,
-          maxWidth: isMobile ? "100%" : debugPanelWidth,
+          minWidth: isMobile ? "100%" : dockWidth,
+          maxWidth: isMobile ? "100%" : dockWidth,
           color: theme.palette.text.primary,
           fontSize: 18,
           borderLeft: theme.palette.defaultBorder,
 
-          borderRadius: debugDocked ? 0 : theme.palette.borderRadius,
+          borderRadius: docked ? 0 : theme.palette.borderRadius,
           borderTopRightRadius: 0,
           borderBottomRightRadius: 0,
-          ...(debugDocked ? { zIndex: 1200 } : {}),
+          ...(docked ? { zIndex: 1200, top: dockTabHeight, height: `calc(100% - ${dockTabHeight}px)` } : {}),
           backgroundColor: themeMode === "dark" ? "black" : theme.palette.drawer.backgroundColor,
         },
       }}
     >
-      {debugDocked ?
-        <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 8px 0px 8px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
-          <Tooltip title="Close run panel (Esc)" placement="left">
-            <IconButton
-              size="small"
-              aria-label="Close run panel"
-              onClick={(e) => {
-                e.preventDefault();
-                closeDockedRunPanel()
-              }}
-            >
-              <CloseIcon fontSize="small" style={{ color: theme.palette.text.primary }} />
-            </IconButton>
-          </Tooltip>
-        </div>
-        : isMobile ?
+      {isMobile ?
         <Tooltip
           title="Close window"
           placement="top"
@@ -23674,7 +23440,7 @@ const AngularWorkflow = (defaultprops) => {
           </div>
 
 		  {executionTimeline?.length > 0 && 
-		  	<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", position: "fixed", bottom: 0, zIndex: 13000, width: debugPanelWidth - 30, right: 10, padding: "0px 10px 0px 10px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
+		  	<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", position: "fixed", bottom: 0, zIndex: 13000, width: dockWidth - 30, right: 10, padding: "0px 10px 0px 10px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
 			  <LineChartWrapper 
 				inputname={""}
 				keys={executionTimeline}
@@ -25729,10 +25495,11 @@ const AngularWorkflow = (defaultprops) => {
           rightSideBarOpen &&
           Object.getOwnPropertyNames(selectedTrigger || {}).length === 0 && 
           Object.getOwnPropertyNames(selectedComment || {}).length === 0 && 
-          Object.getOwnPropertyNames(selectedEdge || {}).length === 0
+          Object.getOwnPropertyNames(selectedEdge || {}).length === 0 &&
+          !configHidden
         }
         hideBackdrop={true}
-        transitionDuration={{ enter: 180, exit: 0 }}
+        transitionDuration={{ enter: docked ? 0 : 180, exit: 0 }}
         onClose={() => {
           setRightSideBarOpen(false);
           setSelectedAction({});
@@ -25753,7 +25520,7 @@ const AngularWorkflow = (defaultprops) => {
             minWidth: rightsidebarStyle.minWidth,
             maxWidth: rightsidebarStyle.maxWidth,
             overflow: "hidden",
-            ...(configDocked ? { right: debugOffset, width: configPanelWidth, minWidth: configPanelWidth, maxWidth: configPanelWidth } : {}),
+            ...(docked ? { top: dockTabHeight, height: `calc(100% - ${dockTabHeight}px)`, right: 0, width: dockWidth, minWidth: dockWidth, maxWidth: dockWidth } : {}),
           },
         }}
       >
@@ -25821,7 +25588,7 @@ const AngularWorkflow = (defaultprops) => {
       {/* {
         rightSideBarOpen && Object.getOwnPropertyNames(selectedAction).length > 0 ?
           <Fade in={true} timeout={250} style={{ transitionDelay: `${0}ms` }}>
-            <div id="rightside_actions" style={rightsidebarStyle}>
+            <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
               <ParsedAction
                 id="rightside_subactions"
                 files={files}
@@ -25888,7 +25655,7 @@ const AngularWorkflow = (defaultprops) => {
       {/* Only fixed the ones that require scrolling on a small screen */}
       {/* Most important: Actions. But these are a lot more complex */}
       {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT" || selectedTrigger.trigger_type === "SUBFLOW") ?
-        <div id="rightside_actions" style={rightsidebarStyle}>
+        <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
           {Object.getOwnPropertyNames(selectedTrigger)?.length > 0 ?
             selectedTrigger.trigger_type === "SCHEDULE" ?
               ScheduleSidebar
@@ -25907,7 +25674,7 @@ const AngularWorkflow = (defaultprops) => {
       {/* 
     {
       rightSideBarOpen && selectedTrigger?.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger)?.length > 0   ? 
-      <div id="rightside_actions" style={rightsidebarStyle}>
+      <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
         <SubflowSidebar/>
         </div> : null
     } */}
@@ -25947,27 +25714,52 @@ const AngularWorkflow = (defaultprops) => {
       />
 	  */}
 
+      <WorkflowAgentSidebar
+        workflow={workflow}
+        cy={cy}
+        dock={dock}
+        theme={theme}
+        open={workflowGenerationModalOpen}
+        onOpenChange={setWorkflowGenerationModalOpen}
+        hidden={showWorkflowRevisions}
+        globalUrl={globalUrl}
+        themeMode={themeMode}
+        isLoggedIn={isLoggedIn}
+        userdata={userdata}
+        isSaved={() => lastSavedRef.current}
+        reloadWorkflow={() => getWorkflow(workflow.id, {}, true)}
+        saveWorkflow={() => saveWorkflow(workflow, undefined, undefined, undefined, true)}
+        onReverted={() => {
+          if (multiplayerEnabledRef.current && streamUrl) {
+            stream.sendWorkflowRewind(userdata?.username)
+          }
+        }}
+        onOpenExecution={openAgentExecution}
+        onPresenceRefresh={handleAgentPresenceRefresh}
+        onStopped={handleAgentStopped}
+        track={trackAgentFunnel}
+      />
+
       {showWorkflowRevisions ? null :
         <span>
           {ConnectedUsersAvatars()}
           {shownErrors}
-          {agentSidebarOpened && workflow?.id && workflow.public !== true && (
-            <AskAiWidget
-              open={workflowGenerationModalOpen}
-              onOpenChange={setWorkflowGenerationModalOpen}
-              // A run keeps being followed after the sidebar is closed, so its presence and reload still happen
-              keepMounted={agentRunning}
-              rightOffset={debugOffset + (configDocked ? configPanelWidth : 0)}
-              hideButton
-              requireSupport={false}
-              globalUrl={globalUrl}
-              theme={themeMode}
-              isLoggedIn={isLoggedIn}
-              userdata={userdata}
-              isSupport={userdata?.support === true}
-              agentUIProps={agentUIProps}
-            />
-          )}
+          <WorkflowDockTabs
+            dock={dock}
+            theme={theme}
+            themeMode={themeMode}
+            labels={{
+              agent: "Agent",
+              config: selectedAction.label || selectedTrigger.label
+                || (Object.getOwnPropertyNames(selectedComment || {}).length > 0 ? "Comment" : Object.getOwnPropertyNames(selectedEdge || {}).length > 0 ? "Branch" : "Configure"),
+              run: "Run",
+            }}
+            onClose={{
+              agent: () => setWorkflowGenerationModalOpen(false),
+              config: () => (cy ? cy.elements().unselect() : setRightSideBarOpen(false)),
+              run: closeDockedRunPanel,
+            }}
+          />
           {BottomCytoscapeBar()}
           {TopCytoscapeBar()}
           {/* <RightsideBar /> */}

@@ -6727,6 +6727,12 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/recommendations/modify", shuffle.HandleRecommendationAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/revisions/summary", shuffle.HandleGetWorkflowRevisionsSummary).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/runs", shuffle.HandleGetWorkflowRuns).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/runs/{execution_id}", shuffle.HandleGetWorkflowRun).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/compare", shuffle.HandleCompareWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/revert", shuffle.HandleRevertWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/issues", shuffle.HandleGetWorkflowIssues).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/child_workflows", shuffle.GetChildWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/validation", shuffle.GetWorkflowValidation).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/distribute/batch", shuffle.DistributeWorkflowsBatch).Methods("POST", "OPTIONS")
@@ -6912,6 +6918,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v2/{datastore_category}/{datastore_key}", shuffle.HandleDatastorePostRedirect).Methods("POST", "OPTIONS")
 
 	r.Use(shuffle.RequestMiddleware)
+	shuffle.InternalRouter = r
 	http.Handle("/", r)
 }
 
