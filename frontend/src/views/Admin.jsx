@@ -94,6 +94,7 @@ import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
 import Files from "../components/Files.jsx";
 import { display, style } from "@mui/system";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -299,9 +300,6 @@ const Admin = (props) => {
     handleGetAllTriggers()
   }, []); 
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
   const setSelectedRegion = (region) => {
     // send a POST request to /api/v1/orgs/{org_id}/region with the region as the body

@@ -21,7 +21,7 @@ import {
 	yellow,
 	red,
 	grey,
-} from "../views/AngularWorkflow.jsx"
+} from "../utils/workflowHelpers.js"
 
 import WorkflowTemplatePopup2 from "../components/WorkflowTemplatePopup2.jsx"
 import { validateJson, GetIconInfo } from "../views/Workflows2.jsx";

@@ -79,7 +79,7 @@ import LineChartWrapper from '../components/LineChartWrapper.jsx';
 import LicencePopup from "../components/LicencePopup.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 
-import { Context, OrgStatusMapping, LegacyStatusList } from "../context/ContextApi.jsx";
+import { Context, OrgStatusMapping, LegacyStatusList, isCloud } from "../context/ContextApi.jsx";
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid } from "@mui/x-data-grid";
@@ -986,6 +986,7 @@ const Billing = memo((props) => {
 	const [isLoggedIn, setIsLoggedIn] = useState(false)
 	const [orgStatus, setOrgStatus] = useState(selectedStatus || []);
 	const [orgRecurrence, setOrgRecurrence] = useState("Monthly");
+	const [statusSyncing, setStatusSyncing] = useState(false);
 	const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
 	const [dealList, setDealList] = React.useState([]);
 	const [dealName, setDealName] = React.useState("");
@@ -1021,7 +1022,20 @@ const Billing = memo((props) => {
 		const activeSubRecurrence = selectedOrganization?.subscriptions?.[0]?.recurrence;
 		setOrgRecurrence((activeSubRecurrence?.toLowerCase() === "annual" || activeSubRecurrence?.toLowerCase() === "year") ? "Annual" : "Monthly");
 	}, [selectedOrganization?.subscriptions]);
-	
+
+	useEffect(() => {
+		setStatusSyncing(false);
+	}, [selectedOrganization]);
+
+	useEffect(() => {
+		if (!statusSyncing) {
+			return;
+		}
+
+		const timeout = setTimeout(() => setStatusSyncing(false), 10000);
+		return () => clearTimeout(timeout);
+	}, [statusSyncing]);
+
 
 	useEffect(() => {
 		if (!statistics || statistics?.success === false) {
@@ -1042,10 +1056,9 @@ const Billing = memo((props) => {
 		}
 
 		const today = new Date()
-		const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-		monthStart.setHours(0, 0, 0, 0)
-		const todayStart = new Date(today)
-		todayStart.setHours(0, 0, 0, 0)
+		const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1))
+		const monthEnd = new Date(today)
+		monthEnd.setUTCHours(23, 59, 59, 999)
 
 		let parent = 0
 		let child = 0
@@ -1056,16 +1069,11 @@ const Billing = memo((props) => {
 			}
 
 			const date = new Date(item.date)
-			date.setHours(0, 0, 0, 0)
-			if (date >= monthStart && date < todayStart) {
+			date.setUTCHours(0, 0, 0, 0)
+			if (date >= monthStart && date <= monthEnd) {
 				parent += item.app_executions ?? 0
 				child += item.child_app_executions ?? 0
 			}
-		}
-
-		if (statistics["daily_app_executions"] !== undefined && statistics["daily_app_executions"] !== null) {
-			parent += statistics["daily_app_executions"]
-			child += statistics["daily_child_app_executions"] ?? 0
 		}
 
 		setMonthlyAppRunsParent(parent)
@@ -1242,10 +1250,6 @@ const Billing = memo((props) => {
 		marginTop: 15,
 	}
 
-	const isCloud =
-		window.location.host === "localhost:3002" ||
-		window.location.host === "shuffler.io" || 
-		window.location.host === "sandbox.shuffler.io";
 
 	billingInfo.subscription = {
 		"active": true,
@@ -3550,8 +3554,10 @@ const Billing = memo((props) => {
 							id="multiselect-status"
 							multiple
 							value={orgStatus}
+							disabled={statusSyncing}
 							onChange={(event) => {
 							let newStatus = [...event.target.value];
+							setStatusSyncing(true);
 							handleStatusChange(event);
 
 							const customerLicenses = [
@@ -3639,6 +3645,7 @@ const Billing = memo((props) => {
 							style={{ minWidth: 150, marginTop: 5, maxWidth: 150, height: 35, borderRadius: 4, color: theme.palette.textFieldStyle.color}}
 							id="select-recurrence"
 							value={orgRecurrence}
+							disabled={statusSyncing}
 							onChange={(event) => {
 								handleRecurrenceChange(event.target.value);
 							}}
@@ -3924,30 +3931,26 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 	}
 
 	const parseDate = (val, isEnd) => {
+		const toUtcBoundary = (d, forceFirstOfMonth) => {
+			const year = d.getFullYear()
+			const month = d.getMonth()
+			const day = forceFirstOfMonth ? 1 : d.getDate()
+			return isEnd
+				? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+				: new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+		}
+
 		if (!val) {
-			const d = new Date()
-			if (isEnd) {
-				d.setHours(23, 59, 59, 999)
-			} else {
-				d.setDate(1)
-				d.setHours(0, 0, 0, 0)
-			}
-			return d
+			return toUtcBoundary(new Date(), !isEnd)
 		}
 		const d = new Date(val)
 		if (isNaN(d.getTime())) {
 			if (typeof val.toDate === "function") {
-				return val.toDate()
+				return toUtcBoundary(val.toDate(), false)
 			}
-			const fallback = new Date()
-			if (isEnd) fallback.setHours(23, 59, 59, 999)
-			else {
-				fallback.setDate(1)
-				fallback.setHours(0, 0, 0, 0)
-			}
-			return fallback
+			return toUtcBoundary(new Date(), !isEnd)
 		}
-		return d
+		return toUtcBoundary(d, false)
 	}
 
 	const paperStyle = {
@@ -3967,9 +3970,9 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		const dailyStats = inputdata["daily_statistics"]
 
 		const filterStart = parseDate(startTime, false)
-		filterStart.setHours(0, 0, 0, 0)
+		filterStart.setUTCHours(0, 0, 0, 0)
 		const filterEnd = parseDate(endTime, true)
-		filterEnd.setHours(23, 59, 59, 999)
+		filterEnd.setUTCHours(23, 59, 59, 999)
 
 		const tokenData     = { key: "LLM Tokens", data: [] }
 		const convertedData = { key: "Converted App Runs", data: [] }
@@ -3981,7 +3984,7 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 
 				const itemDate = new Date(item["date"])
 				const normalizedItemDate = new Date(itemDate)
-				normalizedItemDate.setHours(0, 0, 0, 0)
+				normalizedItemDate.setUTCHours(0, 0, 0, 0)
 
 				if (normalizedItemDate < filterStart || normalizedItemDate > filterEnd) continue
 
@@ -4006,9 +4009,9 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		const dailyStats = inputdata["daily_statistics"]
 
 		const filterStart = parseDate(startTime, false)
-		filterStart.setHours(0, 0, 0, 0)
+		filterStart.setUTCHours(0, 0, 0, 0)
 		const filterEnd = parseDate(endTime, true)
-		filterEnd.setHours(23, 59, 59, 999)
+		filterEnd.setUTCHours(23, 59, 59, 999)
 
 		const tokenData     = { key: "LLM Tokens (Child Tenants)",         data: [] }
 		const convertedData = { key: "Converted App Runs (Child Tenants)", data: [] }
@@ -4019,7 +4022,7 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 				if (!item["date"]) continue
 
 				const normalizedItemDate = new Date(item["date"])
-				normalizedItemDate.setHours(0, 0, 0, 0)
+				normalizedItemDate.setUTCHours(0, 0, 0, 0)
 				if (normalizedItemDate < filterStart || normalizedItemDate > filterEnd) continue
 
 				const dayTokens = Number(item["child_org_llm_tokens"] ?? 0)
@@ -4046,10 +4049,10 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 		if (!statistics) return
 
 		const filterStart = parseDate(startTime, false)
-		filterStart.setHours(0, 0, 0, 0)
+		filterStart.setUTCHours(0, 0, 0, 0)
 
 		const filterEnd = parseDate(endTime, true)
-		filterEnd.setHours(23, 59, 59, 999)
+		filterEnd.setUTCHours(23, 59, 59, 999)
 
 		let parentTokens = 0
 		let childTokens = 0
@@ -4062,7 +4065,7 @@ const BillingStatsAI = memo(({ userdata, globalUrl, selectedOrganization, statis
 				if (!item["date"]) continue
 
 				const itemDate = new Date(item["date"])
-				itemDate.setHours(0, 0, 0, 0)
+				itemDate.setUTCHours(0, 0, 0, 0)
 				if (itemDate >= filterStart && itemDate <= filterEnd) {
 					parentTokens += Number(item["llm_tokens"] ?? 0)
 					childTokens += Number(item["child_org_llm_tokens"] ?? 0)

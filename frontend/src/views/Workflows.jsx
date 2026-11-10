@@ -6,7 +6,7 @@ import { Navigate } from "react-router-dom";
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import Priority from "../components/Priority.jsx";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import { isMobile } from "react-device-detect"
 
 import {
@@ -267,9 +267,6 @@ const Workflows = (props) => {
 
   }
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
   const findWorkflow = (filters) => {
     console.log("Using filters: ", filters)

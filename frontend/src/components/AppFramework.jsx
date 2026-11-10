@@ -37,6 +37,7 @@ import edgehandles from "cytoscape-edgehandles";
 import cytoscape from "cytoscape";
 import { toast } from 'react-toastify';
 import { isMobile } from 'react-device-detect';
+import { isCloud } from '../context/ContextApi.jsx';
 
 cytoscape.use(edgehandles)
 
@@ -1129,7 +1130,6 @@ const AppFramework = (props) => {
 	}, [newSelectedApp])
 
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const imgSize = 50;
 	var parsedFrameworkData = frameworkData === undefined ? {} : frameworkData 
 

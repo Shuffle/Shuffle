@@ -6,6 +6,7 @@ import ReactJson from "react-json-view-ssr";
 import { GetIconInfo, collapseField, } from "../views/Workflows2.jsx";
 import defaultCytoscapeStyle from "../defaultCytoscapeStyle.jsx";
 import { v4 as uuidv4, } from "uuid";
+import { grey, red, } from "../utils/workflowHelpers.js"
 
 import {
   Typography,
@@ -245,22 +246,24 @@ const CorrelationGraph = (props) => {
 					continue
 				}
 
-				value.height = 40 
-				value.width = 40 
+				value.height = 8 
+				value.width = 8 
 				value.clusters = [value.id, parentValue.id]
 
+
+				value.type = "CORRELATION"
+
+				// This got too messy
               	const iconInfo = GetIconInfo({
 					"app_name": category,
 					"name": category,
 				})
-
-				//console.log("Iconinfo: ", category, iconInfo)
+				console.log("ICON: ", iconInfo)
+				/*
 				if (iconInfo?.originalIcon === undefined || iconInfo?.originalIcon === null || iconInfo?.originalIcon.length < 2) {
-					value.type = "CORRELATION"
 
 					// Get text length from value.key
 					//value.width = Math.max(125, Math.min(300, value.key.length * 10))
-					value.backgroundcolor = randomColor()
 				} else {
 					
 					value.type = "CORRELATION"
@@ -284,9 +287,20 @@ const CorrelationGraph = (props) => {
 					} else {
 					  value.iconBackground = iconInfo.iconBackgroundColor;
 					}
-					
+				}
+				*/
+
+				value.backgroundcolor = grey 
+				if (value?.category !== undefined && value?.category !== null && value?.category.length > 0) {
+					if (value?.category?.includes("ioc") || value?.category?.includes("indicator")) {
+						// Highlight them because they are important
+						value.width = 40 
+						value.height = 40 
+						value.backgroundcolor = red
+					}
 				}
 
+				value.fillstyle = "solid"
 				value.is_valid = true
 				value.color = "white"
 				//value.backgroundcolor = "blue" 
@@ -634,7 +648,7 @@ const CorrelationGraph = (props) => {
 				  </Typography>
 				  {hoverCategory !== "" ?
 					  <Typography variant="body1" color="textSecondary" style={{marginBottom: 8, }}>
-						Degrees from start: {jumpsFromStart}
+						Distance from start: {jumpsFromStart}
 					  </Typography>
 				  : null}
 				  <div style={{marginTop: 8, }} />

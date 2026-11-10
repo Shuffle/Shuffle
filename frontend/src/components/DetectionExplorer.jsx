@@ -28,7 +28,7 @@ import {
 	green, 
 	red, 
 	grey,
-} from "../views/AngularWorkflow.jsx"
+} from "../utils/workflowHelpers.js"
 
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 

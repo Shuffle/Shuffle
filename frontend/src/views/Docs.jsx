@@ -622,7 +622,6 @@ const Docs = (defaultprops) => {
     const [hasRedirected, setHasRedirected] = useState(false)
     var isArticlePage = window.location.pathname.includes("/articles/") || window.location.pathname === "/articles" ? true : false;
     const searchFieldRef = useRef(null);
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
 
     const printRef = useRef(null);
     const [isPrinting, setIsPrinting] = useState(false);
@@ -1469,7 +1468,7 @@ const Docs = (defaultprops) => {
 			{showPartnerLogo === true ? null : 
 				<div style={{ display: "flex", marginTop: 25, }}>
 					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/contact?category=support" />
-					{isCloud ? 
+					{false ? 
 					<CustomButton title="Support LLM" icon=<img src={theme.palette.singulBlackWhite} style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://shuffler.io/chat" />
 					: null}
 					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />

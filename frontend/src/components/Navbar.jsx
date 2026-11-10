@@ -36,7 +36,7 @@ import { toast } from "react-toastify";
 import AddIcon from '@mui/icons-material/Add';
 import Mousetrap from "mousetrap";
 import LicencePopup from "../components/LicencePopup.jsx";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import theme, { getTheme } from "../theme.jsx";
 
 const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
@@ -835,12 +835,6 @@ const Navbar = (props) => {
   const [isHovered, setIsHovered] = useState("");
   const [orgSelectOpen, setOrgSelectOpen] = useState(false);
   const [showTopbar, setShowTopbar] = useState(true) // Set to true to show top bar
-  const isCloud =
-  serverside === true || typeof window === "undefined"
-    ? true
-    : window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io" ||
-    window.location.host === "localhost:5002";
 
   const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_51PXYYMEJjT17t98N20qEqItyt1fLQjrnn41lPeG2PjnSlZHTDNKHuisAbW00s4KAn86nGuqB9uSVU4ds8MutbnMU00DPXpZ8ZD" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
 
@@ -2810,10 +2804,9 @@ export const fetchMonthlyAppRunUsage = (globalUrl, orgId, isAnnualGrouping = fal
       }
 
       const today = new Date()
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      monthStart.setHours(0, 0, 0, 0)
+      const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1))
       const monthEnd = new Date(today)
-      monthEnd.setHours(23, 59, 59, 999)
+      monthEnd.setUTCHours(23, 59, 59, 999)
 
       let parent = 0
       let child = 0
@@ -2821,16 +2814,11 @@ export const fetchMonthlyAppRunUsage = (globalUrl, orgId, isAnnualGrouping = fal
         const item = dailyStats[key]
         if (item?.date === undefined) continue
         const date = new Date(item.date)
-        date.setHours(0, 0, 0, 0)
+        date.setUTCHours(0, 0, 0, 0)
         if (date >= monthStart && date <= monthEnd) {
           parent += item.app_executions ?? 0
           child += item.child_app_executions ?? 0
         }
-      }
-
-      if (stats.daily_app_executions != null) {
-        parent += stats.daily_app_executions
-        child += stats.daily_child_app_executions ?? 0
       }
 
       return parent + child
@@ -2875,7 +2863,6 @@ export const AppRunsLimitBanner = ({ userdata, globalUrl, onDismiss, onVisibilit
       })
   }, [userdata?.active_org?.id, globalUrl, orgData])
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const limit = userdata?.app_execution_limit || 0
 
   const subs = orgData?.subscriptions || []

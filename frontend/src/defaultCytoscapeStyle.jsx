@@ -1,4 +1,4 @@
-import { red, } from "./views/AngularWorkflow.jsx"
+import { red, } from "./utils/workflowHelpers.js"
 
 export default function defaultCytoscapeStyle(theme, apps) {
   return [

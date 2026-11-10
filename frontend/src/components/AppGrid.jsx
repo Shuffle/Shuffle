@@ -52,6 +52,7 @@ import {
   Button,
   Tooltip,
 } from "@mui/material";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const searchClient = algoliasearch(
   "JNSS5CFDZZ",
@@ -70,9 +71,6 @@ const AppGrid = (props) => {
     isHeader,
   } = props;
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
   const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows;
   const xs =

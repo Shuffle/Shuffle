@@ -44,6 +44,7 @@ import {
 } from "@mui/icons-material";
 
 import SearchField from '../components/Searchfield.jsx'
+import { isCloud } from '../context/ContextApi.jsx';
 
 const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
@@ -77,7 +78,6 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 		textDecoration: "none",
 	}
 
-  const isCloud = serverside === true || typeof window === 'undefined' ? true : window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 	const clearNotifications = () => {
 		// Don't really care about the logout

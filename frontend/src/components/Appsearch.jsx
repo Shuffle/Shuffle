@@ -4,7 +4,7 @@ import {getTheme} from '../theme.jsx';
 import {Link} from 'react-router-dom';
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 //import algoliasearch from 'algoliasearch/lite';
 import algoliasearch from 'algoliasearch';
 import { ALGOLIA_CLIENT_KEY } from "../algolia";
@@ -26,7 +26,6 @@ const Appsearch = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp, inputHeight, apps, }  = props
 	const { themeMode } = useContext(Context)
 	const theme = getTheme(themeMode)
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	const [formMail, setFormMail] = React.useState("");

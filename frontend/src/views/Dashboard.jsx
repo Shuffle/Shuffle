@@ -35,7 +35,7 @@ import {
 } from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
-import { removeParam } from "../views/AngularWorkflow.jsx"
+import { removeParam } from "../utils/workflowHelpers.js"
 
 // core components
 //import {

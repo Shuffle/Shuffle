@@ -4,7 +4,7 @@ import { useInterval } from "react-powerhooks"
 import WorkflowTemplatePopup2 from "../components/WorkflowTemplatePopup2.jsx"
 
 import AppFramework, { parsedDatatypeImages, findSpecificApp, } from "../components/AppFramework.jsx"
-import { Context } from "../context/ContextApi.jsx"
+import { Context, isCloud } from "../context/ContextApi.jsx"
 
 import { ToastContainer, toast } from "react-toastify" 
 import { makeStyles, } from "@mui/styles"
@@ -36,7 +36,7 @@ import {
 } from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
-import { removeParam } from "../views/AngularWorkflow.jsx"
+import { removeParam } from "../utils/workflowHelpers.js"
 
 // core components
 //import {
@@ -908,9 +908,6 @@ const Usecases2 = (props) => {
   const [frameworkData, setFrameworkData] = useState(undefined);
 
 	let navigate = useNavigate();
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
   const [isLoading, setIsLoading] = useState(true);
 

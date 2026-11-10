@@ -49,7 +49,7 @@ import {
 	Folder as FolderIcon,
 	LibraryBooks as LibraryBooksIcon,
 } from "@mui/icons-material";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 import {
 	ForkRight as ForkRightIcon,
@@ -324,11 +324,6 @@ const Apps = (props) => {
   const [isDropzone, setIsDropzone] = React.useState(false);
   const upload = React.useRef(null);
   const [firstLoad, setFirstLoad] = React.useState(true);
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io"
-      ? true
-      : false;
   const borderRadius = 3;
   const viewWidth = 590;
 

@@ -658,7 +658,7 @@ export const GlobalSearchDialog = ({
           navigate(result.path);
         }
       } else if (result.type === 'app') {
-        navigate(`/apps?app=${encodeURIComponent(result.app.name)}`);
+        navigate(`/apps?q=${encodeURIComponent(result.app.name)}&tab=all_apps`);
       } else if (result.type === 'org_workflow') {
         navigate(`/workflows/${result.workflow.id}`);
       } else if (result.type === 'public_workflow') {

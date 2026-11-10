@@ -49,7 +49,7 @@ import { getTheme } from "../theme.jsx";
 import { Link } from "react-router-dom";
 
 import { toast } from "react-toastify";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import Licensed from "./Licensed.jsx";
 import { fetchMonthlyAppRunUsage } from "./Navbar.jsx";
 
@@ -65,7 +65,7 @@ const shuffleSecurityLogo = (
 
 
 
-const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_VERSION }) => {
+const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_VERSION, topOffset = 32 }) => {
 
   const navigate = useNavigate();
   const {setLeftSideBarOpenByClick, leftSideBarOpenByClick, updateOrg, setUpdateOrg, setSearchBarModalOpen, searchBarModalOpen, logoutUrl, themeMode, handleThemeChange,  isDocSearchModalOpen, setIsDocSearchModalOpen, supportEmail} = useContext(Context);
@@ -262,12 +262,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
     fontSize: "16px",
   };
 
-  const isCloud =
-    serverside === true || typeof window === "undefined"
-      ? true
-      : window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io" ||
-        window.location.host === "localhost:5002";
 
   const UpdateTabStatus  = useCallback(() => {  
     const lastTabOpenByUser = localStorage.getItem("lastTabOpenByUser");
@@ -1046,7 +1040,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
         zoom: isSafari ? undefined : 0.8,
         transform: isSafari ? "scale(0.8)" : undefined,
         transformOrigin: isSafari ? "top left" : undefined,
-        height: "calc((100vh - 32px)*1.2)",
+        height: `calc((100vh - ${topOffset}px)*1.2)`,
       }}
     >
       <Box
@@ -1078,7 +1072,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           }}
         >
         <Tooltip 
-          title={showPartnerLogo ? "Go to Home" : "Switch Product"}
+          title="Switch Product"
           placement="top"
           arrow  
           componentsProps={{
@@ -1099,31 +1093,34 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
           }}
         >
           <Box
-            onClick={showPartnerLogo ? undefined : handleProductClick}
+            onClick={handleProductClick}
             sx={{
-              cursor: showPartnerLogo ? "default" : "pointer",
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 0.5 
+              gap: 0.5,
+              borderRadius: "8px",
+              padding: "4px",
+              transition: "background-color 0.2s ease",
+              "&:hover": {
+                backgroundColor: themeMode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.04)",
+              },
             }}
           >
-            <Link
-              to={showPartnerLogo ? (isCloud ? "/" : "/workflows") : "#"}
+            <Box
               style={{ display: "flex", alignItems: "center" }}
-              onClick={(e) => {
-                !showPartnerLogo && e.preventDefault();
-              }}
             >
               <img
                 src={showPartnerLogo ? userdata?.active_org?.image : ShuffleLogo}
-                alt="Shuffle Logo"
+                alt={showPartnerLogo ? (userdata?.active_org?.branding?.brand_name || "Partner Logo") : "Shuffle Logo"}
                 style={{
                   width: showPartnerLogo ? 30 : 26,
                   height: showPartnerLogo ? 30 : 26,
+                  objectFit: "contain",
                 }}
               />
-              {!showPartnerLogo && expandLeftNav && (
+              {expandLeftNav && (
                 <ExpandMoreIcon
                   sx={{
                     fontSize: 16,
@@ -1135,7 +1132,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
                   }}
                 />
               )}
-            </Link>
+            </Box>
           </Box>
         </Tooltip>
 
@@ -1153,7 +1150,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
             sx: {
               mt: 1, 
               ml: -1,
-              backgroundColor: themeMode === "dark" ? "#212121  " : "#FFFFFF",
+              backgroundColor: themeMode === "dark" ? "#212121" : "#FFFFFF",
               backgroundImage: "none", 
               color: theme.palette.text.primary,
               borderRadius: "12px",
@@ -1175,6 +1172,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
         >
           <MenuItem
             onClick={() => {
+              handleProductClose();
               navigateToShuffleSecurity("/incidents?utm_source=shuffler_sidebar");
             }}
             sx={{
@@ -1198,7 +1196,13 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
                 justifyContent: "center",
               }}
             >
-              {shuffleSecurityLogo}
+              {showPartnerLogo ? (
+                <img
+                src={userdata?.active_org?.image}
+                alt="Shuffle Security"
+                style={{ width: 20, height: 20, objectFit: "contain" }}
+              />
+              ): shuffleSecurityLogo}
             </Box>
             <Typography
               sx={{
@@ -1208,15 +1212,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
                 fontFamily: "Inter, Roboto, sans-serif",
               }}
             >
-              <span style={{ color: "#f26402", fontWeight: 600 }}>Shuffle</span>{" "}
+              <span style={{ color: "#f26402", fontWeight: 600 }}>{showPartnerLogo ? userdata?.active_org?.branding?.brand_name : "Shuffle"}</span>{" "}
               Security
             </Typography>
           </MenuItem>
           <MenuItem
             onClick={() => {
               handleProductClose();
-              window.location.href =
-                isCloud && !showPartnerLogo ? "/" : "/workflows";
+              window.location.href = isCloud ? "/" : "/workflows";
             }}
             sx={{
               borderRadius: "8px",
@@ -1250,9 +1253,9 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
               }}
             >
               <img
-                src={ShuffleLogo}
+                src={showPartnerLogo ? userdata?.active_org?.image : ShuffleLogo}
                 alt="Shuffle"
-                style={{ width: 20, height: 20 }}
+                style={{ width: 20, height: 20, objectFit: "contain" }}
               />
             </Box>
             <Typography
@@ -1263,8 +1266,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, SHUFFLE_V
                 fontFamily: "Inter, Roboto, sans-serif",
               }}
             >
-              <span style={{ color: "#f26402", fontWeight: 600 }}>Shuffle</span>{" "}
-          	  Core    
+              {showPartnerLogo && userdata?.active_org?.branding?.brand_name ? (
+                userdata.active_org.branding.brand_name
+              ) : (
+                <>
+                  <span style={{ color: "#f26402", fontWeight: 600 }}>Shuffle</span>{" "}
+                  Core
+                </>
+              )}
             </Typography>
           </MenuItem>
         </Menu>

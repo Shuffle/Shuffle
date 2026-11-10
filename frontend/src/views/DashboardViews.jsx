@@ -37,7 +37,7 @@ import {
 } from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
-import { removeParam } from "../views/AngularWorkflow.jsx"
+import { removeParam } from "../utils/workflowHelpers.js"
 
 // core components
 //import {
@@ -338,7 +338,6 @@ const Dashboard = (props) => {
   const [, setUpdate] = useState(0);
 
 	let navigate = useNavigate();
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 	const path = window.location.pathname
 	if (path !== undefined && path !== null) { 

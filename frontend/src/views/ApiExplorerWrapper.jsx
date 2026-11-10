@@ -3,7 +3,7 @@ import React, { memo, useCallback } from "react";
 import { useState, useEffect, useContext, Suspense } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 import {
   Box,
   IconButton,
@@ -47,7 +47,7 @@ import Markdown from "react-markdown";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import algoliasearch from "algoliasearch/lite";
 import { ALGOLIA_EXPLORER_KEY } from "../algolia";
-import { green } from "../views/AngularWorkflow.jsx"
+import { green } from "../utils/workflowHelpers.js"
 import { setAppCache } from "../views/AppExplorer.jsx"
 
 const searchClient = algoliasearch(
@@ -62,7 +62,6 @@ const ApiExplorer = React.lazy(() => import("../components/ApiExplorer.jsx"));
 const ApiExplorerWrapper = (props) => {
   const { globalUrl, serverside, userdata, isLoggedIn, isLoaded} = props;
   const { supportEmail } = useContext(Context);
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
   const location = useLocation();
   const navigate = useNavigate();
   const [openapi, setOpenapi] = useState({});

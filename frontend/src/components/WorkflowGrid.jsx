@@ -31,7 +31,6 @@ const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_GRID_KEY)
 const AppGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, onlyResults, inputsearch } = props
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	//const [apps, setApps] = React.useState([]);

@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const workflowActionStyle = {
 	display: "flex",
@@ -50,9 +51,6 @@ const WorkflowPaper = (props) => {
     const [anchorEl, setAnchorEl] = React.useState(null);
 		const appGroup = data.action_references === undefined || data.action_references === null ? [] : data.action_references
 
-  	const isCloud =
-			window.location.host === "localhost:3002" ||
-			window.location.host === "shuffler.io";
 
 		//console.log("Workflow: ", data)
     var boxColor = "#86c142";

@@ -26,7 +26,8 @@ import {
 import {
 	green,
 	red,
-} from "../views/AngularWorkflow.jsx"
+} from "../utils/workflowHelpers.js"
+import { isCloud } from "../context/ContextApi.jsx";
 
 const FixWorkflowValidationErrors = (props) => {
 	const { globalUrl, workflow, setWorkflow, setUpdateParent, } = props;
@@ -36,7 +37,6 @@ const FixWorkflowValidationErrors = (props) => {
 	const [appAuth, setAppAuth] = useState([])
 	const [_, setUpdate] = useState(0)
 
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
 
 	if (workflow === undefined || workflow === null) {
 		console.error("Workflow is undefined")

@@ -28,6 +28,7 @@ import {
 
 import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const WorkflowTemplatePopup = (props) => {
 	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage, getAppFramework,  } = props;
@@ -47,7 +48,6 @@ const WorkflowTemplatePopup = (props) => {
 
 	const [requestSent, setRequestSent] = React.useState(false)
   	
-	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 	useEffect(() => {
 		if (modalOpen !== true) {

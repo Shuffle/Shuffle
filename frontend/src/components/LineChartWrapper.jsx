@@ -89,6 +89,7 @@ export const LoadStats = (globalUrl, cachekey) => {
 // Turns date-like keys (ISO strings, Date objects) into "22 Jul 2026". Non-dates pass through untouched.
 const formatDateLabel = (value) => {
 	if (value === undefined || value === null || value === "") return value
+	if (typeof value === "string" && !/\d{4}/.test(value)) return value
 	const parsed = value instanceof Date ? value : new Date(value)
 	if (isNaN(parsed.getTime())) return value
 	return `${parsed.getDate()} ${parsed.toLocaleString("en-US", { month: "short" })} ${parsed.getFullYear()}`
@@ -198,7 +199,7 @@ const LineChartWrapper = (props) => {
 							maxWidth: 240,
 						}}>
 							<Typography variant="body2" style={{fontWeight: 600}}>
-								{data?.x && !isNaN(Date.parse(data.x)) ? 
+								{data?.x && /\d{4}/.test(String(data.x)) && !isNaN(Date.parse(data.x)) ?
 									`${new Date(data.x).getDate()} ${new Date(data.x).toLocaleString("en-US", { month: "long" })} ${new Date(data.x).getFullYear()}` 
 									: (data?.x ?? '')
 								}

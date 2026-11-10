@@ -1115,6 +1115,12 @@ const UserManagmentTab = memo((props) => {
             <span style={{ color: theme.palette.text.primary }}>User Logs</span>
           </DialogTitle>
           <DialogContent>
+            {!userLogViewing.login_info?.length ? (
+              <Typography color="textSecondary">
+                {userLogViewing.username} has never logged in.
+              </Typography>
+            ) : (
+            <>
             {/* ask user for which IP they want to see logs for by iterating of user.login_info */}
             <FormControl fullWidth>
               <InputLabel
@@ -1252,6 +1258,8 @@ const UserManagmentTab = memo((props) => {
                 </ListItem>
               )})}
             </List>
+            </>
+            )}
           </DialogContent>
         </Dialog>
       ) : null
@@ -1429,9 +1437,9 @@ const UserManagmentTab = memo((props) => {
                                 setLogsViewModal(true);
                                 setUserLogViewing(data);
         
-                                if (userLogViewing.login_info !== undefined && userLogViewing.login_info !== null && userLogViewing.login_info.length > 0) {
-                                    getLogs(userLogViewing.login_info[0].ip, userLogViewing.id)
-                                    setIpSelected(userLogViewing.login_info[0].ip);
+                                if (data.login_info?.length > 0) {
+                                    getLogs(data.login_info[0].ip, data.id)
+                                    setIpSelected(data.login_info[0].ip);
                                 }
                                 }}
                             >

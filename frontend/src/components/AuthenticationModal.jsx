@@ -3,7 +3,7 @@ import { CodeHandler, Img, OuterLink, } from '../views/Docs.jsx'
 import { getTheme } from "../theme.jsx";
 import { isMobile } from "react-device-detect"
 import Markdown from "react-markdown";
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 import PaperComponent from "../components/PaperComponent.jsx";
 import { toast } from "react-toastify";
 import { v4 as uuidv4} from "uuid";
@@ -47,7 +47,6 @@ const AuthenticationModal = (props) => {
 		setAppAuthentication,
 	} = props;
 
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
     const [selectedAuthentication, setSelectedAuthentication] = React.useState({});
 	const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
 	const [authenticationType, setAuthenticationType] = React.useState({})

@@ -31,7 +31,7 @@ import {
 import { 
 	green,
 	red,
-} from '../views/AngularWorkflow.jsx'
+} from '../utils/workflowHelpers.js'
 
 import algoliasearch from 'algoliasearch/lite';
 import { ALGOLIA_CLIENT_KEY } from "../algolia";

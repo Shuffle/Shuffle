@@ -40,7 +40,7 @@ import {
 } from "@mui/icons-material";
 import { toast } from 'react-toastify';
 import { Context } from '../context/ContextApi.jsx';
-import { green, yellow, red } from '../views/AngularWorkflow.jsx'
+import { green, yellow, red } from '../utils/workflowHelpers.js'
 import { MonitorHostTable, HostMonitor } from "@shuffleio/shuffle-core";
 import AppSearch from "../components/AppSearch1.jsx";
 
@@ -75,7 +75,9 @@ const EnvironmentTab = memo((props) => {
     useEffect(() => {
         getEnvironments();
         setModalUser({});
-    }, []);
+        const refreshInterval = setInterval(getEnvironments, 30000);
+        return () => clearInterval(refreshInterval);
+    }, [globalUrl, selectedOrganization.id]);
 
     const changeModalData = (field, value) => {
         modalUser[field] = value;
@@ -442,24 +444,28 @@ const EnvironmentTab = memo((props) => {
             `)
         } else if (installationTab === 2) {
              return `helm install shuffle-orborus oci://ghcr.io/shuffle/charts/shuffle \\
-              --namespace shuffle --create-namespace \\
-              --set opensearch.enabled=false \\
-              --set backend.replicaCount=0 \\
-              --set frontend.replicaCount=0 \\
-              --set 'orborus.extraEnvVars[0].name=AUTH' \\
-              --set 'orborus.extraEnvVars[0].value=${auth}' \\
-              --set 'orborus.extraEnvVars[1].name=BASE_URL' \\
-              --set 'orborus.extraEnvVars[1].value=${newUrl}' \\
-              --set 'orborus.extraEnvVars[2].name=ENVIRONMENT_NAME' \\
-              --set 'orborus.extraEnvVars[2].value=${environment.Name}' \\
-              --set 'orborus.extraEnvVars[3].name=ORG' \\
-              --set 'orborus.extraEnvVars[3].value=${environment.org_id}' \\
-              --set shuffle.org="${environment.org_id}"${addProxy ? ` \\
-              --set 'orborus.extraEnvVars[4].name=HTTPS_PROXY' \\
-              --set 'orborus.extraEnvVars[4].value=IP:PORT'` : ""}${skipPipeline ? ` \\
-              --set 'orborus.extraEnvVars[${addProxy ? 5 : 4}].name=SHUFFLE_SKIP_PIPELINES' \\
-              --set 'orborus.extraEnvVars[${addProxy ? 5 : 4}].value=true'` : ""} \\
-              --set persistence.storageClass=standard`
+             --namespace shuffle --create-namespace \\
+             --set opensearch.enabled=false \\
+             --set security.enabled=false \\
+             --set backend.replicaCount=0 \\
+             --set frontend.replicaCount=0 \\
+             --set shuffle.hybrid=true \\
+             --set-string 'shuffle.baseUrl=${newUrl}' \\
+             --set-string 'shuffle.environmentName=${environment.Name}' \\
+             --set-string 'shuffle.org=${environment.org_id}' \\
+             --set-string "shuffle.appRegistry=\${SHUFFLE_APP_REGISTRY:?Set SHUFFLE_APP_REGISTRY to your private registry host:port}" \\
+             --set shuffle.appRegistryInsecure=\${SHUFFLE_APP_REGISTRY_INSECURE:-false} \\
+             --set orborus.manageWorkerDeployments=false \\
+             --set worker.enableHelmDeployment=true \\
+             --set worker.manageAppDeployments=true \\
+             --set worker.imageManager.enabled=true \\
+             --set 'orborus.extraEnvVars[0].name=AUTH' \\
+             --set 'orborus.extraEnvVars[0].value=${auth}' \\
+             ${addProxy ? `--set 'orborus.extraEnvVars[1].name=HTTPS_PROXY' \\
+             --set 'orborus.extraEnvVars[1].value=IP:PORT'` : ""}${skipPipeline ? ` \\
+             --set 'orborus.extraEnvVars[${addProxy ? 2 : 1}].name=SHUFFLE_SKIP_PIPELINES' \\
+             --set 'orborus.extraEnvVars[${addProxy ? 2 : 1}].value=true'` : ""} \\
+             --set persistence.storageClass=standard`
         }
 
         const commandData = `docker rm shuffle-orborus --force; \\\ndocker run -d \\
@@ -1657,7 +1663,7 @@ const EnvironmentTab = memo((props) => {
                           <Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
                             {installationTab === 2 ?
                             <Typography variant='body2' color="textSecondary">
-                                Simply connect to your Kubernetes cluster and run the following command:
+                                Configure a private app registry reachable from the cluster, set SHUFFLE_APP_REGISTRY to its host:port, then run this command. For HTTP registries also set SHUFFLE_APP_REGISTRY_INSECURE=true; authenticated registries need Worker push and app pull secrets configured separately.
                             </Typography>
                             :
                             <Typography variant='body2' color="textSecondary">

@@ -436,7 +436,10 @@ const AuthenticationOauth2 = (props) => {
     const authentication_url = authenticationType.token_uri;
     const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
 	const workflowId = workflow !== undefined ? workflow.id : ""
-    var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
+	// Integration/agent nodes authenticate the wrapped app, not themselves
+	const isWrapper = selectedAction.app_id === "integration" || selectedAction.app_id === "shuffle_agent"
+	const stateApp = isWrapper && selectedApp?.id ? { app_id: selectedApp.id, app_name: selectedApp.name, app_version: selectedApp.app_version } : selectedAction
+    var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${stateApp.app_id}%26app_name%3d${stateApp.app_name}%26app_id%3d${stateApp.app_id}%26app_version%3d${stateApp.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
 
 
 	// This is to make sure authorization can be handled WITHOUT being logged in,

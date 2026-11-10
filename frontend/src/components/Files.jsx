@@ -56,7 +56,7 @@ import DeleteConfirmDialog from "./DeleteConfirmDialog.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import {getTheme} from "../theme.jsx";
 import { Context } from "../context/ContextApi.jsx";
-import { red } from "../views/AngularWorkflow.jsx";
+import { red } from "../utils/workflowHelpers.js";
 
 const Files = memo((props) => {
   const { globalUrl, userdata, serverside, selectedOrganization, isCloud,isSelectedFiles } = props;

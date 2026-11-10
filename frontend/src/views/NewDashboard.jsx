@@ -29,7 +29,7 @@ import {
 import SuccessFailedRunsWidget from '../components/SuccessFailedRunsWidget.jsx';
 import RunsOverTimeWidget from '../components/RunsOverTimeWidget.jsx';
 import DashboardOnboarding from '../components/DashboardOnboarding.jsx';
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 import { useNavigate } from 'react-router-dom';
 
 const NewDashboard = (props) => {
@@ -64,12 +64,6 @@ const NewDashboard = (props) => {
 
   document.title = "Shuffle - Dashboard";
 
-  const isCloud =
-    serverside === true || typeof window === "undefined"
-      ? true
-      : window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io" ||
-        window.location.host === "localhost:5002";
   
   const navigate = useNavigate();
   const handleSfwControls = useCallback((node) => {

@@ -36,6 +36,23 @@ export const OrgStatusMapping = {
   TechnologyPartner: 'Technology Partner',
 }
 
+export const isCloud = (() => {
+  if (typeof window === "undefined" || window.location === undefined) {
+    return true
+  }
+
+  const { host, hostname } = window.location
+  if (host === "localhost:3002") {
+    return true
+  }
+
+  if (hostname.startsWith("shuffler-pr-previews--") && hostname.endsWith(".web.app")) {
+    return true
+  }
+
+  return hostname === "shuffler.io" || hostname.endsWith(".shuffler.io")
+})()
+
 export const AppContext = (props) => {
 	const { serverside } = props
 

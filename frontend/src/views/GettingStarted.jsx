@@ -70,6 +70,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify" 
 import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
+import { isCloud } from "../context/ContextApi.jsx";
 
 const inputColor = "#383B40";
 const surfaceColor = "#27292D";
@@ -161,9 +162,6 @@ const GettingStarted = (props) => {
 
   const [firstLoad, setFirstLoad] = React.useState(true);
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
 
   const findWorkflow = (filters) => {
     if (filters.length === 0) {

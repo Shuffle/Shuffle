@@ -24,7 +24,7 @@ import {
 import React, { useContext, useEffect, useState } from "react";
 import { getTheme } from "../theme.jsx";
 import { Context } from "../context/ContextApi.jsx";
-import { triggers } from "../views/AngularWorkflow.jsx";
+import { triggers } from "../utils/workflowHelpers.js";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import { toast } from "react-toastify";
@@ -38,7 +38,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import InfoIcon from "@mui/icons-material/Info";
 import { Link, useNavigate } from "react-router-dom";
-import { grey } from "../views/AngularWorkflow.jsx"
+import { grey } from "../utils/workflowHelpers.js"
 
 const IMAGE_UPLOAD_PLACEHOLDER = "Uploading image...";
 

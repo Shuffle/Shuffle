@@ -80,14 +80,27 @@ export const StatsDateRangePicker = ({ startTime, endTime, onStartChange, onEndC
 // No val → defaults to today (start: 3 months back at 00:00, end: today at 23:59) // in New limitsBilling updates
 // Invalid val → falls back to today with the same hour rules
 export const parseDate = (val, isEnd) => {
-  const d = (val && !isNaN(new Date(val))) ? new Date(val) : new Date()
-  if (!val && !isEnd) d.setMonth(d.getMonth() - 3)
-  isEnd ? d.setHours(23, 59, 59, 999) : d.setHours(0, 0, 0, 0)
-  return d
+  const hasVal = val && !isNaN(new Date(val))
+  const d = hasVal ? new Date(val) : new Date()
+  if (!hasVal) {
+    if (!isEnd) d.setUTCMonth(d.getUTCMonth() - 3)
+    const year = d.getUTCFullYear()
+    const month = d.getUTCMonth()
+    const day = d.getUTCDate()
+    return isEnd
+      ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+      : new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+  }
+  const year = d.getFullYear()
+  const month = d.getMonth()
+  const day = d.getDate()
+  return isEnd
+    ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+    : new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
 }
 
 // Formats a Date the same way as the graph axis labels, e.g. "29 Apr 2026"
-export const formatRangeDate = (d) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} ${d.getFullYear()}`
+export const formatRangeDate = (d) => `${d.getUTCDate()} ${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })} ${d.getUTCFullYear()}`
 
 // Merges cloud and onprem daily stats arrays into one list keyed by date.
 // Cloud entries are added first. If onprem has an entry for the same date,
@@ -95,12 +108,17 @@ export const formatRangeDate = (d) => `${d.getDate()} ${d.toLocaleString("en-US"
 // Result is sorted oldest → newest.
 const mergeStatsByDate = (cloudList, onpremList) => {
   const mergeFields = ["app_executions", "child_app_executions", "workflow_executions", "subflow_executions", "app_executions_failed", "workflow_executions_failed", "workflow_executions_finished", "org_sync_actions"]
+  const utcDayKey = (dateStr) => {
+    const d = new Date(dateStr)
+    d.setUTCHours(0, 0, 0, 0)
+    return d.toISOString()
+  }
   const map = {}
   for (const item of cloudList) {
-    map[new Date(item.date).toDateString()] = { ...item }
+    map[utcDayKey(item.date)] = { ...item }
   }
   for (const item of onpremList) {
-    const key = new Date(item.date).toDateString()
+    const key = utcDayKey(item.date)
     if (map[key]) mergeFields.forEach(f => { map[key][f] = (map[key][f] || 0) + (item[f] || 0) })
     else map[key] = { ...item }
   }
@@ -454,7 +472,7 @@ const AppStats = (defaultprops) => {
 
 			const date = new Date(item["date"])
 			const today = new Date()
-			if (date.getMonth() === today.getMonth()) {
+			if (date.getUTCMonth() === today.getUTCMonth()) {
 				mtd_cost += (item["app_executions"] * invocationCost)
 			}
 		}
@@ -462,9 +480,9 @@ const AppStats = (defaultprops) => {
 		if (isCloud && mtd_cost !== monthToDateCost) {
 			// Find how many days there have been in the current month
 			const today = new Date()
-			const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate()
+			const daysInMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth()+1, 0)).getUTCDate()
 			// Find what day we are on
-			const day = today.getDate()
+			const day = today.getUTCDate()
 			// Find how many days are left in the month
 			const daysLeft = daysInMonth - day
 
@@ -492,7 +510,7 @@ const AppStats = (defaultprops) => {
 
 		const filterByRange = (arr) => (arr || []).filter(item => {
 			if (!item.date) return false
-			const d = new Date(item.date); d.setHours(0, 0, 0, 0)
+			const d = new Date(item.date); d.setUTCHours(0, 0, 0, 0)
 			return d >= foundstarttime && d <= foundendtime
 		})
 

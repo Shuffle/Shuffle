@@ -33,7 +33,7 @@ import {
     AvatarGroup,
 } from "@mui/material"
 
-import { Context } from '../context/ContextApi.jsx';
+import { Context, isCloud } from '../context/ContextApi.jsx';
 
 import { Search as SearchIcon, Close as CloseIcon, Folder as FolderIcon, Code as CodeIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material'
 
@@ -78,7 +78,6 @@ const SearchData = props => {
     //    return null
     //}
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
     // if (window.location.pathname === "/docs" || window.location.pathname === "/apps" || window.location.pathname === "/usecases"  ) {
     //     setModalOpen(false)
     // }

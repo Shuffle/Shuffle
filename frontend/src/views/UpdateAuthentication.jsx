@@ -15,7 +15,7 @@ import { ToastContainer, toast } from "react-toastify"
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
 import { base64_decode, appCategories } from "../views/AppCreator.jsx";
-import { Context } from "../context/ContextApi.jsx";
+import { Context, isCloud } from "../context/ContextApi.jsx";
 
 const SetAuthentication = (props) => {
   const { globalUrl, serverside } = props;
@@ -27,7 +27,6 @@ const SetAuthentication = (props) => {
 
   const [showShuffle, setShowShuffle] = React.useState(false);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   //const alert = useAlert();
 
   const parseIncomingOpenapiData = (data) => {
