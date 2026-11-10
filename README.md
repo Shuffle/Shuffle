@@ -23,13 +23,12 @@ Shuffle Automation
 
 [Shuffle](https://shuffler.io) is an open source automation platform, built for and by the security professionals. Security operations is complex, but it doesn't have to be. Built to work well with MSSP's and other service providers in mind.
 
-[ Get training ](https://shuffler.io/training)
 [_Key Features_](https://shuffler.io/docs/features) —
 [_Community & Support_](https://discord.gg/B2CBzUm) —
 [ Get training ](https://shuffler.io/training) -
 [_Documentation_](https://shuffler.io/docs) —
 [_Getting Started_](https://shuffler.io/docs/getting_started) —
-[_Development_](https://github.com/shuffle/Shuffle/blob/master/.github/CONTRIBUTING.md) 
+[_Development_](https://github.com/shuffle/Shuffle/blob/main/.github/CONTRIBUTING.md) -
 [ Set up a demo call ](https://shuffler.io/contact)
 
 Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
@@ -40,10 +39,20 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 ![Example Shuffle webhook integration](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
 
 ## Try it
-* Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
+* Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/main/.github/install-guide.md)
+* Local development: see the [local development quick start](.github/install-guide.md#local-development-installation)
 * Cloud: Register at https://shuffler.io/register and get cooking
 
 Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
+
+## Local development
+
+The [local development quick start](.github/install-guide.md#local-development-installation) in the install guide covers prerequisites (including the Windows/WSL2 setup), starting the backend and database with Docker, running the frontend, creating your admin account, ports and troubleshooting.
+
+```bash
+docker compose up -d opensearch backend   # backend + database
+cd frontend && npm install && npm start     # frontend on http://localhost:3000
+```
 
 ## Support
 * [Discord](https://discord.gg/B2CBzUm)
@@ -60,10 +69,6 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 
 ## Documentation
 [Documentation](https://shuffler.io/docs) can be found on [https://shuffler.io/docs](https://shuffler.io/docs) and is written here: [https://github.com/shuffle/shuffle-docs](https://github.com/shuffle/shuffle-docs).
-
-### Setting up a local development environment
-
-Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md#local-development-installation)!
 
 ## Related repositories
 * OpenAPI apps: [https://github.com/shuffle/security-openapis](https://github.com/shuffle/security-openapis)
@@ -92,7 +97,7 @@ These are the main areas to contribute in:
 * Workflow creation (GUI & Conceptualizing) 
 * Content Creation (Blogs, videos etc) 
 
-Contributing guidelines are outlined [here](https://github.com/shuffle/Shuffle/blob/master/.github/CONTRIBUTING.md).
+Contributing guidelines are outlined [here](https://github.com/shuffle/Shuffle/blob/main/.github/CONTRIBUTING.md).
 
 ## Contributors 
 ![ICPL logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/src/assets/img/icpl_logo.png)
@@ -129,12 +134,15 @@ Below is the folder structure with a short explanation
 ├── backend					# Contains backend related code.
 │   ├── go-app 			# The backend golang webserver
 │   └── app_sdk			# The SDK used for apps
-├── frontend				# Contains frontend code. ReactJS, Material UI and cytoscape
+├── frontend				# Contains frontend code. ReactJS (Vite), Material UI and cytoscape
 ├── functions				# Has execution and extension resources, such as the Wazuh integration
 │   ├── onprem				# Code for onprem solutions
 │   │   ├── Orborus 	# Distributes execution locations
 │   │   ├── Worker		# Runs a workflow
-└ docker-compose.yml 	# Used for deployments
+├── shuffle-apps			# Local app folder (mounted into the backend container)
+├── shuffle-database		# OpenSearch data (created/used by docker compose)
+├── .env					# Configuration used by docker-compose.yml
+└── docker-compose.yml 	# Used for deployments
 ```
 
 [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
