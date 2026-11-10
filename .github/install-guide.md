@@ -99,21 +99,117 @@ https://shuffler.io/docs/configuration
 
 # Local development installation
 
-Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes. We recommend having Shuffle running with the Docker-compose, then manually running the portion that you want to test and/or edit.
+Local development uses **ReactJS** (Vite) for the frontend and **Golang** for the backend. The quick start below runs the backend and database in Docker and the frontend as a dev server, so you don't need Go installed. If you want to edit the backend itself, see [Advanced: run the pieces natively](#advanced-run-the-pieces-natively).
 
-**PS: You have to stop the Backend Docker container to get this one working**
+## Quick start (Docker backend + local frontend)
 
-**PPS: Use the "main" branch when developing to get it set up easier**
+### 1. Prerequisites
 
-## Frontend - ReactJS /w cytoscape
+| Tool | Why | Notes |
+|------|-----|-------|
+| [Git](https://git-scm.com/downloads) | Clone the repo | |
+| [Docker](https://docs.docker.com/get-docker/) with Compose v2 | Runs the backend and OpenSearch | Docker must be **running** before you continue (`docker info` should print a "Server" section) |
+| [Node.js](https://nodejs.org/en/download/) 20+ and npm | Runs the frontend | `package-lock.json` is committed, so `npm` is the default. `yarn` also works |
+| 8 GB+ RAM free | OpenSearch is configured with a 3 GB Java heap | The absolute minimum is 4 GB |
+
+**Windows:** Docker Desktop needs WSL2. If Docker shows `Virtual Machine Platform not enabled` or never reaches "Engine running", open PowerShell **as Administrator**, run the commands below, then **reboot**:
+```powershell
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+wsl --update
+```
+
+**Linux:** OpenSearch needs a higher memory-map limit and write access to the database folder:
+```bash
+sudo sysctl -w vm.max_map_count=262144
+sudo chown -R 1000:1000 shuffle-database
+```
+
+### 2. Start the backend and database
+
+```bash
+git clone https://github.com/Shuffle/Shuffle
+cd Shuffle
+docker compose up -d opensearch backend
+```
+
+Name the two services explicitly. A plain `docker compose up -d` also starts the full stack (the bundled frontend container, Orborus and `shuffle-security`), which you don't need for development.
+
+The first start takes a few minutes. The backend logs `connection refused` to OpenSearch while the database boots, and it then builds the app images in the background. Both are normal. Follow progress with `docker logs -f shuffle-backend`.
+
+Check that it works:
+```bash
+curl http://localhost:5001/api/v1/checkusers
+# -> {"success": true, ...}
+```
+`/api/v1/getinfo` returns `401` until you are logged in. That also means the backend is up.
+
+### 3. Start the frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+Open http://localhost:3000. The dev server proxies `/api` to the backend on `localhost:5001` (see [frontend/vite.config.js](../frontend/vite.config.js)).
+
+### 4. Create your admin account
+
+Shuffle has **no default username or password**. When you open http://localhost:3000 for the first time, you are taken to the login page, where you enter a username and password of your choice (minimum 3 characters). This creates the admin account, and you can then sign in with the same credentials. You don't need to set anything in `.env`.
+
+*Optional:* to pre-create the account instead, set `SHUFFLE_DEFAULT_USERNAME` and `SHUFFLE_DEFAULT_PASSWORD` in [.env](../.env) before starting the backend.
+
+### Ports
+
+| Port | What |
+|------|------|
+| 3000 | Frontend dev server (`npm start`) |
+| 3001 / 3443 | Frontend container from `docker compose up` (HTTP / HTTPS), not needed for development |
+| 5001 | Backend REST API |
+| 9200 | OpenSearch |
+
+### Running workflows (optional)
+
+Building and editing workflows works with the steps above. To actually **execute** workflows, also start Orborus:
+```bash
+docker compose up -d orborus
+```
+
+### Stopping and resetting
+
+```bash
+docker compose stop                 # stop containers, keep your data
+docker compose down                 # remove containers, keep your data (stored in ./shuffle-database)
+docker compose down -v              # remove containers and volumes
+```
+To start from scratch, also clear the contents of `shuffle-database/` (keep its `README.md`) while the containers are stopped.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `failed to connect to the docker API` or `500 Internal Server Error` from `docker info` | Docker isn't running. Start Docker Desktop. On Windows see the WSL2 note above |
+| `port is already allocated` | Something else is using 3000, 5001 or 9200. Stop it, or change `BACKEND_PORT` / `FRONTEND_PORT` in [.env](../.env) |
+| OpenSearch container keeps restarting | Not enough memory. Lower `-Xms3072m -Xmx3072m` in `docker-compose.yml`, or give Docker more RAM. On Linux, check `vm.max_map_count` |
+| Frontend loads but API calls fail | Check that the backend is up with the `curl` above, and that it's reachable on `localhost:5001` |
+| Apps list is empty | The backend is still downloading and building apps. Wait a few minutes, and check `docker logs shuffle-backend`. Behind a proxy, set `HTTP_PROXY` / `HTTPS_PROXY` in [.env](../.env) |
+
+**Want to run the Go backend natively instead?** See [Advanced: run the pieces natively](#advanced-run-the-pieces-natively) below. Stop the backend container first (`docker compose stop backend`), keep OpenSearch running, and note that you will need Go installed.
+
+## Advanced: run the pieces natively
+
+Use this if you want to edit and debug a component directly. **You have to stop the matching Docker container first** (for example `docker compose stop backend`). Keep OpenSearch running in Docker.
+
+
+### Frontend - ReactJS /w cytoscape
 http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
 ```bash
 cd frontend
-yarn install
-yarn start
+npm install   # or: yarn install
+npm start     # or: yarn start
 ```
 
-## Backend - Golang
+### Backend - Golang
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
 export SHUFFLE_OPENSEARCH_URL="https://localhost:9200"
@@ -136,7 +232,7 @@ Large portions of the backend is written in another repository - [shuffle-shared
 4. Make the changes you want, then restart the backend server!
 5. With your changes made, make a pull request :fire:
 
-## Database - Opensearch 
+### Database - Opensearch 
 Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined.
 
 What it means:
@@ -144,7 +240,7 @@ What it means:
 2. Make sure you have the docker-compose.yml file from this repository
 3. Run `docker-compose up opensearch -d`
 
-## Orborus
+### Orborus
 Execution of Workflows:
 PS: This requires some specific environment variables
 ```
