@@ -184,8 +184,11 @@ spec:
               value: tcp://127.0.0.1:2375
             - name: DOCKER_TLS_CERTDIR
               value: ""
-          {{- if .Values.shuffle.appRegistryInsecure }}
           args:
+            - dockerd
+            - --host=unix:///var/run/docker.sock
+            - --host=tcp://127.0.0.1:2375
+          {{- if .Values.shuffle.appRegistryInsecure }}
             - --insecure-registry={{ .Values.shuffle.appRegistry }}
           {{- end }}
           readinessProbe:

@@ -25,6 +25,62 @@ Make sure that no other application is deployed to the shuffle namespace, as shu
 
 Only a single deployment of shuffle is supported per namespace.
 
+### Hybrid EKS with Amazon ECR (early Worker build)
+
+The ECR-capable Worker uses the AWS SDK's default credential chain. Associate an
+IAM role with the **Worker** service account through EKS Pod Identity or IRSA;
+no stored AWS access keys or registry password secret are required. ECR tokens
+are cached per registry and refreshed on demand five minutes before expiry.
+
+Apply these overrides to your existing hybrid values; retain the settings that
+disable the local backend, frontend, and OpenSearch. The preview tag must be
+published to your image registry before EKS can pull it.
+
+```yaml
+shuffle:
+  hybrid: true
+  baseUrl: https://ca.shuffler.io
+  appRegistry: 123456789012.dkr.ecr.ca-central-1.amazonaws.com
+  appRegistryInsecure: false
+  appBaseImageName: frikky/shuffle
+orborus:
+  manageWorkerDeployments: false
+worker:
+  enableHelmDeployment: true
+  image:
+    tag: 2.3.1-ecr-preview.1 # Publish/load this preview image before upgrading.
+  imageManager:
+    enabled: true
+    registryAuthSecret: ""
+  serviceAccount:
+    create: true
+    name: shuffle-worker
+    # IRSA only; Pod Identity uses an association instead of this annotation.
+    # annotations:
+    #   eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/shuffle-worker
+```
+
+Retain the existing Orborus environment authentication and Cloud configuration.
+Workflow-triggered private-app downloads use the execution token without an
+`Org-Id` header; no additional download credential is needed.
+
+Pre-create the ECR repository `frikky/shuffle` (or the repository configured by
+`appBaseImageName`). The Worker's IAM role needs `ecr:GetAuthorizationToken` on
+`*`, plus `ecr:BatchCheckLayerAvailability`, `ecr:BatchGetImage`,
+`ecr:GetDownloadUrlForLayer`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`,
+`ecr:CompleteLayerUpload`, and `ecr:PutImage` on the app repository ARN. The
+Worker does not create repositories or IAM resources.
+
+App images are pulled by the EKS **node IAM role**, not the Worker's Pod Identity
+role. Configure the node role with ECR pull permissions and any required
+cross-account repository policy. EKS refreshes its node pull credentials; do
+not use a manually generated 12-hour ECR token as a permanent pull secret.
+
+The image manager still needs EC2-backed nodes and a privileged Docker sidecar.
+The sidecar keeps its Unix socket and binds its unauthenticated TCP API only to
+`127.0.0.1:2375`, shared within the Worker pod. It is not exposed through a
+Service or a host port. This does not remove the sidecar's privileged access.
+
 ## Uninstallation
 
 ```sh
@@ -177,6 +233,8 @@ For a cloud-connected hybrid cluster without a local Shuffle backend, the Worker
 
 Kubernetes image pulls are authenticated separately. Configure `app.serviceAccount.imagePullSecrets` when needed; on GKE, grant the node service account Artifact Registry Reader access instead. Workload Identity on the Worker does not change the identity used by kubelet to pull app images.
 
+The chart omits the backend app-builder PVC in Hybrid mode when `backend.replicaCount=0` and backend HPA is disabled. A local backend still requires this claim even when `persistence.enabled=false`.
+
 ```yaml
 shuffle:
   hybrid: true
@@ -197,7 +255,9 @@ app:
       - shuffle-app-registry-pull
 ```
 
-On first use, the Worker downloads the image archive from Shuffle Cloud, loads it into its Pod-local Docker daemon, pushes it to `shuffle.appRegistry`, verifies the pushed manifest, and then creates or refreshes the app Deployment. No internal image-manager HTTP service is exposed.
+On first use, the Worker downloads the image archive from Shuffle Cloud, loads it into its Pod-local Docker daemon, pushes it to `shuffle.appRegistry`, verifies the pushed manifest, and creates a digest-pinned app Deployment. On the next use after seven days, it checks Cloud again, using conditional downloads when an ETag is available. A per-image ConfigMap persists the last successful check, digest, and a refresh claim across Worker restarts and replicas; it contains no execution credentials. Apply the updated Worker RBAC when upgrading. Failed refreshes retain the previous digest and retry after one hour. Explicit image refresh requests bypass the weekly interval. `SHUFFLE_AUTO_IMAGE_DOWNLOAD=false` disables automatic checks.
+
+Changed images receive versioned app service names so new actions use the replacement while already-dispatched actions keep their existing service. Unchanged digests reuse the same Deployment. Old app Deployments and Services are deliberately retained; monitor their resource usage and remove unused versions only after executions using them have drained. No internal image-manager HTTP service is exposed, and no Cloud backend deployment is required. Servers without conditional-download support transfer the full archive on each weekly check.
 
 For Artifact Registry, use `shuffle.appRegistry: REGION-docker.pkg.dev/PROJECT/REPOSITORY` and `shuffle.appBaseImageName: frikky/shuffle`. GitHub then maps to `REGION-docker.pkg.dev/PROJECT/REPOSITORY/frikky/shuffle:github_1.1.0`. These settings apply to all Worker-managed app images. Enabled Helm apps also inherit `shuffle.appRegistry` when their registry is empty. Set explicit `apps.<key>.image.registry`, `repository`, and `tag` values to retain existing Docker Hub or custom image paths; inspect `helm template` before applying a global registry change. `global.imageRegistry`, if set, overrides Helm image registries and should be empty for a mixed-registry deployment. See the [Hybrid Kubernetes setup](https://shuffler.io/docs/configuration#kubernetes-runtime) for the GKE IAM and Helm configuration.
 
@@ -629,7 +689,7 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `worker.imageManager.enabled`                              | Enable the hybrid Worker image manager. Requires a privileged Docker sidecar and a Helm-managed Worker.                                                                                                                         | `false`                  |
 | `worker.imageManager.dockerImage`                          | Docker-in-Docker sidecar image                                                                                                                                                                                                  | `docker:28-dind`         |
 | `worker.imageManager.storageSizeLimit`                     | Ephemeral Docker storage limit                                                                                                                                                                                                  | `20Gi`                   |
-| `worker.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password. Empty uses Google ADC for Artifact Registry when supported by the Worker image.                                                                                      | `""`                     |
+| `worker.imageManager.registryAuthSecret`                   | Existing Secret containing registry username and password. Empty uses AWS role credentials for ECR or Google ADC for Artifact Registry when supported by the Worker image.                                                    | `""`                     |
 | `worker.imageManager.registryUsernameKey`                  | Username key in registryAuthSecret                                                                                                                                                                                              | `username`               |
 | `worker.imageManager.registryPasswordKey`                  | Password key in registryAuthSecret                                                                                                                                                                                              | `password`               |
 | `worker.imageManager.resources`                            | Docker sidecar resource requests and limits                                                                                                                                                                                     | `{}`                     |

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
+	ecrtypes "github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/registry"
@@ -39,6 +44,9 @@ var imageManagerLock sync.Mutex
 var imageManagerDocker *dockerclient.Client
 var artifactRegistryTokenLock sync.Mutex
 var artifactRegistryToken *oauth2.Token
+var ecrTokenLock sync.Mutex
+var ecrTokens = map[string]ecrtypes.AuthorizationData{}
+var ecrRegistryHost = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr(?:-fips)?\.([a-z0-9-]+)\.amazonaws\.com(?:\.cn)?$`)
 
 const faultyAppSHA256 = "607c9de1de3172a73f8fa0deb4d349d2119a12df427d21f1852af4293dd09386"
 const maxInspectedAppSize = 1024 * 1024
@@ -112,6 +120,41 @@ func registryAuth(ctx context.Context, target string) (string, error) {
 		}
 		auth.Username = "oauth2accesstoken"
 		auth.Password = artifactRegistryToken.AccessToken
+	}
+	if match := ecrRegistryHost.FindStringSubmatch(strings.ToLower(host)); len(match) > 0 && auth.Username == "" && auth.Password == "" && auth.IdentityToken == "" {
+		ecrTokenLock.Lock()
+		defer ecrTokenLock.Unlock()
+		token := ecrTokens[host]
+		// Refresh on demand before the token can expire during an image push.
+		if token.ExpiresAt == nil || time.Until(*token.ExpiresAt) < 5*time.Minute {
+			authCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			cfg, err := config.LoadDefaultConfig(authCtx, config.WithRegion(match[1]))
+			if err != nil {
+				return "", fmt.Errorf("load ECR credentials (configure EKS Pod Identity or IRSA): %w", err)
+			}
+			result, err := ecr.NewFromConfig(cfg).GetAuthorizationToken(authCtx, &ecr.GetAuthorizationTokenInput{})
+			if err != nil {
+				return "", fmt.Errorf("get ECR authorization token for %s: %w", host, err)
+			}
+			if len(result.AuthorizationData) == 0 {
+				return "", errors.New("ECR returned no authorization token")
+			}
+			token = result.AuthorizationData[0]
+		}
+		if token.ExpiresAt == nil || time.Until(*token.ExpiresAt) < 5*time.Minute {
+			return "", errors.New("ECR returned an expired or short-lived authorization token")
+		}
+		decoded, err := base64.StdEncoding.DecodeString(aws.ToString(token.AuthorizationToken))
+		if err != nil {
+			return "", errors.New("ECR returned an invalid authorization token")
+		}
+		username, password, ok := strings.Cut(string(decoded), ":")
+		if !ok || username != "AWS" || password == "" {
+			return "", errors.New("ECR returned invalid registry credentials")
+		}
+		auth.Username, auth.Password = username, password
+		ecrTokens[host] = token
 	}
 	return registry.EncodeAuthConfig(auth)
 }

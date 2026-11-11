@@ -1491,7 +1491,7 @@ worker:
   ## @param worker.imageManager.enabled Enable the hybrid worker image manager
   ## @param worker.imageManager.dockerImage Docker-in-Docker sidecar image
   ## @param worker.imageManager.storageSizeLimit Ephemeral Docker storage limit
-  ## @param worker.imageManager.registryAuthSecret Existing Secret containing registry username and password. If empty, Artifact Registry uses Google application-default credentials (GKE Workload Identity).
+  ## @param worker.imageManager.registryAuthSecret Existing Secret containing registry username and password. If empty, ECR uses AWS role credentials (EKS Pod Identity/IRSA) and Artifact Registry uses Google application-default credentials.
   ## @param worker.imageManager.registryUsernameKey Username key in registryAuthSecret
   ## @param worker.imageManager.registryPasswordKey Password key in registryAuthSecret
   ## @param worker.imageManager.resources Docker sidecar resource requests and limits

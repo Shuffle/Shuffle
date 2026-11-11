@@ -10,6 +10,11 @@ metadata:
   {{- end }}
 rules:
   {{- if .Values.worker.manageAppDeployments }}
+  {{- if .Values.worker.imageManager.enabled }}
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update"]
+  {{- end }}
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list", "delete"]
