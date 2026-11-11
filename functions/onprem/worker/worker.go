@@ -1756,7 +1756,9 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		}
 
 		// Peer image warming must not block local execution dispatch.
-		go askOtherWorkersToDownloadImage(imageName)
+		if isKubernetes != "true" {
+			go askOtherWorkersToDownloadImage(imageName)
+		}
 
 		// Added UUID to identifier just in case
 		//identifier := fmt.Sprintf("%s_%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId, uuid.NewV4())
@@ -1926,7 +1928,21 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// Needs optimization lol
 
 		pullOptions := dockerimage.PullOptions{}
-		if strings.ToLower(cleanupEnv) == "true" {
+		if isKubernetes == "true" {
+			if err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action); err != nil {
+				log.Printf("[ERROR][%s] Kubernetes app deployment failed for image %s: %s", workflowExecution.ExecutionId, imageName, err)
+				sendSelfRequest(shuffle.ActionResult{
+					Action:        action,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        fmt.Sprintf("Kubernetes app deployment failed for image %s: %s", imageName, err),
+					StartedAt:     time.Now().Unix(),
+					CompletedAt:   time.Now().Unix(),
+					Status:        "FAILURE",
+				})
+				return
+			}
+		} else if strings.ToLower(cleanupEnv) == "true" {
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
@@ -1934,11 +1950,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 					return
 				}
-				if isKubernetes == "true" {
-					log.Printf("[ERROR] Kubernetes app deployment failed for image %s; registry fallback is disabled: %s", imageName, err)
-					return
-				}
-
 				executed := false
 				if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") != "false" {
 					err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, imageName)
@@ -2048,11 +2059,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 					return
 				}
-				if isKubernetes == "true" {
-					log.Printf("[ERROR] Kubernetes app deployment failed for image %s; registry fallback is disabled: %s", imageName, err)
-					return
-				}
-
 				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
 				// FIXME: Should try to remotely download directly if this persists.
 				imageName = images[1]
