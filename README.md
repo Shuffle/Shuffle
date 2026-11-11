@@ -87,7 +87,7 @@ cd frontend && npm install && npm start     # frontend on http://localhost:3000
 [https://shuffler.io](https://shuffler.io)
 
 ## Contributing
-We want to make the world of cybersecurity more accessible and need all the help we can get. Send an email to [support@shuffler](mailto:support@shuffler.io) and we'll make sure to give you any training you may need.
+We want to make the world of cybersecurity more accessible and need all the help we can get. Send an email to [support@shuffler.io](mailto:support@shuffler.io) and we'll make sure to give you any training you may need.
 
 These are the main areas to contribute in:
 * Frontend (ReactJS)
