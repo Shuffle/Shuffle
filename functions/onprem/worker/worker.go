@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	gomemcache "github.com/bradfitz/gomemcache/memcache"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -303,6 +304,74 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 		return errors.New("ExecutionId can't be empty.")
 	}
 
+	if len(releaseUpdateLock) == 0 && os.Getenv("SHUFFLE_MEMCACHED") != "" {
+		claimKey := fmt.Sprintf("workflowexecution_%s_update", workflowExecution.ExecutionId)
+		claimed := false
+		var claimErr error
+		for attempt := 0; attempt < 300; attempt++ {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			claimed, claimErr = shuffle.ClaimCacheKey(claimKey, 120)
+			if claimErr != nil || claimed {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if claimErr != nil || !claimed {
+			return fmt.Errorf("execution snapshot update is busy: %v", claimErr)
+		}
+		releaseUpdateLock = []func(){func() {
+			if claimKey != "" {
+				if err := shuffle.DeleteCache(ctx, claimKey); err != nil {
+					log.Printf("[WARNING][%s] Failed releasing execution update lock: %s", workflowExecution.ExecutionId, err)
+				}
+				claimKey = ""
+			}
+		}}
+		defer releaseUpdateLock[0]()
+	}
+
+	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
+	cached, cacheErr := shuffle.GetCache(ctx, cacheKey)
+	if cacheErr == nil {
+		var saved shuffle.WorkflowExecution
+		if err := json.Unmarshal(cached.([]byte), &saved); err != nil {
+			return err
+		}
+		if saved.ExecutionId != workflowExecution.ExecutionId || saved.Authorization != workflowExecution.Authorization {
+			return errors.New("cached execution identity does not match the worker snapshot")
+		}
+		if saved.Status == "FINISHED" || saved.Status == "FAILURE" || saved.Status == "ABORTED" {
+			workflowExecution = saved
+		} else {
+			workflowExecution.Results = shuffle.MergeExecutionResults(workflowExecution.Results, saved.Results)
+			if workflowExecution.Status == "FINISHED" {
+				required := len(workflowExecution.Workflow.Actions)
+				for _, trigger := range workflowExecution.Workflow.Triggers {
+					if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+						required++
+					}
+				}
+				incomplete := len(workflowExecution.Results) < required
+				for _, result := range workflowExecution.Results {
+					if result.Status == "EXECUTING" || result.Status == "WAITING" || strings.HasPrefix(result.Status, "agent_") ||
+						(saved.Workflow.Configuration.ExitOnError && (result.Status == "FAILURE" || result.Status == "ABORTED")) {
+						incomplete = true
+						break
+					}
+				}
+				if incomplete {
+					// Reconcile completion only after retaining the active execution's pending work.
+					workflowExecution.Status = saved.Status
+					workflowExecution.CompletedAt = saved.CompletedAt
+				}
+			}
+		}
+	} else if os.Getenv("SHUFFLE_MEMCACHED") != "" && !errors.Is(cacheErr, gomemcache.ErrCacheMiss) {
+		return cacheErr
+	}
+
 	if len(workflowExecution.Workflow.Actions) > 0 {
 		snapshotKey := fmt.Sprintf("workflowexecution_%s_action_snapshot", workflowExecution.ExecutionId)
 		if _, err := shuffle.GetCache(ctx, snapshotKey); err != nil {
@@ -314,7 +383,6 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 
 	//log.Printf("[DEBUG][%s] Setting with %d results (pre)", workflowExecution.ExecutionId, len(workflowExecution.Results))
 	workflowExecution, _ = shuffle.Fixexecution(ctx, workflowExecution)
-	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 
 	execData, err := json.Marshal(workflowExecution)
 	if err != nil {
@@ -3792,6 +3860,8 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 			appCallbackUrl = fmt.Sprintf("http://%s:%d", "shuffle-workers", baseport)
 			log.Printf("[DEBUG] NEW WORKER APP: %s", appCallbackUrl)
 			hostname = "shuffle-workers"
+		} else if os.Getenv("SHUFFLE_MEMCACHED") != "" {
+			appCallbackUrl = fmt.Sprintf("http://shuffle-workers:%d", baseport)
 		} else {
 			appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 		}
@@ -4591,6 +4661,9 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 			parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 			//parsedRequest.Url = parsedRequest.BaseUrl
 		}
+	} else if os.Getenv("SHUFFLE_MEMCACHED") != "" && (os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm") && isKubernetes != "true" {
+		// Shared execution state lets another Swarm task accept results after a Worker restart.
+		parsedRequest.BaseUrl = fmt.Sprintf("http://shuffle-workers:%d", baseport)
 	} else if len(hostname) > 0 {
 		// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
 		// This means running with VIP instead.
@@ -5433,7 +5506,14 @@ func processRunExecution(execRequest shuffle.OrborusExecutionRequest) {
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("[ERROR][%s] Failed initializing execution saving: %s", workflowExecution.ExecutionId, err)
+		return
 	}
+	currentExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecution.ExecutionId)
+	if err != nil {
+		log.Printf("[ERROR][%s] Failed reloading initialized execution: %s", workflowExecution.ExecutionId, err)
+		return
+	}
+	workflowExecution = *currentExecution
 
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 		log.Printf("[DEBUG] Workflow %s is finished before dispatch. Exiting async run setup.", workflowExecution.ExecutionId)
@@ -5452,17 +5532,6 @@ func processRunExecution(execRequest shuffle.OrborusExecutionRequest) {
 	if workflowExecution.Status != "EXECUTING" {
 		log.Printf("[WARNING][%s] Exiting async run as execution status is %s", workflowExecution.ExecutionId, workflowExecution.Status)
 		return
-	}
-
-	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
-	execData, err := json.Marshal(workflowExecution)
-	if err != nil {
-		log.Printf("[ERROR][%s] Failed marshalling execution during set (3): %s", workflowExecution.ExecutionId, err)
-	} else {
-		err = shuffle.SetCache(ctx, cacheKey, execData, 31)
-		if err != nil {
-			log.Printf("[ERROR][%s] Failed adding to cache during setexecution (3): %s", workflowExecution.ExecutionId, err)
-		}
 	}
 
 	err = executionInit(workflowExecution)
