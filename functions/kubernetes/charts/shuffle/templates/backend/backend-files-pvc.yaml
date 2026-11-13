@@ -1,5 +1,5 @@
 {{- if .Values.persistence.enabled }}
-{{- if (not .Values.persistence.files.existingClaim) }}
+{{- if (and (not .Values.persistence.files.existingClaim) (ne .Values.storage.type "s3")) }}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
