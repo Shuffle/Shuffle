@@ -618,6 +618,127 @@ func handleGetWorkflowExecutionResult(resp http.ResponseWriter, request *http.Re
 
 }
 
+// isWorkflowExecutionSnapshot reports whether body is a full WorkflowExecution
+// snapshot as posted by workers to /api/v1/streams, as opposed to the
+// ActionResult payloads posted by apps. A WorkflowExecution carries a top-level
+// "workflow" object and never a top-level "action" object, while an ActionResult
+// always carries "action".
+func isWorkflowExecutionSnapshot(body []byte) bool {
+	var probe struct {
+		Workflow json.RawMessage `json:"workflow"`
+		Results  json.RawMessage `json:"results"`
+		Action   json.RawMessage `json:"action"`
+	}
+
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return false
+	}
+
+	// Results has no omitempty on WorkflowExecution, so a full snapshot always
+	// carries it, even when the workflow object itself is empty.
+	return len(probe.Action) == 0 && (len(probe.Workflow) > 0 || len(probe.Results) > 0)
+}
+
+// resetExecutionFromSnapshot applies an explicit reset=true snapshot. This is
+// used by the standalone worker and is deliberately allowed to override a
+// terminal execution, but only for a full snapshot whose authorization matches
+// the stored execution.
+func resetExecutionFromSnapshot(ctx context.Context, body []byte) error {
+	var execution shuffle.WorkflowExecution
+	if err := json.Unmarshal(body, &execution); err != nil {
+		return err
+	}
+
+	if len(execution.ExecutionId) == 0 {
+		return errors.New("execution id is empty")
+	}
+
+	if len(execution.Workflow.Actions) == 0 {
+		return errors.New("workflow has no actions")
+	}
+
+	baseExecution, err := shuffle.GetWorkflowExecution(ctx, execution.ExecutionId)
+	if err != nil {
+		return err
+	}
+
+	if baseExecution.Authorization != execution.Authorization {
+		return errors.New("bad authorization when resetting execution")
+	}
+
+	// A reset must not let stale per-action results or sent-markers leak into
+	// the next run. This mirrors the reset path in ValidateNewWorkerExecution.
+	for _, result := range baseExecution.Results {
+		shuffle.DeleteCache(ctx, fmt.Sprintf("%s_%s_result", execution.ExecutionId, result.Action.ID))
+		shuffle.DeleteCache(ctx, fmt.Sprintf("%s_%s_sent", execution.ExecutionId, result.Action.ID))
+	}
+	shuffle.DeleteCache(ctx, fmt.Sprintf("workflowexecution_%s_action_snapshot", execution.ExecutionId))
+
+	execution.Status = "EXECUTING"
+	execution.CompletedAt = 0
+	return shuffle.SetWorkflowExecution(ctx, execution, true)
+}
+
+// isAgentDecisionCallback reports whether an ActionResult is an AI Agent
+// decision callback. Those are allowed through the FINISHED barrier because the
+// agent decision handler deliberately supports continuing an execution that was
+// marked terminal while a decision was still in flight.
+func isAgentDecisionCallback(actionResult shuffle.ActionResult) bool {
+	if !strings.HasPrefix(actionResult.Status, "agent_") {
+		return false
+	}
+
+	appName := strings.ToLower(actionResult.Action.AppName)
+	appName = strings.ReplaceAll(strings.ReplaceAll(appName, "-", " "), "_", " ")
+
+	return appName == "ai agent" || appName == "shuffle agent" || appName == "shuffle ai" || strings.EqualFold(actionResult.Action.Name, "run_agent")
+}
+
+// agentCallbackHasInFlightDecision reports whether the stored agent output
+// actually contains the decision referenced by the callback and that decision
+// is still in flight. This keeps the FINISHED continuation exception from
+// accepting arbitrary agent-flavoured callbacks.
+func agentCallbackHasInFlightDecision(execution *shuffle.WorkflowExecution, actionResult shuffle.ActionResult) bool {
+	if execution == nil || !strings.HasPrefix(actionResult.Status, "agent_") {
+		return false
+	}
+
+	decisionId := strings.TrimPrefix(actionResult.Status, "agent_")
+	if len(decisionId) == 0 {
+		return false
+	}
+
+	for _, result := range execution.Results {
+		if result.Action.ID != actionResult.Action.ID {
+			continue
+		}
+
+		// The offload placeholder does not let us inspect the decisions here;
+		// allow the callback so the normal rehydration path can handle it.
+		if strings.Contains(result.Result, "Result too large to handle") {
+			return true
+		}
+
+		output := shuffle.AgentOutput{}
+		if err := json.Unmarshal([]byte(result.Result), &output); err != nil {
+			return false
+		}
+
+		for _, decision := range output.Decisions {
+			if decision.RunDetails.Id != decisionId {
+				continue
+			}
+
+			switch decision.RunDetails.Status {
+			case "", "RUNNING", "WAITING":
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -649,13 +770,49 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 	}
 
 	ctx := context.Background()
-	err = shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
-	if err == nil {
+
+	// Full workflow execution snapshots are posted by workers. They must be
+	// validated and persisted as a unit: if the snapshot is rejected (for
+	// example because the execution already reached a terminal state), the
+	// request has to stop here. Falling through would reinterpret the same body
+	// as an ActionResult and force a re-save of the execution that
+	// ValidateNewWorkerExecution just refused to touch.
+	if isWorkflowExecutionSnapshot(body) {
+		validationErr := shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
+		if validationErr != nil {
+			// reset=true is an explicit override used by the standalone worker.
+			// Keep its legacy fall-through for terminal executions instead of
+			// turning it into a hard failure; terminal protection below is also
+			// skipped for explicit reset requests.
+			if shouldReset && strings.Contains(validationErr.Error(), "already finished") {
+				log.Printf("[WARNING] Explicit reset requested for a terminal execution: %s", validationErr)
+				if resetErr := resetExecutionFromSnapshot(ctx, body); resetErr != nil {
+					log.Printf("[ERROR] Failed resetting execution: %s", resetErr)
+					resp.WriteHeader(http.StatusBadRequest)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, resetErr.Error())))
+					return
+				}
+
+				resp.WriteHeader(200)
+				resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully reset the execution"}`)))
+				return
+			} else {
+				log.Printf("[WARNING] Rejected worker execution snapshot: %s", validationErr)
+
+				statusCode := http.StatusBadRequest
+				if strings.Contains(validationErr.Error(), "already finished") {
+					statusCode = http.StatusConflict
+				}
+
+				resp.WriteHeader(statusCode)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, validationErr.Error())))
+				return
+			}
+		}
+
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated the execution"}`)))
 		return
-	} else {
-		//log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
 
 	var actionResult shuffle.ActionResult
@@ -688,12 +845,12 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	//if workflowExecution.Status == "FINISHED" {
-	//	log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
-	//	return
-	//}
+	if workflowExecution.Status == "FINISHED" && !(isAgentDecisionCallback(actionResult) && agentCallbackHasInFlightDecision(workflowExecution, actionResult)) {
+		log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
+		resp.WriteHeader(http.StatusConflict)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
+		return
+	}
 
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 
@@ -3384,6 +3541,25 @@ func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 	return nil
 }
 
+// rerunQueueEnvironment returns the queue key used for a rerun job. On-prem
+// deployments must use the environment name because that is what every queue
+// reader - and the backend rerun sweep - polls. Only cloud uses the
+// <environment>_<orgid> format.
+func rerunQueueEnvironment(environment, orgId string, isCloud bool) string {
+	// SetWorkflowQueue/GetWorkflowQueue replace only spaces with dashes and
+	// lower-case the OpenSearch index name; underscores are significant and
+	// must not be rewritten here.
+	parsedEnv := strings.ToLower(strings.ReplaceAll(environment, " ", "-"))
+	if !isCloud {
+		return parsedEnv
+	}
+
+	// Keep the historical cloud format: <env>_<orgid> with underscores in the
+	// environment name normalised to dashes.
+	parsedEnv = strings.ReplaceAll(parsedEnv, "_", "-")
+	return fmt.Sprintf("%s_%s", parsedEnv, orgId)
+}
+
 func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -3521,9 +3697,16 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	environment := exec.Workflow.Actions[0].Environment
+	if len(strings.TrimSpace(environment)) == 0 {
+		log.Printf("[ERROR][%s] No environment found for execution; cannot enqueue a rerun job", exec.ExecutionId)
+		resp.WriteHeader(http.StatusBadRequest)
+		resp.Write([]byte(`{"success": false, "reason": "No environment found for execution"}`))
+		return
+	}
+
 	log.Printf("[DEBUG][%s] Not a cloud env workflow. Re-adding job in queue for env %s.", exec.ExecutionId, environment)
 
-	parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-")), exec.ExecutionOrg)
+	parsedEnv := rerunQueueEnvironment(environment, exec.ExecutionOrg, shuffle.GetProject().Environment == "cloud")
 	log.Printf("[DEBUG][%s] Adding new run job to env (2): %s", exec.ExecutionId, parsedEnv)
 
 	executionRequest := shuffle.ExecutionRequest{

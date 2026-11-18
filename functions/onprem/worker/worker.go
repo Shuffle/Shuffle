@@ -6,6 +6,7 @@ import (
 
 	"bytes"
 	"context"
+	"hash/fnv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -3124,6 +3125,60 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
+// cachedExecutionChanged reports whether the execution stored in the cache
+// differs from the execution this transaction is about to write. Status,
+// result identity, per-result status and completion timestamps are compared,
+// not just the result count. A missing/empty cached execution is treated as a
+// change so a reset is not silently overwritten.
+func cachedExecutionChanged(cachedExecution *shuffle.WorkflowExecution, currentExecution shuffle.WorkflowExecution) bool {
+	if cachedExecution == nil || len(cachedExecution.ExecutionId) == 0 {
+		return true
+	}
+
+	if cachedExecution.Status != currentExecution.Status {
+		return true
+	}
+
+	if len(cachedExecution.Results) != len(currentExecution.Results) {
+		return true
+	}
+
+	// Fixexecution sorts results before writing them to the cache, so compare by
+	// action ID instead of position. Order and timestamps are not significant,
+	// but result content is: a decision update can change Result while keeping
+	// the same action ID and status.
+	type resultFingerprint struct {
+		status     string
+		resultHash uint64
+	}
+
+	cachedResults := make(map[string]resultFingerprint, len(cachedExecution.Results))
+	for _, result := range cachedExecution.Results {
+		resultHasher := fnv.New64a()
+		_, _ = resultHasher.Write([]byte(result.Result))
+
+		cachedResults[result.Action.ID] = resultFingerprint{
+			status:     result.Status,
+			resultHash: resultHasher.Sum64(),
+		}
+	}
+
+	for _, result := range currentExecution.Results {
+		cachedResult, found := cachedResults[result.Action.ID]
+		if !found || cachedResult.status != result.Status {
+			return true
+		}
+
+		resultHasher := fnv.New64a()
+		_, _ = resultHasher.Write([]byte(result.Result))
+		if cachedResult.resultHash != resultHasher.Sum64() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	//log.Printf("[DEBUG][%s] IN WORKFLOWEXECUTION SUB!", actionResult.ExecutionId)
@@ -3139,7 +3194,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
-	resultLength := len(workflowExecution.Results)
 	setExecution := true
 
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
@@ -3206,7 +3260,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				}
 			}
 
-			resultLength = len(workflowExecution.Results)
 			setExecution = true
 
 			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
@@ -3237,34 +3290,30 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Handled using cachhing, so actually pretty fast
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	cache, err := shuffle.GetCache(ctx, cacheKey)
+	guardTriggered := false
 	if err == nil {
-		//parsedValue := value.(*shuffle.WorkflowExecution)
-
 		parsedValue := &shuffle.WorkflowExecution{}
 		cacheData := []byte(cache.([]uint8))
-		err = json.Unmarshal(cacheData, &workflowExecution)
-		if err != nil {
+		if err := json.Unmarshal(cacheData, parsedValue); err != nil {
 			log.Printf("[ERROR][%s] Failed unmarshalling workflowexecution: %s", workflowExecution.ExecutionId, err)
-		}
-
-		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
+		} else if cachedExecutionChanged(parsedValue, *workflowExecution) {
+			// ParsedExecutionResult already persisted this update. If the cached
+			// document now differs, another writer changed the execution in the
+			// meantime. Skip this redundant re-save and continue with the fresh
+			// document so dispatch decisions are not made from a stale copy.
+			guardTriggered = true
 			setExecution = false
-			if attempts > 5 {
+
+			freshExecution, fetchErr := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
+			if fetchErr == nil && freshExecution != nil && len(freshExecution.ExecutionId) > 0 {
+				workflowExecution = freshExecution
 			}
 
-			attempts += 1
-			log.Printf("[DEBUG][%s] Rerunning transaction as results has changed. %d vs %d", workflowExecution.ExecutionId, len(parsedValue.Results), resultLength)
-			/*
-				if len(workflowExecution.Results) <= len(workflowExecution.Workflow.Actions) {
-					log.Printf("[DEBUG][%s] Rerunning transaction as results has changed. %d vs %d", workflowExecution.ExecutionId, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
-					runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
-					return
-				}
-			*/
+			log.Printf("[DEBUG][%s] Skipping execution re-save: cached status/results differ from the current execution", workflowExecution.ExecutionId)
 		}
 	}
 
-	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
+	if !guardTriggered && (setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE") {
 		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		}
