@@ -144,4 +144,14 @@ func TestLateExecutionUpdatesAreRejectedAfterFinished(t *testing.T) {
 	if seqAfter := executionSeqNo(t, ctx, execution.ExecutionId); seqAfter != seqBefore {
 		t.Fatalf("late ActionResult changed the execution document: seq %d -> %d", seqBefore, seqAfter)
 	}
+
+	// An explicit reset is a deliberate override used by the standalone worker.
+	// It must keep its legacy 200 path instead of being rejected as a late post.
+	resetRequest := httptest.NewRequest(http.MethodPost, "/api/v1/streams?reset=true", bytes.NewReader(snapshotBody))
+	resetRecorder := httptest.NewRecorder()
+	handleSetWorkflowExecution(resetRecorder, resetRequest)
+
+	if resetRecorder.Code != http.StatusOK {
+		t.Fatalf("expected the legacy reset path to return 200, got %d: %s", resetRecorder.Code, resetRecorder.Body.String())
+	}
 }
