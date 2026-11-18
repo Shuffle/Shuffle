@@ -3124,6 +3124,18 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
+// cachedResultsChanged reports whether the execution stored in the cache holds
+// a different number of results than the execution we are about to write. It is
+// used to avoid overwriting a concurrent update with the snapshot this
+// transaction already persisted.
+func cachedResultsChanged(cachedExecution *shuffle.WorkflowExecution, currentExecution shuffle.WorkflowExecution) bool {
+	if cachedExecution == nil || len(cachedExecution.Results) == 0 {
+		return false
+	}
+
+	return len(cachedExecution.Results) != len(currentExecution.Results)
+}
+
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	//log.Printf("[DEBUG][%s] IN WORKFLOWEXECUTION SUB!", actionResult.ExecutionId)
@@ -3139,7 +3151,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
-	resultLength := len(workflowExecution.Results)
 	setExecution := true
 
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
@@ -3206,7 +3217,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				}
 			}
 
-			resultLength = len(workflowExecution.Results)
 			setExecution = true
 
 			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
@@ -3238,29 +3248,17 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	cache, err := shuffle.GetCache(ctx, cacheKey)
 	if err == nil {
-		//parsedValue := value.(*shuffle.WorkflowExecution)
-
 		parsedValue := &shuffle.WorkflowExecution{}
 		cacheData := []byte(cache.([]uint8))
-		err = json.Unmarshal(cacheData, &workflowExecution)
-		if err != nil {
+		if err := json.Unmarshal(cacheData, parsedValue); err != nil {
 			log.Printf("[ERROR][%s] Failed unmarshalling workflowexecution: %s", workflowExecution.ExecutionId, err)
-		}
-
-		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
+		} else if cachedResultsChanged(parsedValue, *workflowExecution) {
+			// ParsedExecutionResult already persisted this update. If the cached
+			// document now holds a different result set, another writer changed
+			// the execution in the meantime - skip this redundant re-save so we
+			// don't overwrite that change with our stale copy.
 			setExecution = false
-			if attempts > 5 {
-			}
-
-			attempts += 1
-			log.Printf("[DEBUG][%s] Rerunning transaction as results has changed. %d vs %d", workflowExecution.ExecutionId, len(parsedValue.Results), resultLength)
-			/*
-				if len(workflowExecution.Results) <= len(workflowExecution.Workflow.Actions) {
-					log.Printf("[DEBUG][%s] Rerunning transaction as results has changed. %d vs %d", workflowExecution.ExecutionId, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
-					runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
-					return
-				}
-			*/
+			log.Printf("[DEBUG][%s] Skipping execution re-save: cache has %d results, current execution has %d", workflowExecution.ExecutionId, len(parsedValue.Results), len(workflowExecution.Results))
 		}
 	}
 

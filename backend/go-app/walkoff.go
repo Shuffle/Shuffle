@@ -618,6 +618,24 @@ func handleGetWorkflowExecutionResult(resp http.ResponseWriter, request *http.Re
 
 }
 
+// isWorkflowExecutionSnapshot reports whether body is a full WorkflowExecution
+// snapshot as posted by workers to /api/v1/streams, as opposed to the
+// ActionResult payloads posted by apps. A WorkflowExecution carries a top-level
+// "workflow" object and never a top-level "action" object, while an ActionResult
+// always carries "action".
+func isWorkflowExecutionSnapshot(body []byte) bool {
+	var probe struct {
+		Workflow json.RawMessage `json:"workflow"`
+		Action   json.RawMessage `json:"action"`
+	}
+
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return false
+	}
+
+	return len(probe.Workflow) > 0 && len(probe.Action) == 0
+}
+
 func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -649,13 +667,31 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 	}
 
 	ctx := context.Background()
-	err = shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
-	if err == nil {
+
+	// Full workflow execution snapshots are posted by workers. They must be
+	// validated and persisted as a unit: if the snapshot is rejected (for
+	// example because the execution already reached a terminal state), the
+	// request has to stop here. Falling through would reinterpret the same body
+	// as an ActionResult and force a re-save of the execution that
+	// ValidateNewWorkerExecution just refused to touch.
+	if isWorkflowExecutionSnapshot(body) {
+		validationErr := shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
+		if validationErr != nil {
+			log.Printf("[WARNING] Rejected worker execution snapshot: %s", validationErr)
+
+			statusCode := http.StatusBadRequest
+			if strings.Contains(validationErr.Error(), "already finished") {
+				statusCode = http.StatusConflict
+			}
+
+			resp.WriteHeader(statusCode)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, validationErr.Error())))
+			return
+		}
+
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated the execution"}`)))
 		return
-	} else {
-		//log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
 
 	var actionResult shuffle.ActionResult
@@ -3384,6 +3420,19 @@ func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 	return nil
 }
 
+// rerunQueueEnvironment returns the queue key used for a rerun job. On-prem
+// deployments must use the environment name because that is what every queue
+// reader - and the backend rerun sweep - polls. Only cloud uses the
+// <environment>_<orgid> format.
+func rerunQueueEnvironment(environment, orgId string, isCloud bool) string {
+	parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-"))
+	if !isCloud {
+		return parsedEnv
+	}
+
+	return fmt.Sprintf("%s_%s", parsedEnv, orgId)
+}
+
 func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -3523,7 +3572,7 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	environment := exec.Workflow.Actions[0].Environment
 	log.Printf("[DEBUG][%s] Not a cloud env workflow. Re-adding job in queue for env %s.", exec.ExecutionId, environment)
 
-	parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-")), exec.ExecutionOrg)
+	parsedEnv := rerunQueueEnvironment(environment, exec.ExecutionOrg, shuffle.GetProject().Environment == "cloud")
 	log.Printf("[DEBUG][%s] Adding new run job to env (2): %s", exec.ExecutionId, parsedEnv)
 
 	executionRequest := shuffle.ExecutionRequest{
