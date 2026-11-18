@@ -118,3 +118,54 @@ func TestIsAgentDecisionCallback(t *testing.T) {
 		t.Fatal("expected a non-agent status to not be treated as an agent decision callback")
 	}
 }
+
+func TestAgentCallbackHasInFlightDecision(t *testing.T) {
+	agentAction := shuffle.Action{ID: "agent-action", AppName: "AI Agent", Name: "agent"}
+
+	runningExecution := &shuffle.WorkflowExecution{
+		Results: []shuffle.ActionResult{
+			{
+				Action: agentAction,
+				Result: `{"status":"RUNNING","decisions":[{"i":1,"run_details":{"id":"d1","status":"RUNNING"}}]}`,
+			},
+		},
+	}
+
+	if !agentCallbackHasInFlightDecision(runningExecution, shuffle.ActionResult{Action: agentAction, Status: "agent_d1"}) {
+		t.Fatal("expected a running decision to allow the continuation callback")
+	}
+
+	finishedExecution := &shuffle.WorkflowExecution{
+		Results: []shuffle.ActionResult{
+			{
+				Action: agentAction,
+				Result: `{"status":"FINISHED","decisions":[{"i":1,"run_details":{"id":"d1","status":"FINISHED"}}]}`,
+			},
+		},
+	}
+
+	if agentCallbackHasInFlightDecision(finishedExecution, shuffle.ActionResult{Action: agentAction, Status: "agent_d1"}) {
+		t.Fatal("expected a finished decision to not allow the continuation callback")
+	}
+
+	if agentCallbackHasInFlightDecision(runningExecution, shuffle.ActionResult{Action: agentAction, Status: "agent_missing"}) {
+		t.Fatal("expected a missing decision to not allow the continuation callback")
+	}
+
+	placeholderExecution := &shuffle.WorkflowExecution{
+		Results: []shuffle.ActionResult{
+			{
+				Action: agentAction,
+				Result: `{"reason":"Result too large to handle (https://github.com/frikky/shuffle/issues/171)."}`,
+			},
+		},
+	}
+
+	if !agentCallbackHasInFlightDecision(placeholderExecution, shuffle.ActionResult{Action: agentAction, Status: "agent_d1"}) {
+		t.Fatal("expected an offloaded result to allow rehydration by the callback path")
+	}
+
+	if agentCallbackHasInFlightDecision(nil, shuffle.ActionResult{Action: agentAction, Status: "agent_d1"}) {
+		t.Fatal("expected a nil execution to not allow the continuation callback")
+	}
+}

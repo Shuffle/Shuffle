@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -158,6 +159,17 @@ func TestLateExecutionUpdatesAreRejectedAfterFinished(t *testing.T) {
 		t.Fatalf("reset=true ActionResult changed the execution document: seq %d -> %d", seqBefore, seqAfter)
 	}
 
+	// Seed per-action caches; an explicit reset must clear them so the next run
+	// cannot resurrect stale results or sent-markers.
+	resultCacheKey := fmt.Sprintf("%s_%s_result", execution.ExecutionId, action.ID)
+	sentCacheKey := fmt.Sprintf("%s_%s_sent", execution.ExecutionId, action.ID)
+	if err := shuffle.SetCache(ctx, resultCacheKey, []byte("stale-result"), 60); err != nil {
+		t.Fatalf("seed result cache: %s", err)
+	}
+	if err := shuffle.SetCache(ctx, sentCacheKey, []byte("stale-sent"), 60); err != nil {
+		t.Fatalf("seed sent cache: %s", err)
+	}
+
 	// An explicit reset snapshot is a deliberate override used by the standalone
 	// worker. It must actually apply the reset, not return a no-op 200.
 	resetSnapshot := lateSnapshot
@@ -192,5 +204,13 @@ func TestLateExecutionUpdatesAreRejectedAfterFinished(t *testing.T) {
 
 	if seqAfter := executionSeqNo(t, ctx, execution.ExecutionId); seqAfter <= seqBefore {
 		t.Fatalf("reset snapshot did not persist: seq %d -> %d", seqBefore, seqAfter)
+	}
+
+	if _, err := shuffle.GetCache(ctx, resultCacheKey); err == nil {
+		t.Fatal("reset left the stale per-action result cache in place")
+	}
+
+	if _, err := shuffle.GetCache(ctx, sentCacheKey); err == nil {
+		t.Fatal("reset left the stale per-action sent cache in place")
 	}
 }

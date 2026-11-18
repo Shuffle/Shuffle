@@ -81,4 +81,15 @@ func TestCachedExecutionChanged(t *testing.T) {
 	if !cachedExecutionChanged(resultStatusChanged, current) {
 		t.Fatal("a per-result status change must be reported as a change")
 	}
+
+	contentChanged := &shuffle.WorkflowExecution{
+		ExecutionId: "execution-id",
+		Results: []shuffle.ActionResult{
+			{Action: shuffle.Action{ID: "one"}, Result: `{"updated":true}`},
+			{Action: shuffle.Action{ID: "two"}},
+		},
+	}
+	if !cachedExecutionChanged(contentChanged, current) {
+		t.Fatal("a result content change must be reported as a change")
+	}
 }

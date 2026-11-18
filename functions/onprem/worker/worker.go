@@ -6,6 +6,7 @@ import (
 
 	"bytes"
 	"context"
+	"hash/fnv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -3143,16 +3144,34 @@ func cachedExecutionChanged(cachedExecution *shuffle.WorkflowExecution, currentE
 	}
 
 	// Fixexecution sorts results before writing them to the cache, so compare by
-	// action ID instead of position. Only identity and status are significant;
-	// a timestamp-only or order-only difference is not a concurrent write.
-	cachedResults := make(map[string]string, len(cachedExecution.Results))
+	// action ID instead of position. Order and timestamps are not significant,
+	// but result content is: a decision update can change Result while keeping
+	// the same action ID and status.
+	type resultFingerprint struct {
+		status     string
+		resultHash uint64
+	}
+
+	cachedResults := make(map[string]resultFingerprint, len(cachedExecution.Results))
 	for _, result := range cachedExecution.Results {
-		cachedResults[result.Action.ID] = result.Status
+		resultHasher := fnv.New64a()
+		_, _ = resultHasher.Write([]byte(result.Result))
+
+		cachedResults[result.Action.ID] = resultFingerprint{
+			status:     result.Status,
+			resultHash: resultHasher.Sum64(),
+		}
 	}
 
 	for _, result := range currentExecution.Results {
-		status, found := cachedResults[result.Action.ID]
-		if !found || status != result.Status {
+		cachedResult, found := cachedResults[result.Action.ID]
+		if !found || cachedResult.status != result.Status {
+			return true
+		}
+
+		resultHasher := fnv.New64a()
+		_, _ = resultHasher.Write([]byte(result.Result))
+		if cachedResult.resultHash != resultHasher.Sum64() {
 			return true
 		}
 	}

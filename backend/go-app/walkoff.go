@@ -666,6 +666,14 @@ func resetExecutionFromSnapshot(ctx context.Context, body []byte) error {
 		return errors.New("bad authorization when resetting execution")
 	}
 
+	// A reset must not let stale per-action results or sent-markers leak into
+	// the next run. This mirrors the reset path in ValidateNewWorkerExecution.
+	for _, result := range baseExecution.Results {
+		shuffle.DeleteCache(ctx, fmt.Sprintf("%s_%s_result", execution.ExecutionId, result.Action.ID))
+		shuffle.DeleteCache(ctx, fmt.Sprintf("%s_%s_sent", execution.ExecutionId, result.Action.ID))
+	}
+	shuffle.DeleteCache(ctx, fmt.Sprintf("workflowexecution_%s_action_snapshot", execution.ExecutionId))
+
 	execution.Status = "EXECUTING"
 	execution.CompletedAt = 0
 	return shuffle.SetWorkflowExecution(ctx, execution, true)
@@ -684,6 +692,51 @@ func isAgentDecisionCallback(actionResult shuffle.ActionResult) bool {
 	appName = strings.ReplaceAll(strings.ReplaceAll(appName, "-", " "), "_", " ")
 
 	return appName == "ai agent" || appName == "shuffle agent" || appName == "shuffle ai" || strings.EqualFold(actionResult.Action.Name, "run_agent")
+}
+
+// agentCallbackHasInFlightDecision reports whether the stored agent output
+// actually contains the decision referenced by the callback and that decision
+// is still in flight. This keeps the FINISHED continuation exception from
+// accepting arbitrary agent-flavoured callbacks.
+func agentCallbackHasInFlightDecision(execution *shuffle.WorkflowExecution, actionResult shuffle.ActionResult) bool {
+	if execution == nil || !strings.HasPrefix(actionResult.Status, "agent_") {
+		return false
+	}
+
+	decisionId := strings.TrimPrefix(actionResult.Status, "agent_")
+	if len(decisionId) == 0 {
+		return false
+	}
+
+	for _, result := range execution.Results {
+		if result.Action.ID != actionResult.Action.ID {
+			continue
+		}
+
+		// The offload placeholder does not let us inspect the decisions here;
+		// allow the callback so the normal rehydration path can handle it.
+		if strings.Contains(result.Result, "Result too large to handle") {
+			return true
+		}
+
+		output := shuffle.AgentOutput{}
+		if err := json.Unmarshal([]byte(result.Result), &output); err != nil {
+			return false
+		}
+
+		for _, decision := range output.Decisions {
+			if decision.RunDetails.Id != decisionId {
+				continue
+			}
+
+			switch decision.RunDetails.Status {
+			case "", "RUNNING", "WAITING":
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
@@ -792,7 +845,7 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	if workflowExecution.Status == "FINISHED" && !isAgentDecisionCallback(actionResult) {
+	if workflowExecution.Status == "FINISHED" && !(isAgentDecisionCallback(actionResult) && agentCallbackHasInFlightDecision(workflowExecution, actionResult)) {
 		log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
 		resp.WriteHeader(http.StatusConflict)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
