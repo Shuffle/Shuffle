@@ -680,16 +680,24 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 	if isWorkflowExecutionSnapshot(body) {
 		validationErr := shuffle.ValidateNewWorkerExecution(ctx, body, shouldReset)
 		if validationErr != nil {
-			log.Printf("[WARNING] Rejected worker execution snapshot: %s", validationErr)
+			// reset=true is an explicit override used by the standalone worker.
+			// Keep its legacy fall-through for terminal executions instead of
+			// turning it into a hard failure; terminal protection below is also
+			// skipped for explicit reset requests.
+			if shouldReset && strings.Contains(validationErr.Error(), "already finished") {
+				log.Printf("[WARNING] Explicit reset requested for a terminal execution; keeping legacy reset path: %s", validationErr)
+			} else {
+				log.Printf("[WARNING] Rejected worker execution snapshot: %s", validationErr)
 
-			statusCode := http.StatusBadRequest
-			if strings.Contains(validationErr.Error(), "already finished") {
-				statusCode = http.StatusConflict
+				statusCode := http.StatusBadRequest
+				if strings.Contains(validationErr.Error(), "already finished") {
+					statusCode = http.StatusConflict
+				}
+
+				resp.WriteHeader(statusCode)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, validationErr.Error())))
+				return
 			}
-
-			resp.WriteHeader(statusCode)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, validationErr.Error())))
-			return
 		}
 
 		resp.WriteHeader(200)
@@ -727,12 +735,12 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	//if workflowExecution.Status == "FINISHED" {
-	//	log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
-	//	return
-	//}
+	if workflowExecution.Status == "FINISHED" && !shouldReset {
+		log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
+		resp.WriteHeader(http.StatusConflict)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
+		return
+	}
 
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 
@@ -3428,11 +3436,17 @@ func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 // reader - and the backend rerun sweep - polls. Only cloud uses the
 // <environment>_<orgid> format.
 func rerunQueueEnvironment(environment, orgId string, isCloud bool) string {
-	parsedEnv := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-"))
+	// SetWorkflowQueue/GetWorkflowQueue replace only spaces with dashes and
+	// lower-case the OpenSearch index name; underscores are significant and
+	// must not be rewritten here.
+	parsedEnv := strings.ToLower(strings.ReplaceAll(environment, " ", "-"))
 	if !isCloud {
 		return parsedEnv
 	}
 
+	// Keep the historical cloud format: <env>_<orgid> with underscores in the
+	// environment name normalised to dashes.
+	parsedEnv = strings.ReplaceAll(parsedEnv, "_", "-")
 	return fmt.Sprintf("%s_%s", parsedEnv, orgId)
 }
 

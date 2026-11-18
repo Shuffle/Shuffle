@@ -72,7 +72,7 @@ func TestRerunQueueEnvironment(t *testing.T) {
 			environment: "My_Env Name",
 			orgId:       "org-id",
 			isCloud:     false,
-			expected:    "my-env-name",
+			expected:    "my_env-name",
 		},
 		{
 			name:        "cloud keeps the org suffix",
@@ -80,6 +80,13 @@ func TestRerunQueueEnvironment(t *testing.T) {
 			orgId:       "org-id",
 			isCloud:     true,
 			expected:    "shuffle_org-id",
+		},
+		{
+			name:        "cloud normalizes underscores in the environment name",
+			environment: "My_Env",
+			orgId:       "org-id",
+			isCloud:     true,
+			expected:    "my-env_org-id",
 		},
 	}
 

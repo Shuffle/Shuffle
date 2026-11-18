@@ -3124,16 +3124,42 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
-// cachedResultsChanged reports whether the execution stored in the cache holds
-// a different number of results than the execution we are about to write. It is
-// used to avoid overwriting a concurrent update with the snapshot this
-// transaction already persisted.
-func cachedResultsChanged(cachedExecution *shuffle.WorkflowExecution, currentExecution shuffle.WorkflowExecution) bool {
-	if cachedExecution == nil || len(cachedExecution.Results) == 0 {
-		return false
+// cachedExecutionChanged reports whether the execution stored in the cache
+// differs from the execution this transaction is about to write. Status,
+// result identity, per-result status and completion timestamps are compared,
+// not just the result count. A missing/empty cached execution is treated as a
+// change so a reset is not silently overwritten.
+func cachedExecutionChanged(cachedExecution *shuffle.WorkflowExecution, currentExecution shuffle.WorkflowExecution) bool {
+	if cachedExecution == nil || len(cachedExecution.ExecutionId) == 0 {
+		return true
 	}
 
-	return len(cachedExecution.Results) != len(currentExecution.Results)
+	if cachedExecution.Status != currentExecution.Status {
+		return true
+	}
+
+	if len(cachedExecution.Results) != len(currentExecution.Results) {
+		return true
+	}
+
+	for resultIndex := range currentExecution.Results {
+		cachedResult := cachedExecution.Results[resultIndex]
+		currentResult := currentExecution.Results[resultIndex]
+
+		if cachedResult.Action.ID != currentResult.Action.ID {
+			return true
+		}
+
+		if cachedResult.Status != currentResult.Status {
+			return true
+		}
+
+		if cachedResult.CompletedAt != currentResult.CompletedAt {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
@@ -3247,22 +3273,30 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Handled using cachhing, so actually pretty fast
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 	cache, err := shuffle.GetCache(ctx, cacheKey)
+	guardTriggered := false
 	if err == nil {
 		parsedValue := &shuffle.WorkflowExecution{}
 		cacheData := []byte(cache.([]uint8))
 		if err := json.Unmarshal(cacheData, parsedValue); err != nil {
 			log.Printf("[ERROR][%s] Failed unmarshalling workflowexecution: %s", workflowExecution.ExecutionId, err)
-		} else if cachedResultsChanged(parsedValue, *workflowExecution) {
+		} else if cachedExecutionChanged(parsedValue, *workflowExecution) {
 			// ParsedExecutionResult already persisted this update. If the cached
-			// document now holds a different result set, another writer changed
-			// the execution in the meantime - skip this redundant re-save so we
-			// don't overwrite that change with our stale copy.
+			// document now differs, another writer changed the execution in the
+			// meantime. Skip this redundant re-save and continue with the fresh
+			// document so dispatch decisions are not made from a stale copy.
+			guardTriggered = true
 			setExecution = false
-			log.Printf("[DEBUG][%s] Skipping execution re-save: cache has %d results, current execution has %d", workflowExecution.ExecutionId, len(parsedValue.Results), len(workflowExecution.Results))
+
+			freshExecution, fetchErr := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
+			if fetchErr == nil && freshExecution != nil && len(freshExecution.ExecutionId) > 0 {
+				workflowExecution = freshExecution
+			}
+
+			log.Printf("[DEBUG][%s] Skipping execution re-save: cached status/results differ from the current execution", workflowExecution.ExecutionId)
 		}
 	}
 
-	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
+	if !guardTriggered && (setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE") {
 		if debug {
 			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		}
