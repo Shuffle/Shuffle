@@ -3587,6 +3587,13 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	environment := exec.Workflow.Actions[0].Environment
+	if len(strings.TrimSpace(environment)) == 0 {
+		log.Printf("[ERROR][%s] No environment found for execution; cannot enqueue a rerun job", exec.ExecutionId)
+		resp.WriteHeader(http.StatusBadRequest)
+		resp.Write([]byte(`{"success": false, "reason": "No environment found for execution"}`))
+		return
+	}
+
 	log.Printf("[DEBUG][%s] Not a cloud env workflow. Re-adding job in queue for env %s.", exec.ExecutionId, environment)
 
 	parsedEnv := rerunQueueEnvironment(environment, exec.ExecutionOrg, shuffle.GetProject().Environment == "cloud")
