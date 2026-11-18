@@ -145,13 +145,52 @@ func TestLateExecutionUpdatesAreRejectedAfterFinished(t *testing.T) {
 		t.Fatalf("late ActionResult changed the execution document: seq %d -> %d", seqBefore, seqAfter)
 	}
 
-	// An explicit reset is a deliberate override used by the standalone worker.
-	// It must keep its legacy 200 path instead of being rejected as a late post.
-	resetRequest := httptest.NewRequest(http.MethodPost, "/api/v1/streams?reset=true", bytes.NewReader(snapshotBody))
+	// reset=true must not bypass the FINISHED barrier for an ActionResult.
+	resetResultRequest := httptest.NewRequest(http.MethodPost, "/api/v1/streams?reset=true", bytes.NewReader(resultBody))
+	resetResultRecorder := httptest.NewRecorder()
+	handleSetWorkflowExecution(resetResultRecorder, resetResultRequest)
+
+	if resetResultRecorder.Code != http.StatusConflict {
+		t.Fatalf("expected reset=true ActionResult to be rejected with 409, got %d: %s", resetResultRecorder.Code, resetResultRecorder.Body.String())
+	}
+
+	if seqAfter := executionSeqNo(t, ctx, execution.ExecutionId); seqAfter != seqBefore {
+		t.Fatalf("reset=true ActionResult changed the execution document: seq %d -> %d", seqBefore, seqAfter)
+	}
+
+	// An explicit reset snapshot is a deliberate override used by the standalone
+	// worker. It must actually apply the reset, not return a no-op 200.
+	resetSnapshot := lateSnapshot
+	resetSnapshot.Results = nil
+	resetSnapshot.Status = "EXECUTING"
+	resetSnapshot.CompletedAt = 0
+	resetBody, err := json.Marshal(resetSnapshot)
+	if err != nil {
+		t.Fatalf("marshal reset snapshot: %s", err)
+	}
+
+	resetRequest := httptest.NewRequest(http.MethodPost, "/api/v1/streams?reset=true", bytes.NewReader(resetBody))
 	resetRecorder := httptest.NewRecorder()
 	handleSetWorkflowExecution(resetRecorder, resetRequest)
 
 	if resetRecorder.Code != http.StatusOK {
-		t.Fatalf("expected the legacy reset path to return 200, got %d: %s", resetRecorder.Code, resetRecorder.Body.String())
+		t.Fatalf("expected a reset snapshot to return 200, got %d: %s", resetRecorder.Code, resetRecorder.Body.String())
+	}
+
+	resetExecution, err := shuffle.GetWorkflowExecution(ctx, execution.ExecutionId, true)
+	if err != nil {
+		t.Fatalf("get reset execution: %s", err)
+	}
+
+	if resetExecution.Status != "EXECUTING" {
+		t.Fatalf("expected reset execution status EXECUTING, got %q", resetExecution.Status)
+	}
+
+	if len(resetExecution.Results) != 0 {
+		t.Fatalf("expected reset execution to have no results, got %d", len(resetExecution.Results))
+	}
+
+	if seqAfter := executionSeqNo(t, ctx, execution.ExecutionId); seqAfter <= seqBefore {
+		t.Fatalf("reset snapshot did not persist: seq %d -> %d", seqBefore, seqAfter)
 	}
 }

@@ -59,4 +59,26 @@ func TestCachedExecutionChanged(t *testing.T) {
 	if !cachedExecutionChanged(statusOnly, current) {
 		t.Fatal("a status-only change must be reported as a change")
 	}
+
+	reversed := &shuffle.WorkflowExecution{
+		ExecutionId: "execution-id",
+		Results: []shuffle.ActionResult{
+			{Action: shuffle.Action{ID: "two"}},
+			{Action: shuffle.Action{ID: "one"}},
+		},
+	}
+	if cachedExecutionChanged(reversed, current) {
+		t.Fatal("result ordering must not count as a change")
+	}
+
+	resultStatusChanged := &shuffle.WorkflowExecution{
+		ExecutionId: "execution-id",
+		Results: []shuffle.ActionResult{
+			{Action: shuffle.Action{ID: "one"}, Status: "SUCCESS"},
+			{Action: shuffle.Action{ID: "two"}},
+		},
+	}
+	if !cachedExecutionChanged(resultStatusChanged, current) {
+		t.Fatal("a per-result status change must be reported as a change")
+	}
 }

@@ -3142,19 +3142,17 @@ func cachedExecutionChanged(cachedExecution *shuffle.WorkflowExecution, currentE
 		return true
 	}
 
-	for resultIndex := range currentExecution.Results {
-		cachedResult := cachedExecution.Results[resultIndex]
-		currentResult := currentExecution.Results[resultIndex]
+	// Fixexecution sorts results before writing them to the cache, so compare by
+	// action ID instead of position. Only identity and status are significant;
+	// a timestamp-only or order-only difference is not a concurrent write.
+	cachedResults := make(map[string]string, len(cachedExecution.Results))
+	for _, result := range cachedExecution.Results {
+		cachedResults[result.Action.ID] = result.Status
+	}
 
-		if cachedResult.Action.ID != currentResult.Action.ID {
-			return true
-		}
-
-		if cachedResult.Status != currentResult.Status {
-			return true
-		}
-
-		if cachedResult.CompletedAt != currentResult.CompletedAt {
+	for _, result := range currentExecution.Results {
+		status, found := cachedResults[result.Action.ID]
+		if !found || status != result.Status {
 			return true
 		}
 	}

@@ -639,6 +639,53 @@ func isWorkflowExecutionSnapshot(body []byte) bool {
 	return len(probe.Action) == 0 && (len(probe.Workflow) > 0 || len(probe.Results) > 0)
 }
 
+// resetExecutionFromSnapshot applies an explicit reset=true snapshot. This is
+// used by the standalone worker and is deliberately allowed to override a
+// terminal execution, but only for a full snapshot whose authorization matches
+// the stored execution.
+func resetExecutionFromSnapshot(ctx context.Context, body []byte) error {
+	var execution shuffle.WorkflowExecution
+	if err := json.Unmarshal(body, &execution); err != nil {
+		return err
+	}
+
+	if len(execution.ExecutionId) == 0 {
+		return errors.New("execution id is empty")
+	}
+
+	if len(execution.Workflow.Actions) == 0 {
+		return errors.New("workflow has no actions")
+	}
+
+	baseExecution, err := shuffle.GetWorkflowExecution(ctx, execution.ExecutionId)
+	if err != nil {
+		return err
+	}
+
+	if baseExecution.Authorization != execution.Authorization {
+		return errors.New("bad authorization when resetting execution")
+	}
+
+	execution.Status = "EXECUTING"
+	execution.CompletedAt = 0
+	return shuffle.SetWorkflowExecution(ctx, execution, true)
+}
+
+// isAgentDecisionCallback reports whether an ActionResult is an AI Agent
+// decision callback. Those are allowed through the FINISHED barrier because the
+// agent decision handler deliberately supports continuing an execution that was
+// marked terminal while a decision was still in flight.
+func isAgentDecisionCallback(actionResult shuffle.ActionResult) bool {
+	if !strings.HasPrefix(actionResult.Status, "agent_") {
+		return false
+	}
+
+	appName := strings.ToLower(actionResult.Action.AppName)
+	appName = strings.ReplaceAll(strings.ReplaceAll(appName, "-", " "), "_", " ")
+
+	return appName == "ai agent" || appName == "shuffle agent" || appName == "shuffle ai" || strings.EqualFold(actionResult.Action.Name, "run_agent")
+}
+
 func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -685,7 +732,17 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 			// turning it into a hard failure; terminal protection below is also
 			// skipped for explicit reset requests.
 			if shouldReset && strings.Contains(validationErr.Error(), "already finished") {
-				log.Printf("[WARNING] Explicit reset requested for a terminal execution; keeping legacy reset path: %s", validationErr)
+				log.Printf("[WARNING] Explicit reset requested for a terminal execution: %s", validationErr)
+				if resetErr := resetExecutionFromSnapshot(ctx, body); resetErr != nil {
+					log.Printf("[ERROR] Failed resetting execution: %s", resetErr)
+					resp.WriteHeader(http.StatusBadRequest)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": %q}`, resetErr.Error())))
+					return
+				}
+
+				resp.WriteHeader(200)
+				resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully reset the execution"}`)))
+				return
 			} else {
 				log.Printf("[WARNING] Rejected worker execution snapshot: %s", validationErr)
 
@@ -735,7 +792,7 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	if workflowExecution.Status == "FINISHED" && !shouldReset {
+	if workflowExecution.Status == "FINISHED" && !isAgentDecisionCallback(actionResult) {
 		log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
 		resp.WriteHeader(http.StatusConflict)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))

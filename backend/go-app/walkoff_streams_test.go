@@ -98,3 +98,23 @@ func TestRerunQueueEnvironment(t *testing.T) {
 		})
 	}
 }
+
+func TestIsAgentDecisionCallback(t *testing.T) {
+	agentAction := shuffle.Action{ID: "agent-action", AppName: "AI Agent", Name: "agent"}
+
+	if !isAgentDecisionCallback(shuffle.ActionResult{Action: agentAction, Status: "agent_decision-id"}) {
+		t.Fatal("expected an AI Agent decision callback to be recognized")
+	}
+
+	if !isAgentDecisionCallback(shuffle.ActionResult{Action: shuffle.Action{ID: "agent-action", AppName: "shuffle-ai", Name: "run_agent"}, Status: "agent_decision-id"}) {
+		t.Fatal("expected a shuffle-ai decision callback to be recognized")
+	}
+
+	if isAgentDecisionCallback(shuffle.ActionResult{Action: shuffle.Action{ID: "action", AppName: "execute_python"}, Status: "agent_decision-id"}) {
+		t.Fatal("expected a regular action to not be treated as an agent decision callback")
+	}
+
+	if isAgentDecisionCallback(shuffle.ActionResult{Action: agentAction, Status: "SUCCESS"}) {
+		t.Fatal("expected a non-agent status to not be treated as an agent decision callback")
+	}
+}
