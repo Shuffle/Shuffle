@@ -39,6 +39,10 @@ func TestIsWorkflowExecutionSnapshot(t *testing.T) {
 		t.Fatal("expected an ActionResult body NOT to be detected as a snapshot")
 	}
 
+	if !isWorkflowExecutionSnapshot([]byte(`{"execution_id": "execution-id", "results": []}`)) {
+		t.Fatal("expected a body with a results array and no action to be detected as a snapshot")
+	}
+
 	if isWorkflowExecutionSnapshot([]byte(`{"workflow": {}, "action": {}}`)) {
 		t.Fatal("expected a body with both workflow and action fields NOT to be detected as a snapshot")
 	}

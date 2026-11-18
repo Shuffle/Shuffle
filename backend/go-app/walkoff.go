@@ -626,6 +626,7 @@ func handleGetWorkflowExecutionResult(resp http.ResponseWriter, request *http.Re
 func isWorkflowExecutionSnapshot(body []byte) bool {
 	var probe struct {
 		Workflow json.RawMessage `json:"workflow"`
+		Results  json.RawMessage `json:"results"`
 		Action   json.RawMessage `json:"action"`
 	}
 
@@ -633,7 +634,9 @@ func isWorkflowExecutionSnapshot(body []byte) bool {
 		return false
 	}
 
-	return len(probe.Workflow) > 0 && len(probe.Action) == 0
+	// Results has no omitempty on WorkflowExecution, so a full snapshot always
+	// carries it, even when the workflow object itself is empty.
+	return len(probe.Action) == 0 && (len(probe.Workflow) > 0 || len(probe.Results) > 0)
 }
 
 func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request) {
