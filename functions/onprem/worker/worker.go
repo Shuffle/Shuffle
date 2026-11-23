@@ -72,6 +72,7 @@ var appContainerSecurityContext = os.Getenv("SHUFFLE_APP_CONTAINER_SECURITY_CONT
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 
 var executionCount int64
+var executionContinuations sync.WaitGroup
 
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
@@ -298,10 +299,10 @@ type UserInputSubflow struct {
 }
 
 // Not using shuffle.SetWorkflowExecution as we only want to use cache in reality
-func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, dbSave bool, releaseUpdateLock ...func()) error {
+func persistWorkerExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, releaseUpdateLock ...func()) (shuffle.WorkflowExecution, error) {
 	if len(workflowExecution.ExecutionId) == 0 {
 		log.Printf("[DEBUG] Workflowexecution executionId can't be empty.")
-		return errors.New("ExecutionId can't be empty.")
+		return workflowExecution, errors.New("ExecutionId can't be empty.")
 	}
 
 	if len(releaseUpdateLock) == 0 && os.Getenv("SHUFFLE_MEMCACHED") != "" {
@@ -310,7 +311,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 		var claimErr error
 		for attempt := 0; attempt < 300; attempt++ {
 			if err := ctx.Err(); err != nil {
-				return err
+				return workflowExecution, err
 			}
 			claimed, claimErr = shuffle.ClaimCacheKey(claimKey, 120)
 			if claimErr != nil || claimed {
@@ -319,7 +320,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 			time.Sleep(100 * time.Millisecond)
 		}
 		if claimErr != nil || !claimed {
-			return fmt.Errorf("execution snapshot update is busy: %v", claimErr)
+			return workflowExecution, fmt.Errorf("execution snapshot update is busy: %v", claimErr)
 		}
 		releaseUpdateLock = []func(){func() {
 			if claimKey != "" {
@@ -337,10 +338,10 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	if cacheErr == nil {
 		var saved shuffle.WorkflowExecution
 		if err := json.Unmarshal(cached.([]byte), &saved); err != nil {
-			return err
+			return workflowExecution, err
 		}
 		if saved.ExecutionId != workflowExecution.ExecutionId || saved.Authorization != workflowExecution.Authorization {
-			return errors.New("cached execution identity does not match the worker snapshot")
+			return workflowExecution, errors.New("cached execution identity does not match the worker snapshot")
 		}
 		if saved.Status == "FINISHED" || saved.Status == "FAILURE" || saved.Status == "ABORTED" {
 			workflowExecution = saved
@@ -369,7 +370,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 			}
 		}
 	} else if os.Getenv("SHUFFLE_MEMCACHED") != "" && !errors.Is(cacheErr, gomemcache.ErrCacheMiss) {
-		return cacheErr
+		return workflowExecution, cacheErr
 	}
 
 	if len(workflowExecution.Workflow.Actions) > 0 {
@@ -387,18 +388,41 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	execData, err := json.Marshal(workflowExecution)
 	if err != nil {
 		log.Printf("[ERROR] Failed marshalling execution during set: %s", err)
-		return err
+		return workflowExecution, err
 	}
 
 	err = shuffle.SetCache(ctx, cacheKey, execData, 30)
 	if err != nil {
 		log.Printf("[ERROR][%s] Failed adding to cache during setexecution", workflowExecution.ExecutionId)
-		return err
+		return workflowExecution, err
 	}
 
 	// Persist under the update lock, but never hold it during callbacks or polling.
 	if len(releaseUpdateLock) > 0 {
 		releaseUpdateLock[0]()
+	}
+	return workflowExecution, nil
+}
+
+func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, dbSave bool, releaseUpdateLock ...func()) error {
+	workflowExecution, err := persistWorkerExecution(ctx, workflowExecution, releaseUpdateLock...)
+	if err != nil {
+		return err
+	}
+	return continueWorkerExecution(ctx, workflowExecution, dbSave)
+}
+
+func continueWorkerExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, dbSave bool) error {
+	// Checkpoint completed progress before starting dependent work. Otherwise a
+	// cache loss can replay completed external effects and create new children.
+	if workflowExecution.Status == "EXECUTING" && len(workflowExecution.Results) > 0 {
+		payload, err := json.Marshal(workflowExecution)
+		if err != nil {
+			return err
+		}
+		if err := sendResult(workflowExecution, payload); err != nil {
+			return err
+		}
 	}
 	handleExecutionResult(workflowExecution)
 	validated := shuffle.ValidateFinished(ctx, -1, workflowExecution)
@@ -3336,58 +3360,22 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
-	setExecution := true
-
+	stopForAgent := false
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
 	if err == nil {
-		if workflowExecution.Status != "EXECUTING" && workflowExecution.Status != "WAITING" {
-			log.Printf("[WARNING][%s] Execution is not executing, but %s. Stopping Transaction update.", workflowExecution.ExecutionId, workflowExecution.Status)
-			if resp != nil {
-				resp.WriteHeader(200)
-				resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Execution is not executing, but %s"}`, workflowExecution.Status)))
-			}
-
-			log.Printf("[DEBUG][%s] Shutting down (35)", workflowExecution.ExecutionId)
-
-			// Force sending result
-			shutdownData, err := json.Marshal(workflowExecution)
-			if err != nil {
-				log.Printf("[ERROR][%s] Failed marshalling execution (35): %s", workflowExecution.ExecutionId, err)
-			}
-
-			releaseClaim()
-			sendResult(*workflowExecution, shutdownData)
-			shutdown(*workflowExecution, "", "", false)
-			return
-		}
-
 		isAgentAction := actionResult.Action.AppName == "shuffle-ai" || actionResult.Action.AppName == "AI Agent" || actionResult.Action.AppName == "Shuffle Agent" || actionResult.Action.Name == "run_agent"
-		isAgentNode:= isAgentAction && (strings.Contains(strings.ToLower(actionResult.Result), "hybrid") || actionResult.Action.Name == "run_agent")
-		if isAgentNode && actionResult.Status != "FAILURE" && actionResult.Status != "ABORTED" && actionResult.Status != "SKIPPED" {
+		isAgentNode := isAgentAction && (strings.Contains(strings.ToLower(actionResult.Result), "hybrid") || actionResult.Action.Name == "run_agent")
+		if isAgentNode && actionResult.Status != "FAILURE" && actionResult.Status != "ABORTED" && actionResult.Status != "SKIPPED" &&
+			(workflowExecution.Status == "EXECUTING" || workflowExecution.Status == "WAITING") {
 			log.Printf("[INFO][%s] AI Agent dispatched to Cloud. Stopping worker execution cleanly to wait for Cloud completion.", workflowExecution.ExecutionId)
 
-			releaseClaim()
-			shutdown(*workflowExecution, "", "", false)
-			return
+			stopForAgent = true
 		}
-
-		/*** STARTREMOVE ***/
-		if workflowExecution.Status == "WAITING" && (os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm") {
-			log.Printf("[INFO][%s] Workflow execution is waiting while in swarm. Sending info to backend to ensure execution stops.", workflowExecution.ExecutionId)
-
-			shutdownData, err := json.Marshal(workflowExecution)
-			if err != nil {
-				log.Printf("[ERROR][%s] Failed marshalling execution (36) - not sending backend WAITING: %s", workflowExecution.ExecutionId, err)
-			} else {
-				releaseClaim()
-				sendResult(*workflowExecution, shutdownData)
-				shutdown(*workflowExecution, "", "", false)
-			}
-		}
-		/*** ENDREMOVE ***/
 	} else {
 		if strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already been ran") || strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already finished") {
 			log.Printf("[ERROR][%s] Skipping rerun of action result as it's already been ran: %s", workflowExecution.ExecutionId)
+			resp.WriteHeader(http.StatusOK)
+			resp.Write([]byte(`{"success": true}`))
 			return
 		}
 
@@ -3404,8 +3392,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 					return
 				}
 			}
-
-			setExecution = true
 
 			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 			if err != nil {
@@ -3431,57 +3417,40 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//	log.Printf("[DEBUG][%s] There may have been an issue in transaction queue. Result lengths: %d vs %d. Should check which exists the base results, but not in entire execution, then append.", workflowExecution.ExecutionId, len(results), len(workflowExecution.Results))
 	//}
 
-	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		if debug {
-			log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
-		}
-
-		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
-		err = setWorkflowExecution(ctx, *workflowExecution, dbSave, releaseClaim)
-		if err != nil {
-			log.Printf("[ERROR][%s] Failed setting execution: %s", workflowExecution.ExecutionId, err)
-
-			resp.WriteHeader(400)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
+	saved, err := persistWorkerExecution(ctx, *workflowExecution, releaseClaim)
+	if err != nil {
+		log.Printf("[ERROR][%s] Failed retaining execution: %s", workflowExecutionId, err)
+		resp.WriteHeader(http.StatusServiceUnavailable)
+		resp.Write([]byte(`{"success": false, "reason": "Failed retaining execution. Retry the result."}`))
+		return
+	}
+	resp.WriteHeader(http.StatusOK)
+	resp.Write([]byte(`{"success": true}`))
+	// App server threads must not wait for work dispatched by their own callback.
+	executionContinuations.Add(1)
+	go func() {
+		defer executionContinuations.Done()
+		if stopForAgent {
+			shutdown(saved, "", "", false)
 			return
 		}
-		releaseClaim()
-
-		/*** STARTREMOVE ***/
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
-			if !finished {
-				if debug {
-					log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
-				}
-
-				handleExecutionResult(*workflowExecution)
-			} else {
-				shutdownData, err := json.Marshal(workflowExecution)
-				if err != nil {
-					log.Printf("[ERROR] Failed marshalling shutdowndata during set: %s", err)
-				}
-
-				sendResult(*workflowExecution, shutdownData)
+		if (saved.Status != "EXECUTING" && saved.Status != "WAITING") ||
+			(saved.Status == "WAITING" && (os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm")) {
+			payload, err := json.Marshal(saved)
+			if err == nil {
+				err = sendResult(saved, payload)
 			}
+			if err != nil {
+				log.Printf("[WARNING][%s] Retained execution awaits backend synchronization: %s", saved.ExecutionId, err)
+				return
+			}
+			shutdown(saved, "", "", false)
+			return
 		}
-		/*** ENDREMOVE ***/
-	} else {
-		log.Printf("[INFO][%s] Skipping setexec with status %s", workflowExecution.ExecutionId, workflowExecution.Status)
-		releaseClaim()
-
-		// Just in case. Should MAYBE validate finishing another time as well.
-		// This fixes issues with e.g. shuffle.Action -> shuffle.Trigger -> shuffle.Action.
-		handleExecutionResult(*workflowExecution)
-	}
-
-	//if newExecutions && len(nextActions) > 0 {
-	//	log.Printf("[DEBUG][%s] New execution: %#v. NextActions: %#v", newExecutions, nextActions)
-	//	//handleExecutionResult(*workflowExecution)
-	//}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+		if err := continueWorkerExecution(context.Background(), saved, dbSave); err != nil {
+			log.Printf("[WARNING][%s] Retained execution awaits continuation: %s", saved.ExecutionId, err)
+		}
+	}()
 }
 
 func sendSelfRequest(actionResult shuffle.ActionResult) {
@@ -3589,7 +3558,9 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) error 
 				}
 				if json.Unmarshal(body, &acknowledgement) == nil && acknowledgement.Success != nil && *acknowledgement.Success {
 					log.Printf("[DEBUG][%s] Backend accepted execution update", workflowExecution.ExecutionId)
-					return nil
+					// Hybrid backends may only acknowledge the snapshot. Deliver the
+					// retained child result after persistence, outside its update lock.
+					return shuffle.RunFixParentWorkflowResult(context.Background(), workflowExecution)
 				}
 			}
 			lastErr = fmt.Errorf("backend execution update returned HTTP %d", newresp.StatusCode)

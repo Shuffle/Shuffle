@@ -733,12 +733,18 @@ func handleSetWorkflowExecution(resp http.ResponseWriter, request *http.Request)
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	log.Printf("[DEBUG][%s] Running workflow execution update with result from %s (%s) of status %s", workflowExecutionId, actionResult.Action.Label, actionResult.Action.ID, actionResult.Status)
 
+	claimKey := ""
+	defer func() {
+		if claimKey != "" {
+			shuffle.DeleteCache(ctx, claimKey)
+		}
+	}()
 	if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
-		claimKey := fmt.Sprintf("workflowexecution_%s_update", workflowExecutionId)
+		newClaimKey := fmt.Sprintf("workflowexecution_%s_update", workflowExecutionId)
 		claimed := false
 		var claimErr error
 		for attempt := 0; attempt < 300; attempt++ {
-			claimed, claimErr = shuffle.ClaimCacheKey(claimKey, 120)
+			claimed, claimErr = shuffle.ClaimCacheKey(newClaimKey, 120)
 			if claimErr != nil || claimed {
 				break
 			}
@@ -752,8 +758,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			resp.Write([]byte(`{"success": false, "reason": "Execution update is busy. Retry the result."}`))
 			return
 		}
+		claimKey = newClaimKey
 
-		defer shuffle.DeleteCache(ctx, claimKey)
 	}
 
 	// Should start a tx for the execution here
@@ -782,7 +788,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-
 	// For AI Agents, ParsedExecutionResult handles its own execution saving
 	if actionResult.Action.AppName == "AI Agent" || actionResult.Action.AppName == "Shuffle Agent" {
 		setExecution = false
@@ -808,6 +813,22 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		log.Printf("Skipping setexec with status %s", workflowExecution.Status)
 	}
 
+	if claimKey != "" {
+		if err := shuffle.DeleteCache(ctx, claimKey); err != nil {
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Write([]byte(`{"success":false,"reason":"Failed releasing execution update"}`))
+			return
+		}
+		claimKey = ""
+	}
+	if projectEnvironment := shuffle.GetProject().Environment; projectEnvironment == "onprem" &&
+		(workflowExecution.Status == "FINISHED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "ABORTED") {
+		if err := shuffle.RunFixParentWorkflowResult(ctx, *workflowExecution); err != nil {
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Write([]byte(`{"success":false,"reason":"Child result retained; parent delivery must be retried"}`))
+			return
+		}
+	}
 	if resp != nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -999,15 +1020,15 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			//	log.Printf("Failed to delete webhook: %s", err)
 			//}
 		} else if item.TriggerType == "EMAIL" {
-		//	err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
-		//	if err != nil {
-		//		log.Printf("[DEBUG] Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
-		//	}
+			//	err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
+			//	if err != nil {
+			//		log.Printf("[DEBUG] Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
+			//	}
 
-		//	err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
-		//	if err != nil {
-		//		log.Printf("Failed to delete gmail email sub: %s", err)
-		//	}
+			//	err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
+			//	if err != nil {
+			//		log.Printf("Failed to delete gmail email sub: %s", err)
+			//	}
 		}
 	}
 
@@ -1103,6 +1124,9 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 	workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
+	if workflowExecErr == nil && execInfo.AlreadyStarted {
+		return workflowExecution, "", nil
+	}
 	if workflowExecErr != nil {
 		if len(workflowExecution.Workflow.Actions) > 0 && len(workflowExecution.Results) > 0 && len(workflowExecution.ExecutionId) > 0 {
 			err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
@@ -1403,7 +1427,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
-		if err != nil || exec.ExecutionId != executionId { 
+		if err != nil || exec.ExecutionId != executionId {
 			log.Printf("[WARNING][%s] Failed getting the agentic execution (execute workflow - agentic): %s", executionId, err)
 			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false, "reason": "No workflow or execution found"}`))
@@ -1411,7 +1435,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		authorization := request.URL.Query().Get("authorization")
-		if authorization != exec.Authorization { 
+		if authorization != exec.Authorization {
 			log.Printf("[WARNING][%s] Invalid authorization for agentic execution (execute workflow - agentic): %s", executionId, authorization)
 			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false, "reason": "Invalid authorization"}`))
@@ -3368,7 +3392,7 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate, false)
-		iterateOpenApiGithub(fs, dir, "", "") 
+		iterateOpenApiGithub(fs, dir, "", "")
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/

@@ -117,7 +117,14 @@ func recoverOnpremExecutions(ctx context.Context, backendURL string) error {
 			}
 			// Older workers kept the initial child reference only in this cache.
 			results := append([]shuffle.ActionResult(nil), current.Results...)
-			for _, action := range current.Workflow.Actions {
+			actions := append([]shuffle.Action(nil), current.Workflow.Actions...)
+			for _, trigger := range current.Workflow.Triggers {
+				if trigger.AppName == "Shuffle Workflow" || trigger.AppName == "shuffle-subflow" {
+					actions = append(actions, shuffle.Action{ID: trigger.ID, AppName: "shuffle-subflow", Name: trigger.Name,
+						Label: trigger.Label, Environment: trigger.Environment, Parameters: trigger.Parameters})
+				}
+			}
+			for _, action := range actions {
 				if action.AppName != "shuffle-subflow" {
 					continue
 				}
