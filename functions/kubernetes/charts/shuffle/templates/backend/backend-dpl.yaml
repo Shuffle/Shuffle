@@ -120,6 +120,18 @@ spec:
             - name: {{ $key | quote }}
               value: {{ $val | quote }}
             {{- end }}
+            {{- if and (eq .Values.storage.type "s3") .Values.storage.s3.existingSecret }}
+            - name: SHUFFLE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.s3.existingSecret | quote }}
+                  key: {{ .Values.storage.s3.accessKeyKey | quote }}
+            - name: SHUFFLE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.s3.existingSecret | quote }}
+                  key: {{ .Values.storage.s3.secretKeyKey | quote }}
+            {{- end }}
             {{- if .Values.backend.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.backend.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
@@ -198,8 +210,12 @@ spec:
         - name: empty-dir
           emptyDir: {}
         - name: shuffle-app-builder
+        {{- if or .Values.persistence.appBuilder.enabled .Values.persistence.appBuilder.existingClaim }}
           persistentVolumeClaim:
-            claimName: backend-apps-claim
+            claimName: {{ default "backend-apps-claim" .Values.persistence.appBuilder.existingClaim }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
         - name: shuffle-apps
         {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
@@ -208,7 +224,7 @@ spec:
           emptyDir: {}
         {{- end }}
         - name: shuffle-files
-        {{- if .Values.persistence.enabled }}
+        {{- if and .Values.persistence.enabled (ne .Values.storage.type "s3") }}
           persistentVolumeClaim:
             claimName: {{ default (printf "%s-files" (include "shuffle.backend.name" .)) .Values.persistence.apps.existingClaim }}
         {{- else }}

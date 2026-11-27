@@ -3757,6 +3757,16 @@
                             "type": "object",
                             "description": "Selector to match an existing Persistent Volume",
                             "default": {}
+                        },
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Use a PVC for app build staging (/app/generated); disabled by default (emptyDir)",
+                            "default": false
+                        },
+                        "existingClaim": {
+                            "type": "string",
+                            "description": "Name of an existing PVC for app build staging",
+                            "default": ""
                         }
                     }
                 },
@@ -3896,6 +3906,81 @@
                     "description": "A list of VaultSecrets to create",
                     "default": [],
                     "items": {}
+                }
+            }
+        },
+        "storage": {
+            "type": "object",
+            "description": "Object storage for file data (uploads, large execution payloads, workflow parameters, app images)",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "local",
+                        "s3"
+                    ],
+                    "description": "local = filesystem under SHUFFLE_FILE_LOCATION (backed by PVC); s3 = S3-compatible object store",
+                    "default": "local"
+                },
+                "s3": {
+                    "type": "object",
+                    "properties": {
+                        "endpoint": {
+                            "type": "string",
+                            "description": "S3-compatible endpoint",
+                            "default": ""
+                        },
+                        "bucket": {
+                            "type": "string",
+                            "description": "Bucket name (required when storage.type=s3)",
+                            "default": ""
+                        },
+                        "prefix": {
+                            "type": "string",
+                            "description": "Optional key prefix inside the bucket",
+                            "default": ""
+                        },
+                        "region": {
+                            "type": "string",
+                            "description": "Bucket region",
+                            "default": "us-east-1"
+                        },
+                        "insecure": {
+                            "type": "boolean",
+                            "description": "Use http:// instead of https://",
+                            "default": false
+                        },
+                        "usePathStyle": {
+                            "type": "boolean",
+                            "description": "Use path-style addressing (required for MinIO)",
+                            "default": true
+                        },
+                        "accessKey": {
+                            "type": "string",
+                            "description": "Static access key (empty = ambient credentials)",
+                            "default": ""
+                        },
+                        "secretKey": {
+                            "type": "string",
+                            "description": "Static secret key (empty = ambient credentials)",
+                            "default": ""
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "Existing Secret with credentials instead of static values",
+                            "default": ""
+                        },
+                        "accessKeyKey": {
+                            "type": "string",
+                            "description": "Key in existingSecret for the access key",
+                            "default": "access-key"
+                        },
+                        "secretKeyKey": {
+                            "type": "string",
+                            "description": "Key in existingSecret for the secret key",
+                            "default": "secret-key"
+                        }
+                    }
                 }
             }
         }

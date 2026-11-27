@@ -2613,6 +2613,43 @@ istio:
     ##
     frontendHeaders: {}
 
+## @section Storage Parameters
+##
+
+## Object storage for file data (uploads, large execution payloads, workflow
+## parameters, app image metadata). The default ("local") keeps the historical
+## filesystem behavior backed by the shuffle-files PVC.
+##
+storage:
+  ## @param storage.type Where file storage is persisted: "local" (filesystem under SHUFFLE_FILE_LOCATION) or "s3" (S3-compatible object store). Databases (OpenSearch) are not affected.
+  ##
+  type: local
+
+  ## @param storage.s3.endpoint S3-compatible endpoint, e.g. s3.amazonaws.com or minio.default.svc.cluster.local:9000
+  ## @param storage.s3.bucket Bucket name (required when storage.type=s3)
+  ## @param storage.s3.prefix Optional key prefix inside the bucket
+  ## @param storage.s3.region Bucket region
+  ## @param storage.s3.insecure Use http:// instead of https:// against the endpoint
+  ## @param storage.s3.usePathStyle Use path-style addressing (required for MinIO and most self-hosted implementations)
+  ## @param storage.s3.accessKey Static access key. Leave empty together with secretKey to use ambient credentials (IRSA/Workload Identity)
+  ## @param storage.s3.secretKey Static secret key
+  ## @param storage.s3.existingSecret Use an existing Secret containing the credentials instead of static values
+  ## @param storage.s3.accessKeyKey Key in existingSecret holding the access key
+  ## @param storage.s3.secretKeyKey Key in existingSecret holding the secret key
+  ##
+  s3:
+    endpoint: ""
+    bucket: ""
+    prefix: ""
+    region: "us-east-1"
+    insecure: false
+    usePathStyle: true
+    accessKey: ""
+    secretKey: ""
+    existingSecret: ""
+    accessKeyKey: "access-key"
+    secretKeyKey: "secret-key"
+
 ## @section Persistence Parameters
 ##
 
@@ -2642,6 +2679,12 @@ persistence:
     annotations: {}
     selector: {}
 
+  ## App build staging for the app builder. This is ephemeral build context
+  ## (generated code is pushed to the registry; images are not stored here), so
+  ## it defaults to an emptyDir. Enable to use a PVC instead, e.g. to share the
+  ## staging area across backend replicas or to keep build artifacts.
+  ## @param persistence.appBuilder.enabled Use a PVC for app build staging (/app/generated)
+  ## @param persistence.appBuilder.existingClaim Name of an existing PVC to use
   ## @param persistence.appBuilder.storageClass PVC Storage Class for backend-apps-claim volume
   ## Note: The default StorageClass will be used if not defined. Set it to `-` to disable dynamic provisioning
   ## @param persistence.appBuilder.accessModes The access mode of the volume
@@ -2649,6 +2692,8 @@ persistence:
   ## @param persistence.appBuilder.annotations Annotations for the PVC
   ## @param persistence.appBuilder.selector Selector to match an existing Persistent Volume
   appBuilder:
+    enabled: false
+    existingClaim: ""
     storageClass: ""
     accessModes:
       - ReadWriteOnce

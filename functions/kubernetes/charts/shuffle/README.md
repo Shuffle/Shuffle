@@ -953,30 +953,67 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 | `istio.virtualService.backendHeaders`   | Header manipulation rules for backend traffic                                   | `{}`                     |
 | `istio.virtualService.frontendHeaders`  | Header manipulation rules for frontend traffic                                  | `{}`                     |
 
+#### Storage Parameters
+
+By default, Shuffle stores file data (file uploads, oversized execution payloads,
+workflow parameters and app image metadata) on the filesystem under
+`SHUFFLE_FILE_LOCATION`, backed by the `shuffle-files` PVC. To run without this
+PVC, set `storage.type=s3` to persist that data in an S3-compatible object store
+(AWS S3, MinIO, Wasabi, Ceph, ...) instead. Databases (OpenSearch) are not
+affected by this setting.
+
+```yaml
+storage:
+  type: s3
+  s3:
+    endpoint: minio.default.svc.cluster.local:9000
+    bucket: shuffle
+    # usePathStyle: true (default; required for MinIO and most self-hosted stores)
+    # Leave accessKey/secretKey empty to use ambient credentials (e.g. IRSA on EKS),
+    # or set storage.s3.existingSecret to reference a Secret with the keys.
+```
+
+| Name                        | Description                                                                                                                                                      | Value        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `storage.type`              | Where file storage is persisted: "local" (filesystem under SHUFFLE_FILE_LOCATION) or "s3" (S3-compatible object store). Databases (OpenSearch) are not affected. | `local`      |
+| `storage.s3.endpoint`       | S3-compatible endpoint, e.g. s3.amazonaws.com or minio.default.svc.cluster.local:9000                                                                            | `""`         |
+| `storage.s3.bucket`         | Bucket name (required when storage.type=s3)                                                                                                                      | `""`         |
+| `storage.s3.prefix`         | Optional key prefix inside the bucket                                                                                                                            | `""`         |
+| `storage.s3.region`         | Bucket region                                                                                                                                                    | `us-east-1`  |
+| `storage.s3.insecure`       | Use http:// instead of https:// against the endpoint                                                                                                             | `false`      |
+| `storage.s3.usePathStyle`   | Use path-style addressing (required for MinIO and most self-hosted implementations)                                                                              | `true`       |
+| `storage.s3.accessKey`      | Static access key. Leave empty together with secretKey to use ambient credentials (IRSA/Workload Identity)                                                       | `""`         |
+| `storage.s3.secretKey`      | Static secret key                                                                                                                                                | `""`         |
+| `storage.s3.existingSecret` | Use an existing Secret containing the credentials instead of static values                                                                                       | `""`         |
+| `storage.s3.accessKeyKey`   | Key in existingSecret holding the access key                                                                                                                     | `access-key` |
+| `storage.s3.secretKeyKey`   | Key in existingSecret holding the secret key                                                                                                                     | `secret-key` |
+
 #### Persistence Parameters
 
-| Name                                  | Description                                       | Value               |
-| ------------------------------------- | ------------------------------------------------- | ------------------- |
-| `persistence.enabled`                 | Enable persistence using Persistent Volume Claims | `true`              |
-| `persistence.apps.existingClaim`      | Name of an existing PVC to use                    | `""`                |
-| `persistence.apps.storageClass`       | PVC Storage Class for shuffle-apps volume         | `""`                |
-| `persistence.apps.subPath`            | The sub path used in the volume                   | `""`                |
-| `persistence.apps.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
-| `persistence.apps.size`               | The size of the volume                            | `5Gi`               |
-| `persistence.apps.annotations`        | Annotations for the PVC                           | `{}`                |
-| `persistence.apps.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
-| `persistence.appBuilder.storageClass` | PVC Storage Class for backend-apps-claim volume   | `""`                |
-| `persistence.appBuilder.accessModes`  | The access mode of the volume                     | `["ReadWriteOnce"]` |
-| `persistence.appBuilder.size`         | The size of the volume                            | `5Gi`               |
-| `persistence.appBuilder.annotations`  | Annotations for the PVC                           | `{}`                |
-| `persistence.appBuilder.selector`     | Selector to match an existing Persistent Volume   | `{}`                |
-| `persistence.files.existingClaim`     | Name of an existing PVC to use                    | `""`                |
-| `persistence.files.storageClass`      | PVC Storage Class for shuffle-files volume        | `""`                |
-| `persistence.files.subPath`           | The sub path used in the volume                   | `""`                |
-| `persistence.files.accessModes`       | The access mode of the volume                     | `["ReadWriteOnce"]` |
-| `persistence.files.size`              | The size of the volume                            | `5Gi`               |
-| `persistence.files.annotations`       | Annotations for the PVC                           | `{}`                |
-| `persistence.files.selector`          | Selector to match an existing Persistent Volume   | `{}`                |
+| Name                                   | Description                                       | Value               |
+| -------------------------------------- | ------------------------------------------------- | ------------------- |
+| `persistence.enabled`                  | Enable persistence using Persistent Volume Claims | `true`              |
+| `persistence.apps.existingClaim`       | Name of an existing PVC to use                    | `""`                |
+| `persistence.apps.storageClass`        | PVC Storage Class for shuffle-apps volume         | `""`                |
+| `persistence.apps.subPath`             | The sub path used in the volume                   | `""`                |
+| `persistence.apps.accessModes`         | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.apps.size`                | The size of the volume                            | `5Gi`               |
+| `persistence.apps.annotations`         | Annotations for the PVC                           | `{}`                |
+| `persistence.apps.selector`            | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.appBuilder.enabled`       | Use a PVC for app build staging (/app/generated)  | `false`             |
+| `persistence.appBuilder.existingClaim` | Name of an existing PVC to use                    | `""`                |
+| `persistence.appBuilder.storageClass`  | PVC Storage Class for backend-apps-claim volume   | `""`                |
+| `persistence.appBuilder.accessModes`   | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.appBuilder.size`          | The size of the volume                            | `5Gi`               |
+| `persistence.appBuilder.annotations`   | Annotations for the PVC                           | `{}`                |
+| `persistence.appBuilder.selector`      | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.files.existingClaim`      | Name of an existing PVC to use                    | `""`                |
+| `persistence.files.storageClass`       | PVC Storage Class for shuffle-files volume        | `""`                |
+| `persistence.files.subPath`            | The sub path used in the volume                   | `""`                |
+| `persistence.files.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.files.size`               | The size of the volume                            | `5Gi`               |
+| `persistence.files.annotations`        | Annotations for the PVC                           | `{}`                |
+| `persistence.files.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
 
 #### Init Container Parameters
 
@@ -1064,28 +1101,30 @@ The password should be provided with the `SHUFFLE_OPENSEARCH_PASSWORD` env varia
 
 ### Persistence Parameters
 
-| Name                                  | Description                                       | Value               |
-| ------------------------------------- | ------------------------------------------------- | ------------------- |
-| `persistence.enabled`                 | Enable persistence using Persistent Volume Claims | `true`              |
-| `persistence.apps.existingClaim`      | Name of an existing PVC to use                    | `""`                |
-| `persistence.apps.storageClass`       | PVC Storage Class for shuffle-apps volume         | `""`                |
-| `persistence.apps.subPath`            | The sub path used in the volume                   | `""`                |
-| `persistence.apps.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
-| `persistence.apps.size`               | The size of the volume                            | `5Gi`               |
-| `persistence.apps.annotations`        | Annotations for the PVC                           | `{}`                |
-| `persistence.apps.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
-| `persistence.appBuilder.storageClass` | PVC Storage Class for backend-apps-claim volume   | `""`                |
-| `persistence.appBuilder.accessModes`  | The access mode of the volume                     | `["ReadWriteOnce"]` |
-| `persistence.appBuilder.size`         | The size of the volume                            | `5Gi`               |
-| `persistence.appBuilder.annotations`  | Annotations for the PVC                           | `{}`                |
-| `persistence.appBuilder.selector`     | Selector to match an existing Persistent Volume   | `{}`                |
-| `persistence.files.existingClaim`     | Name of an existing PVC to use                    | `""`                |
-| `persistence.files.storageClass`      | PVC Storage Class for shuffle-files volume        | `""`                |
-| `persistence.files.subPath`           | The sub path used in the volume                   | `""`                |
-| `persistence.files.accessModes`       | The access mode of the volume                     | `["ReadWriteOnce"]` |
-| `persistence.files.size`              | The size of the volume                            | `5Gi`               |
-| `persistence.files.annotations`       | Annotations for the PVC                           | `{}`                |
-| `persistence.files.selector`          | Selector to match an existing Persistent Volume   | `{}`                |
+| Name                                   | Description                                       | Value               |
+| -------------------------------------- | ------------------------------------------------- | ------------------- |
+| `persistence.enabled`                  | Enable persistence using Persistent Volume Claims | `true`              |
+| `persistence.apps.existingClaim`       | Name of an existing PVC to use                    | `""`                |
+| `persistence.apps.storageClass`        | PVC Storage Class for shuffle-apps volume         | `""`                |
+| `persistence.apps.subPath`             | The sub path used in the volume                   | `""`                |
+| `persistence.apps.accessModes`         | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.apps.size`                | The size of the volume                            | `5Gi`               |
+| `persistence.apps.annotations`         | Annotations for the PVC                           | `{}`                |
+| `persistence.apps.selector`            | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.appBuilder.enabled`       | Use a PVC for app build staging (/app/generated)  | `false`             |
+| `persistence.appBuilder.existingClaim` | Name of an existing PVC to use                    | `""`                |
+| `persistence.appBuilder.storageClass`  | PVC Storage Class for backend-apps-claim volume   | `""`                |
+| `persistence.appBuilder.accessModes`   | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.appBuilder.size`          | The size of the volume                            | `5Gi`               |
+| `persistence.appBuilder.annotations`   | Annotations for the PVC                           | `{}`                |
+| `persistence.appBuilder.selector`      | Selector to match an existing Persistent Volume   | `{}`                |
+| `persistence.files.existingClaim`      | Name of an existing PVC to use                    | `""`                |
+| `persistence.files.storageClass`       | PVC Storage Class for shuffle-files volume        | `""`                |
+| `persistence.files.subPath`            | The sub path used in the volume                   | `""`                |
+| `persistence.files.accessModes`        | The access mode of the volume                     | `["ReadWriteOnce"]` |
+| `persistence.files.size`               | The size of the volume                            | `5Gi`               |
+| `persistence.files.annotations`        | Annotations for the PVC                           | `{}`                |
+| `persistence.files.selector`           | Selector to match an existing Persistent Volume   | `{}`                |
 
 ### Init Container Parameters
 

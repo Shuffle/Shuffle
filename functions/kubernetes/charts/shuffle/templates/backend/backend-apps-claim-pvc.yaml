@@ -1,5 +1,7 @@
-{{- if or (not .Values.shuffle.hybrid) (gt (int .Values.backend.replicaCount) 0) .Values.backend.autoscaling.hpa.enabled }}
-# A local backend needs this volume even when general persistence is disabled.
+{{- if and .Values.persistence.appBuilder.enabled (not .Values.persistence.appBuilder.existingClaim) }}
+# Optional PVC for app build staging (/app/generated). Disabled by default:
+# staging is ephemeral build context and defaults to an emptyDir. Not rendered
+# when persistence.appBuilder.existingClaim references an existing claim.
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:

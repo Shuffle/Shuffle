@@ -91,6 +91,27 @@ RUNNING_MODE: kubernetes
 IS_KUBERNETES: "true"
 SHUFFLE_APP_HOTLOAD_FOLDER: /shuffle-apps
 SHUFFLE_FILE_LOCATION: /shuffle-files
+{{- if eq .Values.storage.type "s3" }}
+SHUFFLE_STORAGE_BACKEND: "s3"
+SHUFFLE_S3_ENDPOINT: {{ .Values.storage.s3.endpoint | quote }}
+SHUFFLE_S3_BUCKET: {{ .Values.storage.s3.bucket | quote }}
+{{- if .Values.storage.s3.prefix }}
+SHUFFLE_S3_PREFIX: {{ .Values.storage.s3.prefix | quote }}
+{{- end }}
+SHUFFLE_S3_REGION: {{ .Values.storage.s3.region | quote }}
+SHUFFLE_S3_USE_PATH_STYLE: {{ .Values.storage.s3.usePathStyle | quote }}
+{{- if .Values.storage.s3.insecure }}
+SHUFFLE_S3_INSECURE: "true"
+{{- end }}
+{{- if not .Values.storage.s3.existingSecret }}
+{{- if .Values.storage.s3.accessKey }}
+SHUFFLE_S3_ACCESS_KEY: {{ .Values.storage.s3.accessKey | quote }}
+{{- end }}
+{{- if .Values.storage.s3.secretKey }}
+SHUFFLE_S3_SECRET_KEY: {{ .Values.storage.s3.secretKey | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
 BACKEND_PORT: "{{ .Values.backend.containerPorts.http }}"
 {{- if .Values.shuffle.baseUrl }}
 BASE_URL: "{{ .Values.shuffle.baseUrl }}"
