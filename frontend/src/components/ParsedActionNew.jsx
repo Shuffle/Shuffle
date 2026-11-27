@@ -192,6 +192,8 @@ const ParsedAction = (props) => {
 		suborgWorkflows,
 		originalWorkflow,
 		runFromHere,
+		pendingEditorField,
+		setPendingEditorField,
 	} = props;
 
 	let navigate = useNavigate()
@@ -210,6 +212,7 @@ const ParsedAction = (props) => {
 	const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
 	const [paramUpdate, setParamUpdate] = React.useState("");
 	const [actionlist, setActionlist] = React.useState([]);
+	const [actionlistOwner, setActionlistOwner] = React.useState("");
 	const [jsonList, setJsonList] = React.useState([]);
 	const [showDropdown, setShowDropdown] = React.useState(false);
 	const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
@@ -1130,6 +1133,7 @@ const ParsedAction = (props) => {
 						name: parentNode.label,
 						autocomplete: parentNode.label.split(" ").join("_"),
 						example: exampleData,
+						large_image: parentNode.large_image,
 					});
 
 					parentActionList.push({
@@ -1221,9 +1225,47 @@ const ParsedAction = (props) => {
 			return { ...param, value: paramvalue, error: message }
 		})
 
-		setSelectedActionParameters(newParameters)
+		setSelectedActionParameters(newParameters || [])
 		setActionlist(newActionList)
+		setActionlistOwner(selectedAction?.id || "")
 	}, [workflow.execution_variables, paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents, setNewSelectedAction]);
+
+	useEffect(() => {
+		if (pendingEditorField === undefined || pendingEditorField === null || setPendingEditorField === undefined) {
+			return
+		}
+
+		if (selectedAction?.id !== pendingEditorField.actionId || actionlistOwner !== selectedAction?.id) {
+			return
+		}
+
+		const count = selectedActionParameters.findIndex((param) => param.name === pendingEditorField.fieldName)
+		setPendingEditorField(null)
+		if (count === -1) {
+			toast.error("Couldn't find that field on this app")
+			return
+		}
+
+		const data = selectedActionParameters[count]
+		var parsedvalue = data.value
+		if (parsedvalue === undefined || parsedvalue === null) {
+			parsedvalue = ""
+		}
+
+		setFieldCount(count)
+		setExpansionModalOpen(true)
+		setActiveDialog("codeeditor")
+		navigate(`?action_id=${selectedAction.id}&field=${data.name}&action_name=${selectedAction.name}&app_name=${selectedAction?.label}`)
+		setEditorData({
+			"name": data.name,
+			"value": fixExample(parsedvalue),
+			"field_number": count,
+			"actionlist": actionlist,
+			"field_id": "rightside_field_" + count,
+
+			"example": fixExample(data.example),
+		})
+	}, [pendingEditorField?.nonce, actionlistOwner, actionlist, selectedAction?.id])
 
 	useEffect(() => {
 		selectedNameChange(appActionName)
@@ -3642,6 +3684,12 @@ const ParsedAction = (props) => {
 											},
 											'& .MuiInputBase-input': {
 												paddingY: 1.25,
+												color: theme.palette.text.primary,
+												WebkitTextFillColor: theme.palette.text.primary,
+											},
+											'& .MuiInputBase-input.Mui-disabled': {
+												color: theme.palette.text.secondary,
+												WebkitTextFillColor: theme.palette.text.secondary,
 											},
 										}}
 									/>

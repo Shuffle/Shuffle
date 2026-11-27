@@ -168,8 +168,7 @@ import HighlightedValueInSearch from "../components/HighlightedValueInSearch.jsx
 import { act } from "react";
 import { Context, isCloud } from "../context/ContextApi.jsx";
 import WorkflowGenerationModal from "../components/WorkflowGenerationModal.jsx";
-import { AskAiWidget, AGENT_WORKFLOW_CHANGED_EVENT, AGENT_FOCUS_NODE_EVENT, AGENT_OPEN_EXECUTION_EVENT } from "@shuffleio/shuffle-mcps";
-import { AppSearchDrawer, AppDetailDrawer } from "@shuffleio/shuffle-core";
+import { useWorkflowDock, WorkflowDockTabs, WorkflowAgentSidebar } from "../components/WorkflowAgentDock.jsx";
 import WorkflowHistory from "../components/WorkflowHistory.jsx";
 import CodeMirror from '@uiw/react-codemirror';
 import { python } from '@codemirror/lang-python';
@@ -203,6 +202,9 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 const searchClient = algoliasearch("JNSS5CFDZZ", ALGOLIA_CLIENT_KEY)
 
+
+const commentResizeState = { timeout: null, width: 0, height: 0 }
+const commentHandlers = {}
 
 const AngularWorkflow = (defaultprops) => {
   const { globalUrl, streamUrl, setCookie, isLoggedIn, isLoaded, userdata, data_id, ReactGA, } = defaultprops;
@@ -297,41 +299,6 @@ const AngularWorkflow = (defaultprops) => {
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
   const [aiQueryModalOpen, setAiQueryModalOpen] = React.useState(false)
   const [workflowGenerationModalOpen, setWorkflowGenerationModalOpen] = React.useState(false);
-
-  // The agent sidebar (AskAiWidget) publishes its width as --ask-ai-panel-width;
-  // the canvas gives up that much room instead of being covered
-  const [agentSidebarWidth, setAgentSidebarWidth] = React.useState(0)
-
-  // Clicking text in the agent sidebar doesn't move focus, so the keys typed after it target <body>,
-  // not the sidebar. Remember where the last click was to tell those keys apart from canvas ones.
-  const lastPointerInAgentPanelRef = React.useRef(false)
-  React.useEffect(() => {
-    const onPointerDown = (event) => {
-      lastPointerInAgentPanelRef.current = !!event.target?.closest?.("[data-ask-ai-panel]")
-    }
-    document.addEventListener("pointerdown", onPointerDown, true)
-    return () => document.removeEventListener("pointerdown", onPointerDown, true)
-  }, [])
-  const isAgentPanelKey = (event) => {
-    const target = event.target
-    if (target?.closest?.("[data-ask-ai-panel]")) return true
-    return lastPointerInAgentPanelRef.current && (!target || target === document.body || target === document.documentElement)
-  }
-  React.useEffect(() => {
-    const readWidth = () => setAgentSidebarWidth(parseInt(getComputedStyle(document.documentElement).getPropertyValue("--ask-ai-panel-width")) || 0)
-    // Dragging the sidebar changes its width every frame; re-render the editor once it settles
-    let timer
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer)
-      timer = setTimeout(readWidth, 100)
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] })
-    readWidth()
-    return () => {
-      observer.disconnect()
-      clearTimeout(timer)
-    }
-  }, [])
 
   const [workflowDescription, setWorkflowDescription] = React.useState("");
   const [executionVariablesModalOpen, setExecutionVariablesModalOpen] =
@@ -433,50 +400,24 @@ const AngularWorkflow = (defaultprops) => {
   const [executionRunning, setExecutionRunning] = React.useState(false);
   const [executionModalOpen, setExecutionModalOpen] = React.useState(false);
 
-  // With the agent sidebar open, the run panel docks at the right edge as a plain side panel (no backdrop),
-  // the sidebar moves left of it, and the editor gives up room for both instead of being covered
-  const debugDocked = agentSidebarWidth > 0 && !isMobile
-  const debugPanelWidth = debugDocked ? 430 : 490
-  const debugOffset = debugDocked && executionModalOpen ? debugPanelWidth : 0
-  // The node/trigger config panel docks the same way: at the right edge (left of a docked run panel), with the sidebar moved left of it
-  const configPanelWidth = 370
-  const configDocked = debugDocked && rightSideBarOpen && [selectedAction, selectedTrigger, selectedComment, selectedEdge].some((item) => Object.getOwnPropertyNames(item || {}).length > 0)
-  const rightPanelsWidth = agentSidebarWidth + debugOffset + (configDocked ? configPanelWidth : 0)
+  // Drop execution_id so the run panel doesn't reopen on reload
+  const closeDockedRunPanel = () => {
+    setExecutionModalOpen(false)
+    navigate(window.location.pathname + (removeParam("execution_id", window.location.search) || ""), { replace: true })
+  }
 
-  const crowdedRight = [agentSidebarWidth > 0, debugOffset > 0, configDocked].filter(Boolean).length >= 2
-  const leftAutoCollapseRef = React.useRef({ crowded: false, collapsed: false, width: 0 })
-  React.useEffect(() => {
-    const autoCollapse = leftAutoCollapseRef.current
-    const becameCrowded = crowdedRight && !autoCollapse.crowded
-    autoCollapse.crowded = crowdedRight
-
-    if (becameCrowded && leftViewOpen) {
-      autoCollapse.collapsed = true
-      autoCollapse.width = leftBarSize
-      setLeftBarSize(0)
-      setLeftViewOpen(false)
-      return
-    }
-
-    if (crowdedRight) {
-      if (leftViewOpen) {
-        autoCollapse.collapsed = false
-      }
-      return
-    }
-
-    if (autoCollapse.collapsed && !leftViewOpen) {
-      setLeftBarSize(autoCollapse.width || 235)
-      setLeftViewOpen(true)
-    }
-    autoCollapse.collapsed = false
-  }, [crowdedRight, leftViewOpen, leftBarSize])
-
-  React.useEffect(() => {
-    if (!cy) return
-    const timer = setTimeout(() => cy.resize(), 350)
-    return () => clearTimeout(timer)
-  }, [rightPanelsWidth, cy])
+  // Right dock: agent, config and run tabs (components/WorkflowAgentDock.jsx)
+  const configOpen = rightSideBarOpen || Object.getOwnPropertyNames(selectedEdge || {}).length > 0
+  const dock = useWorkflowDock({
+    isMobile,
+    agentOpen: workflowGenerationModalOpen && !!workflow?.id && workflow.public !== true,
+    configOpen,
+    configKey: configOpen ? selectedAction.id || selectedTrigger.id || selectedComment.id || selectedEdge.id || "open" : "",
+    runOpen: executionModalOpen,
+    onCloseRunPanel: closeDockedRunPanel,
+    cy,
+  })
+  const { docked, dockTabHeight, shownTab, configHidden, dockWidth, rightPanelsWidth, isAgentPanelKey } = dock
 
   // Bottom toolbar: centred on the canvas area that is actually visible (from the canvas' left edge to where the
   // docked right panels start). Measured, since page margins and the left panels aren't all in leftBarSize.
@@ -506,24 +447,6 @@ const AngularWorkflow = (defaultprops) => {
       window.removeEventListener("resize", measure)
     }
   }, [bottomBarEl, rightPanelsWidth, leftBarSize, leftSideBarOpenByClick])
-
-  // The docked panel has no backdrop to click away, so it gets its own close button and Esc.
-  // Dropping execution_id keeps it from reopening on the next load.
-  const closeDockedRunPanel = () => {
-    setExecutionModalOpen(false)
-    navigate(window.location.pathname + (removeParam("execution_id", window.location.search) || ""), { replace: true })
-  }
-
-  const closeDockedRunPanelRef = React.useRef(closeDockedRunPanel)
-  closeDockedRunPanelRef.current = closeDockedRunPanel
-  React.useEffect(() => {
-    if (!debugDocked || !executionModalOpen) return
-    const onKeyDown = (event) => {
-      if (event.key === "Escape" && !isAgentPanelKey(event)) closeDockedRunPanelRef.current()
-    }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [debugDocked, executionModalOpen])
   const [executionModalView, setExecutionModalView] = React.useState(0);
   const [executionData, setExecutionData] = React.useState({});
   const [appsLoaded, setAppsLoaded] = React.useState(false);
@@ -573,6 +496,22 @@ const AngularWorkflow = (defaultprops) => {
 
   // For code editor
   const [codeEditorModalOpen, setCodeEditorModalOpen] = React.useState(false);
+  const [pendingEditorField, setPendingEditorField] = React.useState(null);
+
+  const switchEditorField = (actionId, fieldName) => {
+    if (cy !== undefined && cy !== null && selectedAction?.id !== actionId) {
+      const node = cy.getElementById(actionId)
+      if (node === undefined || node === null || node.length === 0) {
+        toast.error("Couldn't find that app in the workflow")
+        return
+      }
+
+      cy.elements().unselect()
+      node.select()
+    }
+
+    setPendingEditorField({ actionId: actionId, fieldName: fieldName, nonce: Date.now() })
+  }
   const [codedata, setcodedata] = React.useState("");
   const [editorData, setEditorData] = React.useState({
     "name": "",
@@ -1621,8 +1560,13 @@ const AngularWorkflow = (defaultprops) => {
         cy.removeListener("free");
         cy.removeListener("cxttap");
 
-        setTimeout(() => {
-          setupGraph(workflow)
+        setTimeout(async () => {
+          // Add listeners after drawing, so drawn nodes aren't streamed as user edits
+          try {
+            await setupGraph(workflow)
+          } catch (error) {
+            console.log("Error drawing the workflow: ", error)
+          }
 
           cy.on("select", "node", (e) => {
             onNodeSelect(e, appAuthentication);
@@ -1678,6 +1622,7 @@ const AngularWorkflow = (defaultprops) => {
           });
 
           cy.on("cxttap", "node", (e) => onCtxTap(e));
+          addCommentListeners();
 
           cy.edgehandles({
             handleNodes: (el) => {
@@ -4580,8 +4525,7 @@ const AngularWorkflow = (defaultprops) => {
           })
         }
       })
-      setupResizeHandlers(cy, chunkJson.id)
-      setupNodeDragHandler(cy, chunkJson.id)
+      addCommentListeners()
       return
     }
 
@@ -4776,99 +4720,6 @@ const AngularWorkflow = (defaultprops) => {
     }
   }
 
-  // Agent panel: show the agent's edits on the canvas
-  const flashAgentNodes = (nodeIds) => {
-    if (!cy || !nodeIds || nodeIds.length === 0) return
-    for (const nodeId of nodeIds) {
-      const node = cy.getElementById(nodeId)
-      if (!node || node.length === 0) continue
-      node.style({ "border-width": "6px", "border-color": "#9c5af2", "border-opacity": "1" })
-      setTimeout(() => {
-        if (node.removed()) return
-        node.removeStyle("border-width border-color border-opacity")
-        // removeStyle also drops the red border of a node with validation errors, so put it back
-        if (node.data("is_valid") === false) {
-          node.style({ "border-width": "2px", "border-opacity": ".9", "border-color": red })
-        }
-      }, 2500)
-    }
-  }
-
-  // Nodes the agent changed that the canvas hasn't shown yet
-  const agentPendingNodeIdsRef = React.useRef([])
-  const reloadAgentChanges = () => {
-    const nodeIds = agentPendingNodeIdsRef.current
-    agentPendingNodeIdsRef.current = []
-    getWorkflow(workflow.id, {})
-    setTimeout(() => flashAgentNodes(nodeIds), 1500)
-  }
-
-  const handleAgentWorkflowChanged = (nodeIds, reverted) => {
-    if (reverted) {
-      agentPendingNodeIdsRef.current = []
-      getWorkflow(workflow.id, {})
-      if (multiplayerEnabledRef.current && streamUrl) {
-        stream.sendWorkflowRewind(userdata?.username)
-      }
-      return
-    }
-
-    if (multiplayerEnabledRef.current) {
-      flashAgentNodes(nodeIds)
-      return
-    }
-
-    agentPendingNodeIdsRef.current = [...agentPendingNodeIdsRef.current, ...nodeIds]
-  }
-
-  // The agent works on the saved workflow, so save unsaved edits before it starts
-  const workflowForAgentRef = React.useRef(workflow)
-  workflowForAgentRef.current = workflow
-  const saveBeforeAgentRun = () => saveWorkflow(workflowForAgentRef.current, undefined, undefined, undefined, true)
-
-  const agentTerminalStatuses = ["FINISHED", "FAILURE", "ABORTED", "CANCELLED"]
-  const [agentRunning, setAgentRunning] = React.useState(false)
-  const agentWaitingRef = React.useRef(false)
-  const handleAgentRunStatus = ({ executionId, status, previousStatus, running, waiting }) => {
-    setAgentRunning(running)
-    const startedWaiting = waiting && !agentWaitingRef.current
-    agentWaitingRef.current = waiting
-
-    // Only a change seen live counts. Opening an old run must not report it again.
-    const wasActive = !!previousStatus && !agentTerminalStatuses.includes(previousStatus)
-    if (!wasActive) return
-
-    // Settled: finished, or paused on a question the user may want to answer looking at the canvas
-    if ((agentTerminalStatuses.includes(status) || startedWaiting) && agentPendingNodeIdsRef.current.length > 0) {
-      if (lastSaved) {
-        reloadAgentChanges()
-      } else {
-        agentPendingNodeIdsRef.current = []
-        toast("The agent changed this workflow. Save or discard your own changes, then reload to see its changes.")
-      }
-    }
-
-    // Same events and fields as the old agent widget, so the funnel data stays comparable
-    if (status === "FINISHED") {
-      trackAgentFunnel("agent_finished", executionId)
-    } else if (status === "ABORTED") {
-      trackAgentFunnel("agent_aborted", executionId)
-    } else if (agentTerminalStatuses.includes(status)) {
-      trackAgentFunnel("agent_failed", executionId, { status })
-    }
-  }
-
-  const focusAgentNode = (nodeId) => {
-    const node = cy ? cy.getElementById(nodeId) : null
-    if (!node || node.length === 0) {
-      toast("That node isn't in the workflow anymore")
-      return
-    }
-    cy.elements().unselect()
-    node.select()
-    cy.animate({ center: { eles: node }, duration: 300 })
-  }
-
   // Shows a run the agent started in the debug view, the same way as a run started here
   const openAgentExecution = (executionId, authorization) => {
     navigate(`?execution_id=${executionId}`)
@@ -4881,49 +4732,6 @@ const AngularWorkflow = (defaultprops) => {
     start()
   }
 
-  // Stable props for the memoized agent sidebar, so editor re-renders don't re-render the whole agent tree
-  const agentCallbacksRef = React.useRef({})
-  agentCallbacksRef.current = { track: trackAgentFunnel, beforeRun: saveBeforeAgentRun, runStatus: handleAgentRunStatus }
-  const agentUIProps = React.useMemo(() => ({
-    workflowId: workflow?.id,
-    initialView: "chat",
-    // The editor's own ?execution_id belongs to workflow runs, not agent runs
-    readUrlParams: false,
-    apiBaseUrl: globalUrl,
-    // A run that never started is its own event: agent_failed stays "a started run failed"
-    onRun: ({ success, executionId, error }) => agentCallbacksRef.current.track(success ? "agent_started" : "agent_start_failed", executionId || "", error ? { reason: error } : {}),
-    onBeforeRun: () => agentCallbacksRef.current.beforeRun(),
-    onRunStatusChange: (info) => agentCallbacksRef.current.runStatus(info),
-    renderToolDrawer: (p) => <AppSearchDrawer {...p} />,
-    renderAppDetailDrawer: (p) => <AppDetailDrawer {...p} />,
-  }), [workflow?.id, globalUrl])
-
-  // Latest handlers, so the listeners below subscribe once per workflow
-  const agentEventHandlersRef = React.useRef({})
-  agentEventHandlersRef.current = { changed: handleAgentWorkflowChanged, focus: focusAgentNode, openExecution: openAgentExecution }
-
-  React.useEffect(() => {
-    if (!workflow?.id) return
-    const onChanged = (event) => {
-      if (event.detail?.workflowId !== workflow.id) return
-      agentEventHandlersRef.current.changed(event.detail.nodeIds || [], event.detail.reverted)
-    }
-    const onFocus = (event) => {
-      if (event.detail?.workflowId === workflow.id) agentEventHandlersRef.current.focus(event.detail.nodeId)
-    }
-    const onOpenExecution = (event) => {
-      if (event.detail?.workflowId === workflow.id && event.detail.executionId) agentEventHandlersRef.current.openExecution(event.detail.executionId, event.detail.authorization)
-    }
-    window.addEventListener(AGENT_WORKFLOW_CHANGED_EVENT, onChanged)
-    window.addEventListener(AGENT_FOCUS_NODE_EVENT, onFocus)
-    window.addEventListener(AGENT_OPEN_EXECUTION_EVENT, onOpenExecution)
-    return () => {
-      window.removeEventListener(AGENT_WORKFLOW_CHANGED_EVENT, onChanged)
-      window.removeEventListener(AGENT_FOCUS_NODE_EVENT, onFocus)
-      window.removeEventListener(AGENT_OPEN_EXECUTION_EVENT, onOpenExecution)
-    }
-  }, [workflow?.id])
-
   const handleAgentStopped = () => {
     // Remove immediately from local state — no need to wait for network round-trip.
     setConnectedUsers(prev => prev.filter(u => u.user_id !== "agent"))
@@ -4932,26 +4740,6 @@ const AngularWorkflow = (defaultprops) => {
       stream.sendAgentPresenceRemove(workflow.org_id)
     }
   }
-
-  // The agent shows as present to other editors while it runs (or waits for an answer),
-  // whether or not its sidebar is open
-  const agentPresenceRef = React.useRef({})
-  agentPresenceRef.current = { refresh: handleAgentPresenceRefresh, stop: handleAgentStopped }
-  React.useEffect(() => {
-    if (!agentRunning) return
-    agentPresenceRef.current.refresh()
-    const timer = setInterval(() => agentPresenceRef.current.refresh(), 25000)
-    return () => {
-      clearInterval(timer)
-      agentPresenceRef.current.stop()
-    }
-  }, [agentRunning])
-
-  // The agent sidebar mounts the first time it's opened, then stays for the rest of the visit
-  const [agentSidebarOpened, setAgentSidebarOpened] = React.useState(false)
-  React.useEffect(() => {
-    if (workflowGenerationModalOpen) setAgentSidebarOpened(true)
-  }, [workflowGenerationModalOpen])
 
   const [usedSubflowApps, setUsedSubflowApps] = React.useState([]);
 
@@ -5229,7 +5017,9 @@ const AngularWorkflow = (defaultprops) => {
       })
   }
 
-  const getWorkflow = (workflow_id, sourcenode) => {
+  const redrawFetchSeqRef = React.useRef(0)
+  const getWorkflow = (workflow_id, sourcenode, redraw, shouldRedraw) => {
+    const redrawSeq = redraw ? ++redrawFetchSeqRef.current : 0
     fetch(`${globalUrl}/api/v1/workflows/${workflow_id}`, {
       method: "GET",
       headers: {
@@ -5568,6 +5358,19 @@ const AngularWorkflow = (defaultprops) => {
 		  		setupWorkflowYaml(responseJson) 
 			  }, 2500)
 		  }
+
+          if (redraw && (redrawSeq !== redrawFetchSeqRef.current || (shouldRedraw && !shouldRedraw(responseJson)))) {
+            return
+          }
+
+          // Clear the canvas so removed nodes don't stay; the [workflow] effect redraws
+          if (redraw && cy) {
+            cy.elements().unselect()
+            for (const eventName of ["select", "unselect", "add", "remove"]) {
+              cy.removeListener(eventName)
+            }
+            cy.elements().remove()
+          }
 
           setWorkflow(responseJson);
           setWorkflowDone(true);
@@ -7076,6 +6879,7 @@ const AngularWorkflow = (defaultprops) => {
 			setSelectedAction({})
 			setSelectedApp({})
 			setSelectedComment({})
+			setRightSideBarOpen(false)
 			return
 		}
 
@@ -7468,6 +7272,7 @@ const AngularWorkflow = (defaultprops) => {
 			setSelectedAction({})
 			setSelectedApp({})
 			setSelectedComment({})
+			setRightSideBarOpen(false)
 			return
 		}
 
@@ -7680,6 +7485,7 @@ const AngularWorkflow = (defaultprops) => {
 			setSelectedAction({})
 			setSelectedApp({})
 			setSelectedComment({})
+			setRightSideBarOpen(false)
 			return
 		}
 
@@ -9955,10 +9761,15 @@ const AngularWorkflow = (defaultprops) => {
 
   const onNodeHover = (event) => {
     const nodedata = JSON.parse(JSON.stringify(event.target.data()))
+    if (nodedata.type === "RESIZE-HANDLE" || nodedata.type === "COMMENT") {
+      addCommentListeners()
+    }
 
     const cytoscapeElement = document.getElementById("cytoscape_view")
     if (cytoscapeElement !== undefined && cytoscapeElement !== null) {
-      cytoscapeElement.style.cursor = "pointer"
+      cytoscapeElement.style.cursor = nodedata.type === "RESIZE-HANDLE"
+        ? (/(top-left|bottom-right)$/.test(nodedata.id || "") ? "nwse-resize" : "nesw-resize")
+        : "pointer"
     }
 
     if (nodedata.finished === false) {
@@ -10718,7 +10529,16 @@ const AngularWorkflow = (defaultprops) => {
       });
     }
 
-    var insertedNodes = [].concat(actions, foundtriggers, decoratorNodes, comments);
+    const commentHandles = comments.filter((comment) => comment.position).flatMap((comment) =>
+      Object.entries(getCommentHandleOffsets(comment.data.id, parseInt(comment.data.width) || 250, parseInt(comment.data.height) || 150)).map(([id, off]) => ({
+        group: "nodes",
+        data: { id, type: "RESIZE-HANDLE", is_valid: true, attachedTo: comment.data.id, decorator: true },
+        position: { x: comment.position.x + off.dx, y: comment.position.y + off.dy },
+        classes: "resize-handle",
+      }))
+    )
+
+    var insertedNodes = [].concat(actions, foundtriggers, decoratorNodes, comments, commentHandles);
     insertedNodes = insertedNodes.filter((node) => node !== null);
 
     var edges = inputworkflow.branches.map((branch, index) => {
@@ -14169,18 +13989,18 @@ const AngularWorkflow = (defaultprops) => {
     zoom: isSafari ? undefined : 0.9,
     transform: isSafari ? "scale(0.9)" : undefined,
     transformOrigin: isSafari ? "top right" : undefined,
-    // Docked: full height at the right edge. The 0.9 zoom/scale shrinks sizes and offsets, so they're divided by it.
-    ...(configDocked ? {
-      top: 0,
-      right: debugOffset / (isSafari ? 1 : 0.9),
-      height: "calc(100vh / 0.9)",
+    // Divide by the 0.9 zoom (Safari's scale doesn't affect offsets)
+    ...(docked ? {
+      top: dockTabHeight / (isSafari ? 1 : 0.9),
+      right: 0,
+      height: `calc((100vh - ${dockTabHeight}px) / 0.9)`,
       maxHeight: "none",
-      width: configPanelWidth / 0.9,
-      minWidth: configPanelWidth / 0.9,
-      maxWidth: configPanelWidth / 0.9,
+      width: dockWidth / 0.9,
+      minWidth: dockWidth / 0.9,
+      maxWidth: dockWidth / 0.9,
       resize: "none",
       border: "none",
-      borderLeft: "1px solid rgb(91, 96, 100)",
+      borderLeft: theme.palette.defaultBorder,
       borderRadius: 0,
     } : {}),
   };
@@ -20441,7 +20261,7 @@ const AngularWorkflow = (defaultprops) => {
               paddingRight: 10,
               paddingLeft: 10,
               position: "relative",
-              height: 40,
+              minHeight: 40,
               alignItems: "center",
             }}
               sx={{ border: "1px solid transparent", "&:hover": { borderColor: "rgba(255,255,255,0.3)" } }}
@@ -20455,7 +20275,7 @@ const AngularWorkflow = (defaultprops) => {
                 : 
                 null
               }
-              <span style={{ marginLeft: 30, }}>{workflow.name}</span>
+              <span title={workflow.name} style={{ marginLeft: 30, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word", }}>{workflow.name}</span>
 
 
             </Typography>
@@ -22348,97 +22168,73 @@ const AngularWorkflow = (defaultprops) => {
     );
   };
 
-  const setupResizeHandlers = (cy, nodeId) => {
-    let height;
-    let width;
-    let resizeTimeout;
+  const onCommentHandleDrag = (event) => {
+    const state = commentResizeState
+    if (state.timeout) return
 
-    cy.on("drag", `node[attachedTo = "${nodeId}"].resize-handle`, (event) => {
-      if (resizeTimeout) return;
+    state.timeout = setTimeout(() => {
+      state.timeout = null
+      const handle = event.target
+      const nodeId = handle.data("attachedTo")
+      const parent = cy.getElementById(nodeId)
+      if (!parent || parent.empty() || !handle.position() || !parent.position()) return
 
-      resizeTimeout = setTimeout(() => {
-        resizeTimeout = null;
-        const handle = event.target;
-        const parent = cy.$(`#${nodeId}`);
+      const handlePos = handle.position()
+      const parentPos = parent.position()
 
-        // Check if the parent node exists
-        if (!parent || parent.empty()) {
-          console.warn(`Parent node (${nodeId}) not found.`);
-          return;
-        }
+      // Handle sits handleOffset=10px outside the corner, so subtract it to get the true node size
+      const handleOffset = 10
+      const width = Math.max(150, Math.abs(handlePos.x - parentPos.x) * 2 - handleOffset * 2)
+      const height = Math.max(80, Math.abs(handlePos.y - parentPos.y) * 2 - handleOffset * 2)
 
-        if (!handle?.position()) {
-          console.warn(`Handle position is undefined for ${handle.id()}`);
-          return;
-        }
+      parent.style({ width, height })
+      state.width = Math.floor(width)
+      state.height = Math.floor(height)
 
-        const handlePos = handle.position();
-        const parentPos = parent.position();
+      // Reposition the other 3 handles — skip the one being dragged so Cytoscape keeps control of it
+      repositionCommentHandles(nodeId, parentPos.x, parentPos.y, width, height, handle.id())
+    }, 16)
+  }
 
-        if (!parentPos) {
-          console.warn(`Parent position is undefined for ${nodeId}`);
-          return;
-        }
+  const onCommentHandleFree = (event) => {
+    const state = commentResizeState
+    const nodeId = event.target.data("attachedTo")
+    const parentNode = cy.getElementById(nodeId)
+    if (!parentNode || parentNode.empty() || !state.width || !state.height) return
 
-        // Handle sits handleOffset=10px outside the corner, so subtract it to get the true node size
-        const handleOffset = 10;
-        const rawWidth = Math.abs(handlePos.x - parentPos.x) * 2 - handleOffset * 2;
-        const rawHeight = Math.abs(handlePos.y - parentPos.y) * 2 - handleOffset * 2;
+    const width = state.width
+    const height = state.height
+    state.width = 0
+    state.height = 0
+    parentNode.data({ ...parentNode.data(), width, height })
+    setSelectedComment((prev) => ({ ...prev, width, height }))
+    stream.sendNodeConfigure(nodeId, { ...parentNode.data(), width, height })
+  }
 
-        // Apply min/max constraints
-        const constrainedWidth = Math.max(150, rawWidth);
-        const constrainedHeight = Math.max(80, rawHeight);
+  const onCommentDrag = (event) => {
+    const node = event.target
+    const { x, y } = node.position()
+    repositionCommentHandles(node.id(), x, y, parseFloat(node.style("width")), parseFloat(node.style("height")))
+  }
 
-        // Update node size
-        parent.style({
-          width: constrainedWidth,
-          height: constrainedHeight,
-        });
+  commentHandlers.handleDrag = onCommentHandleDrag
+  commentHandlers.handleFree = onCommentHandleFree
+  commentHandlers.commentDrag = onCommentDrag
 
-        // Store dimensions for state update on drag end
-        height = Math.floor(constrainedHeight);
-        width = Math.floor(constrainedWidth);
-
-        // Reposition the other 3 handles — skip the one being dragged so Cytoscape keeps control of it
-        const { x, y } = parent.position();
-        repositionCommentHandles(nodeId, x, y, constrainedWidth, constrainedHeight, handle.data("id"));
-      }, 16); // Throttle to ~60 FPS
-    });
-
-    // Update state when resizing ends
-    cy.on("free", `node[attachedTo = "${nodeId}"].resize-handle`, (event) => {
-      const data = event.target.data();
-      const parentNode = cy.getElementById(data.attachedTo);
-
-      if (parentNode) {
-        const newWidth = Math.floor(width)
-        const newHeight = Math.floor(height)
-        parentNode.data({
-          ...parentNode.data(),
-          width: newWidth,
-          height: newHeight,
-        });
-        setSelectedComment((prev) => ({
-          ...prev,
-          width: newWidth,
-          height: newHeight,
-        }));
-        stream.sendNodeConfigure(data.attachedTo, { ...parentNode.data(), width: newWidth, height: newHeight })
-      }
-    });
-
-  };
-
-
-  const setupNodeDragHandler = (cy, nodeId) => {
-    cy.on("drag", `#${nodeId}`, (event) => {
-      const node = event.target;
-      const { x, y } = node.position();
-      const width = parseFloat(node.style("width"));
-      const height = parseFloat(node.style("height"));
-      repositionCommentHandles(nodeId, x, y, width, height);
-    });
-  };
+  const addCommentListeners = () => {
+    if (!cy) return
+    cy.nodes(".resize-handle").forEach((handle) => {
+      if (handle.scratch("_commentListeners")) return
+      handle.scratch("_commentListeners", true)
+      handle.on("drag", (e) => commentHandlers.handleDrag(e))
+      handle.on("free", (e) => commentHandlers.handleFree(e))
+    })
+    cy.nodes('[type="COMMENT"]').forEach((comment) => {
+      if (comment.scratch("_commentListeners")) return
+      comment.scratch("_commentListeners", true)
+      comment.on("drag", (e) => commentHandlers.commentDrag(e))
+    })
+  }
 
   const addCommentNode = () => {
     const newId = uuidv4();
@@ -22490,8 +22286,8 @@ const AngularWorkflow = (defaultprops) => {
       });
     });
 
-    setupResizeHandlers(cy, newId);
-    setupNodeDragHandler(cy, newId);
+    addCommentListeners();
+
   };
 
   const RightSideBar = (props) => {
@@ -22551,7 +22347,7 @@ const AngularWorkflow = (defaultprops) => {
         :
         <span>
           {/*<Fade in={true} style={{ transitionDelay: `$0ms` }}>*/}
-          <div id="rightside_actions" style={rightsidebarStyle}>
+          <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
             {defaultReturn}
           </div>
         </span>
@@ -23575,7 +23371,8 @@ const AngularWorkflow = (defaultprops) => {
   const executionModal = (
     <Drawer
       anchor={"right"}
-      open={executionModalOpen}
+      open={executionModalOpen && (!docked || shownTab === "run")}
+      transitionDuration={docked ? 0 : undefined}
       onClose={() => {
         setExecutionModalOpen(false)
         setBuildDebugMode("build")
@@ -23583,11 +23380,11 @@ const AngularWorkflow = (defaultprops) => {
         //navigate(curpath + newitem)
       }}
       style={{
-        resize: debugDocked ? "none" : "both",
+        resize: docked ? "none" : "both",
         overflow: "auto",
       }}
       hideBackdrop={false}
-      variant={debugDocked ? "persistent" : "temporary"}
+      variant={docked ? "persistent" : "temporary"}
       BackdropProps={{
         style: {
           //backgroundColor: "transparent",
@@ -23595,38 +23392,23 @@ const AngularWorkflow = (defaultprops) => {
       }}
       PaperProps={{
         style: {
-          resize: debugDocked ? "none" : "both",
+          resize: docked ? "none" : "both",
           overflow: "auto",
-          minWidth: isMobile ? "100%" : debugPanelWidth,
-          maxWidth: isMobile ? "100%" : debugPanelWidth,
+          minWidth: isMobile ? "100%" : dockWidth,
+          maxWidth: isMobile ? "100%" : dockWidth,
           color: theme.palette.text.primary,
           fontSize: 18,
           borderLeft: theme.palette.defaultBorder,
 
-          borderRadius: debugDocked ? 0 : theme.palette.borderRadius,
+          borderRadius: docked ? 0 : theme.palette.borderRadius,
           borderTopRightRadius: 0,
           borderBottomRightRadius: 0,
-          ...(debugDocked ? { zIndex: 1200 } : {}),
+          ...(docked ? { zIndex: 1200, top: dockTabHeight, height: `calc(100% - ${dockTabHeight}px)` } : {}),
           backgroundColor: themeMode === "dark" ? "black" : theme.palette.drawer.backgroundColor,
         },
       }}
     >
-      {debugDocked ?
-        <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 8px 0px 8px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
-          <Tooltip title="Close run panel (Esc)" placement="left">
-            <IconButton
-              size="small"
-              aria-label="Close run panel"
-              onClick={(e) => {
-                e.preventDefault();
-                closeDockedRunPanel()
-              }}
-            >
-              <CloseIcon fontSize="small" style={{ color: theme.palette.text.primary }} />
-            </IconButton>
-          </Tooltip>
-        </div>
-        : isMobile ?
+      {isMobile ?
         <Tooltip
           title="Close window"
           placement="top"
@@ -23646,7 +23428,7 @@ const AngularWorkflow = (defaultprops) => {
 
       {executionModalView === 0 ? (
         <div style={{ position: "relative", padding: isMobile ? "0px 0px 0px 10px" : "25px 25px 25px 25px", zIndex: 12502,  backgroundColor: theme.palette.drawer.backgroundColor,  height: "100%", }}>
-          <div style={{ display: "flex", }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, }}>
             <Breadcrumbs
               aria-label="breadcrumb"
               separator="›"
@@ -23665,7 +23447,7 @@ const AngularWorkflow = (defaultprops) => {
               <a target="_blank" href={`/workflows/debug?workflow_id=${workflow.id}`} style={{ textDecoration: "none", }}>
                 <Button
                   color="secondary"
-                  style={{ marginLeft: 125, maxHeight: 30, marginTop: 20, }}
+                  style={{ minWidth: 40, maxHeight: 30, }}
                 >
                   <QueryStatsIcon style={{ color: theme.palette.text.primary, }} />
                 </Button>
@@ -23673,8 +23455,8 @@ const AngularWorkflow = (defaultprops) => {
             </Tooltip>
           </div>
 
-		  {executionTimeline?.length > 0 && 
-		  	<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", position: "fixed", bottom: 0, zIndex: 13000, width: debugPanelWidth - 30, right: 10, padding: "0px 10px 0px 10px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
+		  {executionTimeline?.length > 0 && (!docked || shownTab === "run") && 
+		  	<div style={{borderTop: `1px solid ${theme.palette.defaultBorder}`, position: "fixed", bottom: 0, zIndex: 13000, width: dockWidth - 30, right: 10, padding: "0px 10px 0px 10px", backgroundColor: theme.palette.drawer.backgroundColor, }}>
 			  <LineChartWrapper 
 				inputname={""}
 				keys={executionTimeline}
@@ -23706,7 +23488,7 @@ const AngularWorkflow = (defaultprops) => {
 		  </Button>
           <ButtonGroup
             fullWidth
-            style={{ marginTop: 5, maxHeight: 50, overflow: "hidden", }}>
+            style={{ marginTop: 12, maxHeight: 50, overflow: "hidden", }}>
 		
             <Button
               color="secondary"
@@ -23908,7 +23690,7 @@ const AngularWorkflow = (defaultprops) => {
                             }
                           }}
                         >
-                          <div style={{ display: "flex", flex: 1 }}>
+                          <div style={{ display: "flex", flex: 1, minWidth: 0 }}>
                             <div
                               style={{
                                 marginLeft: 0,
@@ -23940,6 +23722,8 @@ const AngularWorkflow = (defaultprops) => {
                                 marginBottom: "auto",
                                 marginRight: 15,
                                 fontSize: 13,
+                                whiteSpace: "nowrap",
+                                flexShrink: 0,
                                 color: theme.palette.text.primary,
                               }}
                             >
@@ -23957,6 +23741,11 @@ const AngularWorkflow = (defaultprops) => {
                                     marginLeft: 10,
                                     marginTop: "auto",
                                     marginBottom: "auto",
+                                    minWidth: 0,
+                                    fontSize: 16,
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
 									                  color: theme.palette.text.primary,
                                   }}
                                 >
@@ -24042,7 +23831,7 @@ const AngularWorkflow = (defaultprops) => {
             style={{ color: theme.palette.text.primary, fontSize: 16 }}
           >
             <span
-              style={{ color: "rgba(255,255,255,0.5)", display: "flex" }}
+              style={{ color: theme.palette.text.secondary, display: "flex" }}
               onClick={() => {
                 setExecutionRunning(false);
                 stop();
@@ -24089,8 +23878,8 @@ const AngularWorkflow = (defaultprops) => {
               marginBottom: 10,
             }}
           />
-          <div style={{ display: "flex", paddingLeft: 10, paddingRight: 10, position: "sticky", top: 0, zIndex: 12500, backgroundColor: theme.palette.drawer.backgroundColor, borderRadius: theme.palette.borderRadius, border: "2px solid rgba(255,255,255,0.3)", marginBottom: 10, }}>
-            <h2>Details</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, paddingLeft: 10, paddingRight: 10, position: "sticky", top: 0, zIndex: 12500, backgroundColor: theme.palette.drawer.backgroundColor, borderRadius: theme.palette.borderRadius, border: "2px solid rgba(255,255,255,0.3)", marginBottom: 10, }}>
+            <h2 style={{ flex: 1, minWidth: 0, }}>Details</h2>
             <Tooltip
               color="primary"
               title={
@@ -24104,7 +23893,7 @@ const AngularWorkflow = (defaultprops) => {
               <span style={{}}>
                 <Button
                   color="primary"
-                  style={{ float: "right", marginTop: 20, marginLeft: 10, }}
+                  style={{ minWidth: 40, }}
                   onClick={() => {
                     const skip_popup = true
                     executeWorkflow(
@@ -24135,7 +23924,7 @@ const AngularWorkflow = (defaultprops) => {
               <span style={{}}>
                 <Button
                 color="primary"
-                  style={{ float: "right", marginTop: 20, }}
+                  style={{ minWidth: 40, }}
                   onClick={() => {
                     // Find current one in execution list
                     var nextindex = -1
@@ -24171,7 +23960,7 @@ const AngularWorkflow = (defaultprops) => {
               <span style={{}}>
                 <Button
                   color="primary"
-                  style={{ float: "right", marginTop: 20}}
+                  style={{ minWidth: 40, }}
                   onClick={() => {
                     // Find current one in execution list
                     var nextindex = -1
@@ -24208,7 +23997,7 @@ const AngularWorkflow = (defaultprops) => {
                 <span style={{}}>
                   <Button
                     color="primary"
-                    style={{ float: "right", marginTop: 20, }}
+                    style={{ minWidth: 40, }}
                     onClick={() => {
                       abortExecution();
                     }}
@@ -24227,7 +24016,7 @@ const AngularWorkflow = (defaultprops) => {
                 <span style={{}}>
                   <Button
                     color={executionData.notifications_created === undefined || executionData.notifications_created === null || executionData.notifications_created === 0 ? "secondary" : "primary"}
-                    style={{ float: "right", marginTop: 20, }}
+                    style={{ minWidth: 40, }}
                     disabled={executionData.notifications_created === undefined || executionData.notifications_created === null || executionData.notifications_created === 0}
                   >
                     <ErrorOutlineIcon
@@ -24253,7 +24042,7 @@ const AngularWorkflow = (defaultprops) => {
                 <span style={{}}>
                   <Button
                     color="secondary"
-                    style={{ float: "right", marginTop: 20, }}
+                    style={{ minWidth: 40, }}
 
                     // Max 5 days in the past
                     disabled={executionData.started_at < (Math.floor(Date.now() / 1000) - 432000)}
@@ -24719,7 +24508,7 @@ const AngularWorkflow = (defaultprops) => {
                             navigate(`?execution_highlight=${parsed_url}`)
                           }}
                         >
-                          <PreviewIcon style={{ color: "rgba(255,255,255,0.5)" }} />
+                          <PreviewIcon style={{ color: theme.palette.text.secondary }} />
                         </IconButton>
                       </Tooltip>
                   }
@@ -24753,8 +24542,8 @@ const AngularWorkflow = (defaultprops) => {
                       border: highlightNode ? `2px solid ${red}`
                         :
                         data.action.sub_action === true
-                          ? "1px solid rgba(255,255,255,0.3)"
-                          : "1px solid rgba(255,255,255, 0.3)",
+                          ? theme.palette.defaultBorder
+                          : theme.palette.defaultBorder,
                       borderRadius: theme.palette?.borderRadius,
                       backgroundColor: theme.palette.cardBackgroundColor,
                       padding: "15px 10px 10px 10px",
@@ -25104,7 +24893,7 @@ const AngularWorkflow = (defaultprops) => {
               marginBottom: 0,
               marginTop: 5,
               cursor: "pointer",
-              border: "1px solid rgba(255,255,255,0.3)",
+              border: `1px solid ${theme.palette.defaultBorder}`,
               borderRadius: theme.palette?.borderRadius,
               padding: "3px 8px 3px 8px",
             }}
@@ -25166,7 +24955,7 @@ const AngularWorkflow = (defaultprops) => {
             variant="body1"
             style={{}}
           >
-            <b>{data.name}</b>: <span style={{color: "rgba(255,255,255,0.5)" }}>
+            <b>{data.name}</b>: <span style={{color: theme.palette.text.secondary }}>
 				{showVariable ? data.value : null}
 			</span>
           </Typography>
@@ -25729,10 +25518,11 @@ const AngularWorkflow = (defaultprops) => {
           rightSideBarOpen &&
           Object.getOwnPropertyNames(selectedTrigger || {}).length === 0 && 
           Object.getOwnPropertyNames(selectedComment || {}).length === 0 && 
-          Object.getOwnPropertyNames(selectedEdge || {}).length === 0
+          Object.getOwnPropertyNames(selectedEdge || {}).length === 0 &&
+          !configHidden
         }
         hideBackdrop={true}
-        transitionDuration={{ enter: 180, exit: 0 }}
+        transitionDuration={{ enter: docked ? 0 : 180, exit: 0 }}
         onClose={() => {
           setRightSideBarOpen(false);
           setSelectedAction({});
@@ -25753,7 +25543,7 @@ const AngularWorkflow = (defaultprops) => {
             minWidth: rightsidebarStyle.minWidth,
             maxWidth: rightsidebarStyle.maxWidth,
             overflow: "hidden",
-            ...(configDocked ? { right: debugOffset, width: configPanelWidth, minWidth: configPanelWidth, maxWidth: configPanelWidth } : {}),
+            ...(docked ? { top: dockTabHeight, height: `calc(100% - ${dockTabHeight}px)`, right: 0, width: dockWidth, minWidth: dockWidth, maxWidth: dockWidth } : {}),
           },
         }}
       >
@@ -25761,6 +25551,8 @@ const AngularWorkflow = (defaultprops) => {
             id="rightside_subactions"
             files={files}
             isCloud={isCloud}
+            pendingEditorField={pendingEditorField}
+            setPendingEditorField={setPendingEditorField}
             getParents={getParents}
             toolsAppId={toolsApp.id}
             setShowVideo={setShowVideo}
@@ -25821,7 +25613,7 @@ const AngularWorkflow = (defaultprops) => {
       {/* {
         rightSideBarOpen && Object.getOwnPropertyNames(selectedAction).length > 0 ?
           <Fade in={true} timeout={250} style={{ transitionDelay: `${0}ms` }}>
-            <div id="rightside_actions" style={rightsidebarStyle}>
+            <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
               <ParsedAction
                 id="rightside_subactions"
                 files={files}
@@ -25888,7 +25680,7 @@ const AngularWorkflow = (defaultprops) => {
       {/* Only fixed the ones that require scrolling on a small screen */}
       {/* Most important: Actions. But these are a lot more complex */}
       {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT" || selectedTrigger.trigger_type === "SUBFLOW") ?
-        <div id="rightside_actions" style={rightsidebarStyle}>
+        <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
           {Object.getOwnPropertyNames(selectedTrigger)?.length > 0 ?
             selectedTrigger.trigger_type === "SCHEDULE" ?
               ScheduleSidebar
@@ -25907,7 +25699,7 @@ const AngularWorkflow = (defaultprops) => {
       {/* 
     {
       rightSideBarOpen && selectedTrigger?.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger)?.length > 0   ? 
-      <div id="rightside_actions" style={rightsidebarStyle}>
+      <div id="rightside_actions" style={configHidden ? { ...rightsidebarStyle, display: "none" } : rightsidebarStyle}>
         <SubflowSidebar/>
         </div> : null
     } */}
@@ -25947,27 +25739,52 @@ const AngularWorkflow = (defaultprops) => {
       />
 	  */}
 
+      <WorkflowAgentSidebar
+        workflow={workflow}
+        cy={cy}
+        dock={dock}
+        theme={theme}
+        open={workflowGenerationModalOpen}
+        onOpenChange={setWorkflowGenerationModalOpen}
+        hidden={showWorkflowRevisions}
+        globalUrl={globalUrl}
+        themeMode={themeMode}
+        isLoggedIn={isLoggedIn}
+        userdata={userdata}
+        markSaved={() => setLastSaved(true)}
+        isStreamLive={() => multiplayerEnabledRef.current && streamStartedRef.current && streamStatusRef.current === "active"}
+        reloadWorkflow={(shouldRedraw) => getWorkflow(workflow.id, {}, true, shouldRedraw)}
+        saveWorkflow={() => saveWorkflow(workflow, undefined, undefined, undefined, true)}
+        onReverted={() => {
+          if (multiplayerEnabledRef.current && streamUrl) {
+            stream.sendWorkflowRewind(userdata?.username)
+          }
+        }}
+        onOpenExecution={openAgentExecution}
+        onPresenceRefresh={handleAgentPresenceRefresh}
+        onStopped={handleAgentStopped}
+        track={trackAgentFunnel}
+      />
+
       {showWorkflowRevisions ? null :
         <span>
           {ConnectedUsersAvatars()}
           {shownErrors}
-          {agentSidebarOpened && workflow?.id && workflow.public !== true && (
-            <AskAiWidget
-              open={workflowGenerationModalOpen}
-              onOpenChange={setWorkflowGenerationModalOpen}
-              // A run keeps being followed after the sidebar is closed, so its presence and reload still happen
-              keepMounted={agentRunning}
-              rightOffset={debugOffset + (configDocked ? configPanelWidth : 0)}
-              hideButton
-              requireSupport={false}
-              globalUrl={globalUrl}
-              theme={themeMode}
-              isLoggedIn={isLoggedIn}
-              userdata={userdata}
-              isSupport={userdata?.support === true}
-              agentUIProps={agentUIProps}
-            />
-          )}
+          <WorkflowDockTabs
+            dock={dock}
+            theme={theme}
+            labels={{
+              agent: "Agent",
+              config: selectedAction.label || selectedTrigger.label
+                || (Object.getOwnPropertyNames(selectedComment || {}).length > 0 ? "Comment" : Object.getOwnPropertyNames(selectedEdge || {}).length > 0 ? "Branch" : "Configure"),
+              run: "Run",
+            }}
+            onClose={{
+              agent: () => setWorkflowGenerationModalOpen(false),
+              config: () => (cy ? cy.elements().unselect() : setRightSideBarOpen(false)),
+              run: closeDockedRunPanel,
+            }}
+          />
           {BottomCytoscapeBar()}
           {TopCytoscapeBar()}
           {/* <RightsideBar /> */}
@@ -27398,6 +27215,7 @@ const AngularWorkflow = (defaultprops) => {
             cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
 
             cy.on("cxttap", "node", (e) => onCtxTap(e));
+            addCommentListeners();
 
 
             if (selectedAction.id !== undefined && selectedAction.id !== null && selectedAction.id !== "") {
@@ -27991,6 +27809,7 @@ const AngularWorkflow = (defaultprops) => {
 
             setAiQueryModalOpen={setAiQueryModalOpen}
 			isWorkflowEditor={editorData?.name === "workflow yaml"}
+			onSwitchField={switchEditorField}
           />
           : null}
 

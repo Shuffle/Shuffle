@@ -250,6 +250,17 @@ const menuData = {
             }
           },
           {
+            title: "Events",
+            icon: "/images/icons/articles.svg",
+            hoverIcon: "/images/icons/articles_hover.svg",
+            link: isCloud ? "/events" : "https://shuffler.io/events",
+            gaData: {
+              category: "navbar",
+              action: "resources_click",
+              label: "events_click"
+            }
+          },
+          {
             title: "Contact Us",
             icon: "/images/icons/contact_us.svg",
             hoverIcon: "/images/icons/contact_us_hover.svg",
@@ -568,7 +579,7 @@ const MobileMenu = ({ anchorEl, handleClose, isLoggedIn, navigate, isCloud }) =>
                                     if(item.link.includes("usecases") || item.link.includes("docs")){
                                         handleItemClick(item.link)
                                     }else{
-                                       window.open("https://shuffler.io" + item.link, '_blank');
+                                       window.open(item.link.startsWith("http") ? item.link : "https://shuffler.io" + item.link, '_blank');
                                       return;
                                     }
                                 }
@@ -1124,7 +1135,7 @@ const Navbar = (props) => {
                         } else if (item.link.includes("docs") || item.link.includes("usecases")) {
                           handleMenuClose();
                         } else {
-                          window.open("https://shuffler.io" + item.link, '_blank');
+                          window.open(item.link.startsWith("http") ? item.link : "https://shuffler.io" + item.link, '_blank');
                           return;
                         }
                       }}

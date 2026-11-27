@@ -521,6 +521,15 @@ export const getTheme = (themeMode, brandColor) => {
             },
           },
         },
+        MuiInputBase: {
+          styleOverrides: {
+            input: {
+              "&:-webkit-autofill": {
+                WebkitTextFillColor: resolvedMode === "dark" ? "#ffffff" : "#1A1A1A",
+              },
+            },
+          },
+        },
       },
 
       overrides: {

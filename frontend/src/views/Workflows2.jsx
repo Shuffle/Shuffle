@@ -4367,10 +4367,10 @@ const Workflows2 = (props) => {
                     checkboxSelection
                     autoHeight
                     density="standard"
-                    onSelectionModelChange={(newSelection) => {
+                    onRowSelectionModelChange={(newSelection) => {
                         setSelectedWorkflowIndexes(newSelection)
                     }}
-                    selectionModel={selectedWorkflowIndexes}
+                    rowSelectionModel={selectedWorkflowIndexes}
                     components={{
                         Toolbar: GridToolbar,
                     }}

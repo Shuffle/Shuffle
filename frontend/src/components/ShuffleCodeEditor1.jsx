@@ -16,6 +16,7 @@ import {
 	Button,
 	ButtonGroup,
 	Collapse,
+	Switch,
 } from '@mui/material';
 import { Context } from '../context/ContextApi.jsx';
 import {getTheme} from '../theme.jsx';
@@ -64,6 +65,7 @@ import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom"
 
 import AceEditor from "react-ace";
 import ace from "ace-builds";
+import ShuffleCodeEditorV2, { getCodeEditorSettings, setCodeEditorSetting } from "./ShuffleCodeEditorV2.jsx";
 import 'ace-builds/src-noconflict/mode-python';
 import 'ace-builds/src-noconflict/mode-json';
 import 'ace-builds/src-noconflict/mode-yaml';
@@ -108,7 +110,7 @@ const pythonFilters = [
 ]
 
 const extensions = []
-const CodeEditor = (props) => {
+const ClassicCodeEditor = (props) => {
 	const {
 		cy,
 		workflow,
@@ -143,6 +145,8 @@ const CodeEditor = (props) => {
 		fixExample,
 		userdata,
 		handleConditionFieldChange,
+		onSwitchExperience,
+		carriedCode,
 	} = props
 
 	// Auto-indent JSON-like content (with safety hehe)
@@ -223,6 +227,18 @@ const CodeEditor = (props) => {
 	})
 	const [executing, setExecuting] = useState(false)
 	const [fullScreenModeEnabled, setFullScreenModeEnabled] = useState(fullScreenMode === true || fullScreenMode === "true" || localStorage.getItem("codeEditorFullScreen") === "true")
+	const [showSwitchHint, setShowSwitchHint] = useState(onSwitchExperience !== undefined && !(fullScreenMode && fullScreenModeEnabled) && getCodeEditorSettings().switchHintSeen !== true)
+	const [switchHovered, setSwitchHovered] = useState(false)
+
+	useEffect(() => {
+		if (!showSwitchHint) {
+			return
+		}
+
+		setCodeEditorSetting("switchHintSeen", true)
+		const timeout = setTimeout(() => setShowSwitchHint(false), 8000)
+		return () => clearTimeout(timeout)
+	}, [showSwitchHint])
 
 	const liquidOpen = Boolean(anchorEl);
 	const mathOpen = Boolean(anchorEl2);
@@ -407,6 +423,12 @@ const CodeEditor = (props) => {
 	useEffect(() => {
     	document.addEventListener("keydown", handleKeyDown)
 		updateAvailableVariables(actionlist)
+	}, [])
+
+	useEffect(() => {
+		if (carriedCode !== undefined && carriedCode !== null) {
+			setlocalcodedata(carriedCode)
+		}
 	}, [])
 
 	useEffect(() => {
@@ -1557,7 +1579,7 @@ const CodeEditor = (props) => {
 					overflowY: "auto",
 					whiteSpace: "pre-wrap",
 					wordWrap: "break-word",
-					zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+					zIndex: activeDialog === "codeeditor" ? 1310 : 1100,
 				}}
 
 				setOptions={{
@@ -1777,7 +1799,7 @@ const CodeEditor = (props) => {
 			disableEnforceFocus={true}
 			style={{ 
 				pointerEvents: "none", 
-				zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+				zIndex: activeDialog === "codeeditor" ? 1310 : 1100,
 			}}
 			hideBackdrop={true}
 			open={expansionModalOpen}
@@ -1826,6 +1848,57 @@ const CodeEditor = (props) => {
 				</Tooltip>
 				: null}
 
+			{onSwitchExperience !== undefined ?
+				<Tooltip
+					title={showSwitchHint ?
+						<span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", }}>
+							<span
+								style={{
+									padding: "1px 6px",
+									borderRadius: 4,
+									fontSize: 10,
+									fontWeight: 700,
+									letterSpacing: 0.5,
+									color: "#ffffff",
+									backgroundColor: "#FF8544",
+								}}
+							>
+								NEW
+							</span>
+							Try the new Shuffle Code Editor
+						</span>
+						:
+						"Try the new Shuffle Code Editor"
+					}
+					placement="top"
+					open={showSwitchHint || switchHovered}
+					onOpen={() => setSwitchHovered(true)}
+					onClose={() => {
+						setSwitchHovered(false)
+						setShowSwitchHint(false)
+					}}
+				>
+					<Switch
+						size="small"
+						checked={false}
+						onChange={() => onSwitchExperience(localcodedata)}
+						style={{ zIndex: 5000, }}
+						sx={{
+							position: "absolute",
+							top: fullScreenModeEnabled ? 58 : 14,
+							right: fullScreenModeEnabled ? 176 : 108,
+							"@keyframes codeEditorSwitchPulse": {
+								"0%": { boxShadow: "0 0 0 0 rgba(255, 133, 68, 0.7)" },
+								"70%": { boxShadow: "0 0 0 8px rgba(255, 133, 68, 0)" },
+								"100%": { boxShadow: "0 0 0 0 rgba(255, 133, 68, 0)" },
+							},
+							"& .MuiSwitch-thumb": {
+								animation: showSwitchHint ? "codeEditorSwitchPulse 1.6s ease-out infinite" : "none",
+							},
+						}}
+					/>
+				</Tooltip>
+			: null}
 			{fullScreenModeEnabled ? null : 
 				<Tooltip
 					color="primary"
@@ -2620,7 +2693,7 @@ const CodeEditor = (props) => {
 									whiteSpace: "pre-wrap",
 									wordWrap: "break-word",
 									backgroundColor: "rgba(40,40,40,1)",
-									zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+									zIndex: activeDialog === "codeeditor" ? 1310 : 1100,
 
 									
 								}}
@@ -2759,7 +2832,7 @@ const CodeEditor = (props) => {
 											border: `1px solid rgba(255, 255, 255, 0.15)`,
 											position: "absolute",
 											top: fullScreenModeEnabled ? 50 : 20,
-											right: fullScreenModeEnabled ? 240 : 120,
+											right: fullScreenModeEnabled ? 240 : 160,
 
 											maxHeight: 35,
 											minWidth: 70,
@@ -2825,7 +2898,7 @@ const CodeEditor = (props) => {
 												overflow: "auto",
 												minWidth: 450,
 												maxWidth: "100%",
-												zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+												zIndex: activeDialog === "codeeditor" ? 1310 : 1100,
 											}}
 											collapsed={false}
 											enableClipboard={(copy) => {
@@ -2858,7 +2931,7 @@ const CodeEditor = (props) => {
 												minHeight: 450,
 												overflow: "auto",
 												wordWrap: "anywhere",
-												zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+												zIndex: activeDialog === "codeeditor" ? 1310 : 1100,
 											}}
 										>
 											{expOutput}
@@ -3017,6 +3090,29 @@ const CodeEditor = (props) => {
 				</Button>
 			</div>
 		</Dialog>)
+}
+
+const CodeEditor = (props) => {
+	const [newExperience, setNewExperience] = useState(getCodeEditorSettings().newExperience === true)
+	const [carriedCode, setCarriedCode] = useState(undefined)
+
+	useEffect(() => {
+		if (carriedCode !== undefined) {
+			setCarriedCode(undefined)
+		}
+	}, [carriedCode])
+
+	const switchExperience = (enabled, code) => {
+		setCodeEditorSetting("newExperience", enabled)
+		setCarriedCode(code)
+		setNewExperience(enabled)
+	}
+
+	if (newExperience) {
+		return <ShuffleCodeEditorV2 {...props} carriedCode={carriedCode} onSwitchExperience={(code) => switchExperience(false, code)} />
+	}
+
+	return <ClassicCodeEditor {...props} carriedCode={carriedCode} onSwitchExperience={(code) => switchExperience(true, code)} />
 }
 
 export default CodeEditor;
