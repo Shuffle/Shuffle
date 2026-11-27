@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Paper, Typography, Box, CircularProgress, TextField, Button } from "@mui/material";
 import { toast } from "react-toastify";
 
-const MFASetup = ({ isLoaded, globalUrl, setCookie }) => {
+const MFASetup = ({ isLoaded, globalUrl }) => {
     const [image2FA, setImage2FA] = useState("");
     const [secret2FA, setSecret2FA] = useState("");
     const [mfaCode, setMfaCode] = useState("");
@@ -91,9 +91,6 @@ const MFASetup = ({ isLoaded, globalUrl, setCookie }) => {
             .then((responseJson) => {
                 if (responseJson.success === true) {
                     toast.success("Successfully setup 2fa. Redirecting in 3 seconds...");
-                    for (var key in responseJson["cookies"]) {
-                        setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" });
-                    }
 
                     const tmpView = new URLSearchParams(window.location.search).get("view");
                     if (tmpView !== undefined && tmpView !== null) {
